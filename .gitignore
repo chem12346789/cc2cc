@@ -1,0 +1,40 @@
+# ignore python run file
+*.pyc
+__pycache__
+
+# ignore large files
+data*/
+log
+data
+checkpoint*/
+validate*/
+*.zip
+*map
+submit*
+out
+*.sh
+*.egg-info/
+
+PlotNeuralNet/
+gen_data_script/gen_data_template_direct.bash
+gen_data_script/mkdir-read-direct.py
+
+# ignore backup files
+.history
+
+# ignore latex files
+*.aux
+*.log
+*.out
+*.synctex.gz
+manu/*
+
+# ignore jupyter notebook checkpoints
+.ipynb_checkpoints
+
+# ignore bash
+bash*
+out_mkdir
+
+# wandb files
+wandb/*
