@@ -6,6 +6,10 @@ AIDFT_MAIN_PATH: the main path of the project.
 from pathlib import Path
 import os
 
+CNN3D = os.environ.get("CNN3D")
+if CNN3D is None:
+    CNN3D = False
+
 MAIN_PATH = os.environ.get("DFT2CC_MAIN_PATH")
 if MAIN_PATH is None:
     MAIN_PATH = Path(__file__).parent.parent.parent
@@ -24,11 +28,11 @@ if DATA_SAVE_PATH is None:
 else:
     DATA_SAVE_PATH = Path(DATA_SAVE_PATH)
 
-DATA_CC_PATH = os.environ.get("DATA_SAVE_PATH")
-if DATA_CC_PATH is None:
-    DATA_CC_PATH = MAIN_PATH / "data" / "test"
+DATA_TEST_PATH = os.environ.get("DATA_SAVE_PATH")
+if DATA_TEST_PATH is None:
+    DATA_TEST_PATH = MAIN_PATH / "data" / "test"
 else:
-    DATA_CC_PATH = Path(DATA_CC_PATH)
+    DATA_TEST_PATH = Path(DATA_TEST_PATH)
 
 CHECKPOINTS_PATH = os.environ.get("CHECKPOINTS_PATH")
 if CHECKPOINTS_PATH is None:
@@ -39,10 +43,11 @@ else:
 print(f"MAIN_PATH: {MAIN_PATH.resolve()}")
 print(f"DATA_PATH: {DATA_PATH.resolve()}")
 print(f"DATA_SAVE_PATH: {DATA_SAVE_PATH.resolve()}")
-print(f"DATA_CC_PATH: {DATA_CC_PATH.resolve()}")
+print(f"DATA_TEST_PATH: {DATA_TEST_PATH.resolve()}")
+print(f"CNN3D: {CNN3D}")
 
 if __name__ == "__main__":
     print(MAIN_PATH)
     print(DATA_PATH)
     print(DATA_SAVE_PATH)
-    print(DATA_CC_PATH)
+    print(DATA_TEST_PATH)

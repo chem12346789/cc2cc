@@ -8,11 +8,12 @@ from dft2cc.utils.env_var import (
     MAIN_PATH,
     DATA_PATH,
     DATA_SAVE_PATH,
-    DATA_CC_PATH,
+    DATA_TEST_PATH,
 )
 from dft2cc.utils.Grids import Grid
 from dft2cc.utils.DataBase import DataBase, process_input
 from dft2cc.utils.ModelDict import ModelDict
+from dft2cc.utils.rotate import rotate
 
 
 def save_csv_loss(

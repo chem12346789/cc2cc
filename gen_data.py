@@ -6,6 +6,7 @@ import argparse
 from itertools import product
 
 from dft2cc import add_args, extend, cc
+from dft2cc.utils import rotate
 
 
 if __name__ == "__main__":
@@ -28,6 +29,7 @@ if __name__ == "__main__":
         molecular, name = extend(
             name_mol, extend_atom, extend_xyz, distance, args.basis
         )
+        rotate(molecular)
 
         if "open-shell" in name:
             continue

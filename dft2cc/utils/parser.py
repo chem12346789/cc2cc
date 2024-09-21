@@ -149,13 +149,13 @@ def add_args(parser: argparse.ArgumentParser):
         default=100,
         help="Step for evaluation. Default is 100.",
     )
-
+    
+    # foe testing
     parser.add_argument(
-        "--train_atom_list",
-        nargs="+",
-        type=str,
-        help="List of atoms to train. Default is H and C atoms.",
-        default=["H", "C"],
+        "--load_epoch",
+        type=int,
+        default=-1,
+        help="Epoch for loading the model. Default is -1.",
     )
 
     args = parser.parse_args()

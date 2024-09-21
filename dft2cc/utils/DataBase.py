@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from dft2cc.utils.mol import Mol
-from dft2cc.utils.env_var import DATA_PATH
+from dft2cc.utils.env_var import DATA_PATH, CNN3D
 
 
 def process_input(data, grids):
@@ -156,42 +156,45 @@ class DataBase:
                         print(f"No file: {name_}:>40")
                         continue
                     self.name_list.append(f"{name_}")
-                    self.load_data(f"{name_}", Mol[name_mol])
+                    self.load_data(name_)
             else:
                 if not (Path(f"{DATA_PATH}") / f"data_{name}.npz").exists():
                     print(f"No file: {name:>40}")
                     continue
                 self.name_list.append(name)
-                self.load_data(name, Mol[name_mol])
+                self.load_data(name)
 
-    def load_data(self, name, mol):
+    def load_data(self, name):
         """
         Load the data.
         """
         data = np.load(Path(f"{DATA_PATH}") / f"data_{name}.npz")
 
-        input_mat = data["rho_inv_4_norm"]
-        error_grad = data["error_grad"]
+        if CNN3D:
+            input_mat = data["rho_cube"]
+        else:
+            input_mat = data["rho_inv_4_norm"]
+        output_mat = data["exc_over_dm_cc_grids"]
+        weights_mat = data["weights"]
 
         input_ = {}
+        weight_ = {}
         output_ = {}
 
-        for i_atom in range(len(mol)):
-            input_[i_atom] = input_mat[[0], i_atom, :, :]
-            output_[i_atom] = error_grad[i_atom, :]
-
-        error_dipole = data["error_dipole"]
-        error_energy = data["error_energy"]
+        for i_coord in range(len(weights_mat)):
+            if CNN3D:
+                input_[i_coord] = input_mat[i_coord]
+            else:
+                input_[i_coord] = input_mat[:, i_coord]
+            weight_[i_coord] = weights_mat[[i_coord]]
+            output_[i_coord] = output_mat[[i_coord]]
 
         self.data_gpu[name] = BasicDataset(
             {
                 "input": input_,
+                "weight": weight_,
                 "output": output_,
             },
             self.batch_size,
             self.dtype,
-            dict_const={
-                "error_dipole": error_dipole,
-                "error_energy": error_energy,
-            },
         ).load_to_gpu()

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-class CNN_FC(nn.Module):
+class Model(nn.Module):
     """
     Fully connected neural network (dense network)
     """

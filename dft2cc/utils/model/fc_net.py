@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-class FCNet(nn.Module):
+class Model(nn.Module):
     """
     Fully connected neural network (dense network)
     """
@@ -12,8 +12,8 @@ class FCNet(nn.Module):
         input_size=4,
         hidden_size=100,
         output_size=1,
-        residual=0,
-        num_layers=3,
+        residual=1,
+        num_layers=4,
     ):
         super().__init__()
 

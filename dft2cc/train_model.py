@@ -11,7 +11,6 @@ import wandb
 
 from dft2cc.utils import add_args, save_csv_loss
 from dft2cc.utils import DataBase, ModelDict
-from dft2cc.utils import AU2KCALMOL, AU2DEBYE
 
 
 def train_model(train_str_dict, eval_str_dict):
@@ -82,54 +81,36 @@ def train_model(train_str_dict, eval_str_dict):
     print(f"Start training at {modeldict.dir_checkpoint}")
     pbar0 = trange(args.epoch + 1)
     for epoch in pbar0:
-        train_loss_ene, train_loss_dipole, train_loss_force = modeldict.train_model(
-            database_train
-        )
+        train_loss_ene, train_loss_ene_tot = modeldict.train_model(database_train)
         if not modeldict.with_eval:
             modeldict.scheduler.step()
 
         if epoch % args.eval_step == 0:
-            eval_loss_ene, eval_loss_dipole, eval_loss_force = modeldict.eval_model(
-                database_eval
-            )
+            eval_loss_ene, eval_loss_ene_tot = modeldict.eval_model(database_eval)
             if modeldict.with_eval:
                 modeldict.scheduler.step(
-                    np.mean(
-                        modeldict.tot_loss(
-                            eval_loss_ene, eval_loss_dipole, eval_loss_force
-                        )
-                    )
+                    np.mean(modeldict.tot_loss(eval_loss_ene, eval_loss_ene_tot))
                 )
 
             experiment_dict = {
                 "epoch": epoch,
                 "global_step": epoch,
-                "train_loss_ene": AU2KCALMOL * np.mean(train_loss_ene),
-                "train_loss_dipole": AU2DEBYE * np.mean(train_loss_dipole),
-                "train_loss_force": AU2KCALMOL * np.mean(train_loss_force),
+                "train_loss_ene": np.mean(train_loss_ene),
+                "train_loss_ene_tot": np.mean(train_loss_ene_tot),
                 "train_loss_tot": np.mean(
-                    modeldict.tot_loss(
-                        AU2KCALMOL * train_loss_ene,
-                        AU2DEBYE * train_loss_dipole,
-                        AU2KCALMOL * train_loss_force,
-                    )
+                    modeldict.tot_loss(train_loss_ene, train_loss_ene_tot)
                 ),
-                "eval_loss_ene": AU2KCALMOL * np.mean(eval_loss_ene),
-                "eval_loss_dipole": AU2DEBYE * np.mean(eval_loss_dipole),
-                "eval_loss_force": AU2KCALMOL * np.mean(eval_loss_force),
+                "eval_loss_ene": np.mean(eval_loss_ene),
+                "eval_loss_ene_tot": np.mean(eval_loss_ene_tot),
                 "eval_loss_tot": np.mean(
-                    modeldict.tot_loss(
-                        AU2KCALMOL * eval_loss_ene,
-                        AU2DEBYE * eval_loss_dipole,
-                        AU2KCALMOL * eval_loss_force,
-                    )
+                    modeldict.tot_loss(eval_loss_ene, eval_loss_ene_tot)
                 ),
                 "lr": modeldict.optimizer.param_groups[0]["lr"],
             }
             experiment.log(experiment_dict)
 
             pbar0.set_description(
-                f"Epoch: {epoch}, Ene loss: {experiment_dict['train_loss_ene']:.2f}, Ene loss eval: {experiment_dict['eval_loss_ene']:.2f}, Loss: {experiment_dict['train_loss_tot']:.2f}, Loss_eval: {experiment_dict['eval_loss_tot']:.2f}, lr: {experiment_dict['lr']:.2e}"
+                f"Epoch: {epoch}, Ene loss tot: {experiment_dict['train_loss_ene_tot']:.2f}, Ene loss eval tot: {experiment_dict['eval_loss_ene_tot']:.2f}, Loss: {experiment_dict['train_loss_tot']:.2f}, Loss_eval: {experiment_dict['eval_loss_tot']:.2f}, lr: {experiment_dict['lr']:.2e}"
             )
 
         if (epoch % (args.eval_step * 50) == 0) and (epoch != 0):
@@ -137,18 +118,16 @@ def train_model(train_str_dict, eval_str_dict):
                 database_train.name_list,
                 modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}",
                 {
-                    "train_loss_ene": AU2KCALMOL * train_loss_ene,
-                    "train_loss_dipole": AU2DEBYE * train_loss_dipole,
-                    "train_loss_force": AU2KCALMOL * train_loss_force,
+                    "train_loss_ene": train_loss_ene,
+                    "train_loss_ene_tot": train_loss_ene_tot,
                 },
             )
             save_csv_loss(
                 database_eval.name_list,
                 modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}",
                 {
-                    "eval_loss_ene": AU2KCALMOL * eval_loss_ene,
-                    "eval_loss_dipole": AU2DEBYE * eval_loss_dipole,
-                    "eval_loss_force": AU2KCALMOL * eval_loss_force,
+                    "eval_loss_ene": eval_loss_ene,
+                    "eval_loss_ene_tot": eval_loss_ene_tot,
                 },
             )
             modeldict.save_model(epoch)
