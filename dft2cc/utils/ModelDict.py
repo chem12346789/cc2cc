@@ -150,9 +150,10 @@ class ModelDict:
         loss_ene = self.loss_ene(output_mat, output_mat_real)
 
         if CNN3D:
-            loss_ene_tot = torch.abs(
-                torch.sum(output_mat * input_mat[:, 0, 1, 1, 1] * weight)
-                - torch.sum(output_mat_real * input_mat[:, 0, 1, 1, 1] * weight)
+            loss_ene_tot = torch.sum(
+                (output_mat[:, 0] - output_mat_real[:, 0])
+                * input_mat[:, 0, 1, 1, 1]
+                * weight[:, 0]
             )
         else:
             loss_ene_tot = torch.sum(
