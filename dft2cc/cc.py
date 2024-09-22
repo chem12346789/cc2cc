@@ -8,11 +8,13 @@ import pyscf
 import opt_einsum as oe
 
 from dft2cc.utils import gen_basis, process_input, Grid
-from dft2cc.utils import DATA_PATH, AU2KCALMOL
-
-ORIENTATION_NUMBER_DICT = {"x": 0, "y": 1, "z": 2}
-CUBE_SIZE = 3
-CUBE_LEN = 0.01
+from dft2cc.utils import (
+    DATA_PATH,
+    AU2KCALMOL,
+    CUBE_SIZE,
+    CUBE_LEN,
+    ORIENTATION_NUMBER_DICT,
+)
 
 
 def cc(molecular, name, args):
@@ -45,7 +47,6 @@ def cc(molecular, name, args):
     mdft = pyscf.scf.RKS(mol)
     mdft.xc = "b3lyp"
     mdft.kernel()
-    dm1_dft = mdft.make_rdm1(ao_repr=True)
 
     grids = Grid(mol, level=1, period=2)
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
@@ -67,7 +68,7 @@ def cc(molecular, name, args):
 
     for i, coord in enumerate(grids.coords):
         if i * 10 % len(grids.coords) == 0:
-            print(f"Progress: {(i*100)/len(grids.coords):.1f}%")
+            print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
 
         ao_0_i = ao_value[0][i]
         if abs(rho_cc[0][i]) < 1e-14:
@@ -81,10 +82,10 @@ def cc(molecular, name, args):
                 backend="torch",
             ) / (rho_cc[0][i] + 1e-14)
 
-    rho_cube = np.zeros((len(grids.coords), 4, 3, 3, 3))
+    rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
     for p, p_coords in enumerate(grids.coords):
         if p * 10 % len(grids.coords) == 0:
-            print(f"Progress: {(p*100)/len(grids.coords):.1f}%")
+            print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
 
         coords_cube = np.zeros((CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
         for i, j, k in product(range(CUBE_SIZE), repeat=3):
@@ -97,7 +98,7 @@ def cc(molecular, name, args):
 
         ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
         rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="GGA")
-        rho_cube[p] = rho_cube_p.reshape(4, 3, 3, 3)
+        rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
     error_energy = e_cc - mdft.energy_tot(dm1_cc)
     error = np.sum(exc_over_dm_cc_grids * grids.weights * rho_cc[0]) - error_energy
@@ -108,8 +109,10 @@ def cc(molecular, name, args):
         e_cc=e_cc,
         dm_cc=dm1_cc,
         rho_inv_4_norm=rho_cc,
+        rho_inv_4_norm_matrix=process_input(rho_cc, grids),
         rho_cube=rho_cube,
         exc_over_dm_cc_grids=exc_over_dm_cc_grids,
+        exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
         weights=grids.weights,
         error_energy=error_energy,
     )

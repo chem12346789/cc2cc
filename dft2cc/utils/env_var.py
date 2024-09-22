@@ -10,6 +10,13 @@ CNN3D = os.environ.get("CNN3D")
 if CNN3D is None:
     CNN3D = False
 
+ORIENTATION_NUMBER_DICT = {"x": 0, "y": 1, "z": 2}
+CUBE_SIZE = 9
+CUBE_MIDDLE = CUBE_SIZE // 2
+CUBE_USE = 3
+CUBE_USE_HALF = CUBE_USE // 2
+CUBE_LEN = 0.01
+
 MAIN_PATH = os.environ.get("DFT2CC_MAIN_PATH")
 if MAIN_PATH is None:
     MAIN_PATH = Path(__file__).parent.parent.parent
