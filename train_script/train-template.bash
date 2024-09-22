@@ -3,7 +3,7 @@
 #slurm options
 #SBATCH -n 2
 #SBATCH -p gpu
-#SBATCH --nodelist=gpu03
+#SBATCH --nodelist=gpu07
 #SBATCH -J train-ccdft-EVAL_STEP-BATCH_SIZE-WITH_EVAL
 #SBATCH -o log/%j.log
 
@@ -21,4 +21,5 @@ export PYSCF_MAX_MEMORY=80000
 export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
 export DATA_PATH=~/workdir/dft2cc/data/grids_dft/
 
-~/anaconda3/envs/pyscf/bin/python train.py -dl -0.5 0.5 11 -b cc-pVDZ --extend_atom 0 0-1 --extend_xyz 0 --eval_step EVAL_STEP --batch_size BATCH_SIZE --epoch 25000 --with_eval WITH_EVAL --precision float64 --load LOAD_MODEL
+# ~/anaconda3/envs/pyscf/bin/python train.py -dl -0.5 0.5 11 -b cc-pVDZ --extend_atom 0 0-1 --extend_xyz 0 --eval_step EVAL_STEP --batch_size BATCH_SIZE --epoch 25000 --with_eval WITH_EVAL --precision float64 --load LOAD_MODEL
+~/anaconda3/envs/pyscf/bin/python train.py -dl 0 0 1 -b cc-pVDZ --extend_atom 0 --extend_xyz 0 --eval_step EVAL_STEP --batch_size BATCH_SIZE --epoch 25000 --with_eval WITH_EVAL --precision float64 --load LOAD_MODEL
