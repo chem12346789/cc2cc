@@ -13,7 +13,7 @@ from dft2cc.utils import (
     AU2KCALMOL,
     CUBE_SIZE,
     CUBE_LEN,
-    ORIENTATION_NUMBER_DICT,
+    CUBE_MIDDLE,
 )
 
 
@@ -90,9 +90,9 @@ def cc(molecular, name, args):
         coords_cube = np.zeros((CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
         for i, j, k in product(range(CUBE_SIZE), repeat=3):
             coords_cube[i, j, k] = p_coords + [
-                (i - 1) * CUBE_LEN,
-                (j - 1) * CUBE_LEN,
-                (k - 1) * CUBE_LEN,
+                (i - CUBE_MIDDLE) * CUBE_LEN,
+                (j - CUBE_MIDDLE) * CUBE_LEN,
+                (k - CUBE_MIDDLE) * CUBE_LEN,
             ]
         coords_cube = coords_cube.reshape(-1, 3)
 
@@ -116,3 +116,61 @@ def cc(molecular, name, args):
         weights=grids.weights,
         error_energy=error_energy,
     )
+
+
+def cc_change_cube(molecular, name, args):
+    """
+    Modify cube data for the CCSD method.
+    """
+    file_path = DATA_PATH / f"data_{name}.npz"
+    if file_path.exists():
+        print(f"Data {name} already exists.")
+        
+        data = np.load(file_path)
+        e_cc = data["e_cc"]
+        dm1_cc = data["dm_cc"]
+        rho_cc = data["rho_inv_4_norm"]
+        exc_over_dm_cc_grids = data["exc_over_dm_cc_grids"]
+        error_energy = data["error_energy"]
+
+        mol = pyscf.M(
+            atom=molecular,
+            basis=gen_basis(
+                molecular,
+                args.basis,
+                args.if_basis_str,
+            ),
+            spin=0,
+        )
+        grids = Grid(mol, level=1, period=2)
+
+        rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        for p, p_coords in enumerate(grids.coords):
+            if p * 10 % len(grids.coords) == 0:
+                print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
+
+            coords_cube = np.zeros((CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
+            for i, j, k in product(range(CUBE_SIZE), repeat=3):
+                coords_cube[i, j, k] = p_coords + [
+                    (i - CUBE_MIDDLE) * CUBE_LEN,
+                    (j - CUBE_MIDDLE) * CUBE_LEN,
+                    (k - CUBE_MIDDLE) * CUBE_LEN,
+                ]
+            coords_cube = coords_cube.reshape(-1, 3)
+
+            ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
+            rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="GGA")
+            rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+
+        np.savez_compressed(
+            DATA_PATH / f"data_{name}.npz",
+            e_cc=e_cc,
+            dm_cc=dm1_cc,
+            rho_inv_4_norm=rho_cc,
+            rho_inv_4_norm_matrix=process_input(rho_cc, grids),
+            rho_cube=rho_cube,
+            exc_over_dm_cc_grids=exc_over_dm_cc_grids,
+            exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
+            weights=grids.weights,
+            error_energy=error_energy,
+        )

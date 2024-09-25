@@ -93,9 +93,9 @@ def get_inertia_moment(molecular):
 
 def rotate(molecular):
     """
-    Rotate the MOs to the canonical basis
+    Rotate the molecular to certain direction, center of mass is at the origin, and the (three) principal axis of charge is along the x, y, z axis.
     """
-    print("Rotate the MOs to the canonical basis")
+    print("Rotate the molecular to certain direction")
     print(f"before rotation {molecular}")
     # Get the barycenter
     barycenter = get_barycenter(molecular)

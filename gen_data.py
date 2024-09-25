@@ -5,7 +5,7 @@
 import argparse
 from itertools import product
 
-from dft2cc import add_args, extend, cc
+from dft2cc import add_args, extend, cc, cc_change_cube
 from dft2cc.utils import rotate
 
 
@@ -34,4 +34,5 @@ if __name__ == "__main__":
         if "open-shell" in name:
             continue
         else:
-            cc(molecular, name, args)
+            # cc(molecular, name, args)
+            cc_change_cube(molecular, name, args)

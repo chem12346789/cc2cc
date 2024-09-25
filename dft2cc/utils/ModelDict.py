@@ -10,13 +10,15 @@ import torch
 import torch.optim as optim
 
 
-from dft2cc.utils.env_var import CHECKPOINTS_PATH, CNN3D
+from dft2cc.utils.env_var import CHECKPOINTS_PATH, STRUCTURE, CUBE_USE_HALF, TEST
 from dft2cc.utils.DataBase import process_input
 from dft2cc.utils.mol import AU2KCALMOL, AU2DEBYE
 
-if CNN3D:
+if STRUCTURE == "cnn3d":
     from dft2cc.utils.model.cnn3d import Model
-else:
+elif STRUCTURE == "fc_3d":
+    from dft2cc.utils.model.fc_3d import Model
+elif STRUCTURE == "fc":
     from dft2cc.utils.model.fc_net import Model
 
 
@@ -68,7 +70,7 @@ class ModelDict:
         if precision == "float64":
             self.model.double()
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
 
         if self.with_eval:
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -80,12 +82,13 @@ class ModelDict:
         else:
             self.scheduler = optim.lr_scheduler.ExponentialLR(
                 self.optimizer,
-                gamma=1.0 - 1e-5,
+                gamma=1.0 - 1e-4,
             )
 
         self.loss_multiplier = 1.0
 
         self.loss_ene = torch.nn.L1Loss()
+        # self.loss_ene = torch.nn.MSELoss()
 
     def load_model(self):
         """
@@ -149,18 +152,30 @@ class ModelDict:
 
         loss_ene = self.loss_ene(output_mat, output_mat_real)
 
-        if CNN3D:
-            loss_ene_tot = torch.sum(
-                (output_mat[:, 0] - output_mat_real[:, 0])
-                * input_mat[:, 0, 1, 1, 1]
-                * weight[:, 0]
-            )
+        if "3d" in STRUCTURE:
+            if TEST:
+                loss_ene_tot = torch.sum(
+                    output_mat_real[:, 0]
+                    * input_mat[:, 0, CUBE_USE_HALF, CUBE_USE_HALF, CUBE_USE_HALF]
+                    * weight[:, 0]
+                )
+            else:
+                loss_ene_tot = torch.sum(
+                    (output_mat_real[:, 0] - output_mat[:, 0])
+                    * input_mat[:, 0, CUBE_USE_HALF, CUBE_USE_HALF, CUBE_USE_HALF]
+                    * weight[:, 0]
+                )
         else:
-            loss_ene_tot = torch.sum(
-                (output_mat_real[:, 0] - output_mat[:, 0])
-                * input_mat[:, 0]
-                * weight[:, 0]
-            )
+            if TEST:
+                loss_ene_tot = torch.sum(
+                    output_mat_real[:, 0] * input_mat[:, 0] * weight[:, 0]
+                )
+            else:
+                loss_ene_tot = torch.sum(
+                    (output_mat_real[:, 0] - output_mat[:, 0])
+                    * input_mat[:, 0]
+                    * weight[:, 0]
+                )
 
         return loss_ene, loss_ene_tot
 

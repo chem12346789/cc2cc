@@ -14,7 +14,10 @@ from dft2cc.utils.env_var import (
     DATA_SAVE_PATH,
     DATA_TEST_PATH,
     CUBE_SIZE,
+    CUBE_MIDDLE,
     CUBE_LEN,
+    CUBE_USE,
+    CUBE_USE_HALF,
     ORIENTATION_NUMBER_DICT,
 )
 from dft2cc.utils.Grids import Grid

@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from dft2cc.utils.env_var import DATA_PATH, CNN3D, CUBE_MIDDLE, CUBE_USE_HALF
+from dft2cc.utils.env_var import DATA_PATH, STRUCTURE, CUBE_MIDDLE, CUBE_USE_HALF
 
 
 def process_input(data, grids):
@@ -152,16 +152,16 @@ class DataBase:
                 for i_spin in range(2):
                     name_ = f"{name}_{i_spin}"
                     if not (Path(f"{DATA_PATH}") / f"data_{name_}.npz").exists():
-                        print(f"No file: {name_}:>40", flush=True)
+                        print(f"No file: {name_:>40}", flush=True)
                         continue
-                    print(f"Load: {name_}:>40", flush=True)
+                    print(f"Load: {name_:>40}", flush=True)
                     self.name_list.append(f"{name_}")
                     self.load_data(name_)
             else:
                 if not (Path(f"{DATA_PATH}") / f"data_{name}.npz").exists():
                     print(f"No file: {name:>40}", flush=True)
                     continue
-                print(f"Load: {name_}:>40", flush=True)
+                print(f"Load: {name:>40}", flush=True)
                 self.name_list.append(name)
                 self.load_data(name)
 
@@ -171,19 +171,20 @@ class DataBase:
         """
         data = np.load(Path(f"{DATA_PATH}") / f"data_{name}.npz")
 
-        if CNN3D:
+        if "3d" in STRUCTURE:
             input_mat = data["rho_cube"]
         else:
             input_mat = data["rho_inv_4_norm"]
         output_mat = data["exc_over_dm_cc_grids"]
         weights_mat = data["weights"]
+        print(data["error_energy"])
 
         input_ = {}
         weight_ = {}
         output_ = {}
 
         for i_coord in range(len(weights_mat)):
-            if CNN3D:
+            if "3d" in STRUCTURE:
                 input_[i_coord] = input_mat[
                     i_coord,
                     :,

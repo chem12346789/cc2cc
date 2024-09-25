@@ -1,4 +1,4 @@
-from dft2cc.cc import cc
+from dft2cc.cc import cc, cc_change_cube
 from dft2cc.train_model import train_model
 from dft2cc.test_rks import test_rks
 from dft2cc.test_uks import test_uks

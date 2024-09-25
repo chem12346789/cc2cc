@@ -48,27 +48,32 @@ for (
     eval_step,
     load_model,
     with_eval,
+    structure,
+    cube_use,
 ) in itertools.product(
-    [2**10],
-    [10],
+    [2**15],  # batch_size
+    [10],  # eval_step
+    ["New"],  # load_model
+    ["False"],  # with_eval
     [
-        "2024-09-15-19-36-22",
-    ],
-    [
-        "True",
-        # "False",
-    ],
+        # "cnn3d",
+        "fc_3d",
+        # "fc",
+    ],  # structure
+    [3],  # cube_use
 ):
     number_of_gpu = next(LIST_OF_GPU)
     cmd = f"""cp {template_bash} {work_bash}"""
-    cmd += "&&" + f"""sed -i "s/EVAL_STEP/{eval_step}/g" {work_bash}"""
-    cmd += "&&" + f"""sed -i "s/BATCH_SIZE/{batch_size}/g" {work_bash}"""
-    cmd += "&&" + f"""sed -i "s/WITH_EVAL/{with_eval}/g" {work_bash}"""
-    cmd += "&&" + f"""sed -i "s/LOAD_MODEL/{load_model}/g" {work_bash}"""
-    cmd += "&&" + f"""sed -i "s/NUMBER_OF_GPU/{number_of_gpu}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/BASH_EVAL_STEP/{eval_step}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/BASH_BATCH_SIZE/{batch_size}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/BASH_WITH_EVAL/{with_eval}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/BASH_LOAD_MODEL/{load_model}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/BASH_STRUCTURE/{structure}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/BASH_NUMBER_OF_GPU/{number_of_gpu}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/BASH_CUBE_USE/{cube_use}/g" {work_bash}"""
     cmd += (
         "&&"
-        + f"""mv {work_bash} {work_dir / f"train_{eval_step}_{batch_size}_{with_eval}_{load_model}.bash"}"""
+        + f"""mv {work_bash} {work_dir / f"train_{eval_step}_{batch_size}_{with_eval}_{load_model}_{structure}_{cube_use}.bash"}"""
     )
     with open(main_dir / "out_mkdir", "w", encoding="utf-8") as f:
         subprocess.call(cmd, shell=True, stdout=f)
@@ -79,10 +84,4 @@ for child in (work_dir).glob("*.bash"):
         with open(main_dir / "out_mkdir", "a", encoding="utf-8") as f:
             subprocess.call(cmd, shell=True, stdout=f)
 
-        # Best time for ai training is 6 seconds (according to the HuaWei)
-        # time.sleep(6)
-        # time.sleep(6)
-        # time.sleep(6)
-        # time.sleep(6)
-        # time.sleep(6)
-        # time.sleep(6)
+        time.sleep(6 * 6)
