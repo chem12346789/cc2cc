@@ -34,5 +34,6 @@ if __name__ == "__main__":
         if "open-shell" in name:
             continue
         else:
-            # cc(molecular, name, args)
-            cc_change_cube(molecular, name, args)
+            cc(molecular, name, args)
+            # cc_change_cube(molecular, name, args)
+            # cc_append(molecular, name, args)

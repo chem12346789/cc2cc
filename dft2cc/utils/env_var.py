@@ -24,7 +24,7 @@ if CUBE_USE is None:
     CUBE_USE = 3
 else:
     CUBE_USE = int(CUBE_USE)
-CUBE_USE_HALF = CUBE_USE // 2
+CUBE_USE_MIDDLE = CUBE_USE // 2
 
 MAIN_PATH = os.environ.get("DFT2CC_MAIN_PATH")
 if MAIN_PATH is None:

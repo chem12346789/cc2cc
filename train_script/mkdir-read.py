@@ -57,8 +57,9 @@ for (
     ["False"],  # with_eval
     [
         # "cnn3d",
-        "fc_3d",
+        # "fc_3d",
         # "fc",
+        "unet",
     ],  # structure
     [3],  # cube_use
 ):

@@ -5,7 +5,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from dft2cc.utils.env_var import DATA_PATH, STRUCTURE, CUBE_MIDDLE, CUBE_USE_HALF
+from dft2cc.utils.env_var import DATA_PATH, STRUCTURE, CUBE_MIDDLE, CUBE_USE_MIDDLE
+from dft2cc.utils.mol import AU2KCALMOL
 
 
 def process_input(data, grids):
@@ -170,39 +171,63 @@ class DataBase:
         Load the data.
         """
         data = np.load(Path(f"{DATA_PATH}") / f"data_{name}.npz")
+        print(AU2KCALMOL * data["error_energy"])
 
-        if "3d" in STRUCTURE:
-            input_mat = data["rho_cube"]
+        if "unet" in STRUCTURE:
+            input_mat = data["rho_inv_4_norm_matrix"]
+            output_mat = data["exc_over_dm_cc_grids_matrix"]
+            weights_mat = data["weights_matrix"]
+
+            input_ = {}
+            weight_ = {}
+            output_ = {}
+
+            for i_atom in range(output_mat.shape[0]):
+                input_[i_atom] = input_mat[[0], i_atom, :, :]
+                weight_[i_atom] = weights_mat[[i_atom], :, :]
+                output_[i_atom] = output_mat[[i_atom], :, :]
+
+            self.data_gpu[name] = BasicDataset(
+                {
+                    "input": input_,
+                    "output": output_,
+                    "weight": weight_,
+                },
+                self.batch_size,
+                self.dtype,
+            ).load_to_gpu()
         else:
-            input_mat = data["rho_inv_4_norm"]
-        output_mat = data["exc_over_dm_cc_grids"]
-        weights_mat = data["weights"]
-        print(data["error_energy"])
-
-        input_ = {}
-        weight_ = {}
-        output_ = {}
-
-        for i_coord in range(len(weights_mat)):
             if "3d" in STRUCTURE:
-                input_[i_coord] = input_mat[
-                    i_coord,
-                    :,
-                    CUBE_MIDDLE - CUBE_USE_HALF : CUBE_MIDDLE + CUBE_USE_HALF + 1,
-                    CUBE_MIDDLE - CUBE_USE_HALF : CUBE_MIDDLE + CUBE_USE_HALF + 1,
-                    CUBE_MIDDLE - CUBE_USE_HALF : CUBE_MIDDLE + CUBE_USE_HALF + 1,
-                ]
+                input_mat = data["rho_cube"]
             else:
-                input_[i_coord] = input_mat[:, i_coord]
-            weight_[i_coord] = weights_mat[[i_coord]]
-            output_[i_coord] = output_mat[[i_coord]]
+                input_mat = data["rho_inv_4_norm"]
+            output_mat = data["exc_over_dm_cc_grids"]
+            weights_mat = data["weights"]
 
-        self.data_gpu[name] = BasicDataset(
-            {
-                "input": input_,
-                "weight": weight_,
-                "output": output_,
-            },
-            self.batch_size,
-            self.dtype,
-        ).load_to_gpu()
+            input_ = {}
+            weight_ = {}
+            output_ = {}
+
+            for i_coord in range(len(weights_mat)):
+                if "3d" in STRUCTURE:
+                    input_[i_coord] = input_mat[
+                        i_coord,
+                        :,
+                        CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+                        CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+                        CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+                    ]
+                else:
+                    input_[i_coord] = input_mat[:, i_coord]
+                weight_[i_coord] = weights_mat[[i_coord]]
+                output_[i_coord] = output_mat[[i_coord]]
+
+            self.data_gpu[name] = BasicDataset(
+                {
+                    "input": input_,
+                    "weight": weight_,
+                    "output": output_,
+                },
+                self.batch_size,
+                self.dtype,
+            ).load_to_gpu()

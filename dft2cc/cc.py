@@ -109,11 +109,12 @@ def cc(molecular, name, args):
         e_cc=e_cc,
         dm_cc=dm1_cc,
         rho_inv_4_norm=rho_cc,
-        rho_inv_4_norm_matrix=process_input(rho_cc, grids),
         rho_cube=rho_cube,
         exc_over_dm_cc_grids=exc_over_dm_cc_grids,
-        exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
         weights=grids.weights,
+        rho_inv_4_norm_matrix=process_input(rho_cc, grids),
+        exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
+        weights_matrix=grids.vector_to_matrix(grids.weights),
         error_energy=error_energy,
     )
 
@@ -125,7 +126,7 @@ def cc_change_cube(molecular, name, args):
     file_path = DATA_PATH / f"data_{name}.npz"
     if file_path.exists():
         print(f"Data {name} already exists.")
-        
+
         data = np.load(file_path)
         e_cc = data["e_cc"]
         dm1_cc = data["dm_cc"]
@@ -170,7 +171,8 @@ def cc_change_cube(molecular, name, args):
             rho_inv_4_norm_matrix=process_input(rho_cc, grids),
             rho_cube=rho_cube,
             exc_over_dm_cc_grids=exc_over_dm_cc_grids,
+            error_energy=error_energy,
             exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
             weights=grids.weights,
-            error_energy=error_energy,
+            weights_matrix=grids.vector_to_matrix(grids.weights),
         )

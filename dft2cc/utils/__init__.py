@@ -17,7 +17,7 @@ from dft2cc.utils.env_var import (
     CUBE_MIDDLE,
     CUBE_LEN,
     CUBE_USE,
-    CUBE_USE_HALF,
+    CUBE_USE_MIDDLE,
     ORIENTATION_NUMBER_DICT,
 )
 from dft2cc.utils.Grids import Grid

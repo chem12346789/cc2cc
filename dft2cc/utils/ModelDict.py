@@ -8,11 +8,12 @@ import datetime
 import numpy as np
 import torch
 import torch.optim as optim
+import pyscf
 
-
-from dft2cc.utils.env_var import CHECKPOINTS_PATH, STRUCTURE, CUBE_USE_HALF, TEST
-from dft2cc.utils.DataBase import process_input
+from dft2cc.utils.env_var import CHECKPOINTS_PATH, STRUCTURE, CUBE_USE_MIDDLE, TEST
 from dft2cc.utils.mol import AU2KCALMOL, AU2DEBYE
+from dft2cc.utils.get_input import get_input_mat
+from dft2cc.utils.Grids import Grid
 
 if STRUCTURE == "cnn3d":
     from dft2cc.utils.model.cnn3d import Model
@@ -20,6 +21,8 @@ elif STRUCTURE == "fc_3d":
     from dft2cc.utils.model.fc_3d import Model
 elif STRUCTURE == "fc":
     from dft2cc.utils.model.fc_net import Model
+elif STRUCTURE == "unet":
+    from dft2cc.utils.model.unet import Model
 
 
 class ModelDict:
@@ -65,12 +68,12 @@ class ModelDict:
         self.optimizer_dict = {}
         self.scheduler_dict = {}
 
-        self.model = Model().to(device)
+        self.model: torch.nn.Module = Model().to(device)
 
         if precision == "float64":
             self.model.double()
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
 
         if self.with_eval:
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -156,14 +159,23 @@ class ModelDict:
             if TEST:
                 loss_ene_tot = torch.sum(
                     output_mat_real[:, 0]
-                    * input_mat[:, 0, CUBE_USE_HALF, CUBE_USE_HALF, CUBE_USE_HALF]
+                    * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
                     * weight[:, 0]
                 )
             else:
                 loss_ene_tot = torch.sum(
                     (output_mat_real[:, 0] - output_mat[:, 0])
-                    * input_mat[:, 0, CUBE_USE_HALF, CUBE_USE_HALF, CUBE_USE_HALF]
+                    * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
                     * weight[:, 0]
+                )
+        elif "unet" in STRUCTURE:
+            if TEST:
+                loss_ene_tot = torch.sum(
+                    output_mat_real * input_mat[:, [0], :, :] * weight
+                )
+            else:
+                loss_ene_tot = torch.sum(
+                    (output_mat_real - output_mat) * input_mat[:, [0], :, :] * weight
                 )
         else:
             if TEST:
@@ -243,21 +255,40 @@ class ModelDict:
 
         return np.array(loss_ene_l), np.array(loss_ene_tot_l)
 
-    def get_val(self, scf_r_3, grids):
+    def get_energy(
+        self,
+        dft: pyscf.dft.rks.RKS,
+        grids: Grid,
+        dms: np.ndarray = None,
+    ):
         """
-        Obtain the potential.
-        Input: [rho, nabla rho] (4, ngrids),
+        Obtain the energy density.
+        Input: dft instance and grids instance.
         Output: the potential (ngrids).
         """
-        input_mat = process_input(scf_r_3, grids)
-        input_mat = np.transpose(input_mat[[0], :, :, :], (1, 0, 2, 3))
+        if dms is None:
+            dms = dft.make_rdm1()
+
+        input_mat = get_input_mat(dft, grids, dms)
         input_mat = torch.tensor(input_mat, dtype=self.dtype).to("cuda")
+        output_mat = self.model(input_mat)
+        output_mat = output_mat.cpu().detach().numpy()
+        input_mat = input_mat.cpu().detach().numpy()
 
-        with torch.no_grad():
-            output_mat = self.model(input_mat)
+        if "3d" in STRUCTURE:
+            correct_ene = np.sum(
+                (output_mat[:, 0])
+                * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
+                * grids.weight[:, 0]
+            )
+        elif "unet" in STRUCTURE:
+            correct_ene = np.sum(
+                grids.matrix_to_vector(output_mat[:, 0, :, :] * input_mat[:, 0, :, :])
+                * grids.weights
+            )
+        else:
+            correct_ene = np.sum(
+                (output_mat[:, 0]) * input_mat[:, 0] * grids.weights[:, 0]
+            )
 
-        correct_ene = torch.sum(output_mat[:, 0]).detach().cpu().numpy()
-        correct_dipole = torch.sum(output_mat[:, 1:4], axis=0).detach().cpu().numpy()
-        loss_force = output_mat[:, 4:7].detach().cpu().numpy()
-
-        return correct_ene, correct_dipole, loss_force
+        return correct_ene

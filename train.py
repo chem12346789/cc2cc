@@ -9,10 +9,6 @@ TRAIN_STR_DICT = [
     "cyclopropane",
     "allene",
     "propyne",
-    "bicyclobutane",
-    # "methyl-openshell",
-]
-EVAL_STR_DICT = [
     "propane",
     "propylene",
     "isobutane",
@@ -20,13 +16,18 @@ EVAL_STR_DICT = [
     "butane",
     "butyne",
     "butadiene",
+    "bicyclobutane",
     "cyclopropylmethyl",
     "cyclopentane",
     "spiropentane",
     "benzene",
     "neopentane",
     "isopentane",
+    # "methyl-openshell",
+]
+EVAL_STR_DICT = [
     "pentane",
+    "hexane",
 ]
 
 if __name__ == "__main__":
