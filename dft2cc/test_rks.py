@@ -44,6 +44,7 @@ class TEST_DATA:
         """
         Generate 1-RDM.
         """
+        # if False:
         if (DATA_TEST_PATH / f"data_{self.name}.npz").exists():
             print(f"Load data from {DATA_TEST_PATH}/data_{self.name}.npz")
             data_saved = np.load(f"{DATA_TEST_PATH}/data_{self.name}.npz")
@@ -123,11 +124,12 @@ def test_rks(
 
     grids = Grid(test_data.mol, level=1, period=2)
     mdft = pyscf.dft.RKS(test_data.mol)
+    mdft.xc = "b3lyp"
     correct_ene = modeldict.get_energy(mdft, grids, test_data.dm1_cc)
     correct_ene += mdft.energy_tot(test_data.dm1_cc)
 
     error_ene = test_data.e_cc - test_data.e_dft
-    df_dict["error_scf_ene"].append(AU2KCALMOL * (correct_ene - test_data.e_dft))
+    df_dict["error_scf_ene"].append(AU2KCALMOL * (test_data.e_cc - correct_ene))
     df_dict["error_dft_ene"].append(AU2KCALMOL * error_ene)
     df_dict["abs_cc_ene"].append(AU2KCALMOL * test_data.e_cc)
 
