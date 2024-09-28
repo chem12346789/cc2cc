@@ -41,13 +41,31 @@ work_dir = main_dir / ("bash_submitted" + time_stamp)
 work_dir.mkdir()
 work_bash = work_dir / "validate-template.bash"
 
+gpu_node_pool = itertools.cycle(
+    [
+        "gpu03",
+        "gpu03",
+        "gpu05",
+        "gpu05",
+        "gpu06",
+        "gpu06",
+        "gpu06",
+        "gpu06",
+        "gpu06",
+        "gpu07",
+        "gpu07",
+    ]
+)
+
+
 for (
     checkpoint_hidden_size,
     structure,
     cube_use,
+    (range_list, extend_atom),
 ) in itertools.product(
     [
-        "checkpoint-ccdft_2024-09-26-10-31-16",
+        "checkpoint-ccdft_2024-09-27-14-27-34",
     ],  # checkpoint_hidden_size
     [
         # "cnn3d",
@@ -56,18 +74,51 @@ for (
         "unet",
     ],  # structure
     [3],  # cube_use
+    [
+        ((0, 0, 1), "0"),
+        ((-0.2, -0.2, 1), "0-1"),
+        ((-0.1, -0.1, 1), "0-1"),
+        ((0.1, 0.1, 1), "0-1"),
+        ((0.2, 0.2, 1), "0-1"),
+        ((0.3, 0.3, 1), "0-1"),
+        ((-0.3, -0.3, 1), "0-1"),
+        ((0.4, 0.4, 1), "0-1"),
+        ((-0.4, -0.4, 1), "0-1"),
+        ((0.5, 0.5, 1), "0-1"),
+        ((-0.5, -0.5, 1), "0-1"),
+    ],
 ):
     (_, checkpoint) = checkpoint_hidden_size.split("_")
     print(checkpoint)
     cmd = f"""cp {template_bash} {work_bash}"""
+    gpu_node = next(gpu_node_pool)
+    cmd += "&&" + f"""sed -i "s/BASH_GPU_NODE/{gpu_node}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/BASH_CUBE_USE/{cube_use}/g" {work_bash}"""
     cmd += "&&" + f"""sed -i "s/CHECKPOINT/{checkpoint}/g" {work_bash}"""
     cmd += "&&" + f"""sed -i "s/BASH_STRUCTURE/{structure}/g" {work_bash}"""
-    cmd += "&&" + f"""sed -i "s/BASH_CUBE_USE/{cube_use}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/EXTEND_ATOM/{extend_atom}/g" {work_bash}"""
 
-    cmd += (
-        "&&"
-        + f"""mv {work_bash} {work_dir / f"validate_{checkpoint_hidden_size}.bash"}"""
-    )
+    if isinstance(range_list, float):
+        start = range_list
+        cmd += "&&" + f"""sed -i "s/START/{start}/g" {work_bash}"""
+        cmd += "&&" + f"""sed -i "s/END//g" {work_bash}"""
+        cmd += "&&" + f"""sed -i "s/STEP//g" {work_bash}"""
+        cmd += (
+            "&&"
+            + f"""mv {work_bash} {work_dir / f"validate_{checkpoint_hidden_size}_{start}.bash"}"""
+        )
+    elif isinstance(range_list, tuple):
+        start = range_list[0]
+        end = range_list[1]
+        step = range_list[2]
+        cmd += "&&" + f"""sed -i "s/START/{start}/g" {work_bash}"""
+        cmd += "&&" + f"""sed -i "s/END/{end}/g" {work_bash}"""
+        cmd += "&&" + f"""sed -i "s/STEP/{step}/g" {work_bash}"""
+        cmd += (
+            "&&"
+            + f"""mv {work_bash} {work_dir / f"validate_{checkpoint_hidden_size}_{start}_{end}_{step}.bash"}"""
+        )
+
     with open(main_dir / "out_mkdir", "w", encoding="utf-8") as f:
         subprocess.call(cmd, shell=True, stdout=f)
 

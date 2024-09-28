@@ -104,6 +104,7 @@ def test_uks(
     name,
     modeldict,
     df_dict: dict,
+    df_dict_path: Path,
 ):
     """
     Test the model. Restrict Khon-Sham (no spin).
@@ -142,9 +143,4 @@ def test_uks(
     df_dict["force_diff_dft"].append(AU2KCALMOL * np.linalg.norm(error_force))
 
     df = pd.DataFrame(df_dict)
-    df.to_csv(
-        Path(
-            f"{MAIN_PATH}/validate/ccdft_{args.load}_{args.hidden_size}_{args.num_layers}_{args.residual}"
-        ),
-        index=False,
-    )
+    df.to_csv(df_dict_path, index=False)

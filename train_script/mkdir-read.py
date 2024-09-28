@@ -54,7 +54,10 @@ for (
     [2**15],  # batch_size
     [10],  # eval_step
     ["New"],  # load_model
-    ["False"],  # with_eval
+    [
+        # "False",
+        "True",
+    ],  # with_eval
     [
         # "cnn3d",
         # "fc_3d",

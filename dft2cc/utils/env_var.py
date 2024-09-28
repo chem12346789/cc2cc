@@ -26,6 +26,12 @@ else:
     CUBE_USE = int(CUBE_USE)
 CUBE_USE_MIDDLE = CUBE_USE // 2
 
+GENERATE_NEW = os.environ.get("DFT2CC_GENERATE_NEW")
+if GENERATE_NEW is None:
+    GENERATE_NEW = False
+else:
+    GENERATE_NEW = GENERATE_NEW.lower() == "true"
+
 MAIN_PATH = os.environ.get("DFT2CC_MAIN_PATH")
 if MAIN_PATH is None:
     MAIN_PATH = Path(__file__).parent.parent.parent
@@ -49,6 +55,12 @@ if DATA_TEST_PATH is None:
     DATA_TEST_PATH = MAIN_PATH / "data" / "test"
 else:
     DATA_TEST_PATH = Path(DATA_TEST_PATH)
+
+DATA_SCF_PATH = os.environ.get("DFT2CC_DATA_SCF_PATH")
+if DATA_SCF_PATH is None:
+    DATA_SCF_PATH = MAIN_PATH / "data" / "grids_scf"
+else:
+    DATA_SCF_PATH = Path(DATA_SCF_PATH)
 
 CHECKPOINTS_PATH = os.environ.get("DFT2CC_CHECKPOINTS_PATH")
 if CHECKPOINTS_PATH is None:

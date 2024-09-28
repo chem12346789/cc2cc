@@ -271,7 +271,8 @@ class ModelDict:
 
         input_mat = get_input_mat(dft, grids, dms)
         input_mat = torch.tensor(input_mat, dtype=self.dtype).to("cuda")
-        output_mat = self.model(input_mat)
+        with torch.no_grad():
+            output_mat = self.model(input_mat)
         output_mat = output_mat.cpu().detach().numpy()
         input_mat = input_mat.cpu().detach().numpy()
 
@@ -292,3 +293,42 @@ class ModelDict:
             )
 
         return correct_ene
+
+    def get_v(
+        self,
+        dft: pyscf.dft.rks.RKS,
+        grids: Grid,
+        dms: np.ndarray = None,
+    ):
+        """
+        Obtain the energy density.
+        Input: dft instance and grids instance.
+        Output: the potential (ngrids).
+        """
+        if dms is None:
+            dms = dft.make_rdm1()
+
+        input_mat = get_input_mat(dft, grids, dms)
+        input_mat = torch.tensor(input_mat, dtype=self.dtype).to("cuda")
+        with torch.no_grad():
+            output_mat = self.model(input_mat)
+
+        if "3d" in STRUCTURE:
+            raise NotImplementedError
+        elif "unet" in STRUCTURE:
+            input_mat = input_mat.requires_grad_(True)
+            middle_mat = (
+                torch.autograd.grad(
+                    torch.sum(input_mat[:, [0], :, :] * output_mat),
+                    input_mat,
+                    create_graph=True,
+                )[0]
+                .detach()
+                .cpu()
+                .numpy()
+            )
+            vxc = grids.matrix_to_vector(middle_mat[:, 0, :, :])
+        else:
+            raise NotImplementedError
+
+        return vxc

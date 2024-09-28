@@ -27,7 +27,7 @@ TRAIN_STR_DICT = [
 ]
 EVAL_STR_DICT = [
     "pentane",
-    "hexane",
+    # "hexane",
 ]
 
 if __name__ == "__main__":

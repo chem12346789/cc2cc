@@ -14,8 +14,16 @@ class Model(nn.Module):
         self.input_size = 1
         self.hidden_size = 64
         self.output_size = 1
-        self.num_layers = 4
+        self.num_layers = 3
         self.residual = -1
+
+        print(
+            f"Model: UNet, residual: {self.residual}"
+            f"num_layers: {self.num_layers}"
+            f"hidden_size: {self.hidden_size}"
+            f"input_size: {self.input_size}"
+            f"output_size: {self.output_size}"
+        )
 
         if self.residual == -1:
             norm_layer = "NoNorm2d"

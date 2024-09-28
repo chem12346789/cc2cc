@@ -5,13 +5,15 @@ Other parameter are from the argparse.
 
 import argparse
 from itertools import product
+from pathlib import Path
+import datetime
 
 import torch
+import numpy as np
 
 from dft2cc import add_args, extend
 from dft2cc import test_rks, test_uks
-
-from dft2cc.utils import ModelDict
+from dft2cc.utils import ModelDict, MAIN_PATH
 
 # from cadft.utils.ModelDict_xy import ModelDict
 # from cadft.utils import ModelDict_xy1 as ModelDict
@@ -43,6 +45,8 @@ if __name__ == "__main__":
         "error_scf_ene": [],
         "error_dft_ene": [],
         "abs_cc_ene": [],
+        "density_diff_scf": [],
+        "density_diff_dft": [],
         "dipole_diff_scf": [],
         "dipole_diff_dft": [],
         "force_diff_scf": [],
@@ -69,7 +73,11 @@ if __name__ == "__main__":
             print(f"Skip: {name:>40}")
             continue
 
+        df_dict_path = Path(
+            f"{MAIN_PATH}/validate/ccdft_{args.load}_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}_{np.random.randint(10000)}.csv"
+        )
+
         if "openshell" in name_mol:
-            test_uks(args, molecular, name, modeldict, df_dict)
+            test_uks(args, molecular, name, modeldict, df_dict, df_dict_path)
         else:
-            test_rks(args, molecular, name, modeldict, df_dict)
+            test_rks(args, molecular, name, modeldict, df_dict, df_dict_path)

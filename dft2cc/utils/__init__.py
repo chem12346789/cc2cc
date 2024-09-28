@@ -11,6 +11,8 @@ from dft2cc.utils.mol import (
 from dft2cc.utils.env_var import (
     MAIN_PATH,
     DATA_PATH,
+    GENERATE_NEW,
+    DATA_SCF_PATH,
     DATA_SAVE_PATH,
     DATA_TEST_PATH,
     CUBE_SIZE,
