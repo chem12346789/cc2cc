@@ -96,15 +96,10 @@ input_mat = np.array(input_mat)
 output_mat = np.array(output_mat)
 weights_mat = np.array(weights_mat)
 
-index_laarge = np.sum(np.abs(input_mat), axis=1) > 1e-5
-input_mat = input_mat[index_laarge]
-output_mat = output_mat[index_laarge]
-weights_mat = weights_mat[index_laarge]
-
 print("input_mat.shape:", input_mat.shape, flush=True)
 
 x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
-    input_mat, output_mat, weights_mat, train_size=0.995
+    input_mat, output_mat, weights_mat, train_size=0.005
 )
 # x_train = input_mat
 # y_train = output_mat
@@ -114,10 +109,13 @@ krr.fit(x_train, y_train)
 autokcalmol = 627.509
 
 print("Krr perdict:")
-print(autokcalmol * np.sum((y_train - krr.predict(x_train)) * w_train * x_train[:, 0]))
+print(
+    autokcalmol
+    * np.sum((output_mat - krr.predict(input_mat)) * weights_mat * input_mat[:, 0])
+)
 
 print("B3lyp perdict:")
-print(autokcalmol * np.sum(y_train * w_train * x_train[:, 0]), flush=True)
+print(autokcalmol * np.sum(output_mat * weights_mat * input_mat[:, 0]), flush=True)
 
 
 input_mat = []
