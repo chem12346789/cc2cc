@@ -101,9 +101,6 @@ print("input_mat.shape:", input_mat.shape, flush=True)
 x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
     input_mat, output_mat, weights_mat, train_size=0.005
 )
-# x_train = input_mat
-# y_train = output_mat
-# w_train = weights_mat
 
 krr.fit(x_train, y_train)
 autokcalmol = 627.509
