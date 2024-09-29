@@ -47,8 +47,8 @@ for (
     gamma,
     alpha,
 ) in itertools.product(
-    10 ** np.linspace(-1, 3, 5)[::-1],  # gamma
-    [0.01, 0.1, 1],  # alpha
+    100,  # gamma
+    [0.001],  # alpha
 ):
     cmd = f"""cp {template_bash} {work_bash}"""
     cmd += "&&" + f"""sed -i 's/BASH_GAMMA/{gamma}/g' {work_bash}"""
