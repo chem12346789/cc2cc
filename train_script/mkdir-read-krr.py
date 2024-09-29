@@ -21,7 +21,6 @@ def clean_dir(pth):
 
 
 main_dir = Path(__file__).resolve().parents[0]
-template_bash = main_dir / "train-template.bash"
 time_stamp = time.strftime("%Y%m%d%H%M%S", time.localtime())
 
 critical_time = arrow.now().shift(hours=-72)
@@ -39,15 +38,16 @@ if (main_dir / "out_mkdir").exists():
     (main_dir / "out_mkdir").unlink()
 (main_dir / "out_mkdir").touch()
 
+template_bash = main_dir / "train-template-krr.bash"
 work_dir = main_dir / ("bash_submitted" + time_stamp)
 work_dir.mkdir()
-work_bash = work_dir / "train-krr-template.bash"
+work_bash = work_dir / "train-template-krr.bash"
 
 for (
     gamma,
     alpha,
 ) in itertools.product(
-    10 ** np.linspace(-1, 3, 5),  # gamma
+    10 ** np.linspace(-1, 3, 5)[::-1],  # gamma
     [0.01, 0.1, 1],  # alpha
 ):
     cmd = f"""cp {template_bash} {work_bash}"""
@@ -63,4 +63,4 @@ for child in (work_dir).glob("*.bash"):
         with open(main_dir / "out_mkdir", "a", encoding="utf-8") as f:
             subprocess.call(cmd, shell=True, stdout=f)
 
-        time.sleep(6 * 6)
+        time.sleep(1)
