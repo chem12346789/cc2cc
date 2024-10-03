@@ -153,7 +153,7 @@ def test_rks(
         correct_ene = modeldict.get_energy(ks, grids, dm)
         exc += correct_ene
 
-        vxc_scf = modeldict.get_v(mdft, grids, dm)
+        vxc_scf = modeldict.get_v(ks, grids, dm)
         vxc += pyscf.dft.numint.eval_mat(
             test_data.mol, ao_0, grids.weights, vxc_scf, vxc_scf
         )

@@ -14,6 +14,7 @@ submit*
 out
 *.sh
 *.egg-info/
+*.npz
 
 PlotNeuralNet/
 gen_data_script/gen_data_template_direct.bash
