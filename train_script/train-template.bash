@@ -19,7 +19,7 @@ export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=c
 export PYTHONPATH=~/python:$PYTHONPATH
 export PYSCF_MAX_MEMORY=80000
 export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
-export DFT2CC_DATA_PATH=~/workdir/dft2cc/data/grids_dft_3_0.005/
+export DFT2CC_DATA_PATH=~/workdir/dft2cc/data/grids_scf/
 export DFT2CC_STRUCTURE=BASH_STRUCTURE
 export DFT2CC_CUBE_USE=BASH_CUBE_USE
 # export DFT2CC_TEST=True
