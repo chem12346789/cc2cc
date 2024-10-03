@@ -43,17 +43,22 @@ work_bash = work_dir / "validate-template.bash"
 
 gpu_node_pool = itertools.cycle(
     [
-        "gpu03",
-        "gpu03",
+        # "gpu03",
+        # "gpu03",
+        # "gpu07",
+        # "gpu07",
+        "gpu04",
+        "gpu04",
+        "gpu04",
+        "gpu04",
+        "gpu05",
+        "gpu05",
         "gpu05",
         "gpu05",
         "gpu06",
         "gpu06",
         "gpu06",
         "gpu06",
-        "gpu06",
-        "gpu07",
-        "gpu07",
     ]
 )
 
@@ -65,7 +70,8 @@ for (
     (range_list, extend_atom),
 ) in itertools.product(
     [
-        "checkpoint-ccdft_2024-09-27-14-27-34",
+        # "checkpoint-ccdft_2024-09-27-14-27-34",
+        "checkpoint-ccdft_2024-09-29-18-16-08",
     ],  # checkpoint_hidden_size
     [
         # "cnn3d",
@@ -75,17 +81,17 @@ for (
     ],  # structure
     [3],  # cube_use
     [
-        ((0, 0, 1), "0"),
+        ((-0.5, -0.5, 1), "0-1"),
+        ((-0.4, -0.4, 1), "0-1"),
+        ((-0.3, -0.3, 1), "0-1"),
         ((-0.2, -0.2, 1), "0-1"),
         ((-0.1, -0.1, 1), "0-1"),
+        ((0, 0, 1), "0"),
         ((0.1, 0.1, 1), "0-1"),
         ((0.2, 0.2, 1), "0-1"),
         ((0.3, 0.3, 1), "0-1"),
-        ((-0.3, -0.3, 1), "0-1"),
         ((0.4, 0.4, 1), "0-1"),
-        ((-0.4, -0.4, 1), "0-1"),
         ((0.5, 0.5, 1), "0-1"),
-        ((-0.5, -0.5, 1), "0-1"),
     ],
 ):
     (_, checkpoint) = checkpoint_hidden_size.split("_")
@@ -100,6 +106,7 @@ for (
 
     if isinstance(range_list, float):
         start = range_list
+        cmd += "&&" + f"""sed -i "s/BASH_VALIDATE_NAME/{start}/g" {work_bash}"""
         cmd += "&&" + f"""sed -i "s/START/{start}/g" {work_bash}"""
         cmd += "&&" + f"""sed -i "s/END//g" {work_bash}"""
         cmd += "&&" + f"""sed -i "s/STEP//g" {work_bash}"""
@@ -111,6 +118,7 @@ for (
         start = range_list[0]
         end = range_list[1]
         step = range_list[2]
+        cmd += "&&" + f"""sed -i "s/BASH_VALIDATE_NAME/{start}/g" {work_bash}"""
         cmd += "&&" + f"""sed -i "s/START/{start}/g" {work_bash}"""
         cmd += "&&" + f"""sed -i "s/END/{end}/g" {work_bash}"""
         cmd += "&&" + f"""sed -i "s/STEP/{step}/g" {work_bash}"""

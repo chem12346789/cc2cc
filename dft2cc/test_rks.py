@@ -125,24 +125,6 @@ def test_rks(
     """
     Test the model. Restrict Khon-Sham (no spin).
     """
-
-    if GENERATE_NEW:
-        if not (DATA_SCF_PATH / f"data_{name}.npz").exists():
-            if (DATA_PATH / f"data_{name}.npz").exists():
-                data_load = np.load(DATA_PATH / f"data_{name}.npz")
-                np.savez_compressed(
-                    DATA_SCF_PATH / f"data_{name}.npz",
-                    dm1_last=data_load["dm_cc"],
-                    rho_inv_4_norm_matrix=data_load["rho_inv_4_norm_matrix"],
-                    exc_over_dm_cc_grids_matrix=data_load[
-                        "exc_over_dm_cc_grids_matrix"
-                    ],
-                    weights_matrix=data_load["weights_matrix"],
-                    error_energy=data_load["error_energy"],
-                )
-            print(f"Skip: {name:>40}")
-            return
-
     # 2.0 Prepare
     test_data = TEST_DATA(
         molecular,
@@ -283,9 +265,9 @@ def test_rks(
     df.to_csv(df_dict_path, index=False)
 
     if GENERATE_NEW:
-        if (DATA_SCF_PATH / f"data_{name}.npz").exists():
-            data_load = np.load(DATA_SCF_PATH / f"data_{name}.npz")
-            dm1_last = data_load["dm1_last"]
+        if (DATA_PATH / f"data_{name}.npz").exists():
+            data_load = np.load(DATA_PATH / f"data_{name}.npz")
+            dm1_last = data_load["dm_cc"]
             exc_cc_grids = grids.matrix_to_vector(
                 data_load["exc_over_dm_cc_grids_matrix"]
                 * data_load["rho_inv_4_norm_matrix"][0, :, :, :]
@@ -407,3 +389,5 @@ def test_rks(
                 weights_matrix=grids.vector_to_matrix(grids.weights),
                 error_energy=test_data.e_cc - mdft.e_tot,
             )
+        else:
+            print(f"Skip: {name:>40}")

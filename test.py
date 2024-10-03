@@ -7,6 +7,7 @@ import argparse
 from itertools import product
 from pathlib import Path
 import datetime
+import os
 
 import torch
 import numpy as np
@@ -14,6 +15,7 @@ import numpy as np
 from dft2cc import add_args, extend
 from dft2cc import test_rks, test_uks
 from dft2cc.utils import ModelDict, MAIN_PATH
+
 
 # from cadft.utils.ModelDict_xy import ModelDict
 # from cadft.utils import ModelDict_xy1 as ModelDict
@@ -55,6 +57,10 @@ if __name__ == "__main__":
 
     name_mol_now = args.name_mol[0]
 
+    df_dict_path = Path(
+        f"{MAIN_PATH}/validate/ccdft_{args.load}_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}_{np.random.randint(10000) if os.environ.get("DFT2CC_VALIDATE_NAME") is None else os.environ.get("DFT2CC_VALIDATE_NAME")}.csv"
+    )
+
     for (
         name_mol,
         extend_atom,
@@ -72,10 +78,6 @@ if __name__ == "__main__":
         if molecular is None:
             print(f"Skip: {name:>40}")
             continue
-
-        df_dict_path = Path(
-            f"{MAIN_PATH}/validate/ccdft_{args.load}_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}_{np.random.randint(10000)}.csv"
-        )
 
         if "openshell" in name_mol:
             test_uks(args, molecular, name, modeldict, df_dict, df_dict_path)

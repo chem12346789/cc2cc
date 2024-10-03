@@ -47,7 +47,7 @@ for (
     gamma,
     alpha,
 ) in itertools.product(
-    100,  # gamma
+    [100],  # gamma
     [0.001],  # alpha
 ):
     cmd = f"""cp {template_bash} {work_bash}"""
