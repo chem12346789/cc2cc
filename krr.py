@@ -3,6 +3,9 @@ import argparse
 from itertools import product
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import time
+
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
@@ -75,21 +78,16 @@ def evaluate(
         "train",
         AUTOKCALMOL
         * np.sum((y_train - krr.predict(x_train)) * w_train * x_train[:, 0]),
+        "KCAL/MOL",
         flush=True,
     )
     for key in keys_list:
-        print(
-            key,
-            "test",
-            AUTOKCALMOL
-            * np.sum(
-                (output_dict[key] - krr.predict(input_dict[key]))
-                * weights_dict[key]
-                * input_dict[key][:, 0]
-            ),
-            "KCAL/MOL",
-            flush=True,
+        error_krr = AUTOKCALMOL * np.sum(
+            (output_dict[key] - krr.predict(input_dict[key]))
+            * weights_dict[key]
+            * input_dict[key][:, 0]
         )
+        print(f"{key} test, {error_krr} KCAL/MOL", flush=True)
     print("B3lyp perdict:")
     print(
         "train",
@@ -106,6 +104,8 @@ def evaluate(
             "KCAL/MOL",
             flush=True,
         )
+    print("End of evaluate.\n", flush=True)
+    return np.abs(error_krr)
 
 
 def add_data(
@@ -116,37 +116,38 @@ def add_data(
     x_test,
     y_test,
     w_test,
-    input_dict,
-    output_dict,
-    weights_dict,
-    keys_list,
-    training_set,
 ):
     """
     Add data which has large error.
     """
+    print("Add data:", flush=True)
     error_train = y_train - krr.predict(x_train)
     benchmark_error = np.mean(error_train**2)
     print("error_train:", benchmark_error, flush=True)
-    print("keys_list:", keys_list, flush=True)
-    for key in keys_list:
-        if training_set == 0:
-            error_test = y_test - krr.predict(x_test)
-            print("error_test:", np.mean(error_test**2), flush=True)
-            index_add = error_test**2 > benchmark_error * 2
-            print("length of index_add:", np.sum(index_add), flush=True)
-            x_train = np.concatenate([x_train, x_test[index_add]])
-            y_train = np.concatenate([y_train, y_test[index_add]])
-            w_train = np.concatenate([w_train, w_test[index_add]])
-        else:
-            error_test = output_dict[key] - krr.predict(input_dict[key])
-            print(key, "error_test:", np.mean(error_test**2), flush=True)
-            index_add = error_test**2 > benchmark_error * 2
-            print("length of index_add:", np.sum(index_add), flush=True)
-            x_train = np.concatenate([x_train, input_dict[key][index_add]])
-            y_train = np.concatenate([y_train, output_dict[key][index_add]])
-            w_train = np.concatenate([w_train, weights_dict[key][index_add]])
-    return x_train, y_train, w_train
+
+    error_test = y_test - krr.predict(x_test)
+    print("error_test:", np.mean(error_test**2), flush=True)
+    index_add = error_test**2 > np.sort(error_test**2, axis=0)[-51]
+    print(index_add)
+    print((error_test**2)[index_add])
+    print("length of x_train:", len(x_train), flush=True)
+    print("length of index_add:", np.sum(index_add), flush=True)
+    x_train = np.concatenate([x_train, x_test[index_add]])
+    y_train = np.concatenate([y_train, y_test[index_add]])
+    w_train = np.concatenate([w_train, w_test[index_add]])
+    x_test = x_test[~index_add]
+    y_test = y_test[~index_add]
+    w_test = w_test[~index_add]
+    print("length of x_train:", len(x_train), flush=True)
+    print("End of add data.\n", flush=True)
+    return (
+        x_train,
+        y_train,
+        w_train,
+        x_test,
+        y_test,
+        w_test,
+    )
 
 
 args_parse = argparse.ArgumentParser()
@@ -158,7 +159,7 @@ args_parse.add_argument(
 args_parse.add_argument(
     "--alpha",
     type=float,
-    default=0.001,
+    default=0.01,
 )
 args_parse.add_argument(
     "--kernel",
@@ -172,8 +173,8 @@ args_parse.add_argument(
     default=[
         "methane",
         "ethane",
-        # "ethylene",
-        # "acetylene",
+        "ethylene",
+        "acetylene",
     ],
     help="Name of molecular.",
 )
@@ -222,36 +223,69 @@ krr = GridSearchCV(
     },
 )
 
-x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
-    input_dict[keys_list[0]],
-    output_dict[keys_list[0]],
-    weights_dict[keys_list[0]],
-    train_size=0.2,
-)
 
-for training_set in range(len(keys_list) + 1):
-    krr.fit(x_train, y_train)
-    evaluate(
-        krr,
-        x_train,
-        input_dict,
-        y_train,
-        output_dict,
-        w_train,
-        weights_dict,
-        keys_list[: training_set + 1],
-    )
-    x_train, y_train, w_train = add_data(
-        krr,
-        x_train,
-        y_train,
-        w_train,
-        x_test,
-        y_test,
-        w_test,
-        input_dict,
-        output_dict,
-        weights_dict,
-        keys_list[training_set : training_set + 1],
-        training_set,
-    )
+for training_set in [0, 1, 2]:
+    if training_set == 0:
+        x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
+            input_dict[keys_list[training_set]],
+            output_dict[keys_list[training_set]],
+            weights_dict[keys_list[training_set]],
+            train_size=50,
+        )
+        np.savez_compressed(
+            f"train_test-{time.strftime('%Y%m%d-%H%M%S')}.npz",
+            x_train=x_train,
+            x_test=x_test,
+            y_train=y_train,
+            y_test=y_test,
+            w_train=w_train,
+            w_test=w_test,
+        )
+    else:
+        x_test = input_dict[keys_list[training_set]].copy()
+        y_test = output_dict[keys_list[training_set]].copy()
+        w_test = weights_dict[keys_list[training_set]].copy()
+
+    CONVERGE_STEP = 0
+    for i_step in range(200):
+        print(f"Step {i_step}:", flush=True)
+        krr.fit(x_train, y_train)
+        error_krr = evaluate(
+            krr,
+            x_train,
+            input_dict,
+            y_train,
+            output_dict,
+            w_train,
+            weights_dict,
+            keys_list[: training_set + 1],
+        )
+        if error_krr < 1:
+            print(f"Error is small: {error_krr}", flush=True)
+            CONVERGE_STEP += 1
+            if CONVERGE_STEP == 2:
+                print("Converge.")
+                break
+        (
+            x_train,
+            y_train,
+            w_train,
+            x_test,
+            y_test,
+            w_test,
+        ) = add_data(
+            krr,
+            x_train,
+            y_train,
+            w_train,
+            x_test,
+            y_test,
+            w_test,
+        )
+
+np.savez_compressed(
+    f"train_test-final-{time.strftime('%Y%m%d-%H%M%S')}.npz",
+    x_train=x_train,
+    y_train=y_train,
+    w_train=w_train,
+)

@@ -18,11 +18,13 @@ class Model(nn.Module):
         # train_vector size = torch.Size([ntrain, 4])
         self.train_vector = train_vector
         # train_vector size = torch.Size([1, ntrain, 4])
+        self.n_train = len(self.train_vector)
         self.train_vector = self.train_vector.unsqueeze(0)
 
-        self.alpha = nn.Parameter(torch.tensor(1.0))
-        self.sigma = nn.Parameter(torch.tensor(1.0))
-        self.weight = nn.Parameter(torch.zeros(len(self.train_vector)))
+        self.weight = nn.Parameter(torch.zeros(self.n_train))
+        self.sigma = nn.Parameter(torch.tensor(100.0))
+        print(self.weight.shape)
+        print(self.train_vector.shape)
 
     def forward(self, x):
         """
@@ -30,21 +32,10 @@ class Model(nn.Module):
         """
         # input size = torch.Size([N, 4])
         # Compute the kernel matrix
-        if x.dim() == 2:
-            for i in range(x.shape[0]):
-                # x[i] size = torch.Size([4])
-                kernel_i = torch.exp(
-                    -torch.sum((x[i] - self.train_vector) ** 2, dim=-1) / self.sigma
-                )
-                if i == 0:
-                    kernel = kernel_i
-                else:
-                    kernel = torch.cat((kernel, kernel_i), dim=0)
-        else:
-            kernel = torch.exp(
-                -torch.sum((x - self.train_vector) ** 2, dim=-1) / self.sigma
-            )
-
-        # kernel size = torch.Size([N, ntrain])
-
-        return torch.sum(kernel * self.weight, dim=-1)
+        kernel_distance = torch.zeros(x.shape[0], self.n_train, x.shape[1]).to(x.device)
+        kernel_distance += x.unsqueeze(1)
+        kernel_distance -= self.train_vector
+        kernel_distance = torch.sum(kernel_distance**2, dim=-1) / self.sigma
+        kernel = torch.exp(-kernel_distance)
+        kernel = torch.matmul(kernel, self.weight)
+        return kernel

@@ -23,6 +23,9 @@ elif STRUCTURE == "fc":
     from dft2cc.utils.model.fc_net import Model
 elif STRUCTURE == "unet":
     from dft2cc.utils.model.unet import Model
+elif STRUCTURE == "krr":
+    from dft2cc.utils.model.krr import Model
+    from dft2cc.utils.DataBase import DataBase
 
 
 class ModelDict:
@@ -68,7 +71,22 @@ class ModelDict:
         self.optimizer_dict = {}
         self.scheduler_dict = {}
 
-        self.model: torch.nn.Module = Model().to(device)
+        if STRUCTURE == "krr":
+            database_model = DataBase(
+                ["methane"],
+                [0],
+                [1],
+                [0],
+                "cc-pVDZ",
+                2**15,
+                device,
+                precision,
+            )
+            self.model: torch.nn.Module = Model(
+                database_model.data_gpu["methane_cc-pVDZ_0_1_0.0000"][0]["input"]
+            ).to(device)
+        else:
+            self.model: torch.nn.Module = Model().to(device)
 
         if precision == "float64":
             self.model.double()
@@ -176,6 +194,13 @@ class ModelDict:
             else:
                 loss_ene_tot = torch.sum(
                     (output_mat_real - output_mat) * input_mat[:, [0], :, :] * weight
+                )
+        elif "krr" in STRUCTURE:
+            if TEST:
+                loss_ene_tot = torch.sum(output_mat_real * input_mat[:, 0] * weight)
+            else:
+                loss_ene_tot = torch.sum(
+                    (output_mat_real - output_mat) * input_mat[:, 0] * weight
                 )
         else:
             if TEST:
