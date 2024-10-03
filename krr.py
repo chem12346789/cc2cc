@@ -3,6 +3,8 @@ import argparse
 from itertools import product
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
@@ -133,7 +135,10 @@ def add_data(
         if training_set == 0:
             error_test = y_test - krr.predict(x_test)
             print("error_test:", np.mean(error_test**2), flush=True)
-            index_add = error_test**2 > benchmark_error * 2
+            index_add = error_test**2 > benchmark_error * 25
+            print("length of index_add:", np.sum(index_add), flush=True)
+            index_include = np.linalg.norm(x_test, axis=1) > 1e-4
+            index_add = np.logical_and(index_add, index_include)
             print("length of index_add:", np.sum(index_add), flush=True)
             x_train = np.concatenate([x_train, x_test[index_add]])
             y_train = np.concatenate([y_train, y_test[index_add]])
@@ -141,7 +146,10 @@ def add_data(
         else:
             error_test = output_dict[key] - krr.predict(input_dict[key])
             print(key, "error_test:", np.mean(error_test**2), flush=True)
-            index_add = error_test**2 > benchmark_error * 2
+            index_add = error_test**2 > benchmark_error * 25
+            print("length of index_add:", np.sum(index_add), flush=True)
+            index_include = np.linalg.norm(input_dict[key], axis=1) > 1e-4
+            index_add = np.logical_and(index_add, index_include)
             print("length of index_add:", np.sum(index_add), flush=True)
             x_train = np.concatenate([x_train, input_dict[key][index_add]])
             y_train = np.concatenate([y_train, output_dict[key][index_add]])
@@ -158,7 +166,7 @@ args_parse.add_argument(
 args_parse.add_argument(
     "--alpha",
     type=float,
-    default=0.001,
+    default=0.01,
 )
 args_parse.add_argument(
     "--kernel",
@@ -172,8 +180,8 @@ args_parse.add_argument(
     default=[
         "methane",
         "ethane",
-        # "ethylene",
-        # "acetylene",
+        "ethylene",
+        "acetylene",
     ],
     help="Name of molecular.",
 )
@@ -226,10 +234,10 @@ x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
     input_dict[keys_list[0]],
     output_dict[keys_list[0]],
     weights_dict[keys_list[0]],
-    train_size=0.2,
+    train_size=0.005,
 )
 
-for training_set in range(len(keys_list) + 1):
+for training_set in [0, 0, 0, 1, 1, 1, 1]:
     krr.fit(x_train, y_train)
     evaluate(
         krr,

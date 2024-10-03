@@ -37,9 +37,6 @@ def cc(molecular, name, args):
     mf = pyscf.scf.RHF(mol)
     mf.kernel()
     mycc = pyscf.cc.CCSD(mf)
-    mycc.incore_complete = True
-    mycc.async_io = False
-    mycc.direct = True
     mycc.kernel()
     dm1_cc = mycc.make_rdm1(ao_repr=True)
     e_cc = mycc.e_tot
