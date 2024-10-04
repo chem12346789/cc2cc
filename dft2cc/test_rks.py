@@ -150,7 +150,7 @@ def test_rks(
         max_memory = ks.max_memory - lib.current_memory()[0]
         n, exc, vxc = ni.nr_rks(mol, ks.grids, ks.xc, dm, max_memory=max_memory)
 
-        correct_ene = modeldict.get_energy(ks, grids, dm)
+        correct_ene = modeldict.get_e(ks, grids, dm)
         exc += correct_ene
 
         vxc_scf = modeldict.get_v(ks, grids, dm)

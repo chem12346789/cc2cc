@@ -280,7 +280,7 @@ class ModelDict:
 
         return np.array(loss_ene_l), np.array(loss_ene_tot_l)
 
-    def get_energy(
+    def get_e(
         self,
         dft: pyscf.dft.rks.RKS,
         grids: Grid,
@@ -309,8 +309,9 @@ class ModelDict:
             )
         elif "unet" in STRUCTURE:
             correct_ene = np.sum(
-                grids.matrix_to_vector(output_mat[:, 0, :, :] * input_mat[:, 0, :, :])
-                * grids.weights
+                output_mat[:, 0, :, :]
+                * input_mat[:, 0, :, :]
+                * grids.vector_to_matrix(grids.weights)
             )
         else:
             correct_ene = np.sum(
@@ -344,7 +345,11 @@ class ModelDict:
             input_mat = input_mat.requires_grad_(True)
             middle_mat = (
                 torch.autograd.grad(
-                    torch.sum(input_mat[:, [0], :, :] * output_mat),
+                    torch.sum(
+                        output_mat[:, 0, :, :]
+                        * input_mat[:, 0, :, :]
+                        * grids.vector_to_matrix(grids.weights)
+                    ),
                     input_mat,
                     create_graph=True,
                 )[0]
