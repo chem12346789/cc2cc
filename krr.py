@@ -1,13 +1,13 @@
-import numpy as np
+import time
+import types
 import argparse
 from itertools import product
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import time
+import numpy as np
+from numba import njit, prange
 
 from sklearn.kernel_ridge import KernelRidge
-from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
 
 
@@ -73,14 +73,11 @@ def evaluate(
     """
     Evaluate the model.
     """
-    print("Krr perdict:")
-    print(
-        "train",
-        AUTOKCALMOL
-        * np.sum((y_train - krr.predict_data(x_train)) * w_train * x_train[:, 0]),
-        "KCAL/MOL",
-        flush=True,
+    train_error = np.sum(
+        (y_train - krr.predict_data(x_train)) * w_train * x_train[:, 0]
     )
+    print("Krr perdict:")
+    print("train", AUTOKCALMOL * train_error, "KCAL/MOL", flush=True)
     for key in keys_list:
         error_krr = AUTOKCALMOL * np.sum(
             (output_dict[key] - krr.predict_data(input_dict[key]))
@@ -89,21 +86,13 @@ def evaluate(
         )
         print(f"{key} test, {error_krr} KCAL/MOL", flush=True)
     print("B3lyp perdict:")
-    print(
-        "train",
-        AUTOKCALMOL * np.sum(y_train * w_train * x_train[:, 0]),
-        "KCAL/MOL",
-        flush=True,
-    )
+    b3lyp_error = np.sum(y_train * w_train * x_train[:, 0])
+    print("train", AUTOKCALMOL * b3lyp_error, "KCAL/MOL", flush=True)
     for key in keys_list:
-        print(
-            key,
-            "test",
-            AUTOKCALMOL
-            * np.sum(output_dict[key] * weights_dict[key] * input_dict[key][:, 0]),
-            "KCAL/MOL",
-            flush=True,
+        b3lyp_error = np.sum(
+            output_dict[key] * weights_dict[key] * input_dict[key][:, 0]
         )
+        print(key, "test", AUTOKCALMOL * b3lyp_error, "KCAL/MOL", flush=True)
     print("End of evaluate.\n", flush=True)
     return np.abs(error_krr)
 
@@ -121,24 +110,19 @@ def add_data(
     Add data which has large error.
     """
     print("Add data:", flush=True)
-    error_train = y_train - krr.predict_data(x_train)
-    benchmark_error = np.mean(error_train**2)
-    print("error_train:", benchmark_error, flush=True)
-
-    error_test = y_test - krr.predict_data(x_test)
+    error_test = (y_test - krr.predict_data(x_test)) * w_test * x_test[:, 0]
     print("error_test:", np.mean(error_test**2), flush=True)
+
     index_add = error_test**2 > np.sort(error_test**2, axis=0)[-51]
     print(index_add)
-    print((error_test**2)[index_add])
-    print("length of x_train:", len(x_train), flush=True)
-    print("length of index_add:", np.sum(index_add), flush=True)
+    print(error_test[index_add])
+    print("Length of x_train:", len(x_train), flush=True)
     x_train = np.concatenate([x_train, x_test[index_add]])
     y_train = np.concatenate([y_train, y_test[index_add]])
     w_train = np.concatenate([w_train, w_test[index_add]])
     x_test = x_test[~index_add]
     y_test = y_test[~index_add]
     w_test = w_test[~index_add]
-    print("length of x_train:", len(x_train), flush=True)
     print("End of add data.\n", flush=True)
     return (
         x_train,
@@ -221,34 +205,37 @@ krr = KernelRidge(
 )
 
 
-@numba.jit(nopython=True)
-def get_kernel(x):
+@njit(parallel=True)
+def get_kernel(x1, x2, gamma=100.0):
     """
     Precompute the kernel.
+    Rbf kernel.
+    Using numba to speed up.
     """
-    for i in range(len(x)):
-        for j in range(i, len(x)):
-            x[i, j] = np.dot(x[i], x[j])
-            x[j, i] = x[i, j]
-    return x
+    kernel = np.zeros((x1.shape[0], x2.shape[0]))
+    for j in prange(x2.shape[0]):
+        for i in range(x1.shape[0]):
+            kernel[i, j] = np.exp(-gamma * np.sum((x1[i] - x2[j]) ** 2))
+    return kernel
 
 
 def fit_data(self, x, y):
     """
     Modify the fit method to use the precomputed kernel.
     """
-    self.fit(get_kernel(x), y)
+    self.x_fit = x.copy()
+    self.fit(get_kernel(x, x, self.gamma), y)
 
 
 def predict_data(self, x):
     """
     Modify the predict method to use the precomputed kernel.
     """
-    return self.predict(get_kernel(x))
+    return self.predict(get_kernel(x, self.x_fit, self.gamma))
 
 
 krr.fit_data = types.MethodType(fit_data, krr)
-krr.predict_data_data = types.MethodType(predict_data, krr)
+krr.predict_data = types.MethodType(predict_data, krr)
 
 
 for training_set in [0, 1, 2]:
@@ -258,6 +245,7 @@ for training_set in [0, 1, 2]:
             output_dict[keys_list[training_set]],
             weights_dict[keys_list[training_set]],
             train_size=50,
+            random_state=42,
         )
         np.savez_compressed(
             f"train_test-{time.strftime('%Y%m%d-%H%M%S')}.npz",
@@ -274,7 +262,8 @@ for training_set in [0, 1, 2]:
         w_test = weights_dict[keys_list[training_set]].copy()
 
     CONVERGE_STEP = 0
-    for i_step in range(200):
+    i_step = 0
+    for i_step in range(i_step, i_step + 250):
         print(f"Step {i_step}:", flush=True)
         krr.fit_data(x_train, y_train)
         error_krr = evaluate(
@@ -287,7 +276,7 @@ for training_set in [0, 1, 2]:
             weights_dict,
             keys_list[: training_set + 1],
         )
-        if error_krr < 1:
+        if error_krr < 0.5:
             print(f"Error is small: {error_krr}", flush=True)
             CONVERGE_STEP += 1
             if CONVERGE_STEP == 2:
