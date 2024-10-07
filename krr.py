@@ -43,12 +43,12 @@ def load_data(
         distance_list,
     ):
         name = f"{name_mol}_{BASIS}_{extend_atom}_{extend_xyz}_{distance:.4f}"
-
-        if not (Path(f"{DATA_PATH}") / f"data_{name}.npz").exists():
-            print(f"No file: {name:>40}")
+        data_path = Path(f"{DATA_PATH}") / f"data_{name}.npz"
+        if not (data_path).exists():
+            print(f"No file: {data_path}")
             continue
 
-        data = np.load(Path(f"{DATA_PATH}") / f"data_{name}.npz")
+        data = np.load(data_path)
 
         input_ = data["rho_inv_4_norm"]
         output_ = data["exc_over_dm_cc_grids"]
@@ -77,13 +77,13 @@ def evaluate(
     print(
         "train",
         AUTOKCALMOL
-        * np.sum((y_train - krr.predict(x_train)) * w_train * x_train[:, 0]),
+        * np.sum((y_train - krr.predict_data(x_train)) * w_train * x_train[:, 0]),
         "KCAL/MOL",
         flush=True,
     )
     for key in keys_list:
         error_krr = AUTOKCALMOL * np.sum(
-            (output_dict[key] - krr.predict(input_dict[key]))
+            (output_dict[key] - krr.predict_data(input_dict[key]))
             * weights_dict[key]
             * input_dict[key][:, 0]
         )
@@ -121,11 +121,11 @@ def add_data(
     Add data which has large error.
     """
     print("Add data:", flush=True)
-    error_train = y_train - krr.predict(x_train)
+    error_train = y_train - krr.predict_data(x_train)
     benchmark_error = np.mean(error_train**2)
     print("error_train:", benchmark_error, flush=True)
 
-    error_test = y_test - krr.predict(x_test)
+    error_test = y_test - krr.predict_data(x_test)
     print("error_test:", np.mean(error_test**2), flush=True)
     index_add = error_test**2 > np.sort(error_test**2, axis=0)[-51]
     print(index_add)
@@ -189,7 +189,7 @@ args_parse.add_argument(
     "--extend_atom",
     type=str,
     nargs="+",
-    default=[0],
+    default=["0-1"],
     help="Number of atoms to extend. Default is 0.",
 )
 args_parse.add_argument(
@@ -214,14 +214,41 @@ print("kernel:", args.kernel, flush=True)
     args.distance_list,
 )
 
-krr = GridSearchCV(
-    KernelRidge(),
-    param_grid={
-        "kernel": [args.kernel],
-        "gamma": [args.gamma],
-        "alpha": [args.alpha],
-    },
+krr = KernelRidge(
+    alpha=args.alpha,
+    gamma=args.gamma,
+    kernel="precomputed",
 )
+
+
+@numba.jit(nopython=True)
+def get_kernel(x):
+    """
+    Precompute the kernel.
+    """
+    for i in range(len(x)):
+        for j in range(i, len(x)):
+            x[i, j] = np.dot(x[i], x[j])
+            x[j, i] = x[i, j]
+    return x
+
+
+def fit_data(self, x, y):
+    """
+    Modify the fit method to use the precomputed kernel.
+    """
+    self.fit(get_kernel(x), y)
+
+
+def predict_data(self, x):
+    """
+    Modify the predict method to use the precomputed kernel.
+    """
+    return self.predict(get_kernel(x))
+
+
+krr.fit_data = types.MethodType(fit_data, krr)
+krr.predict_data_data = types.MethodType(predict_data, krr)
 
 
 for training_set in [0, 1, 2]:
@@ -249,7 +276,7 @@ for training_set in [0, 1, 2]:
     CONVERGE_STEP = 0
     for i_step in range(200):
         print(f"Step {i_step}:", flush=True)
-        krr.fit(x_train, y_train)
+        krr.fit_data(x_train, y_train)
         error_krr = evaluate(
             krr,
             x_train,
