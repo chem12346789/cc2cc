@@ -1,4 +1,4 @@
-from dft2cc import train_model
+from cc2cc import train_model
 
 TRAIN_STR_DICT = [
     "methane",

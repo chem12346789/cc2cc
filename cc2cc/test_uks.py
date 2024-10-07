@@ -6,9 +6,9 @@ import numpy as np
 import pyscf
 from pyscf.grad import ccsd as ccsd_grad
 
-from dft2cc.utils import MAIN_PATH, DATA_TEST_PATH, AU2KCALMOL, AU2DEBYE
-from dft2cc.utils import gen_basis
-from dft2cc.utils import Grid
+from cc2cc.utils import MAIN_PATH, DATA_TEST_PATH, AU2KCALMOL, AU2DEBYE
+from cc2cc.utils import gen_basis
+from cc2cc.utils import Grid
 
 
 class TEST_DATA:

@@ -12,9 +12,9 @@ import os
 import torch
 import numpy as np
 
-from dft2cc import add_args, extend
-from dft2cc import test_rks, test_uks
-from dft2cc.utils import ModelDict, MAIN_PATH
+from cc2cc import add_args, extend
+from cc2cc import test_rks, test_uks
+from cc2cc.utils import ModelDict, MAIN_PATH
 
 
 # from cadft.utils.ModelDict_xy import ModelDict

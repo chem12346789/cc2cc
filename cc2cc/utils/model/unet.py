@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from dft2cc.utils.model.unet_parts import DoubleConv, Down, Up, OutConv
+from cc2cc.utils.model.unet_parts import DoubleConv, Down, Up, OutConv
 
 
 class Model(nn.Module):

@@ -7,9 +7,9 @@ from itertools import product
 import numpy as np
 import pyscf
 
-from dft2cc.utils.Grids import Grid
-from dft2cc.utils.DataBase import process_input
-from dft2cc.utils.env_var import (
+from cc2cc.utils.Grids import Grid
+from cc2cc.utils.DataBase import process_input
+from cc2cc.utils.env_var import (
     STRUCTURE,
     CUBE_USE,
     CUBE_LEN,

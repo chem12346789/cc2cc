@@ -7,8 +7,8 @@ import pyscf
 
 import opt_einsum as oe
 
-from dft2cc.utils import gen_basis, process_input, Grid
-from dft2cc.utils import (
+from cc2cc.utils import gen_basis, process_input, Grid
+from cc2cc.utils import (
     DATA_PATH,
     AU2KCALMOL,
     CUBE_SIZE,

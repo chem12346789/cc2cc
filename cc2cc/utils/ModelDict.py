@@ -10,22 +10,22 @@ import torch
 import torch.optim as optim
 import pyscf
 
-from dft2cc.utils.env_var import CHECKPOINTS_PATH, STRUCTURE, CUBE_USE_MIDDLE, TEST
-from dft2cc.utils.mol import AU2KCALMOL, AU2DEBYE
-from dft2cc.utils.get_input import get_input_mat
-from dft2cc.utils.Grids import Grid
+from cc2cc.utils.env_var import CHECKPOINTS_PATH, STRUCTURE, CUBE_USE_MIDDLE, TEST
+from cc2cc.utils.mol import AU2KCALMOL, AU2DEBYE
+from cc2cc.utils.get_input import get_input_mat
+from cc2cc.utils.Grids import Grid
 
 if STRUCTURE == "cnn3d":
-    from dft2cc.utils.model.cnn3d import Model
+    from cc2cc.utils.model.cnn3d import Model
 elif STRUCTURE == "fc_3d":
-    from dft2cc.utils.model.fc_3d import Model
+    from cc2cc.utils.model.fc_3d import Model
 elif STRUCTURE == "fc":
-    from dft2cc.utils.model.fc_net import Model
+    from cc2cc.utils.model.fc_net import Model
 elif STRUCTURE == "unet":
-    from dft2cc.utils.model.unet import Model
+    from cc2cc.utils.model.unet import Model
 elif STRUCTURE == "krr":
-    from dft2cc.utils.model.krr import Model
-    from dft2cc.utils.DataBase import DataBase
+    from cc2cc.utils.model.krr import Model
+    from cc2cc.utils.DataBase import DataBase
 
 
 class ModelDict:

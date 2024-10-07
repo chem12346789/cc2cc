@@ -9,8 +9,8 @@ import torch
 import numpy as np
 import wandb
 
-from dft2cc.utils import add_args, save_csv_loss
-from dft2cc.utils import DataBase, ModelDict
+from cc2cc.utils import add_args, save_csv_loss
+from cc2cc.utils import DataBase, ModelDict
 
 
 def train_model(train_str_dict, eval_str_dict):

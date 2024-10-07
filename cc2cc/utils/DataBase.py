@@ -5,8 +5,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from dft2cc.utils.env_var import DATA_PATH, STRUCTURE, CUBE_MIDDLE, CUBE_USE_MIDDLE
-from dft2cc.utils.mol import AU2KCALMOL
+from cc2cc.utils.env_var import DATA_PATH, STRUCTURE, CUBE_MIDDLE, CUBE_USE_MIDDLE
+from cc2cc.utils.mol import AU2KCALMOL
 
 
 def process_input(data, grids):

@@ -5,8 +5,8 @@
 import argparse
 from itertools import product
 
-from dft2cc import add_args, extend, cc, cc_change_cube
-from dft2cc.utils import rotate
+from cc2cc import add_args, extend, cc, cc_change_cube
+from cc2cc.utils import rotate
 
 
 if __name__ == "__main__":

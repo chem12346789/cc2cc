@@ -1,14 +1,14 @@
 import copy
 import pandas as pd
 
-from dft2cc.utils.basis import gen_basis
-from dft2cc.utils.parser import add_args
-from dft2cc.utils.mol import (
+from cc2cc.utils.basis import gen_basis
+from cc2cc.utils.parser import add_args
+from cc2cc.utils.mol import (
     Mol,
     AU2KCALMOL,
     AU2DEBYE,
 )
-from dft2cc.utils.env_var import (
+from cc2cc.utils.env_var import (
     MAIN_PATH,
     DATA_PATH,
     GENERATE_NEW,
@@ -23,10 +23,10 @@ from dft2cc.utils.env_var import (
     CUBE_USE_MIDDLE,
     ORIENTATION_NUMBER_DICT,
 )
-from dft2cc.utils.Grids import Grid
-from dft2cc.utils.DataBase import DataBase, process_input
-from dft2cc.utils.ModelDict import ModelDict
-from dft2cc.utils.rotate import rotate
+from cc2cc.utils.Grids import Grid
+from cc2cc.utils.DataBase import DataBase, process_input
+from cc2cc.utils.ModelDict import ModelDict
+from cc2cc.utils.rotate import rotate
 
 
 def save_csv_loss(

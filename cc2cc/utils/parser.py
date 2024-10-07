@@ -8,7 +8,7 @@ More details.
 import argparse
 import numpy as np
 
-from dft2cc.utils.mol import Mol
+from cc2cc.utils.mol import Mol
 
 
 def str2bool(v):

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from dft2cc.utils.env_var import CUBE_USE
+from cc2cc.utils.env_var import CUBE_USE
 
 
 class Model(nn.Module):

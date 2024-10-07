@@ -10,7 +10,7 @@ import pyscf.dft
 from pyscf.grad import ccsd as ccsd_grad
 from pyscf import lib
 
-from dft2cc.utils import (
+from cc2cc.utils import (
     MAIN_PATH,
     DATA_CC_PATH,
     DATA_TEST_PATH,
@@ -18,9 +18,9 @@ from dft2cc.utils import (
     GENERATE_NEW,
     DATA_SCF_PATH,
 )
-from dft2cc.utils import gen_basis, rotate
-from dft2cc.utils import Grid
-from dft2cc.utils import process_input
+from cc2cc.utils import gen_basis, rotate
+from cc2cc.utils import Grid
+from cc2cc.utils import process_input
 
 
 class TEST_DATA:
