@@ -12,7 +12,7 @@ from pyscf import lib
 
 from dft2cc.utils import (
     MAIN_PATH,
-    DATA_PATH,
+    DATA_CC_PATH,
     DATA_TEST_PATH,
     AU2KCALMOL,
     GENERATE_NEW,
@@ -265,41 +265,38 @@ def test_rks(
     df.to_csv(df_dict_path, index=False)
 
     if GENERATE_NEW:
-        if (DATA_PATH / f"data_{name}.npz").exists():
-            data_load = np.load(DATA_PATH / f"data_{name}.npz")
-            dm1_last = data_load["dm_cc"]
-            exc_cc_grids = grids.matrix_to_vector(
+        if (DATA_CC_PATH / f"data_{name}.npz").exists():
+            data_load = np.load(DATA_CC_PATH / f"data_{name}.npz")
+            dm_cc = data_load["dm_cc"]
+            exc_over_dm_cc_grids = grids.matrix_to_vector(
                 data_load["exc_over_dm_cc_grids_matrix"]
-                * data_load["rho_inv_4_norm_matrix"][0, :, :, :]
             )
-            rho_last = grids.matrix_to_vector(
-                data_load["rho_inv_4_norm_matrix"][0, :, :, :]
-            )
+            print("Original exc_over_dm_cc_grids", flush=True)
+            print("exc_over_dm_cc_grids", np.max(exc_over_dm_cc_grids))
+            print("exc_over_dm_cc_grids", np.min(exc_over_dm_cc_grids))
 
             ao_2 = pyscf.dft.numint.eval_ao(test_data.mol, grids.coords, deriv=2)
             ao_value = ao_2[:4, :, :]
             ao_2_diag = ao_2[4, :, :] + ao_2[7, :, :] + ao_2[9, :, :]
 
-            exc_cc_grids += (
+            exc_over_dm_cc_grids += (
                 pyscf.dft.libxc.eval_xc(
                     "b3lyp",
                     pyscf.dft.numint.eval_rho(
-                        test_data.mol, ao_value, dm1_last, xctype="GGA"
+                        test_data.mol, ao_value, dm_cc, xctype="GGA"
                     ),
                 )[0]
-                * rho_last
                 - pyscf.dft.libxc.eval_xc(
                     "b3lyp",
                     pyscf.dft.numint.eval_rho(
                         test_data.mol, ao_value, dm1_scf, xctype="GGA"
                     ),
                 )[0]
-                * rho_scf
             )
 
             expr_rinv_dm2_r = oe.contract_expression(
                 "ijkl,i,j,kl->",
-                -0.05 * oe.contract("pr,qs->pqrs", dm1_last, dm1_last)
+                -0.05 * oe.contract("pr,qs->pqrs", dm_cc, dm_cc)
                 + 0.05 * oe.contract("pr,qs->pqrs", dm1_scf, dm1_scf),
                 (test_data.mol.nao,),
                 (test_data.mol.nao,),
@@ -315,17 +312,14 @@ def test_rks(
                 ao_0_i = ao_0[i]
                 with test_data.mol.with_rinv_origin(coord):
                     rinv = test_data.mol.intor("int1e_rinv")
-                    exc_cc_grids[i] += expr_rinv_dm2_r(
+                    exc_over_dm_cc_grids[i] += expr_rinv_dm2_r(
                         ao_0_i,
                         ao_0_i,
                         rinv,
                         backend="torch",
-                    )
+                    ) / (rho_scf[i] + 1e-14)
 
-            exc_over_dm_cc_grids = exc_cc_grids / (rho_scf + 1e-14)
             print("Done exc_over_dm_cc_grids", flush=True)
-            print("exc_cc_grids", np.max(exc_cc_grids))
-            print("exc_cc_grids", np.min(exc_cc_grids))
             print("exc_over_dm_cc_grids", np.max(exc_over_dm_cc_grids))
             print("exc_over_dm_cc_grids", np.min(exc_over_dm_cc_grids))
 
@@ -347,7 +341,7 @@ def test_rks(
                     eigs_v_dm1[:, i],
                     ao_2_diag,
                 )
-                exc_cc_grids -= part * eigs_e_dm1[i] / 2
+                exc_over_dm_cc_grids -= part * eigs_e_dm1[i] / 2 / (rho_cc + 1e-14)
 
             dm1_scf_mo = oe.contract(
                 "ij,pi,qj->pq",
@@ -365,12 +359,9 @@ def test_rks(
                     eigs_v_dm1[:, i],
                     ao_2_diag,
                 )
-                exc_cc_grids += part * eigs_e_dm1[i] / 2
+                exc_over_dm_cc_grids += part * eigs_e_dm1[i] / 2 / (rho_scf + 1e-14)
 
-            exc_over_dm_cc_grids = exc_cc_grids / (rho_scf + 1e-14)
             print("Done exc_over_dm_cc_grids", flush=True)
-            print("exc_cc_grids", np.max(exc_cc_grids))
-            print("exc_cc_grids", np.min(exc_cc_grids))
             print("exc_over_dm_cc_grids", np.max(exc_over_dm_cc_grids))
             print("exc_over_dm_cc_grids", np.min(exc_over_dm_cc_grids))
 

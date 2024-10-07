@@ -14,6 +14,7 @@ from dft2cc.utils.env_var import (
     GENERATE_NEW,
     DATA_SCF_PATH,
     DATA_SAVE_PATH,
+    DATA_CC_PATH,
     DATA_TEST_PATH,
     CUBE_SIZE,
     CUBE_MIDDLE,

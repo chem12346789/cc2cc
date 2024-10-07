@@ -79,23 +79,23 @@ def cc(molecular, name, args):
                 backend="torch",
             ) / (rho_cc[0][i] + 1e-14)
 
-    rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
-    for p, p_coords in enumerate(grids.coords):
-        if p * 10 % len(grids.coords) == 0:
-            print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
+    # rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+    # for p, p_coords in enumerate(grids.coords):
+    #     if p * 10 % len(grids.coords) == 0:
+    #         print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
 
-        coords_cube = np.zeros((CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
-        for i, j, k in product(range(CUBE_SIZE), repeat=3):
-            coords_cube[i, j, k] = p_coords + [
-                (i - CUBE_MIDDLE) * CUBE_LEN,
-                (j - CUBE_MIDDLE) * CUBE_LEN,
-                (k - CUBE_MIDDLE) * CUBE_LEN,
-            ]
-        coords_cube = coords_cube.reshape(-1, 3)
+    #     coords_cube = np.zeros((CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
+    #     for i, j, k in product(range(CUBE_SIZE), repeat=3):
+    #         coords_cube[i, j, k] = p_coords + [
+    #             (i - CUBE_MIDDLE) * CUBE_LEN,
+    #             (j - CUBE_MIDDLE) * CUBE_LEN,
+    #             (k - CUBE_MIDDLE) * CUBE_LEN,
+    #         ]
+    #     coords_cube = coords_cube.reshape(-1, 3)
 
-        ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
-        rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="GGA")
-        rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+    #     ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
+    #     rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="GGA")
+    #     rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
     error_energy = e_cc - mdft.energy_tot(dm1_cc)
     error = np.sum(exc_over_dm_cc_grids * grids.weights * rho_cc[0]) - error_energy
@@ -106,7 +106,7 @@ def cc(molecular, name, args):
         e_cc=e_cc,
         dm_cc=dm1_cc,
         rho_inv_4_norm=rho_cc,
-        rho_cube=rho_cube,
+        # rho_cube=rho_cube,
         exc_over_dm_cc_grids=exc_over_dm_cc_grids,
         weights=grids.weights,
         rho_inv_4_norm_matrix=process_input(rho_cc, grids),

@@ -2,13 +2,17 @@ from dft2cc import train_model
 
 TRAIN_STR_DICT = [
     "methane",
-    # "ethylene",
-    # "acetylene",
+    "ethane",
+    "ethylene",
+    "acetylene",
     # "cyclopropene",
     # "cyclopropane",
     # "allene",
     # "propyne",
-    # "propane",
+    # "methyl-openshell",
+]
+EVAL_STR_DICT = [
+    "propane",
     # "propylene",
     # "isobutane",
     # "cyclobutane",
@@ -22,10 +26,6 @@ TRAIN_STR_DICT = [
     # "benzene",
     # "neopentane",
     # "isopentane",
-    # "methyl-openshell",
-]
-EVAL_STR_DICT = [
-    "ethane",
     # "pentane",
     # "hexane",
 ]

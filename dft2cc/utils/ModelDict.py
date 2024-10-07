@@ -338,6 +338,9 @@ class ModelDict:
         input_mat = torch.tensor(input_mat, dtype=self.dtype).to("cuda")
         with torch.no_grad():
             output_mat = self.model(input_mat)
+        weight_mat = torch.tensor(
+            grids.vector_to_matrix(grids.weights), dtype=self.dtype
+        ).to("cuda")
 
         if "3d" in STRUCTURE:
             raise NotImplementedError
@@ -345,11 +348,7 @@ class ModelDict:
             input_mat = input_mat.requires_grad_(True)
             middle_mat = (
                 torch.autograd.grad(
-                    torch.sum(
-                        output_mat[:, 0, :, :]
-                        * input_mat[:, 0, :, :]
-                        * grids.vector_to_matrix(grids.weights)
-                    ),
+                    torch.sum(output_mat[:, 0, :, :] * input_mat[:, 0, :, :]),
                     input_mat,
                     create_graph=True,
                 )[0]

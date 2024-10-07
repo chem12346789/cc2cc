@@ -38,6 +38,12 @@ if MAIN_PATH is None:
 else:
     MAIN_PATH = Path(MAIN_PATH)
 
+DATA_CC_PATH = os.environ.get("DFT2CC_DATA_CC_PATH")
+if DATA_CC_PATH is None:
+    DATA_CC_PATH = MAIN_PATH / "data" / "grids_dft"
+else:
+    DATA_CC_PATH = Path(DATA_CC_PATH)
+
 DATA_PATH = os.environ.get("DFT2CC_DATA_PATH")
 if DATA_PATH is None:
     DATA_PATH = MAIN_PATH / "data" / "grids_dft"
@@ -70,6 +76,7 @@ else:
 
 print(f"MAIN_PATH: {MAIN_PATH.resolve()}")
 print(f"DATA_PATH: {DATA_PATH.resolve()}")
+print(f"DATA_CC_PATH: {DATA_CC_PATH.resolve()}")
 print(f"DATA_SAVE_PATH: {DATA_SAVE_PATH.resolve()}")
 print(f"DATA_TEST_PATH: {DATA_TEST_PATH.resolve()}")
 print(f"STRUCTURE: {STRUCTURE}")
