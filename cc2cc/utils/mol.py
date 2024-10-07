@@ -57,7 +57,7 @@ Mol = {
     "HNH2": HNHH,
 }
 
-with importlib.resources.path("dft2cc", "utils") as resource_path:
+with importlib.resources.path("cc2cc", "utils") as resource_path:
     with open(
         Path(os.fspath(resource_path)) / "mol.json",
         "r",
