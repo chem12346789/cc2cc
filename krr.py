@@ -18,12 +18,7 @@ BASIS = "cc-pVDZ"
 # pylint: disable=W0621
 
 
-def load_data(
-    molecular_list,
-    extend_atom,
-    extend_xyz,
-    distance_list,
-):
+def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
     """
     Load the data.
     """
@@ -61,14 +56,7 @@ def load_data(
 
 
 def evaluate(
-    krr,
-    x_train,
-    input_dict,
-    y_train,
-    output_dict,
-    w_train,
-    weights_dict,
-    keys_list,
+    krr, x_train, input_dict, y_train, output_dict, w_train, weights_dict, keys_list
 ):
     """
     Evaluate the model.
@@ -97,20 +85,12 @@ def evaluate(
     return np.abs(error_krr)
 
 
-def add_data(
-    krr,
-    x_train,
-    y_train,
-    w_train,
-    x_test,
-    y_test,
-    w_test,
-):
+def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
     """
     Add data which has large error.
     """
     print("Add data:", flush=True)
-    error_test = (y_test - krr.predict_data(x_test)) * w_test * x_test[:, 0]
+    error_test = y_test - krr.predict_data(x_test)
     print("error_test:", np.mean(error_test**2), flush=True)
 
     index_add = error_test**2 > np.sort(error_test**2, axis=0)[-51]
@@ -124,14 +104,7 @@ def add_data(
     y_test = y_test[~index_add]
     w_test = w_test[~index_add]
     print("End of add data.\n", flush=True)
-    return (
-        x_train,
-        y_train,
-        w_train,
-        x_test,
-        y_test,
-        w_test,
-    )
+    return x_train, y_train, w_train, x_test, y_test, w_test
 
 
 args_parse = argparse.ArgumentParser()
@@ -237,6 +210,7 @@ def predict_data(self, x):
 krr.fit_data = types.MethodType(fit_data, krr)
 krr.predict_data = types.MethodType(predict_data, krr)
 
+i_step = 0
 
 for training_set in [0, 1, 2]:
     if training_set == 0:
@@ -262,7 +236,6 @@ for training_set in [0, 1, 2]:
         w_test = weights_dict[keys_list[training_set]].copy()
 
     CONVERGE_STEP = 0
-    i_step = 0
     for i_step in range(i_step, i_step + 250):
         print(f"Step {i_step}:", flush=True)
         krr.fit_data(x_train, y_train)
