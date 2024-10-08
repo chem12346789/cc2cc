@@ -93,7 +93,7 @@ def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
     Add data which has large error.
     """
     print("Add data:", flush=True)
-    error_test = (y_test - krr.predict_data(x_test))
+    error_test = y_test - krr.predict_data(x_test)
     print("error_test:", np.mean(error_test**2), flush=True)
 
     index_add = error_test**2 > np.sort(error_test**2, axis=0)[-51]
@@ -243,4 +243,5 @@ np.savez_compressed(
     x_train=x_train,
     y_train=y_train,
     w_train=w_train,
+    dual_coef=krr.dual_coef_,
 )
