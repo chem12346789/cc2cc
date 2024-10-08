@@ -18,7 +18,7 @@ BASIS = "cc-pVDZ"
 # pylint: disable=W0621
 
 
-def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
+def load_data(molecular_list, extend_atom, extend_xyz, distance_list, if_normal=True):
     """
     Load the data.
     """
@@ -49,6 +49,10 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
         output_ = data["exc_over_dm_cc_grids"]
         weights_ = data["weights"]
         input_dict[name] = np.transpose(input_, (1, 0))
+
+        for index_ in range(len(input_)):
+            print(input_[index_].shape)
+
         output_dict[name] = output_
         weights_dict[name] = weights_
         keys_list.append(name)
