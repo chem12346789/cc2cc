@@ -255,26 +255,15 @@ for training_set in [0, 1, 2]:
             if CONVERGE_STEP == 2:
                 print("Converge.")
                 break
-        (
-            x_train,
-            y_train,
-            w_train,
-            x_test,
-            y_test,
-            w_test,
-        ) = add_data(
-            krr,
-            x_train,
-            y_train,
-            w_train,
-            x_test,
-            y_test,
-            w_test,
+        x_train, y_train, w_train, x_test, y_test, w_test = add_data(
+            krr, x_train, y_train, w_train, x_test, y_test, w_test
         )
+
 
 np.savez_compressed(
     f"train_test-final-{time.strftime('%Y%m%d-%H%M%S')}.npz",
     x_train=x_train,
     y_train=y_train,
     w_train=w_train,
+    dual_coef=krr.dual_coef_,
 )
