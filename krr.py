@@ -78,13 +78,16 @@ def evaluate(
     )
     print("Krr perdict:")
     print("train", AUTOKCALMOL * train_error, "KCAL/MOL", flush=True)
+    error_krr = 0
     for key in keys_list:
-        error_krr = AUTOKCALMOL * np.sum(
+        error_krr_i = AUTOKCALMOL * np.sum(
             (output_dict[key] - krr.predict_data(input_dict[key]))
             * weights_dict[key]
             * input_dict[key][:, 0]
         )
-        print(f"{key} test, {error_krr} KCAL/MOL", flush=True)
+        error_krr_i = np.abs(error_krr_i)
+        print(f"{key} test, {error_krr_i} KCAL/MOL", flush=True)
+        error_krr = max(error_krr, error_krr_i)
     print("B3lyp perdict:")
     b3lyp_error = np.sum(y_train * w_train * x_train[:, 0])
     print("train", AUTOKCALMOL * b3lyp_error, "KCAL/MOL", flush=True)
@@ -94,7 +97,7 @@ def evaluate(
         )
         print(key, "test", AUTOKCALMOL * b3lyp_error, "KCAL/MOL", flush=True)
     print("End of evaluate.\n", flush=True)
-    return np.abs(error_krr)
+    return error_krr
 
 
 def add_data(
@@ -237,67 +240,43 @@ def predict_data(self, x):
 krr.fit_data = types.MethodType(fit_data, krr)
 krr.predict_data = types.MethodType(predict_data, krr)
 
+x_all = np.concatenate([input_dict[key] for key in keys_list])
+y_all = np.concatenate([output_dict[key] for key in keys_list])
+w_all = np.concatenate([weights_dict[key] for key in keys_list])
 
-for training_set in [0, 1, 2]:
-    if training_set == 0:
-        x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
-            input_dict[keys_list[training_set]],
-            output_dict[keys_list[training_set]],
-            weights_dict[keys_list[training_set]],
-            train_size=50,
-            random_state=42,
-        )
-        np.savez_compressed(
-            f"train_test-{time.strftime('%Y%m%d-%H%M%S')}.npz",
-            x_train=x_train,
-            x_test=x_test,
-            y_train=y_train,
-            y_test=y_test,
-            w_train=w_train,
-            w_test=w_test,
-        )
-    else:
-        x_test = input_dict[keys_list[training_set]].copy()
-        y_test = output_dict[keys_list[training_set]].copy()
-        w_test = weights_dict[keys_list[training_set]].copy()
+x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
+    x_all, y_all, w_all, train_size=50, random_state=42
+)
 
-    CONVERGE_STEP = 0
-    i_step = 0
-    for i_step in range(i_step, i_step + 250):
-        print(f"Step {i_step}:", flush=True)
-        krr.fit_data(x_train, y_train)
-        error_krr = evaluate(
-            krr,
-            x_train,
-            input_dict,
-            y_train,
-            output_dict,
-            w_train,
-            weights_dict,
-            keys_list[: training_set + 1],
-        )
-        if error_krr < 0.5:
-            print(f"Error is small: {error_krr}", flush=True)
-            CONVERGE_STEP += 1
-            if CONVERGE_STEP == 2:
-                print("Converge.")
-                break
-        (
-            x_train,
-            y_train,
-            w_train,
-            x_test,
-            y_test,
-            w_test,
-        ) = add_data(
-            krr,
-            x_train,
-            y_train,
-            w_train,
-            x_test,
-            y_test,
-            w_test,
-        )
+CONVERGE_STEP = 0
+for i_step in range(0, 2500):
+    print(f"Step {i_step}:", flush=True)
+    krr.fit_data(x_train, y_train)
+    error_krr = evaluate(
+        krr, x_train, input_dict, y_train, output_dict, w_train, weights_dict, keys_list
+    )
+    if error_krr < 0.5:
+        print(f"Error is small: {error_krr}", flush=True)
+        CONVERGE_STEP += 1
+        if CONVERGE_STEP == 2:
+            print("Converge.")
+            break
+    (
+        x_train,
+        y_train,
+        w_train,
+        x_test,
+        y_test,
+        w_test,
+    ) = add_data(
+        krr,
+        x_train,
+        y_train,
+        w_train,
+        x_test,
+        y_test,
+        w_test,
+    )
 
 np.savez_compressed(
     f"train_test-final-{time.strftime('%Y%m%d-%H%M%S')}.npz",
