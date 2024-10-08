@@ -18,12 +18,7 @@ BASIS = "cc-pVDZ"
 # pylint: disable=W0621
 
 
-def load_data(
-    molecular_list,
-    extend_atom,
-    extend_xyz,
-    distance_list,
-):
+def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
     """
     Load the data.
     """
@@ -61,14 +56,7 @@ def load_data(
 
 
 def evaluate(
-    krr,
-    x_train,
-    input_dict,
-    y_train,
-    output_dict,
-    w_train,
-    weights_dict,
-    keys_list,
+    krr, x_train, input_dict, y_train, output_dict, w_train, weights_dict, keys_list
 ):
     """
     Evaluate the model.
@@ -100,20 +88,12 @@ def evaluate(
     return error_krr
 
 
-def add_data(
-    krr,
-    x_train,
-    y_train,
-    w_train,
-    x_test,
-    y_test,
-    w_test,
-):
+def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
     """
     Add data which has large error.
     """
     print("Add data:", flush=True)
-    error_test = (y_test - krr.predict_data(x_test)) * w_test * x_test[:, 0]
+    error_test = (y_test - krr.predict_data(x_test))
     print("error_test:", np.mean(error_test**2), flush=True)
 
     index_add = error_test**2 > np.sort(error_test**2, axis=0)[-51]
@@ -127,14 +107,7 @@ def add_data(
     y_test = y_test[~index_add]
     w_test = w_test[~index_add]
     print("End of add data.\n", flush=True)
-    return (
-        x_train,
-        y_train,
-        w_train,
-        x_test,
-        y_test,
-        w_test,
-    )
+    return x_train, y_train, w_train, x_test, y_test, w_test
 
 
 args_parse = argparse.ArgumentParser()
@@ -261,21 +234,8 @@ for i_step in range(0, 2500):
         if CONVERGE_STEP == 2:
             print("Converge.")
             break
-    (
-        x_train,
-        y_train,
-        w_train,
-        x_test,
-        y_test,
-        w_test,
-    ) = add_data(
-        krr,
-        x_train,
-        y_train,
-        w_train,
-        x_test,
-        y_test,
-        w_test,
+    x_train, y_train, w_train, x_test, y_test, w_test = add_data(
+        krr, x_train, y_train, w_train, x_test, y_test, w_test
     )
 
 np.savez_compressed(
