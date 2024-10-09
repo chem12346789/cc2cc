@@ -221,7 +221,7 @@ def test_rks(
     elif args.precision == "float64":
         mdft.conv_tol = 1e-8
     mdft.diis_space = 10
-    mdft.DIIS = pyscf.scf.EDIIS
+    mdft.DIIS = pyscf.scf.CDIIS
     mdft.max_cycle = 100
     mdft.level_shift = 0
     mdft.run()

@@ -48,11 +48,8 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list, if_normal=
         input_ = data["rho_inv_4_norm"]
         output_ = data["exc_over_dm_cc_grids"]
         weights_ = data["weights"]
+
         input_dict[name] = np.transpose(input_, (1, 0))
-
-        for index_ in range(len(input_)):
-            print(input_[index_].shape)
-
         output_dict[name] = output_
         weights_dict[name] = weights_
         keys_list.append(name)
@@ -95,18 +92,26 @@ def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
     """
     print("Add data:", flush=True)
     error_test = y_test - krr.predict_data(x_test)
-    print("error_test:", np.mean(error_test**2), flush=True)
+    index_include = np.sum(krr.kernel_matrix, axis=1) < 1e-2
 
-    index_add = error_test**2 > np.sort(error_test**2, axis=0)[-51]
-    print(index_add)
-    print(error_test[index_add])
+    index_add = (
+        np.array([True] * len(error_test[index_include]))
+        if len(error_test[index_include]) < 51
+        else (
+            error_test[index_include] ** 2
+            > np.sort(error_test[index_include] ** 2, axis=0)[-51]
+        )
+    )
+    print(error_test[index_include][index_add])
+    print(np.sum(krr.kernel_matrix[index_include][index_add], axis=1))
     print("Length of x_train:", len(x_train), flush=True)
-    x_train = np.concatenate([x_train, x_test[index_add]])
-    y_train = np.concatenate([y_train, y_test[index_add]])
-    w_train = np.concatenate([w_train, w_test[index_add]])
-    x_test = x_test[~index_add]
-    y_test = y_test[~index_add]
-    w_test = w_test[~index_add]
+    x_train = np.concatenate([x_train, x_test[index_include][index_add]])
+    y_train = np.concatenate([y_train, y_test[index_include][index_add]])
+    w_train = np.concatenate([w_train, w_test[index_include][index_add]])
+    x_test = np.concatenate([x_test[~index_include], x_test[index_include][~index_add]])
+    y_test = np.concatenate([y_test[~index_include], y_test[index_include][~index_add]])
+    w_test = np.concatenate([w_test[~index_include], w_test[index_include][~index_add]])
+
     print("End of add data.\n", flush=True)
     return x_train, y_train, w_train, x_test, y_test, w_test
 
@@ -201,14 +206,16 @@ def fit_data(self, x, y):
     Modify the fit method to use the precomputed kernel.
     """
     self.x_fit = x.copy()
-    self.fit(get_kernel(x, x, self.gamma), y)
+    self.kernel_matrix = get_kernel(x, x, self.gamma)
+    self.fit(self.kernel_matrix, y)
 
 
 def predict_data(self, x):
     """
     Modify the predict method to use the precomputed kernel.
     """
-    return self.predict(get_kernel(x, self.x_fit, self.gamma))
+    self.kernel_matrix = get_kernel(x, self.x_fit, self.gamma)
+    return self.predict(self.kernel_matrix)
 
 
 krr.fit_data = types.MethodType(fit_data, krr)
@@ -253,7 +260,7 @@ for training_set in [0, 1, 2]:
             weights_dict,
             keys_list[: training_set + 1],
         )
-        if error_krr < 0.5:
+        if error_krr < 1:
             print(f"Error is small: {error_krr}", flush=True)
             CONVERGE_STEP += 1
             if CONVERGE_STEP == 2:
