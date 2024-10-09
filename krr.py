@@ -125,7 +125,7 @@ args_parse.add_argument(
 args_parse.add_argument(
     "--alpha",
     type=float,
-    default=0.01,
+    default=0.00001,
 )
 args_parse.add_argument(
     "--kernel",
@@ -223,7 +223,7 @@ krr.predict_data = types.MethodType(predict_data, krr)
 
 i_step = 0
 
-for training_set in [0, 1, 2]:
+for training_set in range(len(keys_list)):
     if training_set == 0:
         x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
             input_dict[keys_list[training_set]],
