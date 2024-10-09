@@ -49,6 +49,7 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
         output_ = data["exc_over_dm_cc_grids"]
         weights_ = data["weights"]
         input_dict[name] = np.transpose(input_, (1, 0))
+        print(np.max(input_[0, :]), np.min(input_[0, :]))
         output_dict[name] = output_
         weights_dict[name] = weights_
         keys_list.append(name)
@@ -213,13 +214,29 @@ def predict_data(self, x):
 krr.fit_data = types.MethodType(fit_data, krr)
 krr.predict_data = types.MethodType(predict_data, krr)
 
-x_all = np.concatenate([input_dict[key] for key in keys_list])
-y_all = np.concatenate([output_dict[key] for key in keys_list])
-w_all = np.concatenate([weights_dict[key] for key in keys_list])
+x_all = [np.array([0]) for _ in range(250)]
+y_all = [np.array([0]) for _ in range(250)]
+w_all = [np.array([0]) for _ in range(250)]
 
-x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
-    x_all, y_all, w_all, train_size=50, random_state=42
-)
+for key in keys_list:
+    for index_ in range(len(input_dict[key])):
+        index_round = int(input_dict[key][index_, 0])
+        x_all[index_round] = np.concatenate(
+            [x_all[index_round], input_dict[key][index_]]
+        )
+        y_all[index_round] = np.concatenate(
+            [y_all[index_round], output_dict[key][index_]]
+        )
+        w_all[index_round] = np.concatenate([w_all[index_round], weights_dict[key]])
+
+
+for index_ in range(250):
+    x_all[index_] = x_all[index_][1:]
+    y_all[index_] = y_all[index_][1:]
+    w_all[index_] = w_all[index_][1:]
+
+    print(f"Round {index_}:", flush=True)
+    print("Length of x_all:", len(x_all[index_]), flush=True)
 
 CONVERGE_STEP = 0
 for i_step in range(0, 2500):
