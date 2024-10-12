@@ -14,7 +14,8 @@ from sklearn.model_selection import train_test_split
 DATA_PATH = Path("data/grids_dft")
 AUTOKCALMOL = 627.509
 BASIS = "cc-pVDZ"
-
+HASHLEN = 10000
+HASHSIZE = 10
 # pylint: disable=W0621
 
 
@@ -49,66 +50,14 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
         output_ = data["exc_over_dm_cc_grids"]
         weights_ = data["weights"]
         input_dict[name] = np.transpose(input_, (1, 0))
-        print(np.max(input_[0, :]), np.min(input_[0, :]))
+        for index_ in range(4):
+            input_[index_, :] = input_[index_, :] / (1 if index_ == 0 else np.sqrt(20))
+            print(np.var(input_[index_, :]))
+            print(np.max(input_[index_, :]), np.min(input_[index_, :]))
         output_dict[name] = output_
         weights_dict[name] = weights_
         keys_list.append(name)
     return input_dict, output_dict, weights_dict, keys_list
-
-
-def evaluate(
-    krr, x_train, input_dict, y_train, output_dict, w_train, weights_dict, keys_list
-):
-    """
-    Evaluate the model.
-    """
-    train_error = np.sum(
-        (y_train - krr.predict_data(x_train)) * w_train * x_train[:, 0]
-    )
-    print("Krr perdict:")
-    print("train", AUTOKCALMOL * train_error, "KCAL/MOL", flush=True)
-    error_krr = 0
-    for key in keys_list:
-        error_krr_i = AUTOKCALMOL * np.sum(
-            (output_dict[key] - krr.predict_data(input_dict[key]))
-            * weights_dict[key]
-            * input_dict[key][:, 0]
-        )
-        error_krr_i = np.abs(error_krr_i)
-        print(f"{key} test, {error_krr_i} KCAL/MOL", flush=True)
-        error_krr = max(error_krr, error_krr_i)
-    print("B3lyp perdict:")
-    b3lyp_error = np.sum(y_train * w_train * x_train[:, 0])
-    print("train", AUTOKCALMOL * b3lyp_error, "KCAL/MOL", flush=True)
-    for key in keys_list:
-        b3lyp_error = np.sum(
-            output_dict[key] * weights_dict[key] * input_dict[key][:, 0]
-        )
-        print(key, "test", AUTOKCALMOL * b3lyp_error, "KCAL/MOL", flush=True)
-    print("End of evaluate.\n", flush=True)
-    return error_krr
-
-
-def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
-    """
-    Add data which has large error.
-    """
-    print("Add data:", flush=True)
-    error_test = y_test - krr.predict_data(x_test)
-    print("error_test:", np.mean(error_test**2), flush=True)
-
-    index_add = error_test**2 > np.sort(error_test**2, axis=0)[-51]
-    print(index_add)
-    print(error_test[index_add])
-    print("Length of x_train:", len(x_train), flush=True)
-    x_train = np.concatenate([x_train, x_test[index_add]])
-    y_train = np.concatenate([y_train, y_test[index_add]])
-    w_train = np.concatenate([w_train, w_test[index_add]])
-    x_test = x_test[~index_add]
-    y_test = y_test[~index_add]
-    w_test = w_test[~index_add]
-    print("End of add data.\n", flush=True)
-    return x_train, y_train, w_train, x_test, y_test, w_test
 
 
 args_parse = argparse.ArgumentParser()
@@ -214,51 +163,117 @@ def predict_data(self, x):
 krr.fit_data = types.MethodType(fit_data, krr)
 krr.predict_data = types.MethodType(predict_data, krr)
 
-x_all = [np.array([0]) for _ in range(250)]
-y_all = [np.array([0]) for _ in range(250)]
-w_all = [np.array([0]) for _ in range(250)]
+x_all = {}
+y_all = {}
+w_all = {}
+dual_coef = {}
 
 for key in keys_list:
+    print(f"Key: {key}", flush=True)
     for index_ in range(len(input_dict[key])):
-        index_round = int(input_dict[key][index_, 0])
-        x_all[index_round] = np.concatenate(
-            [x_all[index_round], input_dict[key][index_]]
+        if index_ % (len(input_dict[key]) / 10) == 0:
+            print(
+                f"Processing: {index_ / (len(input_dict[key]) / 10) * 10:.1f}%",
+                flush=True,
+            )
+        index_round0 = int(input_dict[key][index_, 0] * HASHSIZE)
+        index_round1 = int(input_dict[key][index_, 1] * HASHSIZE) + HASHLEN // 2
+        index_round2 = int(input_dict[key][index_, 2] * HASHSIZE) + HASHLEN // 2
+        index_round3 = int(input_dict[key][index_, 3] * HASHSIZE) + HASHLEN // 2
+        index_round = int(
+            index_round0 * HASHLEN * HASHLEN * HASHLEN
+            + index_round1 * HASHLEN * HASHLEN
+            + index_round2 * HASHLEN
+            + index_round3
         )
-        y_all[index_round] = np.concatenate(
-            [y_all[index_round], output_dict[key][index_]]
+
+        if index_round not in x_all:
+            x_all[index_round] = np.array([input_dict[key][index_]])
+            y_all[index_round] = np.array([output_dict[key][index_]])
+            w_all[index_round] = np.array([weights_dict[key][index_]])
+        else:
+            x_all[index_round] = np.append(
+                x_all[index_round],
+                [input_dict[key][index_]],
+                axis=0,
+            )
+            y_all[index_round] = np.append(
+                y_all[index_round],
+                output_dict[key][index_],
+            )
+            w_all[index_round] = np.append(
+                w_all[index_round],
+                weights_dict[key][index_],
+            )
+
+train_error_sum = 0
+energy_correct_sum = 0
+
+for index_ in np.sort(list(x_all.keys())):
+    index_round0 = index_ // (HASHLEN * HASHLEN * HASHLEN)
+    index_round1 = (
+        index_ % (HASHLEN * HASHLEN * HASHLEN) // (HASHLEN * HASHLEN) - HASHLEN // 2
+    )
+    index_round2 = index_ % (HASHLEN * HASHLEN) // HASHLEN - HASHLEN // 2
+    index_round3 = index_ % HASHLEN - HASHLEN // 2
+
+    print(index_round0 / HASHSIZE, index_)
+
+    np.savez_compressed(
+        f"train_test-final-{index_}.npz",
+        x=x_all[index_],
+        y=y_all[index_],
+        w=w_all[index_],
+    )
+
+    if len(x_all[index_]) < 500:
+        krr.fit_data(x_all[index_], y_all[index_])
+    else:
+        x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
+            x_all[index_],
+            y_all[index_],
+            w_all[index_],
+            train_size=500,
+            random_state=0,
         )
-        w_all[index_round] = np.concatenate([w_all[index_round], weights_dict[key]])
+        krr.fit_data(x_train, y_train)
+        test_error = np.sum(
+            np.abs(y_test - krr.predict_data(x_test)) * w_test * x_test[:, 0]
+        )
 
-
-for index_ in range(250):
-    x_all[index_] = x_all[index_][1:]
-    y_all[index_] = y_all[index_][1:]
-    w_all[index_] = w_all[index_][1:]
-
-    print(f"Round {index_}:", flush=True)
-    print("Length of x_all:", len(x_all[index_]), flush=True)
-
-CONVERGE_STEP = 0
-for i_step in range(0, 2500):
-    print(f"Step {i_step}:", flush=True)
-    krr.fit_data(x_train, y_train)
-    error_krr = evaluate(
-        krr, x_train, input_dict, y_train, output_dict, w_train, weights_dict, keys_list
+    train_error = np.sum(
+        np.abs(
+            (y_all[index_] - krr.predict_data(x_all[index_]))
+            * w_all[index_]
+            * x_all[index_][:, 0]
+        )
     )
-    if error_krr < 0.5:
-        print(f"Error is small: {error_krr}", flush=True)
-        CONVERGE_STEP += 1
-        if CONVERGE_STEP == 2:
-            print("Converge.")
-            break
-    x_train, y_train, w_train, x_test, y_test, w_test = add_data(
-        krr, x_train, y_train, w_train, x_test, y_test, w_test
-    )
+    energy_correct = np.sum(np.abs(x_all[index_][:, 0] * y_all[index_] * w_all[index_]))
 
-np.savez_compressed(
-    f"train_test-final-{time.strftime('%Y%m%d-%H%M%S')}.npz",
-    x_train=x_train,
-    y_train=y_train,
-    w_train=w_train,
-    dual_coef=krr.dual_coef_,
+    train_error_sum += train_error
+    energy_correct_sum += energy_correct
+
+    if AUTOKCALMOL * train_error > 0.1 / HASHSIZE:
+        print(
+            f"Round {index_round0} {index_round1} {index_round2} {index_round3}",
+            flush=True,
+        )
+        print("Length of x_all:", len(x_all[index_]), flush=True)
+
+        print(
+            f"Energy correct: {AUTOKCALMOL * energy_correct} KCAL/MOL",
+            flush=True,
+        )
+        print(
+            f"Train error: {AUTOKCALMOL * train_error} KCAL/MOL",
+            flush=True,
+        )
+    dual_coef[index_] = krr.dual_coef_
+
+    print()
+
+print(
+    f"Energy correct sum: {AUTOKCALMOL * energy_correct_sum} KCAL/MOL",
+    f"Train error sum: {AUTOKCALMOL * train_error_sum} KCAL/MOL",
+    flush=True,
 )
