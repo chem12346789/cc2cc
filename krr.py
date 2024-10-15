@@ -80,6 +80,63 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
     return input_dict, output_dict, weights_dict, coords_dict, keys_list
 
 
+def evaluate(
+    krr,
+    x_train,
+    y_train,
+    w_train,
+    x_all,
+    y_all,
+    w_all,
+):
+    """
+    Evaluate the model.
+    """
+    print("Krr perdict:")
+    train_error = np.sum(
+        np.abs((y_train - krr.predict_data(x_train)) * w_train * x_train[:, 0])
+    )
+    print("train", AUTOKCALMOL * train_error, "KCAL/MOL", flush=True)
+    error_krr = AUTOKCALMOL * np.sum(
+        np.abs((y_all - krr.predict_data(x_all)) * w_all * x_all[:, 0])
+    )
+    print(f"test, {error_krr} KCAL/MOL", flush=True)
+
+    print("B3lyp perdict:")
+    b3lyp_error = np.sum(np.abs(y_train * w_train * x_train[:, 0]))
+    print("train", AUTOKCALMOL * b3lyp_error, "KCAL/MOL", flush=True)
+    b3lyp_error = np.sum(np.abs(y_all * w_all * x_all[:, 0]))
+    print("test", AUTOKCALMOL * b3lyp_error, "KCAL/MOL", flush=True)
+    print("End of evaluate.\n", flush=True)
+    return np.abs(error_krr)
+
+
+def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
+    """
+    Add data which has large error.
+    """
+    print("Add data:", flush=True)
+    error_test = y_test - krr.predict_data(x_test)
+
+    index_add = (
+        np.array([True] * len(error_test))
+        if len(error_test) < 51
+        else (error_test**2 > np.sort(error_test**2, axis=0)[-51])
+    )
+    print(error_test[index_add])
+    print(np.max(krr.kernel_matrix[index_add], axis=1))
+    print("Length of x_train:", len(x_train), flush=True)
+    x_train = np.concatenate([x_train, x_test[index_add]])
+    y_train = np.concatenate([y_train, y_test[index_add]])
+    w_train = np.concatenate([w_train, w_test[index_add]])
+    x_test = x_test[~index_add]
+    y_test = y_test[~index_add]
+    w_test = w_test[~index_add]
+
+    print("End of add data.\n", flush=True)
+    return x_train, y_train, w_train, x_test, y_test, w_test
+
+
 args_parse = argparse.ArgumentParser()
 args_parse.add_argument(
     "--gamma",
@@ -158,7 +215,12 @@ krr = KernelRidge(
 
 
 @njit(parallel=True)
-def get_kernel(x1, x2, gamma=100.0):
+def get_kernel(
+    x1,
+    x2,
+    gamma=100.0,
+    kernel_type="rbf",
+):
     """
     Precompute the kernel.
     Rbf kernel.
@@ -167,7 +229,12 @@ def get_kernel(x1, x2, gamma=100.0):
     kernel = np.zeros((x1.shape[0], x2.shape[0]))
     for j in prange(x2.shape[0]):
         for i in range(x1.shape[0]):
-            kernel[i, j] = np.exp(-gamma * np.sum((x1[i] - x2[j]) ** 2))
+            if kernel_type == "rbf":
+                kernel[i, j] = np.exp(-gamma * np.sum((x1[i] - x2[j]) ** 2))
+            elif kernel_type == "linear":
+                kernel[i, j] = np.dot(x1[i], x2[j])
+            elif kernel_type == "laplacian":
+                kernel[i, j] = np.exp(-gamma * np.sum(np.abs(x1[i] - x2[j])))
     return kernel
 
 
@@ -176,14 +243,16 @@ def fit_data(self, x, y):
     Modify the fit method to use the precomputed kernel.
     """
     self.x_fit = x.copy()
-    self.fit(get_kernel(x, x, self.gamma), y)
+    self.kernel_matrix = get_kernel(x, x, self.gamma, self.kernel_type)
+    self.fit(self.kernel_matrix, y)
 
 
 def predict_data(self, x):
     """
     Modify the predict method to use the precomputed kernel.
     """
-    return self.predict(get_kernel(x, self.x_fit, self.gamma))
+    self.kernel_matrix = get_kernel(x, self.x_fit, self.gamma, self.kernel_type)
+    return self.predict(self.kernel_matrix)
 
 
 krr.fit_data = types.MethodType(fit_data, krr)
@@ -192,6 +261,9 @@ krr.predict_data = types.MethodType(predict_data, krr)
 x_all = {}
 y_all = {}
 w_all = {}
+# x_neighborhood = {}
+# y_neighborhood = {}
+# w_neighborhood = {}
 coor_all = {}
 name_all = {}
 dual_coef = {}
@@ -228,12 +300,54 @@ for key in keys_list:
             coor_all[index_round].append(coords_dict[key][index_])
             name_all[index_round].append(key)
 
+        # index_neighborhood = []
+        # for i, j, k, l in product(
+        #     [-1, 0, 1],
+        #     [-1, 0, 1],
+        #     [-1, 0, 1],
+        #     [-1, 0, 1],
+        # ):
+        #     if (
+        #         index_round0 + i < 0
+        #         or index_round1 + j < 0
+        #         or index_round2 + k < 0
+        #         or index_round3 + l < 0
+        #     ):
+        #         continue
+        #     if (
+        #         index_round0 + i >= HASHLEN
+        #         or index_round1 + j >= HASHLEN
+        #         or index_round2 + k >= HASHLEN
+        #         or index_round3 + l >= HASHLEN
+        #     ):
+        #         continue
+        #     index_neighborhood.append(
+        #         int(
+        #             (index_round0 + i) * HASHLEN * HASHLEN * HASHLEN
+        #             + (index_round1 + j) * HASHLEN * HASHLEN
+        #             + (index_round2 + k) * HASHLEN
+        #             + (index_round3 + l)
+        #         )
+        #     )
+        # for index_neighborhood_i in index_neighborhood:
+        #     if index_neighborhood_i not in x_neighborhood:
+        #         x_neighborhood[index_neighborhood_i] = [input_dict[key][index_]]
+        #         y_neighborhood[index_neighborhood_i] = [output_dict[key][index_]]
+        #         w_neighborhood[index_neighborhood_i] = [weights_dict[key][index_]]
+        #     else:
+        #         x_neighborhood[index_neighborhood_i].append(input_dict[key][index_])
+        #         y_neighborhood[index_neighborhood_i].append(output_dict[key][index_])
+        #         w_neighborhood[index_neighborhood_i].append(weights_dict[key][index_])
+
 for index_ in np.sort(list(x_all.keys())):
     x_all[index_] = np.array(x_all[index_])
     y_all[index_] = np.array(y_all[index_])
     w_all[index_] = np.array(w_all[index_])
     coor_all[index_] = np.array(coor_all[index_])
     name_all[index_] = np.array(name_all[index_])
+    # x_neighborhood[index_] = np.array(x_neighborhood[index_])
+    # y_neighborhood[index_] = np.array(y_neighborhood[index_])
+    # w_neighborhood[index_] = np.array(w_neighborhood[index_])
 
 train_error_sum = 0
 energy_correct_sum = 0
@@ -247,6 +361,11 @@ for index_ in np.sort(list(x_all.keys())):
     index_round3 = index_ % HASHLEN - HASHLEN // 2
 
     print(index_round0 / HASHSIZE, index_)
+
+    if index_ == 0:
+        krr.kernel_type = "laplacian"
+    else:
+        krr.kernel_type = "rbf"
 
     np.savez_compressed(
         f"data/save/train_test-final-{index_}.npz",
@@ -264,19 +383,39 @@ for index_ in np.sort(list(x_all.keys())):
             x_all[index_],
             y_all[index_],
             w_all[index_],
-            train_size=500,
-            random_state=0,
+            train_size=50,
+            random_state=42,
         )
-        krr.fit_data(x_train, y_train)
+
+        CONVERGE_STEP = 0
+        for i_step in range(250):
+            print(f"Step {i_step}:", flush=True)
+            krr.fit_data(x_train, y_train)
+            error_krr = evaluate(
+                krr,
+                x_train,
+                y_train,
+                w_train,
+                x_all[index_],
+                y_all[index_],
+                w_all[index_],
+            )
+            if error_krr * AUTOKCALMOL < 1:
+                print(f"Error is small: {error_krr}", flush=True)
+                CONVERGE_STEP += 1
+                if CONVERGE_STEP == 1:
+                    print("Converge.")
+                    break
+            x_train, y_train, w_train, x_test, y_test, w_test = add_data(
+                krr, x_train, y_train, w_train, x_test, y_test, w_test
+            )
 
     train_error = np.sum(
-        np.abs(
-            (y_all[index_] - krr.predict_data(x_all[index_]))
-            * w_all[index_]
-            * x_all[index_][:, 0]
-        )
+        (y_all[index_] - krr.predict_data(x_all[index_]))
+        * w_all[index_]
+        * x_all[index_][:, 0]
     )
-    energy_correct = np.sum(np.abs(x_all[index_][:, 0] * y_all[index_] * w_all[index_]))
+    energy_correct = np.sum(x_all[index_][:, 0] * y_all[index_] * w_all[index_])
 
     train_error_sum += train_error
     energy_correct_sum += energy_correct
