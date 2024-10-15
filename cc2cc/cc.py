@@ -80,6 +80,7 @@ def cc(molecular, name, args):
             ) / (rho_cc[0][i] + 1e-14)
 
     rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+    coor_cube = np.zeros((len(grids.coords), 3, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
     for p, p_coords in enumerate(grids.coords):
         if p * 10 % len(grids.coords) == 0:
             print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
@@ -91,6 +92,7 @@ def cc(molecular, name, args):
                 (j - CUBE_MIDDLE) * CUBE_LEN,
                 (k - CUBE_MIDDLE) * CUBE_LEN,
             ]
+        coor_cube[p] = coords_cube.copy()
         coords_cube = coords_cube.reshape(-1, 3)
 
         ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
@@ -106,6 +108,7 @@ def cc(molecular, name, args):
         e_cc=e_cc,
         dm_cc=dm1_cc,
         rho_inv_4_norm=rho_cc,
+        coor_cube=coor_cube,
         rho_cube=rho_cube,
         exc_over_dm_cc_grids=exc_over_dm_cc_grids,
         weights=grids.weights,
@@ -142,7 +145,11 @@ def cc_change_cube(molecular, name, args):
         )
         grids = Grid(mol, level=1, period=2)
 
+        ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+        rho_cc_all = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="mGGA")
+
         rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        coor_cube = np.zeros((len(grids.coords), 3, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
         for p, p_coords in enumerate(grids.coords):
             if p * 10 % len(grids.coords) == 0:
                 print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
@@ -154,6 +161,7 @@ def cc_change_cube(molecular, name, args):
                     (j - CUBE_MIDDLE) * CUBE_LEN,
                     (k - CUBE_MIDDLE) * CUBE_LEN,
                 ]
+            coor_cube[p] = coords_cube.copy()
             coords_cube = coords_cube.reshape(-1, 3)
 
             ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
@@ -165,11 +173,17 @@ def cc_change_cube(molecular, name, args):
             e_cc=e_cc,
             dm_cc=dm1_cc,
             rho_inv_4_norm=rho_cc,
+            rho_cc_all=rho_cc_all,
             rho_inv_4_norm_matrix=process_input(rho_cc, grids),
             rho_cube=rho_cube,
+            coor_cube=coor_cube,
             exc_over_dm_cc_grids=exc_over_dm_cc_grids,
-            error_energy=error_energy,
             exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
+            coords=grids.coords,
+            x_matrix=grids.vector_to_matrix(grids.coords[:, 0]),
+            y_matrix=grids.vector_to_matrix(grids.coords[:, 1]),
+            z_matrix=grids.vector_to_matrix(grids.coords[:, 2]),
             weights=grids.weights,
             weights_matrix=grids.vector_to_matrix(grids.weights),
+            error_energy=error_energy,
         )

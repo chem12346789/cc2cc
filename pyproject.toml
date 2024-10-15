@@ -1,7 +1,7 @@
 [project]
-name = "dft2cc"
+name = "cc2cc"
 version = "0.1.0"
-description = "dft2cc: AI for density functional theory"
+description = "cc2cc: AI for density functional theory"
 
 [build-system]
 build-backend = "setuptools.build_meta"
@@ -21,6 +21,6 @@ requires = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["dft2cc"]
+include = ["cc2cc"]
 exclude = []
 namespaces = false

@@ -13,7 +13,7 @@ if STRUCTURE is None:
 ORIENTATION_NUMBER_DICT = {"x": 0, "y": 1, "z": 2}
 CUBE_SIZE = 3
 CUBE_MIDDLE = CUBE_SIZE // 2
-CUBE_LEN = 0.005
+CUBE_LEN = 0.1
 
 TEST = os.environ.get("DFT2CC_TEST")
 if TEST is None:

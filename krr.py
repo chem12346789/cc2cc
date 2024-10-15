@@ -14,8 +14,8 @@ from sklearn.model_selection import train_test_split
 DATA_PATH = Path("data/grids_dft")
 AUTOKCALMOL = 627.509
 BASIS = "cc-pVDZ"
-HASHLEN = 10000
-HASHSIZE = 10
+HASHLEN = 5000
+HASHSIZE = 1
 # pylint: disable=W0621
 
 
@@ -26,6 +26,7 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
     input_dict = {}
     output_dict = {}
     weights_dict = {}
+    coords_dict = {}
     keys_list = []
     for (
         name_mol,
@@ -46,18 +47,37 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
 
         data = np.load(data_path)
 
-        input_ = data["rho_inv_4_norm"]
         output_ = data["exc_over_dm_cc_grids"]
         weights_ = data["weights"]
-        input_dict[name] = np.transpose(input_, (1, 0))
-        for index_ in range(4):
-            input_[index_, :] = input_[index_, :] / (1 if index_ == 0 else np.sqrt(20))
-            print(np.var(input_[index_, :]))
-            print(np.max(input_[index_, :]), np.min(input_[index_, :]))
+        coords_cube = data["coor_cube"]
+
+        input_ = data["rho_cube"]
+        swap_ = input_[:, :, 0, 0, 0].copy()
+        input_[:, :, 0, 0, 0] = input_[:, :, 1, 1, 1].copy()
+        input_[:, :, 1, 1, 1] = swap_.copy()
+        input_ = input_.reshape(-1, 27 * 4)
+        print(f"max input: {np.max(input_)}, min input: {np.min(input_)}")
+        input_dict[name] = input_
+
         output_dict[name] = output_
         weights_dict[name] = weights_
+
+        swap_ = coords_cube[:, 0, 0, 0, :].copy()
+        coords_cube[:, 0, 0, 0, :] = coords_cube[:, 1, 1, 1, :].copy()
+        coords_cube[:, 1, 1, 1, :] = swap_.copy()
+        coords_cube = coords_cube.reshape(-1, 27, 3)
+        coords_dict[name] = coords_cube
+
         keys_list.append(name)
-    return input_dict, output_dict, weights_dict, keys_list
+        print(
+            AUTOKCALMOL
+            * np.sum(
+                np.abs(input_dict[name][:, 0] * output_dict[name] * weights_dict[name])
+            ),
+            AUTOKCALMOL
+            * np.sum(input_dict[name][:, 0] * output_dict[name] * weights_dict[name]),
+        )
+    return input_dict, output_dict, weights_dict, coords_dict, keys_list
 
 
 args_parse = argparse.ArgumentParser()
@@ -69,7 +89,7 @@ args_parse.add_argument(
 args_parse.add_argument(
     "--alpha",
     type=float,
-    default=0.01,
+    default=1e-8,
 )
 args_parse.add_argument(
     "--kernel",
@@ -117,7 +137,13 @@ print("gamma:", args.gamma)
 print("alpha:", args.alpha)
 print("kernel:", args.kernel, flush=True)
 
-(input_dict, output_dict, weights_dict, keys_list) = load_data(
+(
+    input_dict,
+    output_dict,
+    weights_dict,
+    coords_dict,
+    keys_list,
+) = load_data(
     args.molecular_list,
     args.extend_atom,
     args.extend_xyz,
@@ -166,6 +192,8 @@ krr.predict_data = types.MethodType(predict_data, krr)
 x_all = {}
 y_all = {}
 w_all = {}
+coor_all = {}
+name_all = {}
 dual_coef = {}
 
 for key in keys_list:
@@ -188,23 +216,24 @@ for key in keys_list:
         )
 
         if index_round not in x_all:
-            x_all[index_round] = np.array([input_dict[key][index_]])
-            y_all[index_round] = np.array([output_dict[key][index_]])
-            w_all[index_round] = np.array([weights_dict[key][index_]])
+            x_all[index_round] = [input_dict[key][index_]]
+            y_all[index_round] = [output_dict[key][index_]]
+            w_all[index_round] = [weights_dict[key][index_]]
+            coor_all[index_round] = [coords_dict[key][index_]]
+            name_all[index_round] = [key]
         else:
-            x_all[index_round] = np.append(
-                x_all[index_round],
-                [input_dict[key][index_]],
-                axis=0,
-            )
-            y_all[index_round] = np.append(
-                y_all[index_round],
-                output_dict[key][index_],
-            )
-            w_all[index_round] = np.append(
-                w_all[index_round],
-                weights_dict[key][index_],
-            )
+            x_all[index_round].append(input_dict[key][index_])
+            y_all[index_round].append(output_dict[key][index_])
+            w_all[index_round].append(weights_dict[key][index_])
+            coor_all[index_round].append(coords_dict[key][index_])
+            name_all[index_round].append(key)
+
+for index_ in np.sort(list(x_all.keys())):
+    x_all[index_] = np.array(x_all[index_])
+    y_all[index_] = np.array(y_all[index_])
+    w_all[index_] = np.array(w_all[index_])
+    coor_all[index_] = np.array(coor_all[index_])
+    name_all[index_] = np.array(name_all[index_])
 
 train_error_sum = 0
 energy_correct_sum = 0
@@ -220,10 +249,12 @@ for index_ in np.sort(list(x_all.keys())):
     print(index_round0 / HASHSIZE, index_)
 
     np.savez_compressed(
-        f"train_test-final-{index_}.npz",
+        f"data/save/train_test-final-{index_}.npz",
         x=x_all[index_],
         y=y_all[index_],
         w=w_all[index_],
+        coor=coor_all[index_],
+        name=name_all[index_],
     )
 
     if len(x_all[index_]) < 500:
@@ -237,9 +268,6 @@ for index_ in np.sort(list(x_all.keys())):
             random_state=0,
         )
         krr.fit_data(x_train, y_train)
-        test_error = np.sum(
-            np.abs(y_test - krr.predict_data(x_test)) * w_test * x_test[:, 0]
-        )
 
     train_error = np.sum(
         np.abs(
@@ -253,23 +281,25 @@ for index_ in np.sort(list(x_all.keys())):
     train_error_sum += train_error
     energy_correct_sum += energy_correct
 
-    if AUTOKCALMOL * train_error > 0.1 / HASHSIZE:
+    if np.abs(AUTOKCALMOL * train_error) > 0.0001:
         print(
             f"Round {index_round0} {index_round1} {index_round2} {index_round3}",
             flush=True,
         )
-        print("Length of x_all:", len(x_all[index_]), flush=True)
+        print(
+            f"Length of x_all: {len(x_all[index_])}",
+            flush=True,
+        )
+        print(
+            f"Train error: {AUTOKCALMOL * train_error_sum} KCAL/MOL",
+            flush=True,
+        )
+        print(
+            f"Energy correct: {AUTOKCALMOL * energy_correct_sum} KCAL/MOL",
+            flush=True,
+        )
 
-        print(
-            f"Energy correct: {AUTOKCALMOL * energy_correct} KCAL/MOL",
-            flush=True,
-        )
-        print(
-            f"Train error: {AUTOKCALMOL * train_error} KCAL/MOL",
-            flush=True,
-        )
     dual_coef[index_] = krr.dual_coef_
-
     print()
 
 print(
