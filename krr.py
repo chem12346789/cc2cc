@@ -281,7 +281,7 @@ for index_ in np.sort(list(x_all.keys())):
     train_error_sum += train_error
     energy_correct_sum += energy_correct
 
-    if np.abs(AUTOKCALMOL * train_error) > 0.0001:
+    if np.abs(AUTOKCALMOL * train_error) > 0.01:
         print(
             f"Round {index_round0} {index_round1} {index_round2} {index_round3}",
             flush=True,
@@ -291,11 +291,11 @@ for index_ in np.sort(list(x_all.keys())):
             flush=True,
         )
         print(
-            f"Train error: {AUTOKCALMOL * train_error_sum} KCAL/MOL",
+            f"Train error: {AUTOKCALMOL * train_error} KCAL/MOL",
             flush=True,
         )
         print(
-            f"Energy correct: {AUTOKCALMOL * energy_correct_sum} KCAL/MOL",
+            f"Energy correct: {AUTOKCALMOL * energy_correct} KCAL/MOL",
             flush=True,
         )
 
