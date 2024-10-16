@@ -12,6 +12,7 @@ from cc2cc.utils.env_var import (
     MAIN_PATH,
     DATA_PATH,
     GENERATE_NEW,
+    STRUCTURE,
     DATA_SCF_PATH,
     DATA_SAVE_PATH,
     DATA_CC_PATH,

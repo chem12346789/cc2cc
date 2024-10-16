@@ -14,8 +14,8 @@ from sklearn.model_selection import train_test_split
 DATA_PATH = Path("data/grids_dft")
 AUTOKCALMOL = 627.509
 BASIS = "cc-pVDZ"
-HASHLEN = 5000
-HASHSIZE = 1
+HASHLEN = 50000
+HASHSIZE = 10
 # pylint: disable=W0621
 
 
@@ -59,7 +59,7 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
         print(f"max input: {np.max(input_)}, min input: {np.min(input_)}")
         input_dict[name] = input_
 
-        output_dict[name] = output_ * input_[:, 0, 0, 0, 0]
+        output_dict[name] = output_
         weights_dict[name] = weights_
 
         swap_ = coords_cube[:, 0, 0, 0, :].copy()
@@ -80,25 +80,17 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
     return input_dict, output_dict, weights_dict, coords_dict, keys_list
 
 
-def evaluate(
-    krr,
-    x_train,
-    y_train,
-    w_train,
-    x_all,
-    y_all,
-    w_all,
-):
+def evaluate(krr, x_train, y_train, w_train, x_all, y_all, w_all):
     """
     Evaluate the model.
     """
     print("Krr perdict:")
     train_error = np.sum(
-        np.abs((y_train - krr.predict_data(x_train)) * w_train * x_train[:, 0])
+        (np.abs(y_train - krr.predict_data(x_train)) * w_train * x_train[:, 0])
     )
     print("train", AUTOKCALMOL * train_error, "KCAL/MOL", flush=True)
     error_krr = AUTOKCALMOL * np.sum(
-        np.abs((y_all - krr.predict_data(x_all)) * w_all * x_all[:, 0])
+        (np.abs(y_all - krr.predict_data(x_all)) * w_all * x_all[:, 0])
     )
     print(f"test, {error_krr} KCAL/MOL", flush=True)
 
@@ -116,7 +108,7 @@ def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
     Add data which has large error.
     """
     print("Add data:", flush=True)
-    error_test = y_test - krr.predict_data(x_test)
+    error_test = (y_test - krr.predict_data(x_test)) * w_test * x_test[:, 0]
 
     index_add = (
         np.array([True] * len(error_test))
@@ -125,7 +117,6 @@ def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
     )
     print(error_test[index_add])
     print(np.max(krr.kernel_matrix[index_add], axis=1))
-    print("Length of x_train:", len(x_train), flush=True)
     x_train = np.concatenate([x_train, x_test[index_add]])
     y_train = np.concatenate([y_train, y_test[index_add]])
     w_train = np.concatenate([w_train, w_test[index_add]])
@@ -133,6 +124,13 @@ def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
     y_test = y_test[~index_add]
     w_test = w_test[~index_add]
 
+    print(
+        "Length of x_train:",
+        len(x_train),
+        "Length of x_test:",
+        len(x_test),
+        flush=True,
+    )
     print("End of add data.\n", flush=True)
     return x_train, y_train, w_train, x_test, y_test, w_test
 
@@ -141,7 +139,7 @@ args_parse = argparse.ArgumentParser()
 args_parse.add_argument(
     "--gamma",
     type=float,
-    default=10,
+    default=1000,
 )
 args_parse.add_argument(
     "--alpha",
@@ -215,12 +213,7 @@ krr = KernelRidge(
 
 
 @njit(parallel=True)
-def get_kernel(
-    x1,
-    x2,
-    gamma=100.0,
-    kernel_type="rbf",
-):
+def get_kernel(x1, x2, gamma=100.0, kernel_type="rbf"):
     """
     Precompute the kernel.
     Rbf kernel.
@@ -300,54 +293,12 @@ for key in keys_list:
             coor_all[index_round].append(coords_dict[key][index_])
             name_all[index_round].append(key)
 
-        # index_neighborhood = []
-        # for i, j, k, l in product(
-        #     [-1, 0, 1],
-        #     [-1, 0, 1],
-        #     [-1, 0, 1],
-        #     [-1, 0, 1],
-        # ):
-        #     if (
-        #         index_round0 + i < 0
-        #         or index_round1 + j < 0
-        #         or index_round2 + k < 0
-        #         or index_round3 + l < 0
-        #     ):
-        #         continue
-        #     if (
-        #         index_round0 + i >= HASHLEN
-        #         or index_round1 + j >= HASHLEN
-        #         or index_round2 + k >= HASHLEN
-        #         or index_round3 + l >= HASHLEN
-        #     ):
-        #         continue
-        #     index_neighborhood.append(
-        #         int(
-        #             (index_round0 + i) * HASHLEN * HASHLEN * HASHLEN
-        #             + (index_round1 + j) * HASHLEN * HASHLEN
-        #             + (index_round2 + k) * HASHLEN
-        #             + (index_round3 + l)
-        #         )
-        #     )
-        # for index_neighborhood_i in index_neighborhood:
-        #     if index_neighborhood_i not in x_neighborhood:
-        #         x_neighborhood[index_neighborhood_i] = [input_dict[key][index_]]
-        #         y_neighborhood[index_neighborhood_i] = [output_dict[key][index_]]
-        #         w_neighborhood[index_neighborhood_i] = [weights_dict[key][index_]]
-        #     else:
-        #         x_neighborhood[index_neighborhood_i].append(input_dict[key][index_])
-        #         y_neighborhood[index_neighborhood_i].append(output_dict[key][index_])
-        #         w_neighborhood[index_neighborhood_i].append(weights_dict[key][index_])
-
 for index_ in np.sort(list(x_all.keys())):
     x_all[index_] = np.array(x_all[index_])
     y_all[index_] = np.array(y_all[index_])
     w_all[index_] = np.array(w_all[index_])
     coor_all[index_] = np.array(coor_all[index_])
     name_all[index_] = np.array(name_all[index_])
-    # x_neighborhood[index_] = np.array(x_neighborhood[index_])
-    # y_neighborhood[index_] = np.array(y_neighborhood[index_])
-    # w_neighborhood[index_] = np.array(w_neighborhood[index_])
 
 train_error_sum = 0
 energy_correct_sum = 0
@@ -362,23 +313,17 @@ for index_ in np.sort(list(x_all.keys())):
 
     print(index_round0 / HASHSIZE, index_)
 
-    if index_ == 0:
-        krr.gamma = args.gamma
+    if (
+        index_round0 == 0
+        and index_round1 == 0
+        and index_round2 == 0
+        and index_round3 == 0
+    ):
         krr.alpha = args.alpha
-        krr.kernel_type = "laplacian"
+        krr.kernel_type = "rbf"
     else:
-        krr.gamma = 100
         krr.alpha = 1e-8
         krr.kernel_type = "rbf"
-
-    np.savez_compressed(
-        f"data/save/train_test-final-{index_}.npz",
-        x=x_all[index_],
-        y=y_all[index_],
-        w=w_all[index_],
-        coor=coor_all[index_],
-        name=name_all[index_],
-    )
 
     if len(x_all[index_]) < 500:
         krr.fit_data(x_all[index_], y_all[index_])
@@ -392,7 +337,7 @@ for index_ in np.sort(list(x_all.keys())):
         )
 
         CONVERGE_STEP = 0
-        for i_step in range(250):
+        for i_step in range(200):
             print(f"Step {i_step}:", flush=True)
             krr.fit_data(x_train, y_train)
             error_krr = evaluate(
@@ -404,7 +349,7 @@ for index_ in np.sort(list(x_all.keys())):
                 y_all[index_],
                 w_all[index_],
             )
-            if error_krr < 0.01:
+            if error_krr < 0.1:
                 print(f"Error is small: {error_krr}", flush=True)
                 CONVERGE_STEP += 1
                 if CONVERGE_STEP == 1:
@@ -444,6 +389,12 @@ for index_ in np.sort(list(x_all.keys())):
 
     dual_coef[index_] = krr.dual_coef_
     print()
+
+# save the model
+np.savez_compressed(
+    f"data/save/dual_coef-final.npz",
+    dual_coef=dual_coef,
+)
 
 print(
     f"Energy correct sum: {AUTOKCALMOL * energy_correct_sum} KCAL/MOL",
