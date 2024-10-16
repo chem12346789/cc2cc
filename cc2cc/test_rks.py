@@ -222,8 +222,9 @@ def test_rks(
         mdft.conv_tol = 1e-8
     mdft.diis_space = 10
     mdft.DIIS = pyscf.scf.EDIIS
-    mdft.max_cycle = 100
+    mdft.max_cycle = -1
     mdft.level_shift = 0
+    mdft.init_guess = test_data.dm1_cc
     mdft.run()
     dm1_scf = mdft.make_rdm1()
     print("Done SCF", flush=True)
