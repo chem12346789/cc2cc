@@ -213,14 +213,23 @@ class DataBase:
                     input_[i_coord] = input_mat[
                         i_coord,
                         :,
-                        CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-                        CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-                        CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+                        CUBE_MIDDLE
+                        - CUBE_USE_MIDDLE : CUBE_MIDDLE
+                        + CUBE_USE_MIDDLE
+                        + 1,
+                        CUBE_MIDDLE
+                        - CUBE_USE_MIDDLE : CUBE_MIDDLE
+                        + CUBE_USE_MIDDLE
+                        + 1,
+                        CUBE_MIDDLE
+                        - CUBE_USE_MIDDLE : CUBE_MIDDLE
+                        + CUBE_USE_MIDDLE
+                        + 1,
                     ]
                 else:
                     input_[i_coord] = input_mat[:, i_coord]
-                weight_[i_coord] = weights_mat[i_coord]
-                output_[i_coord] = output_mat[i_coord]
+                weight_[i_coord] = weights_mat[[i_coord]]
+                output_[i_coord] = output_mat[[i_coord]]
 
             self.data_gpu[name] = BasicDataset(
                 {
