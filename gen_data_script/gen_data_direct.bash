@@ -21,7 +21,5 @@ export DFT2CC_DATA_PATH=~/workspace/cc2cc/data/grids_dft/
 export NVIDIA_VISIBLE_DEVICES=1
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')
 # export CUDA_VISIBLE_DEVICES=NUMBER_OF_GPU
-# export DFT2CC_STRUCTURE=unet
 
-# nohup bash -c '~/anaconda3/envs/pyscf3.8/bin/python train.py -dl -0.5 0.5 11 -b cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --eval_step 10 --batch_size 10 --epoch 2500 --with_eval True --precision float32'  > log/train.log &
-nohup bash -c '~/anaconda3/envs/pyscf3.8/bin/python train.py -dl -0.5 0.5 11 -b cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --eval_step 10 --batch_size 10000 --epoch 2500 --with_eval True --precision float32'  > log/train.log &
+nohup bash -c '~/anaconda3/envs/pyscf3.8/bin/python gen_data.py -dl -0.5 0.5 11 -b cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --name_mol propane'  > log/gen_data.log &
