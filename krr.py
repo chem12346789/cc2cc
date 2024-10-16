@@ -103,10 +103,10 @@ def evaluate(
     print(f"test, {error_krr} KCAL/MOL", flush=True)
 
     print("B3lyp perdict:")
-    b3lyp_error = np.sum(np.abs(y_train * w_train * x_train[:, 0]))
-    print("train", AUTOKCALMOL * b3lyp_error, "KCAL/MOL", flush=True)
-    b3lyp_error = np.sum(np.abs(y_all * w_all * x_all[:, 0]))
-    print("test", AUTOKCALMOL * b3lyp_error, "KCAL/MOL", flush=True)
+    b3lyp_error = AUTOKCALMOL * np.sum(np.abs(y_train * w_train * x_train[:, 0]))
+    print("train", b3lyp_error, "KCAL/MOL", flush=True)
+    b3lyp_error = AUTOKCALMOL * np.sum(np.abs(y_all * w_all * x_all[:, 0]))
+    print("test", b3lyp_error, "KCAL/MOL", flush=True)
     print("End of evaluate.\n", flush=True)
     return np.abs(error_krr)
 
@@ -363,8 +363,12 @@ for index_ in np.sort(list(x_all.keys())):
     print(index_round0 / HASHSIZE, index_)
 
     if index_ == 0:
+        krr.gamma = args.gamma
+        krr.alpha = args.alpha
         krr.kernel_type = "laplacian"
     else:
+        krr.gamma = 100
+        krr.alpha = 1e-8
         krr.kernel_type = "rbf"
 
     np.savez_compressed(
@@ -400,7 +404,7 @@ for index_ in np.sort(list(x_all.keys())):
                 y_all[index_],
                 w_all[index_],
             )
-            if error_krr * AUTOKCALMOL < 1:
+            if error_krr < 0.01:
                 print(f"Error is small: {error_krr}", flush=True)
                 CONVERGE_STEP += 1
                 if CONVERGE_STEP == 1:
