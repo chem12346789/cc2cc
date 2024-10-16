@@ -59,7 +59,7 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
         print(f"max input: {np.max(input_)}, min input: {np.min(input_)}")
         input_dict[name] = input_
 
-        output_dict[name] = output_
+        output_dict[name] = output_ * input_[:, 0, 0, 0, 0]
         weights_dict[name] = weights_
 
         swap_ = coords_cube[:, 0, 0, 0, :].copy()
