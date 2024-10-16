@@ -338,9 +338,6 @@ class ModelDict:
         input_mat = torch.tensor(input_mat, dtype=self.dtype).to("cuda")
         with torch.no_grad():
             output_mat = self.model(input_mat)
-        weight_mat = torch.tensor(
-            grids.vector_to_matrix(grids.weights), dtype=self.dtype
-        ).to("cuda")
 
         if "3d" in STRUCTURE:
             raise NotImplementedError
