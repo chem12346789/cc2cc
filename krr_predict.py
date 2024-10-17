@@ -14,8 +14,8 @@ from sklearn.model_selection import train_test_split
 DATA_PATH = Path("data/grids_dft")
 AUTOKCALMOL = 627.509
 BASIS = "cc-pVDZ"
-HASHLEN = 50000
-HASHSIZE = 10
+HASHLEN = 500
+HASHSIZE = 0.1
 # pylint: disable=W0621
 
 
@@ -115,7 +115,7 @@ def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
         if len(error_test) < 51
         else (error_test**2 > np.sort(error_test**2, axis=0)[-51])
     )
-    print(AUTOKCALMOL * error_test[index_add])
+    print(error_test[index_add])
     print(np.max(krr.kernel_matrix[index_add], axis=1))
     x_train = np.concatenate([x_train, x_test[index_add]])
     y_train = np.concatenate([y_train, y_test[index_add]])
@@ -224,20 +224,9 @@ def get_kernel(x1, x2, gamma=100.0, kernel_type="rbf"):
         for i in range(x1.shape[0]):
             if kernel_type == "rbf":
                 kernel[i, j] = np.exp(-gamma * np.sum((x1[i] - x2[j]) ** 2))
-            elif kernel_type == "linear":
-                kernel[i, j] = np.dot(x1[i], x2[j])
             elif kernel_type == "laplacian":
                 kernel[i, j] = np.exp(-gamma * np.sum(np.abs(x1[i] - x2[j])))
     return kernel
-
-
-def fit_data(self, x, y):
-    """
-    Modify the fit method to use the precomputed kernel.
-    """
-    self.x_fit = x.copy()
-    self.kernel_matrix = get_kernel(x, x, self.gamma, self.kernel_type)
-    self.fit(self.kernel_matrix, y)
 
 
 def predict_data(self, x):
@@ -248,8 +237,8 @@ def predict_data(self, x):
     return self.kernel_matrix @ self.dual_coef_
 
 
-krr.fit_data = types.MethodType(fit_data, krr)
 krr.predict_data = types.MethodType(predict_data, krr)
+krr.kernel_type = "rbf"
 
 x_all = {}
 y_all = {}
@@ -260,7 +249,6 @@ w_all = {}
 coor_all = {}
 name_all = {}
 dual_coef = {}
-x_fit = {}
 
 for key in keys_list:
     print(f"Key: {key}", flush=True)
@@ -304,6 +292,14 @@ for index_ in np.sort(list(x_all.keys())):
 train_error_sum = 0
 energy_correct_sum = 0
 
+
+# load the model
+model_coef = np.load("data/save/dual_coef-final.npz", allow_pickle=True)[
+    "dual_coef"
+].item()
+model_xfit = np.load("data/save/dual_coef-final.npz", allow_pickle=True)["x_fit"].item()
+
+
 for index_ in np.sort(list(x_all.keys())):
     index_round0 = index_ // (HASHLEN * HASHLEN * HASHLEN)
     index_round1 = (
@@ -314,58 +310,23 @@ for index_ in np.sort(list(x_all.keys())):
 
     print(index_round0 / HASHSIZE, index_)
 
-    if (
-        index_round0 == 0
-        and index_round1 == 0
-        and index_round2 == 0
-        and index_round3 == 0
-    ):
-        krr.alpha = args.alpha
-        krr.kernel_type = "rbf"
+    if index_ in model_coef:
+        krr.dual_coef_ = model_coef[index_]
+        krr.x_fit = model_xfit[index_]
     else:
-        krr.alpha = 1e-8
-        krr.kernel_type = "rbf"
-
-    if len(x_all[index_]) < 500:
-        krr.fit_data(x_all[index_], y_all[index_])
-    else:
-        x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
-            x_all[index_],
-            y_all[index_],
-            w_all[index_],
-            train_size=50,
-            random_state=42,
+        index_search_index = np.argmin(
+            np.abs(np.array(list(model_coef.keys())) - index_)
         )
-
-        CONVERGE_STEP = 0
-        for i_step in range(500):
-            print(f"Step {i_step}:", flush=True)
-            krr.fit_data(x_train, y_train)
-            error_krr = evaluate(
-                krr,
-                x_train,
-                y_train,
-                w_train,
-                x_all[index_],
-                y_all[index_],
-                w_all[index_],
-            )
-            if error_krr < 0.1:
-                print(f"Error is small: {error_krr}", flush=True)
-                CONVERGE_STEP += 1
-                if CONVERGE_STEP == 1:
-                    print("Converge.")
-                    break
-            x_train, y_train, w_train, x_test, y_test, w_test = add_data(
-                krr, x_train, y_train, w_train, x_test, y_test, w_test
-            )
+        index_search = list(model_coef.keys())[index_search_index]
+        krr.dual_coef_ = model_coef[index_search]
+        krr.x_fit = model_xfit[index_search]
 
     train_error = np.sum(
         (y_all[index_] - krr.predict_data(x_all[index_]))
         * w_all[index_]
         * x_all[index_][:, 0]
     )
-    energy_correct = np.sum(x_all[index_][:, 0] * y_all[index_] * w_all[index_])
+    energy_correct = np.sum(y_all[index_] * w_all[index_] * x_all[index_][:, 0])
 
     train_error_sum += train_error
     energy_correct_sum += energy_correct
@@ -387,17 +348,6 @@ for index_ in np.sort(list(x_all.keys())):
             f"Energy correct: {AUTOKCALMOL * energy_correct} KCAL/MOL",
             flush=True,
         )
-
-    dual_coef[index_] = krr.dual_coef_
-    x_fit[index_] = krr.x_fit
-    print()
-
-# save the model
-np.savez_compressed(
-    f"data/save/dual_coef-final.npz",
-    dual_coef=dual_coef,
-    x_fit=x_fit,
-)
 
 print(
     f"Energy correct sum: {AUTOKCALMOL * energy_correct_sum} KCAL/MOL",
