@@ -139,7 +139,7 @@ args_parse = argparse.ArgumentParser()
 args_parse.add_argument(
     "--gamma",
     type=float,
-    default=1000,
+    default=100,
 )
 args_parse.add_argument(
     "--alpha",
@@ -394,7 +394,7 @@ for index_ in np.sort(list(x_all.keys())):
 
 # save the model
 np.savez_compressed(
-    f"data/save/dual_coef-final.npz",
+    "data/save/dual_coef-final.npz",
     dual_coef=dual_coef,
     x_fit=x_fit,
 )

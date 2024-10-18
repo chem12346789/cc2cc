@@ -14,8 +14,8 @@ from sklearn.model_selection import train_test_split
 DATA_PATH = Path("data/grids_dft")
 AUTOKCALMOL = 627.509
 BASIS = "cc-pVDZ"
-HASHLEN = 500
-HASHSIZE = 0.1
+HASHLEN = 50000
+HASHSIZE = 10
 # pylint: disable=W0621
 
 
@@ -291,7 +291,8 @@ for index_ in np.sort(list(x_all.keys())):
 
 train_error_sum = 0
 energy_correct_sum = 0
-
+train_error_abs_sum = 0
+energy_correct_abs_sum = 0
 
 # load the model
 model_coef = np.load("data/save/dual_coef-final.npz", allow_pickle=True)[
@@ -327,9 +328,19 @@ for index_ in np.sort(list(x_all.keys())):
         * x_all[index_][:, 0]
     )
     energy_correct = np.sum(y_all[index_] * w_all[index_] * x_all[index_][:, 0])
+    train_error_abs = np.sum(
+        np.abs(
+            (y_all[index_] - krr.predict_data(x_all[index_]))
+            * w_all[index_]
+            * x_all[index_][:, 0]
+        )
+    )
+    energy_correct_abs = np.sum(np.abs(y_all[index_] * w_all[index_] * x_all[index_][:, 0]))
 
     train_error_sum += train_error
     energy_correct_sum += energy_correct
+    train_error_abs_sum += train_error_abs
+    energy_correct_abs_sum += energy_correct_abs
 
     if np.abs(AUTOKCALMOL * train_error) > 0.01:
         print(
@@ -352,5 +363,7 @@ for index_ in np.sort(list(x_all.keys())):
 print(
     f"Energy correct sum: {AUTOKCALMOL * energy_correct_sum} KCAL/MOL",
     f"Train error sum: {AUTOKCALMOL * train_error_sum} KCAL/MOL",
+    f"Energy correct abs sum: {AUTOKCALMOL * energy_correct_abs_sum} KCAL/MOL",
+    f"Train error abs sum: {AUTOKCALMOL * train_error_abs_sum} KCAL/MOL",
     flush=True,
 )
