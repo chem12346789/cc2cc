@@ -258,9 +258,9 @@ class ModelDict:
         database_train.rng.shuffle(database_train.name_list)
 
         for name in database_train.name_list:
+            batch_name = 0
             loss_ene_name = 0.0
             loss_ene_tot_name = 0.0
-            batch_name = 0
 
             for batch in database_train.data_gpu[name]:
                 self.zero_grad()
@@ -268,8 +268,8 @@ class ModelDict:
                 loss_ene.backward()
                 self.step()
                 batch_name += len(batch["weight"])
-                loss_ene_tot_name += loss_ene_tot.item()
                 loss_ene_name += loss_ene.item() * len(batch["weight"])
+                loss_ene_tot_name += loss_ene_tot.item()
 
             loss_ene_l.append(AU2KCALMOL * loss_ene_name / batch_name)
             loss_ene_tot_l.append(AU2KCALMOL * np.abs(loss_ene_tot_name))
@@ -284,16 +284,16 @@ class ModelDict:
         loss_ene_l, loss_ene_tot_l = [], []
 
         for name in database_eval.name_list:
+            batch_name = 0
             loss_ene_name = 0.0
             loss_ene_tot_name = 0.0
-            batch_name = 0
 
             for batch in database_eval.data_gpu[name]:
                 with torch.no_grad():
                     loss_ene, loss_ene_tot = self.loss(batch)
                 batch_name += len(batch["weight"])
-                loss_ene_tot_name += loss_ene_tot.item()
                 loss_ene_name += loss_ene.item() * len(batch["weight"])
+                loss_ene_tot_name += loss_ene_tot.item()
 
             loss_ene_l.append(AU2KCALMOL * loss_ene_name / batch_name)
             loss_ene_tot_l.append(AU2KCALMOL * np.abs(loss_ene_tot_name))
@@ -325,7 +325,7 @@ class ModelDict:
             correct_ene = np.sum(
                 (output_mat[:, 0])
                 * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
-                * grids.weight[:, 0]
+                * grids.weights
             )
         elif "unet" in STRUCTURE:
             correct_ene = np.sum(
@@ -334,10 +334,42 @@ class ModelDict:
                 * grids.vector_to_matrix(grids.weights)
             )
         else:
-            correct_ene = np.sum(
-                (output_mat[:, 0]) * input_mat[:, 0] * grids.weights[:, 0]
-            )
+            correct_ene = np.sum((output_mat[:, 0]) * input_mat[:, 0] * grids.weights)
+        return correct_ene
 
+    def get_e_density(
+        self,
+        dft: pyscf.dft.rks.RKS,
+        grids: Grid,
+        dms: np.ndarray = None,
+    ):
+        """
+        Obtain the energy density.
+        Input: dft instance and grids instance.
+        Output: the potential (ngrids).
+        """
+        if dms is None:
+            dms = dft.make_rdm1()
+
+        input_mat = get_input_mat(dft, grids, dms)
+        input_mat = torch.tensor(input_mat, dtype=self.dtype).to("cuda")
+        with torch.no_grad():
+            output_mat = self.model(input_mat)
+        output_mat = output_mat.cpu().detach().numpy()
+        input_mat = input_mat.cpu().detach().numpy()
+
+        if "3d" in STRUCTURE:
+            correct_ene = (
+                output_mat[:, 0]
+                * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
+                * grids.weights
+            )
+        elif "unet" in STRUCTURE:
+            correct_ene = grids.matrix_to_vector(
+                output_mat[:, 0, :, :] * input_mat[:, 0, :, :]
+            ) * grids.vector_to_matrix(grids.weights)
+        else:
+            correct_ene = output_mat[:, 0] * input_mat[:, 0] * grids.weights
         return correct_ene
 
     def get_v(
@@ -355,22 +387,8 @@ class ModelDict:
             dms = dft.make_rdm1()
 
         if "3d" in STRUCTURE:
-            input_mat = get_input_mat(dft, grids, dms)
-            input_mat = torch.tensor(input_mat, dtype=self.dtype).to("cuda")
-            with torch.no_grad():
-                output_mat = self.model(input_mat)
-            input_mat = input_mat.requires_grad_(True)
-            middle_mat = (
-                torch.autograd.grad(
-                    torch.sum(output_mat[:, 0, :, :] * input_mat[:, 0, :, :]),
-                    input_mat,
-                    create_graph=True,
-                )[0]
-                .detach()
-                .cpu()
-                .numpy()
-            )
-            vxc = grids.matrix_to_vector(middle_mat[:, 0, :, :])
+            output_mat = output_mat.cpu().detach().numpy()
+            return output_mat[:, 0] * grids.weights
         elif "unet" in STRUCTURE:
             input_mat = get_input_mat(dft, grids, dms)
             input_mat = torch.tensor(input_mat, dtype=self.dtype).to("cuda")
@@ -390,5 +408,4 @@ class ModelDict:
             vxc = grids.matrix_to_vector(middle_mat[:, 0, :, :])
         else:
             raise NotImplementedError
-
         return vxc
