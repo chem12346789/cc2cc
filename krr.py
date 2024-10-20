@@ -312,6 +312,14 @@ for index_ in np.sort(list(x_all.keys())):
     index_round3 = index_ % HASHLEN - HASHLEN // 2
 
     print(index_round0 / HASHSIZE, index_)
+    np.savez_compressed(
+        f"data/save/train_test-{index_round0}-{index_round1}-{index_round2}-{index_round3}.npz",
+        x=x_all[index_],
+        y=y_all[index_],
+        w=w_all[index_],
+        coor=coor_all[index_],
+        name=name_all[index_],
+    )
 
     if (
         index_round0 == 0

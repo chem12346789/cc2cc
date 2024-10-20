@@ -148,15 +148,12 @@ def test_rks(
         ni = ks._numint
 
         max_memory = ks.max_memory - lib.current_memory()[0]
-        n, exc, vxc = ni.nr_rks(mol, ks.grids, ks.xc, dm, max_memory=max_memory)
-
-        correct_ene = modeldict.get_e(ks, grids, dm)
-        exc += correct_ene
-
-        vxc_scf = modeldict.get_v(ks, grids, dm)
-        vxc += pyscf.dft.numint.eval_mat(
-            test_data.mol, ao_0, grids.weights, vxc_scf, vxc_scf
+        n, exc, vxc = ni.nr_rks(
+            mol, ks.grids, ks.xc, test_data.dm1_cc, max_memory=max_memory
         )
+
+        correct_ene = modeldict.get_e(ks, grids, test_data.dm1_cc)
+        exc += correct_ene
 
         # rho_diff = ni.eval_rho(test_data.mol, ao_0, dm - test_data.dm1_cc)
         # v_p = pyscf.dft.numint.eval_mat(
@@ -166,47 +163,24 @@ def test_rks(
 
         if not ni.libxc.is_hybrid_xc(ks.xc):
             vk = None
-            if (
-                ks._eri is None
-                and ks.direct_scf
-                and getattr(vhf_last, "vj", None) is not None
-            ):
-                ddm = np.asarray(dm) - np.asarray(dm_last)
-                vj = ks.get_j(mol, ddm, hermi)
-                vj += vhf_last.vj
-            else:
-                vj = ks.get_j(mol, dm, hermi)
+            vj = ks.get_j(mol, test_data.dm1_cc, hermi)
             vxc += vj
         else:
             omega, alpha, hyb = ni.rsh_and_hybrid_coeff(ks.xc, spin=mol.spin)
-            if (
-                ks._eri is None
-                and ks.direct_scf
-                and getattr(vhf_last, "vk", None) is not None
-            ):
-                ddm = np.asarray(dm) - np.asarray(dm_last)
-                vj, vk = ks.get_jk(mol, ddm, hermi)
-                vk *= hyb
-                if omega != 0:  # For range separated Coulomb
-                    vklr = ks.get_k(mol, ddm, hermi, omega=omega)
-                    vklr *= alpha - hyb
-                    vk += vklr
-                vj += vhf_last.vj
-                vk += vhf_last.vk
-            else:
-                vj, vk = ks.get_jk(mol, dm, hermi)
-                vk *= hyb
-                if omega != 0:
-                    vklr = ks.get_k(mol, dm, hermi, omega=omega)
-                    vklr *= alpha - hyb
-                    vk += vklr
+
+            vj, vk = ks.get_jk(mol, test_data.dm1_cc, hermi)
+            vk *= hyb
+            if omega != 0:
+                vklr = ks.get_k(mol, test_data.dm1_cc, hermi, omega=omega)
+                vklr *= alpha - hyb
+                vk += vklr
             vxc += vj - vk * 0.5
 
             if ground_state:
-                exc -= np.einsum("ij,ji", dm, vk).real * 0.5 * 0.5
+                exc -= np.einsum("ij,ji", test_data.dm1_cc, vk).real * 0.5 * 0.5
 
         if ground_state:
-            ecoul = np.einsum("ij,ji", dm, vj).real * 0.5
+            ecoul = np.einsum("ij,ji", test_data.dm1_cc, vj).real * 0.5
         else:
             ecoul = None
 
