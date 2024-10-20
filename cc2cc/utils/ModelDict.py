@@ -173,6 +173,26 @@ class ModelDict:
 
         loss_ene = self.loss_ene(output_mat, output_mat_real)
 
+        # if "3d" in STRUCTURE:
+        #     loss_ene = self.loss_ene(
+        #         output_mat
+        #         * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
+        #         * weight[:, 0],
+        #         output_mat_real
+        #         * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
+        #         * weight[:, 0],
+        #     )
+        # elif "unet" in STRUCTURE:
+        #     loss_ene = self.loss_ene(
+        #         output_mat * input_mat[:, [0], :, :] * weight,
+        #         output_mat_real * input_mat[:, [0], :, :] * weight,
+        #     )
+        # else:
+        #     loss_ene = self.loss_ene(
+        #         output_mat * input_mat[:, 0] * weight[:, 0],
+        #         output_mat_real * input_mat[:, 0] * weight[:, 0],
+        #     )
+
         if "3d" in STRUCTURE:
             if TEST:
                 loss_ene_tot = torch.sum(
@@ -366,15 +386,14 @@ class ModelDict:
         if dms is None:
             dms = dft.make_rdm1()
 
-        input_mat = get_input_mat(dft, grids, dms)
-        input_mat = torch.tensor(input_mat, dtype=self.dtype).to("cuda")
-        with torch.no_grad():
-            output_mat = self.model(input_mat)
-
         if "3d" in STRUCTURE:
             output_mat = output_mat.cpu().detach().numpy()
             return output_mat[:, 0] * grids.weights
         elif "unet" in STRUCTURE:
+            input_mat = get_input_mat(dft, grids, dms)
+            input_mat = torch.tensor(input_mat, dtype=self.dtype).to("cuda")
+            with torch.no_grad():
+                output_mat = self.model(input_mat)
             input_mat = input_mat.requires_grad_(True)
             middle_mat = (
                 torch.autograd.grad(
