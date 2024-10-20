@@ -139,7 +139,7 @@ args_parse = argparse.ArgumentParser()
 args_parse.add_argument(
     "--gamma",
     type=float,
-    default=1000,
+    default=100,
 )
 args_parse.add_argument(
     "--alpha",
