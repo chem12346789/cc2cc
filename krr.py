@@ -14,8 +14,8 @@ from sklearn.model_selection import train_test_split
 DATA_PATH = Path("data/grids_dft")
 AUTOKCALMOL = 627.509
 BASIS = "cc-pVDZ"
-HASHLEN = 50000
-HASHSIZE = 10
+HASHLEN = 5000
+HASHSIZE = 1
 # pylint: disable=W0621
 
 
@@ -139,7 +139,7 @@ args_parse = argparse.ArgumentParser()
 args_parse.add_argument(
     "--gamma",
     type=float,
-    default=100,
+    default=10,
 )
 args_parse.add_argument(
     "--alpha",
@@ -313,14 +313,14 @@ for index_ in np.sort(list(x_all.keys())):
     index_round3 = index_ % HASHLEN - HASHLEN // 2
 
     print(index_round0 / HASHSIZE, index_)
-    np.savez_compressed(
-        f"data/save/train_test-{index_round0}-{index_round1}-{index_round2}-{index_round3}.npz",
-        x=x_all[index_],
-        y=y_all[index_],
-        w=w_all[index_],
-        coor=coor_all[index_],
-        name=name_all[index_],
-    )
+    # np.savez_compressed(
+    #     f"data/save/train_test-{index_round0}-{index_round1}-{index_round2}-{index_round3}.npz",
+    #     x=x_all[index_],
+    #     y=y_all[index_],
+    #     w=w_all[index_],
+    #     coor=coor_all[index_],
+    #     name=name_all[index_],
+    # )
 
     if (
         index_round0 == 0
@@ -402,7 +402,7 @@ for index_ in np.sort(list(x_all.keys())):
 
 # save the model
 np.savez_compressed(
-    "data/save/dual_coef-final.npz",
+    f"data/save/dual_coef-final-{args.alpha}-{args.gamma}.npz",
     dual_coef=dual_coef,
     x_fit=x_fit,
 )

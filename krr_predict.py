@@ -14,8 +14,8 @@ from sklearn.model_selection import train_test_split
 DATA_PATH = Path("data/grids_dft")
 AUTOKCALMOL = 627.509
 BASIS = "cc-pVDZ"
-HASHLEN = 50000
-HASHSIZE = 10
+HASHLEN = 5000
+HASHSIZE = 1
 # pylint: disable=W0621
 
 
@@ -139,7 +139,7 @@ args_parse = argparse.ArgumentParser()
 args_parse.add_argument(
     "--gamma",
     type=float,
-    default=1000,
+    default=10,
 )
 args_parse.add_argument(
     "--alpha",
@@ -226,6 +226,7 @@ def get_kernel(x1, x2, gamma=100.0, kernel_type="rbf"):
                 kernel[i, j] = np.exp(-gamma * np.sum((x1[i] - x2[j]) ** 2))
             elif kernel_type == "laplacian":
                 kernel[i, j] = np.exp(-gamma * np.sum(np.abs(x1[i] - x2[j])))
+    
     return kernel
 
 
@@ -335,30 +336,35 @@ for index_ in np.sort(list(x_all.keys())):
             * x_all[index_][:, 0]
         )
     )
-    energy_correct_abs = np.sum(np.abs(y_all[index_] * w_all[index_] * x_all[index_][:, 0]))
+    energy_correct_abs = np.sum(
+        np.abs(y_all[index_] * w_all[index_] * x_all[index_][:, 0])
+    )
 
     train_error_sum += train_error
     energy_correct_sum += energy_correct
     train_error_abs_sum += train_error_abs
     energy_correct_abs_sum += energy_correct_abs
 
-    if np.abs(AUTOKCALMOL * train_error) > 0.01:
-        print(
-            f"Round {index_round0} {index_round1} {index_round2} {index_round3}",
-            flush=True,
-        )
-        print(
-            f"Length of x_all: {len(x_all[index_])}",
-            flush=True,
-        )
-        print(
-            f"Train error: {AUTOKCALMOL * train_error} KCAL/MOL",
-            flush=True,
-        )
-        print(
-            f"Energy correct: {AUTOKCALMOL * energy_correct} KCAL/MOL",
-            flush=True,
-        )
+    print(
+        f"Round {index_round0} {index_round1} {index_round2} {index_round3}",
+        flush=True,
+    )
+    print(
+        f"Length of x_all: {len(krr.x_fit)}",
+        flush=True,
+    )
+    print(
+        f"Train error: {AUTOKCALMOL * train_error} KCAL/MOL",
+        flush=True,
+    )
+    print(
+        f"Train abs sum error: {AUTOKCALMOL * train_error_abs_sum} KCAL/MOL",
+        flush=True,
+    )
+    print(
+        f"Energy correct: {AUTOKCALMOL * energy_correct} KCAL/MOL",
+        flush=True,
+    )
 
 print(
     f"Energy correct sum: {AUTOKCALMOL * energy_correct_sum} KCAL/MOL",
