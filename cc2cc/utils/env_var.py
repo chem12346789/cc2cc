@@ -11,9 +11,9 @@ if STRUCTURE is None:
     STRUCTURE = "cnn3d"
 
 ORIENTATION_NUMBER_DICT = {"x": 0, "y": 1, "z": 2}
-CUBE_SIZE = 3
+CUBE_SIZE = 5
 CUBE_MIDDLE = CUBE_SIZE // 2
-CUBE_LEN = 0.01
+CUBE_LEN = 0.1
 
 TEST = os.environ.get("DFT2CC_TEST")
 if TEST is None:
@@ -21,7 +21,7 @@ if TEST is None:
 
 CUBE_USE = os.environ.get("DFT2CC_CUBE_USE")
 if CUBE_USE is None:
-    CUBE_USE = 3
+    CUBE_USE = CUBE_SIZE
 else:
     CUBE_USE = int(CUBE_USE)
 CUBE_USE_MIDDLE = CUBE_USE // 2

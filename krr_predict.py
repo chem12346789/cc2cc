@@ -14,8 +14,8 @@ from sklearn.model_selection import train_test_split
 DATA_PATH = Path("data/grids_dft")
 AUTOKCALMOL = 627.509
 BASIS = "cc-pVDZ"
-HASHLEN = 5000
-HASHSIZE = 1
+HASHLEN = 50000
+HASHSIZE = 10
 # pylint: disable=W0621
 
 
