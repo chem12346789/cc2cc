@@ -14,8 +14,8 @@ from sklearn.model_selection import train_test_split
 DATA_PATH = Path("data/grids_dft")
 AUTOKCALMOL = 627.509
 BASIS = "cc-pVDZ"
-HASHLEN = 5000
-HASHSIZE = 1
+HASHLEN = 21
+HASHSIZE = 10
 # pylint: disable=W0621
 
 
@@ -270,10 +270,24 @@ for key in keys_list:
                 f"Processing: {index_ / (len(input_dict[key]) / 10) * 10:.1f}%",
                 flush=True,
             )
+
         index_round0 = int(input_dict[key][index_, 0] * HASHSIZE)
-        index_round1 = int(input_dict[key][index_, 1] * HASHSIZE) + HASHLEN // 2
-        index_round2 = int(input_dict[key][index_, 2] * HASHSIZE) + HASHLEN // 2
-        index_round3 = int(input_dict[key][index_, 3] * HASHSIZE) + HASHLEN // 2
+        index_round1 = int(input_dict[key][index_, 1] * HASHSIZE)
+        index_round2 = int(input_dict[key][index_, 2] * HASHSIZE)
+        index_round3 = int(input_dict[key][index_, 3] * HASHSIZE)
+
+        if np.abs(index_round0) >= HASHLEN // 2:
+            index_round0 = np.sign(index_round0) * HASHLEN // 2
+        if np.abs(index_round1) >= HASHLEN // 2:
+            index_round1 = np.sign(index_round1) * HASHLEN // 2
+        if np.abs(index_round2) >= HASHLEN // 2:
+            index_round2 = np.sign(index_round2) * HASHLEN // 2
+        if np.abs(index_round3) >= HASHLEN // 2:
+            index_round3 = np.sign(index_round3) * HASHLEN // 2
+        index_round1 += HASHLEN // 2
+        index_round2 += HASHLEN // 2
+        index_round3 += HASHLEN // 2
+
         index_round = int(
             index_round0 * HASHLEN * HASHLEN * HASHLEN
             + index_round1 * HASHLEN * HASHLEN
@@ -312,7 +326,15 @@ for index_ in np.sort(list(x_all.keys())):
     index_round2 = index_ % (HASHLEN * HASHLEN) // HASHLEN - HASHLEN // 2
     index_round3 = index_ % HASHLEN - HASHLEN // 2
 
-    print(index_round0 / HASHSIZE, index_)
+    print(
+        index_round0 / HASHSIZE,
+        index_,
+        index_round0,
+        index_round1,
+        index_round2,
+        index_round3,
+    )
+
     # np.savez_compressed(
     #     f"data/save/train_test-{index_round0}-{index_round1}-{index_round2}-{index_round3}.npz",
     #     x=x_all[index_],
@@ -322,16 +344,13 @@ for index_ in np.sort(list(x_all.keys())):
     #     name=name_all[index_],
     # )
 
-    if (
-        index_round0 == 0
-        and index_round1 == 0
-        and index_round2 == 0
-        and index_round3 == 0
-    ):
+    if index_round0 >= HASHLEN // 2:
         krr.alpha = args.alpha
+        krr.gamma = 0.1
         krr.kernel_type = "rbf"
     else:
-        krr.alpha = 1e-8
+        krr.alpha = args.alpha
+        krr.gamma = args.gamma
         krr.kernel_type = "rbf"
 
     if len(x_all[index_]) < 500:
@@ -358,7 +377,7 @@ for index_ in np.sort(list(x_all.keys())):
                 y_all[index_],
                 w_all[index_],
             )
-            if error_krr < 0.1:
+            if error_krr < 0.25:
                 print(f"Error is small: {error_krr}", flush=True)
                 CONVERGE_STEP += 1
                 if CONVERGE_STEP == 1:

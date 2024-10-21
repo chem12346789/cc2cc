@@ -14,8 +14,8 @@ from sklearn.model_selection import train_test_split
 DATA_PATH = Path("data/grids_dft")
 AUTOKCALMOL = 627.509
 BASIS = "cc-pVDZ"
-HASHLEN = 5000
-HASHSIZE = 1
+HASHLEN = 21
+HASHSIZE = 10
 # pylint: disable=W0621
 
 
@@ -226,7 +226,7 @@ def get_kernel(x1, x2, gamma=100.0, kernel_type="rbf"):
                 kernel[i, j] = np.exp(-gamma * np.sum((x1[i] - x2[j]) ** 2))
             elif kernel_type == "laplacian":
                 kernel[i, j] = np.exp(-gamma * np.sum(np.abs(x1[i] - x2[j])))
-    
+
     return kernel
 
 
@@ -259,10 +259,24 @@ for key in keys_list:
                 f"Processing: {index_ / (len(input_dict[key]) / 10) * 10:.1f}%",
                 flush=True,
             )
+
         index_round0 = int(input_dict[key][index_, 0] * HASHSIZE)
-        index_round1 = int(input_dict[key][index_, 1] * HASHSIZE) + HASHLEN // 2
-        index_round2 = int(input_dict[key][index_, 2] * HASHSIZE) + HASHLEN // 2
-        index_round3 = int(input_dict[key][index_, 3] * HASHSIZE) + HASHLEN // 2
+        index_round1 = int(input_dict[key][index_, 1] * HASHSIZE)
+        index_round2 = int(input_dict[key][index_, 2] * HASHSIZE)
+        index_round3 = int(input_dict[key][index_, 3] * HASHSIZE)
+
+        if np.abs(index_round0) >= HASHLEN // 2:
+            index_round0 = np.sign(index_round0) * HASHLEN // 2
+        if np.abs(index_round1) >= HASHLEN // 2:
+            index_round1 = np.sign(index_round1) * HASHLEN // 2
+        if np.abs(index_round2) >= HASHLEN // 2:
+            index_round2 = np.sign(index_round2) * HASHLEN // 2
+        if np.abs(index_round3) >= HASHLEN // 2:
+            index_round3 = np.sign(index_round3) * HASHLEN // 2
+        index_round1 += HASHLEN // 2
+        index_round2 += HASHLEN // 2
+        index_round3 += HASHLEN // 2
+
         index_round = int(
             index_round0 * HASHLEN * HASHLEN * HASHLEN
             + index_round1 * HASHLEN * HASHLEN
@@ -296,10 +310,12 @@ train_error_abs_sum = 0
 energy_correct_abs_sum = 0
 
 # load the model
-model_coef = np.load("data/save/dual_coef-final.npz", allow_pickle=True)[
-    "dual_coef"
-].item()
-model_xfit = np.load("data/save/dual_coef-final.npz", allow_pickle=True)["x_fit"].item()
+model_coef = np.load(
+    f"data/save/dual_coef-final-{args.alpha}-{args.gamma}.npz", allow_pickle=True
+)["dual_coef"].item()
+model_xfit = np.load(
+    f"data/save/dual_coef-final-{args.alpha}-{args.gamma}.npz", allow_pickle=True
+)["x_fit"].item()
 
 
 for index_ in np.sort(list(x_all.keys())):
@@ -311,6 +327,15 @@ for index_ in np.sort(list(x_all.keys())):
     index_round3 = index_ % HASHLEN - HASHLEN // 2
 
     print(index_round0 / HASHSIZE, index_)
+
+    if index_round0 >= HASHLEN // 2:
+        krr.alpha = args.alpha
+        krr.gamma = 0.1
+        krr.kernel_type = "rbf"
+    else:
+        krr.alpha = args.alpha
+        krr.gamma = args.gamma
+        krr.kernel_type = "rbf"
 
     if index_ in model_coef:
         krr.dual_coef_ = model_coef[index_]
@@ -350,7 +375,7 @@ for index_ in np.sort(list(x_all.keys())):
         flush=True,
     )
     print(
-        f"Length of x_all: {len(krr.x_fit)}",
+        f"Length of x_fit: {len(krr.x_fit)}",
         flush=True,
     )
     print(
