@@ -80,7 +80,7 @@ def cc(molecular, name, args):
             ) / (rho_cc[0][i] + 1e-14)
 
     rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
-    coor_cube = np.zeros((len(grids.coords), 3, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+    coor_cube = np.zeros((len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
     for p, p_coords in enumerate(grids.coords):
         if p * 10 % len(grids.coords) == 0:
             print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
@@ -149,7 +149,7 @@ def cc_change_cube(molecular, name, args):
         rho_cc_all = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="mGGA")
 
         rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
-        coor_cube = np.zeros((len(grids.coords), 3, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        coor_cube = np.zeros((len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
         for p, p_coords in enumerate(grids.coords):
             if p * 10 % len(grids.coords) == 0:
                 print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
