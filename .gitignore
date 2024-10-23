@@ -15,6 +15,8 @@ out
 *.sh
 *.egg-info/
 *.npz
+*.png
+*.pdf
 
 PlotNeuralNet/
 gen_data_script/gen_data_template_direct.bash

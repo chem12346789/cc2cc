@@ -152,9 +152,10 @@ class Grid(dft.gen_grid.Grids):
     def __init__(self, mol, level=1, period=2):
         super().__init__(mol)
         self.n_rad, self.n_ang = (
-            RAD_GRIDS[level, period + 1],
+            RAD_GRIDS[level, period],
             LEBEDEV_ORDER[ANG_ORDER[level, period]],
         )
+        self.natm = mol.natm
         self.coord_list = []
         self.atom_grid = {}
         for i_atom in mol.atom:
@@ -170,7 +171,7 @@ class Grid(dft.gen_grid.Grids):
         modified_build(self)
 
         self.index_2d = np.arange(len(self.coords)).reshape(
-            self.mol.natm, self.n_ang, self.n_rad
+            self.natm, self.n_ang, self.n_rad
         )
         self.index_2d = np.transpose(self.index_2d, axes=[0, 2, 1])
 
@@ -178,8 +179,8 @@ class Grid(dft.gen_grid.Grids):
         """
         Documentation for a method.
         """
-        matrix = np.zeros((len(self.coord_list), self.n_rad, self.n_ang))
-        index_range = np.ndindex((len(self.coord_list)), self.n_rad, self.n_ang)
+        matrix = np.empty((self.natm, self.n_rad, self.n_ang), dtype=vector.dtype)
+        index_range = np.ndindex(self.natm, self.n_rad, self.n_ang)
         for i, j, k in index_range:
             matrix[i, j, k] = vector[self.index_2d[i, j, k]]
         return matrix
@@ -188,8 +189,8 @@ class Grid(dft.gen_grid.Grids):
         """
         Documentation for a method.
         """
-        vector = np.zeros(len(self.coord_list) * self.n_rad * self.n_ang)
-        index_range = np.ndindex((len(self.coord_list)), self.n_rad, self.n_ang)
+        vector = np.empty(self.natm * self.n_rad * self.n_ang, dtype=matrix.dtype)
+        index_range = np.ndindex(self.natm, self.n_rad, self.n_ang)
         for i, j, k in index_range:
             vector[self.index_2d[i, j, k]] = matrix[i, j, k]
         return vector
@@ -201,7 +202,7 @@ class Grid(dft.gen_grid.Grids):
         atom_x = np.zeros(self.n_rad * self.n_ang)
         atom_y = np.zeros(self.n_rad * self.n_ang)
         atom_z = np.zeros(self.n_rad * self.n_ang)
-        vector = np.zeros(self.n_rad * self.n_ang)
+        vector = np.empty(self.n_rad * self.n_ang, dtype=matrix.dtype)
         index_range = np.ndindex(self.n_rad, self.n_ang)
         for i, (j, k) in enumerate(index_range):
             vector[i] = matrix[atom_number, j, k]

@@ -139,6 +139,19 @@ def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
     return x_train, y_train, w_train, x_test, y_test, w_test
 
 
+def gen_logger(distance_list):
+    """
+    Function to distance list and generate logger
+    """
+    if len(distance_list) == 3:
+        distance_l = np.linspace(
+            distance_list[0], distance_list[1], int(distance_list[2])
+        )
+    else:
+        distance_l = distance_list
+    return distance_l
+
+
 args_parse = argparse.ArgumentParser()
 args_parse.add_argument(
     "--gamma",
@@ -191,6 +204,8 @@ args_parse.add_argument(
 args = args_parse.parse_args()
 for i in range(len(args.extend_xyz)):
     args.extend_xyz[i] += 1
+args.distance_list = gen_logger(args.distance_list)
+
 
 print("gamma:", args.gamma)
 print("alpha:", args.alpha)
@@ -266,6 +281,8 @@ name_all = {}
 dual_coef = {}
 x_fit = {}
 
+shape_matrix = (20, 194, 40)
+
 for key in keys_list:
     print(f"Key: {key}", flush=True)
     for index_ in range(len(input_dict[key])):
@@ -299,18 +316,20 @@ for key in keys_list:
             + index_round3
         )
 
+        iatm, iang, irad = np.unravel_index(index_, shape_matrix)
+
         if index_round not in x_all:
             x_all[index_round] = [input_dict[key][index_]]
             y_all[index_round] = [output_dict[key][index_]]
             w_all[index_round] = [weights_dict[key][index_]]
             coor_all[index_round] = [coords_dict[key][index_]]
-            name_all[index_round] = [key]
+            name_all[index_round] = [f"{key}_{iatm}_{irad}_{iang}"]
         else:
             x_all[index_round].append(input_dict[key][index_])
             y_all[index_round].append(output_dict[key][index_])
             w_all[index_round].append(weights_dict[key][index_])
             coor_all[index_round].append(coords_dict[key][index_])
-            name_all[index_round].append(key)
+            name_all[index_round].append(f"{key}_{iatm}_{irad}_{iang}")
 
 for index_ in np.sort(list(x_all.keys())):
     x_all[index_] = np.array(x_all[index_])
@@ -339,63 +358,65 @@ for index_ in np.sort(list(x_all.keys())):
         index_round3,
     )
 
-    # np.savez_compressed(
-    #     f"data/save/train_test-{index_round0}-{index_round1}-{index_round2}-{index_round3}.npz",
-    #     x=x_all[index_],
-    #     y=y_all[index_],
-    #     w=w_all[index_],
-    #     coor=coor_all[index_],
-    #     name=name_all[index_],
-    # )
-
-    if index_round0 >= HASHLEN // 2:
-        krr.alpha = args.alpha
-        krr.gamma = 0.1
-        krr.kernel_type = "rbf"
-    else:
-        krr.alpha = args.alpha
-        krr.gamma = args.gamma
-        krr.kernel_type = "rbf"
-
-    if len(x_all[index_]) < 500:
-        krr.fit_data(x_all[index_], y_all[index_])
-    else:
-        x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
-            x_all[index_],
-            y_all[index_],
-            w_all[index_],
-            train_size=50,
-            random_state=42,
-        )
-
-        CONVERGE_STEP = 0
-        for i_step in range(500):
-            print(f"Step {i_step}:", flush=True)
-            krr.fit_data(x_train, y_train)
-            error_krr = evaluate(
-                krr,
-                x_train,
-                y_train,
-                w_train,
-                x_all[index_],
-                y_all[index_],
-                w_all[index_],
-            )
-            if error_krr < 0.25:
-                print(f"Error is small: {error_krr}", flush=True)
-                CONVERGE_STEP += 1
-                if CONVERGE_STEP == 1:
-                    print("Converge.")
-                    break
-            x_train, y_train, w_train, x_test, y_test, w_test = add_data(
-                krr, x_train, y_train, w_train, x_test, y_test, w_test
-            )
-
-    train_error = np.sum(
-        (y_all[index_] - krr.predict_data(x_all[index_]))
-        * w_all[index_]
-        * x_all[index_][:, 0]
+    if index_round0 > 0:
+        break
+    np.savez_compressed(
+        f"data/save/train_test-{index_round0}-{index_round1}-{index_round2}-{index_round3}.npz",
+        x=x_all[index_],
+        y=y_all[index_],
+        w=w_all[index_],
+        coor=coor_all[index_],
+        name=name_all[index_],
     )
+
+    # if index_round0 >= HASHLEN // 2:
+    #     krr.alpha = args.alpha
+    #     krr.gamma = 0.1
+    #     krr.kernel_type = "rbf"
+    # else:
+    #     krr.alpha = args.alpha
+    #     krr.gamma = args.gamma
+    #     krr.kernel_type = "rbf"
+
+    # if len(x_all[index_]) < 500:
+    #     krr.fit_data(x_all[index_], y_all[index_])
+    # else:
+    #     x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
+    #         x_all[index_],
+    #         y_all[index_],
+    #         w_all[index_],
+    #         train_size=50,
+    #         random_state=42,
+    #     )
+
+    #     CONVERGE_STEP = 0
+    #     for i_step in range(500):
+    #         print(f"Step {i_step}:", flush=True)
+    #         krr.fit_data(x_train, y_train)
+    #         error_krr = evaluate(
+    #             krr,
+    #             x_train,
+    #             y_train,
+    #             w_train,
+    #             x_all[index_],
+    #             y_all[index_],
+    #             w_all[index_],
+    #         )
+    #         if error_krr < 0.25:
+    #             print(f"Error is small: {error_krr}", flush=True)
+    #             CONVERGE_STEP += 1
+    #             if CONVERGE_STEP == 1:
+    #                 print("Converge.")
+    #                 break
+    #         x_train, y_train, w_train, x_test, y_test, w_test = add_data(
+    #             krr, x_train, y_train, w_train, x_test, y_test, w_test
+    #         )
+
+    # train_error = np.sum(
+    #     (y_all[index_] - krr.predict_data(x_all[index_]))
+    #     * w_all[index_]
+    #     * x_all[index_][:, 0]
+    # )
 
     # if (
     #     index_round0 == 0
