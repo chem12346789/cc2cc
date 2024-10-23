@@ -113,6 +113,10 @@ def cc(molecular, name, args):
         weights_matrix=grids.vector_to_matrix(grids.weights),
         exc_over_dm_cc_grids=exc_over_dm_cc_grids,
         exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
+        exc_over_dm_b3lyp_grids=-pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0],
+        exc_over_dm_b3lyp_grids_matrix=grids.vector_to_matrix(
+            -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0]
+        ),
         rho_cc_all=rho_cc_all,
         rho_cube=rho_cube,
         coor_cube=coor_cube,
