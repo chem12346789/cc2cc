@@ -51,33 +51,33 @@ def cc(molecular, name, args):
     rho_cc_all = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="mGGA")
     exc_over_dm_cc_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0]
 
-    # dm2_cc = mycc.make_rdm2(ao_repr=True)
-    # expr_rinv_dm2_r = oe.contract_expression(
-    #     "ijkl,i,j,kl->",
-    #     0.5 * (dm2_cc - oe.contract("pq,rs->pqrs", dm1_cc, dm1_cc))
-    #     + 0.05 * oe.contract("pr,qs->pqrs", dm1_cc, dm1_cc),
-    #     (mol.nao,),
-    #     (mol.nao,),
-    #     (mol.nao, mol.nao),
-    #     constants=[0],
-    #     optimize="optimal",
-    # )
+    dm2_cc = mycc.make_rdm2(ao_repr=True)
+    expr_rinv_dm2_r = oe.contract_expression(
+        "ijkl,i,j,kl->",
+        0.5 * (dm2_cc - oe.contract("pq,rs->pqrs", dm1_cc, dm1_cc))
+        + 0.05 * oe.contract("pr,qs->pqrs", dm1_cc, dm1_cc),
+        (mol.nao,),
+        (mol.nao,),
+        (mol.nao, mol.nao),
+        constants=[0],
+        optimize="optimal",
+    )
 
-    # for i, coord in enumerate(grids.coords):
-    #     if i * 10 % len(grids.coords) == 0:
-    #         print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
+    for i, coord in enumerate(grids.coords):
+        if i * 10 % len(grids.coords) == 0:
+            print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
 
-    #     ao_0_i = ao_value[0][i]
-    #     if abs(rho_cc[0][i]) < 1e-14:
-    #         continue
-    #     with mol.with_rinv_origin(coord):
-    #         rinv = mol.intor("int1e_rinv")
-    #         exc_over_dm_cc_grids[i] += expr_rinv_dm2_r(
-    #             ao_0_i,
-    #             ao_0_i,
-    #             rinv,
-    #             backend="torch",
-    #         ) / (rho_cc[0][i] + 1e-14)
+        ao_0_i = ao_value[0][i]
+        if abs(rho_cc[0][i]) < 1e-14:
+            continue
+        with mol.with_rinv_origin(coord):
+            rinv = mol.intor("int1e_rinv")
+            exc_over_dm_cc_grids[i] += expr_rinv_dm2_r(
+                ao_0_i,
+                ao_0_i,
+                rinv,
+                backend="torch",
+            ) / (rho_cc[0][i] + 1e-14)
 
     rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
     coor_cube = np.zeros((len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
