@@ -51,7 +51,18 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
 
         data = np.load(data_path)
 
-        output_ = data["exc_over_dm_cc_grids"]
+        output_1 = data["exc_over_dm_b3lyp_grids"]
+        output_2 = data["exc_over_dm_cc_2_grids"]
+        output_3 = data["exc_over_dm_cc_1_j_grids"]
+        output_4 = data["exc_over_dm_cc_1_k_grids"]
+        output_ = np.array(
+            [
+                output_1,
+                output_2,
+                output_3,
+                output_4,
+            ]
+        ).T
         weights_ = data["weights"]
         coords_cube = data["coor_cube"]
 
@@ -73,14 +84,19 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
         coords_dict[name] = coords_cube
 
         keys_list.append(name)
-        print(
-            AU2KCALMOL
-            * np.sum(
-                np.abs(input_dict[name][:, 0] * output_dict[name] * weights_dict[name])
-            ),
-            AU2KCALMOL
-            * np.sum(input_dict[name][:, 0] * output_dict[name] * weights_dict[name]),
-        )
+        if len(np.shape(output_dict[name])) == 1:
+            print(
+                AU2KCALMOL
+                * np.sum(
+                    np.abs(
+                        input_dict[name][:, 0] * output_dict[name] * weights_dict[name]
+                    )
+                ),
+                AU2KCALMOL
+                * np.sum(
+                    input_dict[name][:, 0] * output_dict[name] * weights_dict[name]
+                ),
+            )
     return input_dict, output_dict, weights_dict, coords_dict, keys_list
 
 

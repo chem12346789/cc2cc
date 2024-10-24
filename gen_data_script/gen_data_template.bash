@@ -3,7 +3,7 @@
 #slurm options
 #SBATCH -n 24
 #SBATCH --mem 100000
-#SBATCH --nodelist=gpu[06,07]
+#SBATCH --nodelist=BASH_GPU_NODE
 #SBATCH -p gpu
 #SBATCH -J gen_data_MOL_EXTEND_ATOM
 #SBATCH -o log/%j.log
@@ -17,7 +17,6 @@ export PYSCF_TMPDIR=~/workdir/tmp
 export PYSCF_MAX_MEMORY=40000
 export PYTHONPATH=~/python:$PYTHONPATH
 export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
-export DFT2CC_DATA_PATH=~/workdir/dft2cc/data/grids_dft_3_0.005/
 
 export NVIDIA_VISIBLE_DEVICES=1
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')
