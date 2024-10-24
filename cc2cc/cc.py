@@ -49,13 +49,33 @@ def cc(molecular, name, args):
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
     rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
     rho_cc_all = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="mGGA")
-    exc_over_dm_cc_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0]
+    exc_over_dm_b3lyp_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0]
+    exc_over_dm_cc_2_grids = np.zeros_like(exc_over_dm_b3lyp_grids)
+    exc_over_dm_cc_1_j_grids = np.zeros_like(exc_over_dm_b3lyp_grids)
+    exc_over_dm_cc_1_k_grids = np.zeros_like(exc_over_dm_b3lyp_grids)
 
     dm2_cc = mycc.make_rdm2(ao_repr=True)
     expr_rinv_dm2_r = oe.contract_expression(
         "ijkl,i,j,kl->",
-        0.5 * (dm2_cc - oe.contract("pq,rs->pqrs", dm1_cc, dm1_cc))
-        + 0.05 * oe.contract("pr,qs->pqrs", dm1_cc, dm1_cc),
+        0.5 * dm2_cc,
+        (mol.nao,),
+        (mol.nao,),
+        (mol.nao, mol.nao),
+        constants=[0],
+        optimize="optimal",
+    )
+    expr_rinv_dm1_j_r = oe.contract_expression(
+        "ijkl,i,j,kl->",
+        -0.5 * oe.contract("pq,rs->pqrs", dm1_cc, dm1_cc),
+        (mol.nao,),
+        (mol.nao,),
+        (mol.nao, mol.nao),
+        constants=[0],
+        optimize="optimal",
+    )
+    expr_rinv_dm1_k_r = oe.contract_expression(
+        "ijkl,i,j,kl->",
+        0.05 * oe.contract("pr,qs->pqrs", dm1_cc, dm1_cc),
         (mol.nao,),
         (mol.nao,),
         (mol.nao, mol.nao),
@@ -72,12 +92,40 @@ def cc(molecular, name, args):
             continue
         with mol.with_rinv_origin(coord):
             rinv = mol.intor("int1e_rinv")
-            exc_over_dm_cc_grids[i] += expr_rinv_dm2_r(
+            exc_over_dm_cc_2_grids[i] += expr_rinv_dm2_r(
                 ao_0_i,
                 ao_0_i,
                 rinv,
                 backend="torch",
             ) / (rho_cc[0][i] + 1e-14)
+            exc_over_dm_cc_1_j_grids[i] += expr_rinv_dm1_j_r(
+                ao_0_i,
+                ao_0_i,
+                rinv,
+                backend="torch",
+            ) / (rho_cc[0][i] + 1e-14)
+            exc_over_dm_cc_1_k_grids[i] += expr_rinv_dm1_k_r(
+                ao_0_i,
+                ao_0_i,
+                rinv,
+                backend="torch",
+            ) / (rho_cc[0][i] + 1e-14)
+
+    error_energy = e_cc - mdft.energy_tot(dm1_cc)
+    error = (
+        np.sum(
+            (
+                exc_over_dm_b3lyp_grids
+                + exc_over_dm_cc_2_grids
+                + exc_over_dm_cc_1_j_grids
+                + exc_over_dm_cc_1_k_grids
+            )
+            * grids.weights
+            * rho_cc[0]
+        )
+        - error_energy
+    )
+    print(f"error_energy: {AU2KCALMOL * error_energy}, Error: {AU2KCALMOL * error}")
 
     rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
     coor_cube = np.zeros((len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
@@ -99,10 +147,6 @@ def cc(molecular, name, args):
         rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="GGA")
         rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
-    error_energy = e_cc - mdft.energy_tot(dm1_cc)
-    error = np.sum(exc_over_dm_cc_grids * grids.weights * rho_cc[0]) - error_energy
-    print(f"error_energy: {AU2KCALMOL * error_energy}, Error: {AU2KCALMOL * error}")
-
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",
         e_cc=e_cc,
@@ -111,11 +155,17 @@ def cc(molecular, name, args):
         rho_inv_4_norm_matrix=process_input(rho_cc, grids),
         weights=grids.weights,
         weights_matrix=grids.vector_to_matrix(grids.weights),
-        exc_over_dm_cc_grids=exc_over_dm_cc_grids,
-        exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
-        exc_over_dm_b3lyp_grids=-pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0],
-        exc_over_dm_b3lyp_grids_matrix=grids.vector_to_matrix(
-            -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0]
+        exc_over_dm_b3lyp_grids=exc_over_dm_b3lyp_grids,
+        exc_over_dm_b3lyp_grids_matrix=grids.vector_to_matrix(exc_over_dm_b3lyp_grids),
+        exc_over_dm_cc_2_grids=exc_over_dm_cc_2_grids,
+        exc_over_dm_cc_2_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_2_grids),
+        exc_over_dm_cc_1_j_grids=exc_over_dm_cc_1_j_grids,
+        exc_over_dm_cc_1_j_grids_matrix=grids.vector_to_matrix(
+            exc_over_dm_cc_1_j_grids
+        ),
+        exc_over_dm_cc_1_k_grids=exc_over_dm_cc_1_k_grids,
+        exc_over_dm_cc_1_k_grids_matrix=grids.vector_to_matrix(
+            exc_over_dm_cc_1_k_grids
         ),
         rho_cc_all=rho_cc_all,
         rho_cube=rho_cube,
