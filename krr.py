@@ -51,18 +51,20 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
 
         data = np.load(data_path)
 
-        # output_ = data["exc_over_dm_b3lyp_grids"]
+        output_ = data["exc_over_dm_lda_grids"]
 
         output_1 = data["exc_over_dm_b3lyp_grids"]
         output_2 = data["exc_over_dm_cc_2_grids"]
         output_3 = data["exc_over_dm_cc_1_j_grids"]
         output_4 = data["exc_over_dm_cc_1_k_grids"]
+        output_5 = data["exc_over_dm_lda_grids"]
         output_ = np.array(
             [
                 output_1,
                 output_2,
                 output_3,
                 output_4,
+                output_5,
             ]
         ).T
 
@@ -70,22 +72,15 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
         coords_cube = data["coor_cube"]
 
         input_ = data["rho_cube"]
-        input_[:, 1, :, :, :] = input_[:, 1, :, :, :] / (
-            input_[:, 0, :, :, :] + 1e-14
-        ) ** (4 / 3)
-        input_[:, 2, :, :, :] = input_[:, 2, :, :, :] / (
-            input_[:, 0, :, :, :] + 1e-14
-        ) ** (4 / 3)
-        input_[:, 3, :, :, :] = input_[:, 3, :, :, :] / (
-            input_[:, 0, :, :, :] + 1e-14
-        ) ** (4 / 3)
-        input_[:, 0, :, :, :] = input_[:, 0, :, :, :] ** (1 / 3)
         swap_ = input_[:, :, 0, 0, 0].copy()
         input_[:, :, 0, 0, 0] = input_[:, :, 1, 1, 1].copy()
         input_[:, :, 1, 1, 1] = swap_.copy()
         input_ = input_.reshape(-1, (CUBE_USE) ** 3 * 4)
-        print(f"max input: {np.max(input_)}, min input: {np.min(input_)}")
+
+        # input_ = np.transpose(data["rho_inv_4_norm"], (1, 0))
+
         input_dict[name] = input_
+        print(f"max input: {np.max(input_)}, min input: {np.min(input_)}")
 
         output_dict[name] = output_
         weights_dict[name] = weights_
@@ -185,7 +180,7 @@ args_parse = argparse.ArgumentParser()
 args_parse.add_argument(
     "--gamma",
     type=float,
-    default=10,
+    default=100,
 )
 args_parse.add_argument(
     "--alpha",
@@ -454,9 +449,11 @@ for index_ in np.sort(list(x_all.keys())):
 #         and index_round3 == 0
 #     ):
 #         krr.alpha = args.alpha
+#         krr.gamma = args.gamma
 #         krr.kernel_type = "rbf"
 #     else:
 #         krr.alpha = 1e-8
+#         krr.gamma = args.gamma
 #         krr.kernel_type = "rbf"
 
 #     if len(x_all[index_]) < 500:

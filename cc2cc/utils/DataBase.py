@@ -175,7 +175,10 @@ class DataBase:
 
         if "unet" in STRUCTURE:
             input_mat = data["rho_inv_4_norm_matrix"]
-            output_mat = data["exc_over_dm_cc_grids_matrix"]
+            output_mat = data["exc_over_dm_b3lyp_grids_matrix"]
+            output_mat += data["exc_over_dm_cc_2_grids_matrix"]
+            output_mat += data["exc_over_dm_cc_1_j_grids_matrix"]
+            output_mat += data["exc_over_dm_cc_1_k_grids_matrix"]
             weights_mat = data["weights_matrix"]
 
             input_ = {}

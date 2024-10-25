@@ -25,6 +25,7 @@ from cc2cc.utils import (
     CUBE_SIZE,
     CUBE_LEN,
     CUBE_MIDDLE,
+    STRUCTURE,
 )
 from cc2cc.test_rks import TEST_DATA
 
@@ -153,28 +154,43 @@ if __name__ == "__main__":
         error = np.sum(exc_over_dm_cc_grids * grids.weights * rho_cc[0]) - error_energy
         print(f"error_energy: {AU2KCALMOL * error_energy}, Error: {AU2KCALMOL * error}")
 
-        rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
-        for p, p_coords in enumerate(grids.coords):
-            if p * 10 % len(grids.coords) == 0:
-                print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
+        if STRUCTURE == "cnn3d":
+            rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+            for p, p_coords in enumerate(grids.coords):
+                if p * 10 % len(grids.coords) == 0:
+                    print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
 
-            coords_cube = np.zeros((CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
-            for i, j, k in product(range(CUBE_SIZE), repeat=3):
-                coords_cube[i, j, k] = p_coords + [
-                    (i - CUBE_MIDDLE) * CUBE_LEN,
-                    (j - CUBE_MIDDLE) * CUBE_LEN,
-                    (k - CUBE_MIDDLE) * CUBE_LEN,
-                ]
+                coords_cube = np.zeros((CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
+                for i, j, k in product(range(CUBE_SIZE), repeat=3):
+                    coords_cube[i, j, k] = p_coords + [
+                        (i - CUBE_MIDDLE) * CUBE_LEN,
+                        (j - CUBE_MIDDLE) * CUBE_LEN,
+                        (k - CUBE_MIDDLE) * CUBE_LEN,
+                    ]
 
-            coords_cube = coords_cube.reshape(-1, 3)
-            ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
-            rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="GGA")
-            rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+                coords_cube = coords_cube.reshape(-1, 3)
+                ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
+                rho_cube_p = pyscf.dft.numint.eval_rho(
+                    mol, ao_cube, dm1_cc, xctype="GGA"
+                )
+                rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
-        input_mat = torch.tensor(rho_cube, dtype=modeldict.dtype).to("cuda")
+            input_mat = torch.tensor(rho_cube, dtype=modeldict.dtype).to("cuda")
+        elif STRUCTURE == "unet":
+            input_mat = process_input(rho_cc, grids)
+            input_mat = np.transpose(input_mat, (1, 0, 2, 3))
+            input_mat = input_mat[:, [0], :, :]
+            input_mat = torch.tensor(input_mat, dtype=modeldict.dtype).to("cuda")
+
         with torch.no_grad():
             output_mat = modeldict.model(input_mat)
-        correct_ene = output_mat.cpu().detach().numpy()[:, 0]
+
+        if STRUCTURE == "cnn3d":
+            correct_ene = output_mat.cpu().detach().numpy()[:, 0]
+        elif STRUCTURE == "unet":
+            correct_ene = grids.matrix_to_vector(
+                (output_mat.cpu().detach().numpy())[:, 0, :, :]
+            )
 
         exc_over_dm_cc_predict = (
             (correct_ene - exc_over_dm_cc_grids) * rho_cc[0] * grids.weights

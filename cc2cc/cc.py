@@ -50,6 +50,7 @@ def cc(molecular, name, args):
     rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
     rho_cc_all = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="mGGA")
     exc_over_dm_b3lyp_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0]
+    exc_over_dm_lda_grids = -pyscf.dft.libxc.eval_xc("lda", rho_cc[0])[0]
     exc_over_dm_cc_2_grids = np.zeros_like(exc_over_dm_b3lyp_grids)
     exc_over_dm_cc_1_j_grids = np.zeros_like(exc_over_dm_b3lyp_grids)
     exc_over_dm_cc_1_k_grids = np.zeros_like(exc_over_dm_b3lyp_grids)
@@ -138,6 +139,9 @@ def cc(molecular, name, args):
     print(
         f"3: {AU2KCALMOL * np.sum(exc_over_dm_cc_1_k_grids * grids.weights * rho_cc[0])}"
     )
+    print(
+        f"4: {AU2KCALMOL * np.sum(exc_over_dm_lda_grids * grids.weights * rho_cc[0])}"
+    )
 
     rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
     coor_cube = np.zeros((len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
@@ -167,6 +171,8 @@ def cc(molecular, name, args):
         rho_inv_4_norm_matrix=process_input(rho_cc, grids),
         weights=grids.weights,
         weights_matrix=grids.vector_to_matrix(grids.weights),
+        exc_over_dm_lda_grids=exc_over_dm_lda_grids,
+        exc_over_dm_lda_grids_matrix=grids.vector_to_matrix(exc_over_dm_lda_grids),
         exc_over_dm_b3lyp_grids=exc_over_dm_b3lyp_grids,
         exc_over_dm_b3lyp_grids_matrix=grids.vector_to_matrix(exc_over_dm_b3lyp_grids),
         exc_over_dm_cc_2_grids=exc_over_dm_cc_2_grids,
