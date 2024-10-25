@@ -45,7 +45,7 @@ def cc(molecular, name, args):
     mdft.xc = "b3lyp"
     mdft.kernel()
 
-    grids = Grid(mol, level=1)
+    grids = Grid(mol, level=1, period=2)
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
     rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
     rho_cc_all = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="mGGA")
@@ -126,6 +126,18 @@ def cc(molecular, name, args):
         - error_energy
     )
     print(f"error_energy: {AU2KCALMOL * error_energy}, Error: {AU2KCALMOL * error}")
+    print(
+        f"0: {AU2KCALMOL * np.sum(exc_over_dm_b3lyp_grids * grids.weights * rho_cc[0])}"
+    )
+    print(
+        f"1: {AU2KCALMOL * np.sum(exc_over_dm_cc_2_grids * grids.weights * rho_cc[0])}"
+    )
+    print(
+        f"2: {AU2KCALMOL * np.sum(exc_over_dm_cc_1_j_grids * grids.weights * rho_cc[0])}"
+    )
+    print(
+        f"3: {AU2KCALMOL * np.sum(exc_over_dm_cc_1_k_grids * grids.weights * rho_cc[0])}"
+    )
 
     rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
     coor_cube = np.zeros((len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
