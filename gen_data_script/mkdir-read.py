@@ -42,6 +42,26 @@ for item in Path(main_dir).glob("*"):
             item.rmdir()
 
 LIST_OF_GPU = itertools.cycle([0, 1])
+GPU_NODE_POOL = itertools.cycle(
+    [
+        "gpu01",
+        "gpu01",
+        "gpu01",
+        "gpu01",
+        "gpu02",
+        "gpu02",
+        "gpu02",
+        "gpu02",
+        "gpu03",
+        "gpu03",
+        "gpu03",
+        "gpu03",
+        "gpu04",
+        "gpu04",
+        "gpu04",
+        "gpu04",
+    ]
+)
 
 for mol, basis_set, (range_list, extend_atom) in itertools.product(
     [
@@ -73,15 +93,25 @@ for mol, basis_set, (range_list, extend_atom) in itertools.product(
     ["cc-pVDZ"],
     [
         ((-0.5, -0.5, 1), "0-1"),
+        ((-0.45, -0.45, 1), "0-1"),
         ((-0.4, -0.4, 1), "0-1"),
+        ((-0.35, -0.35, 1), "0-1"),
         ((-0.3, -0.3, 1), "0-1"),
+        ((-0.25, -0.25, 1), "0-1"),
         ((-0.2, -0.2, 1), "0-1"),
+        ((-0.15, -0.15, 1), "0-1"),
         ((-0.1, -0.1, 1), "0-1"),
-        ((0, 0, 1), "0"),
+        ((-0.05, -0.05, 1), "0-1"),
+        ((0.0, 0.0, 1), "0-1"),
+        ((0.05, 0.05, 1), "0-1"),
         ((0.1, 0.1, 1), "0-1"),
+        ((0.15, 0.15, 1), "0-1"),
         ((0.2, 0.2, 1), "0-1"),
+        ((0.25, 0.25, 1), "0-1"),
         ((0.3, 0.3, 1), "0-1"),
+        ((0.35, 0.35, 1), "0-1"),
         ((0.4, 0.4, 1), "0-1"),
+        ((0.45, 0.45, 1), "0-1"),
         ((0.5, 0.5, 1), "0-1"),
         # ((0.6, 0.6, 1), "0-1"),
         # ((0.7, 0.7, 1), "0-1"),
@@ -96,10 +126,12 @@ for mol, basis_set, (range_list, extend_atom) in itertools.product(
     ],
 ):
     number_of_gpu = next(LIST_OF_GPU)
+    gpu_node = next(GPU_NODE_POOL)
     cmd = f"""cp {template_bash} {work_bash}"""
     cmd += "&&" + f"""sed -i "s/MOL/{mol}/g" {work_bash}"""
     cmd += "&&" + f"""sed -i "s/BASIS/{basis_set}/g" {work_bash}"""
     cmd += "&&" + f"""sed -i "s/NUMBER_OF_GPU/{number_of_gpu}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/BASH_GPU_NODE/{gpu_node}/g" {work_bash}"""
     cmd += "&&" + f"""sed -i "s/EXTEND_ATOM/{extend_atom}/g" {work_bash}"""
 
     if isinstance(range_list, float):
