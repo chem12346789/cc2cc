@@ -10,11 +10,7 @@ from numba import njit, prange
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.model_selection import train_test_split
 
-from cc2cc.utils import (
-    DATA_PATH,
-    AU2KCALMOL,
-    CUBE_USE,
-)
+from cc2cc.utils import DATA_PATH, AU2KCALMOL, CUBE_USE, CUBE_MIDDLE, CUBE_USE_MIDDLE
 
 DATA_PATH = Path("data/grids_dft")
 BASIS = "cc-pVDZ"
@@ -65,11 +61,25 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
         ).T
         weights_ = data["weights"]
         coords_cube = data["coor_cube"]
-
+        coords_cube = coords_cube[
+            :,
+            CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+            CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+            CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+            :,
+        ]
         input_ = data["rho_cube"]
-        swap_ = input_[:, :, 0, 0, 0].copy()
-        input_[:, :, 0, 0, 0] = input_[:, :, 1, 1, 1].copy()
-        input_[:, :, 1, 1, 1] = swap_.copy()
+        input_ = input_[
+            :,
+            :,
+            CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+            CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+            CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+        ]
+        if CUBE_USE > 1:
+            swap_ = input_[:, :, 0, 0, 0].copy()
+            input_[:, :, 0, 0, 0] = input_[:, :, 1, 1, 1].copy()
+            input_[:, :, 1, 1, 1] = swap_.copy()
         input_ = input_.reshape(-1, (CUBE_USE) ** 3 * 4)
         print(f"max input: {np.max(input_)}, min input: {np.min(input_)}")
         input_dict[name] = input_
@@ -77,9 +87,10 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
         output_dict[name] = output_
         weights_dict[name] = weights_
 
-        swap_ = coords_cube[:, 0, 0, 0, :].copy()
-        coords_cube[:, 0, 0, 0, :] = coords_cube[:, 1, 1, 1, :].copy()
-        coords_cube[:, 1, 1, 1, :] = swap_.copy()
+        if CUBE_USE > 1:
+            swap_ = coords_cube[:, 0, 0, 0, :].copy()
+            coords_cube[:, 0, 0, 0, :] = coords_cube[:, 1, 1, 1, :].copy()
+            coords_cube[:, 1, 1, 1, :] = swap_.copy()
         coords_cube = coords_cube.reshape(-1, (CUBE_USE) ** 3, 3)
         coords_dict[name] = coords_cube
 
