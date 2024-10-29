@@ -1,0 +1,23 @@
+name: pyscf
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+dependencies:
+  - python>=3.12
+  - anaconda
+  - numpy==1.26.4
+  - scipy==1.14.0
+  - pandas==2.2.2
+  - pyscf==2.6.1
+  - opt_einsum
+  - scikit-learn
+  - basis_set_exchange
+  - wandb
+  - tqdm
+  - pip
+  - pip:
+    - segmentation_models_pytorch==0.3.3
+    - torch==2.4.0
+    - torchvision
+    - torchaudio
