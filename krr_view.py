@@ -57,7 +57,16 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
         output_2 = data["exc_over_dm_cc_2_grids"]
         output_3 = data["exc_over_dm_cc_1_j_grids"]
         output_4 = data["exc_over_dm_cc_1_k_grids"]
-        output_ = output_1 + output_2 + output_3 + output_4
+        output_5 = data["exc_over_dm_lda_grids"]
+        output_ = np.array(
+            [
+                output_1,
+                output_2,
+                output_3,
+                output_4,
+                output_5,
+            ]
+        ).T
 
         weights_ = data["weights"]
         coords_cube = data["coor_cube"]
@@ -291,9 +300,12 @@ w_all = {}
 # x_neighborhood = {}
 # y_neighborhood = {}
 # w_neighborhood = {}
+coor_all = {}
 name_all = {}
 dual_coef = {}
 x_fit = {}
+
+shape_matrix = (20, 194, 40)
 
 for key in keys_list:
     print(f"Key: {key}", flush=True)
@@ -328,19 +340,27 @@ for key in keys_list:
             + index_round3
         )
 
+        iatm, iang, irad = np.unravel_index(index_, shape_matrix)
+
         if index_round not in x_all:
             x_all[index_round] = [input_dict[key][index_]]
             y_all[index_round] = [output_dict[key][index_]]
             w_all[index_round] = [weights_dict[key][index_]]
+            coor_all[index_round] = [coords_dict[key][index_]]
+            name_all[index_round] = [f"{key}_{iatm}_{irad}_{iang}"]
         else:
             x_all[index_round].append(input_dict[key][index_])
             y_all[index_round].append(output_dict[key][index_])
             w_all[index_round].append(weights_dict[key][index_])
+            coor_all[index_round].append(coords_dict[key][index_])
+            name_all[index_round].append(f"{key}_{iatm}_{irad}_{iang}")
 
 for index_ in np.sort(list(x_all.keys())):
     x_all[index_] = np.array(x_all[index_])
     y_all[index_] = np.array(y_all[index_])
     w_all[index_] = np.array(w_all[index_])
+    coor_all[index_] = np.array(coor_all[index_])
+    name_all[index_] = np.array(name_all[index_])
 
 train_error_sum = 0
 energy_correct_sum = 0
@@ -362,90 +382,155 @@ for index_ in np.sort(list(x_all.keys())):
         index_round3,
     )
 
-    if index_round0 >= HASHLEN // 2:
-        krr.alpha = args.alpha
-        krr.gamma = 0.1
-        krr.kernel_type = "rbf"
-    else:
-        krr.alpha = args.alpha
-        krr.gamma = args.gamma
-        krr.kernel_type = "rbf"
-
-    if len(x_all[index_]) < 500:
-        krr.fit_data(x_all[index_], y_all[index_])
-    else:
-        x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
-            x_all[index_],
-            y_all[index_],
-            w_all[index_],
-            train_size=50,
-            random_state=42,
-        )
-
-        CONVERGE_STEP = 0
-        for i_step in range(250):
-            print(f"Step {i_step}:", flush=True)
-            krr.fit_data(x_train, y_train)
-            error_krr = evaluate(
-                krr,
-                x_train,
-                y_train,
-                w_train,
-                x_all[index_],
-                y_all[index_],
-                w_all[index_],
-            )
-            if error_krr < 0.25:
-                print(f"Error is small: {error_krr}", flush=True)
-                CONVERGE_STEP += 1
-                if CONVERGE_STEP == 1:
-                    print("Converge.")
-                    break
-            x_train, y_train, w_train, x_test, y_test, w_test = add_data(
-                krr, x_train, y_train, w_train, x_test, y_test, w_test
-            )
-
-    train_error = np.sum(
-        (y_all[index_] - krr.predict_data(x_all[index_]))
-        * w_all[index_]
-        * x_all[index_][:, 0]
+    if index_round0 > 0:
+        break
+    np.savez_compressed(
+        f"data/save/train_test_new-{index_round0}-{index_round1}-{index_round2}-{index_round3}.npz",
+        x=x_all[index_],
+        y=y_all[index_],
+        w=w_all[index_],
+        coor=coor_all[index_],
+        name=name_all[index_],
     )
-    energy_correct = np.sum(x_all[index_][:, 0] * y_all[index_] * w_all[index_])
 
-    train_error_sum += train_error
-    energy_correct_sum += energy_correct
+#     if index_round0 >= HASHLEN // 2:
+#         krr.alpha = args.alpha
+#         krr.gamma = 0.1
+#         krr.kernel_type = "rbf"
+#     else:
+#         krr.alpha = args.alpha
+#         krr.gamma = args.gamma
+#         krr.kernel_type = "rbf"
 
-    if np.abs(AU2KCALMOL * train_error) > 0.01:
-        print(
-            f"Round {index_round0} {index_round1} {index_round2} {index_round3}",
-            flush=True,
-        )
-        print(
-            f"Length of x_all: {len(x_all[index_])}",
-            flush=True,
-        )
-        print(
-            f"Train error: {AU2KCALMOL * train_error} KCAL/MOL",
-            flush=True,
-        )
-        print(
-            f"Energy correct: {AU2KCALMOL * energy_correct} KCAL/MOL",
-            flush=True,
-        )
+#     if len(x_all[index_]) < 500:
+#         krr.fit_data(x_all[index_], y_all[index_])
+#     else:
+#         x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
+#             x_all[index_],
+#             y_all[index_],
+#             w_all[index_],
+#             train_size=50,
+#             random_state=42,
+#         )
 
-    dual_coef[index_] = krr.dual_coef_
-    x_fit[index_] = krr.x_fit
-    print()
+#         CONVERGE_STEP = 0
+#         for i_step in range(500):
+#             print(f"Step {i_step}:", flush=True)
+#             krr.fit_data(x_train, y_train)
+#             error_krr = evaluate(
+#                 krr,
+#                 x_train,
+#                 y_train,
+#                 w_train,
+#                 x_all[index_],
+#                 y_all[index_],
+#                 w_all[index_],
+#             )
+#             if error_krr < 0.25:
+#                 print(f"Error is small: {error_krr}", flush=True)
+#                 CONVERGE_STEP += 1
+#                 if CONVERGE_STEP == 1:
+#                     print("Converge.")
+#                     break
+#             x_train, y_train, w_train, x_test, y_test, w_test = add_data(
+#                 krr, x_train, y_train, w_train, x_test, y_test, w_test
+#             )
 
-# save the model
-np.savez_compressed(
-    f"data/save/dual_coef-final-{args.alpha}-{args.gamma}.npz",
-    dual_coef=dual_coef,
-    x_fit=x_fit,
-)
+#     train_error = np.sum(
+#         (y_all[index_] - krr.predict_data(x_all[index_]))
+#         * w_all[index_]
+#         * x_all[index_][:, 0]
+#     )
 
-print(
-    f"Energy correct sum: {AU2KCALMOL * energy_correct_sum} KCAL/MOL",
-    f"Train error sum: {AU2KCALMOL * train_error_sum} KCAL/MOL",
-    flush=True,
-)
+#     if (
+#         index_round0 == 0
+#         and index_round1 == 0
+#         and index_round2 == 0
+#         and index_round3 == 0
+#     ):
+#         krr.alpha = args.alpha
+#         krr.gamma = args.gamma
+#         krr.kernel_type = "rbf"
+#     else:
+#         krr.alpha = 1e-8
+#         krr.gamma = args.gamma
+#         krr.kernel_type = "rbf"
+
+#     if len(x_all[index_]) < 500:
+#         krr.fit_data(x_all[index_], y_all[index_])
+#     else:
+#         x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
+#             x_all[index_],
+#             y_all[index_],
+#             w_all[index_],
+#             train_size=50,
+#             random_state=42,
+#         )
+
+#         CONVERGE_STEP = 0
+#         for i_step in range(500):
+#             print(f"Step {i_step}:", flush=True)
+#             krr.fit_data(x_train, y_train)
+#             error_krr = evaluate(
+#                 krr,
+#                 x_train,
+#                 y_train,
+#                 w_train,
+#                 x_all[index_],
+#                 y_all[index_],
+#                 w_all[index_],
+#             )
+#             if error_krr < 0.1:
+#                 print(f"Error is small: {error_krr}", flush=True)
+#                 CONVERGE_STEP += 1
+#                 if CONVERGE_STEP == 1:
+#                     print("Converge.")
+#                     break
+#             x_train, y_train, w_train, x_test, y_test, w_test = add_data(
+#                 krr, x_train, y_train, w_train, x_test, y_test, w_test
+#             )
+
+#     train_error = np.sum(
+#         (y_all[index_] - krr.predict_data(x_all[index_]))
+#         * w_all[index_]
+#         * x_all[index_][:, 0]
+#     )
+#     energy_correct = np.sum(x_all[index_][:, 0] * y_all[index_] * w_all[index_])
+
+#     train_error_sum += train_error
+#     energy_correct_sum += energy_correct
+
+#     if np.abs(AU2KCALMOL * train_error) > 0.01:
+#         print(
+#             f"Round {index_round0} {index_round1} {index_round2} {index_round3}",
+#             flush=True,
+#         )
+#         print(
+#             f"Length of x_all: {len(x_all[index_])}",
+#             flush=True,
+#         )
+#         print(
+#             f"Train error: {AU2KCALMOL * train_error} KCAL/MOL",
+#             flush=True,
+#         )
+#         print(
+#             f"Energy correct: {AU2KCALMOL * energy_correct} KCAL/MOL",
+#             flush=True,
+#         )
+
+#     dual_coef[index_] = krr.dual_coef_
+#     x_fit[index_] = krr.x_fit
+#     print()
+
+# # save the model
+# np.savez_compressed(
+#     f"data/save/dual_coef-final-{args.alpha}-{args.gamma}.npz",
+#     dual_coef=dual_coef,
+#     x_fit=x_fit,
+# )
+
+# print(
+#     f"Energy correct sum: {AU2KCALMOL * energy_correct_sum} KCAL/MOL",
+#     f"Train error sum: {AU2KCALMOL * train_error_sum} KCAL/MOL",
+#     flush=True,
+# )

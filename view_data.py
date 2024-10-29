@@ -16,12 +16,10 @@ for name_plot, max_x in product(
         "plot-cc",
     ],
     [
-        1e-3,
-        1e-4,
-        1e-5,
         1e-6,
-        1e-7,
         1e-8,
+        1e-10,
+        1e-12,
     ],
 ):
     x = np.array(data["x"], dtype=np.float32)
@@ -52,6 +50,7 @@ for name_plot, max_x in product(
     distances, indices = index.search(b, min_number)
     name = data["name"]
 
+    distances = np.sqrt(distances) / x.shape[1]
     var_y = np.var(np.einsum("ij,i->ij", y[indices], x[:, 0] * w), axis=1)
 
     mean_of_distances = np.max(distances, axis=1)
@@ -59,7 +58,7 @@ for name_plot, max_x in product(
     mean_of_distances[mean_of_distances > max_x] = 0
     mean_of_distances = -mean_of_distances
 
-    argsort_ = np.argsort(mean_of_distances * var_y)[::-1][:100]
+    argsort_ = np.argsort(mean_of_distances * var_y)[::-1][:min_number]
 
     energy = np.einsum("ij,i->ij", y[indices[argsort_]], (x[:, 0] * w)[argsort_])
     distances = distances[argsort_]
