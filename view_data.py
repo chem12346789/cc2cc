@@ -9,23 +9,25 @@ import faiss
 
 data = np.load("data/save/train_test-0-0-0-0.npz")
 
-for name_plot, max_x in product(
+for name_plot, max_x_ in product(
     [
         "plot-b3lyp",
         "plot-cc-b3lyp",
         "plot-cc",
     ],
     [
+        1e-2,
+        1e-4,
         1e-6,
         1e-8,
         1e-10,
         1e-12,
     ],
 ):
-    x = np.array(data["x"], dtype=np.float32)
-    y = np.array(data["y"], dtype=np.float32)
-    w = np.array(data["w"], dtype=np.float32)
-    coor = np.array(data["coor"], dtype=np.int64)
+    x = data["x"]
+    y = data["y"]
+    w = data["w"]
+    coor = data["coor"]
 
     if name_plot == "plot-b3lyp":
         y = y[:, 0]
@@ -33,10 +35,15 @@ for name_plot, max_x in product(
         y = y[:, 0] + y[:, 1] + y[:, 2] + y[:, 3]
     if name_plot == "plot-cc":
         y = y[:, 1] + y[:, 2]
+    if name_plot == "plot-lda":
+        y = y[:, 4]
     # exc_over_dm_b3lyp_grids
     # exc_over_dm_cc_2_grids
     # exc_over_dm_cc_1_j_grids
     # exc_over_dm_cc_1_k_grids
+    name_plot = f"{name_plot}-{x.shape[1]}"
+    Path(f"plot/{name_plot}-{max_x_}/plot/").mkdir(parents=True, exist_ok=True)
+    print(x.shape, flush=True)
 
     (num_sample, dim_sample) = x.shape
     res = faiss.StandardGpuResources()
@@ -46,11 +53,10 @@ for name_plot, max_x in product(
     index.add(x)
 
     b = x.copy()
-    min_number = 100
-    distances, indices = index.search(b, min_number)
+    distances, indices = index.search(b, 20)
     name = data["name"]
 
-    distances = np.sqrt(distances) / x.shape[1]
+    max_x = max_x_**2 * x.shape[1]
     var_y = np.var(np.einsum("ij,i->ij", y[indices], x[:, 0] * w), axis=1)
 
     mean_of_distances = np.max(distances, axis=1)
@@ -58,30 +64,32 @@ for name_plot, max_x in product(
     mean_of_distances[mean_of_distances > max_x] = 0
     mean_of_distances = -mean_of_distances
 
-    argsort_ = np.argsort(mean_of_distances * var_y)[::-1][:min_number]
+    plot_number = 16
+    argsort_ = np.argsort(mean_of_distances * var_y)[::-1][:plot_number]
 
     energy = np.einsum("ij,i->ij", y[indices[argsort_]], (x[:, 0] * w)[argsort_])
     distances = distances[argsort_]
     name = name[indices[argsort_]]
     max_y = np.max(np.abs(energy - energy[:, [0]])) * 627.509
+    print(max_y, flush=True)
 
     # (sum_of_distances_reverse * var_y)[argsort_]
-    index_check = 18
     print(
         np.sum(
-            (x[indices[argsort_[index_check]]] - x[indices[argsort_[index_check]]][0])
-            ** 2,
+            (x[indices[argsort_]] - x[indices[argsort_]][[0], :, :]) ** 2,
             axis=1,
-        )
+        ),
+        flush=True,
     )
-    print(np.max(distances[index_check]))
-    print(np.max(np.abs((energy[index_check] - energy[index_check][0]) * 627.509)))
-    print(name[index_check])
+    print(distances, flush=True)
+    print(np.max(np.abs((energy - energy[0]) * 627.509)), flush=True)
+    print(name, flush=True)
+    index_check = 5
 
     plt.rcParams["figure.figsize"] = np.array([0.5, 0.5]) * 520 / 72
     name_energy_dict = {}
 
-    for i in range(min_number):
+    for i in range(plot_number):
         name_energy_dict[name[index_check][i]] = (
             energy[index_check][i] - energy[index_check][0]
         ) * 627.509
@@ -109,26 +117,29 @@ for name_plot, max_x in product(
             x_name_dict[x_] = [[name_i, energy_i]]
         plt.scatter(x_, energy_i, c="b")
 
-    Path(f"{name_plot}-{max_x}/plot/").mkdir(parents=True, exist_ok=True)
-
     for key_, value_ in x_name_dict.items():
         for j in value_:
             plt.scatter(float(j[0].split("_")[4]), j[1], c="r")
         plt.xticks(rotation=90)
         plt.xlabel(r"$\Delta$ x ($\AA$)")
-        plt.ylabel("Energy (kcal/mol)")
+        plt.ylabel(r"Energy (kcal/mol)")
         plt.xlim(-0.575, 0.575)
         plt.xticks(np.arange(-0.5, 0.6, 0.1))
         plt.savefig(
-            f"{name_plot}-{max_x}/plot/{key_}_{len(value_)}.pdf", bbox_inches="tight"
+            f"plot/{name_plot}-{max_x_}/plot/{key_}_{len(value_)}.pdf",
+            bbox_inches="tight",
         )
         plt.savefig(
-            f"{name_plot}-{max_x}/plot/{key_}_{len(value_)}.png",
+            f"plot/{name_plot}-{max_x_}/plot/{key_}_{len(value_)}.png",
             bbox_inches="tight",
             dpi=300,
         )
         plt.close()
-        print(key_, [i[0] for i in value_])
+        print(
+            key_,
+            [i[0] for i in value_],
+            flush=True,
+        )
 
     color_dict = {
         "methane": "#004D40",
@@ -182,14 +193,7 @@ for name_plot, max_x in product(
                 axes[i, j].set_xticks([])
             else:
                 axes[i, j].set_xticks([0, max_x])
-                axes[i, j].set_xticklabels([0, max_x])
-            # if j != 0:
-            #     axes[i][j].set_yticks([])
-            # else:
-            #     axes[i][j].set_yticks([-0.03, -0.02, -0.01, 0])
-            #     axes[i][j].set_yticklabels([-0.03, -0.02, -0.01, 0])
-            #     axes[i][j].set_yticks([0, 0.01, 0.02, 0.03])
-            #     axes[i][j].set_yticklabels([0, 0.01, 0.02, 0.03])
+                axes[i, j].set_xticklabels([0, max_x_])
 
     for j in range(indices.shape[1]):
         axes[0, 0].scatter(
@@ -202,11 +206,11 @@ for name_plot, max_x in product(
         axes[0, 0].scatter([-1], [-1], c=c, label=i)
 
     plt.xlabel("Distance of cube")
-    plt.ylabel("$\Delta$ Energy (kcal/mol)")
+    plt.ylabel(r"$\Delta$ Energy (kcal/mol)")
     plt.legend()
 
-    plt.savefig(f"{name_plot}-{max_x}/sub_test.pdf", dpi=300, bbox_inches="tight")
-    plt.savefig(f"{name_plot}-{max_x}/sub_test.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"plot/{name_plot}-{max_x_}/sub_test.pdf", dpi=300, bbox_inches="tight")
+    plt.savefig(f"plot/{name_plot}-{max_x_}/sub_test.png", dpi=300, bbox_inches="tight")
     plt.clf()
 
     color_dict = {
@@ -216,10 +220,9 @@ for name_plot, max_x in product(
         "acetylene": "#7B1FA2",
     }
 
-    plt.rcParams["figure.figsize"] = np.array([3, 3]) * 520 / 72
-
-    f, axes = plt.subplots(10, 10)
-    axes = axes.reshape(10, 10)
+    plt.rcParams["figure.figsize"] = np.array([1.25, 1.25]) * 520 / 72
+    f, axes = plt.subplots(4, 4)
+    axes = axes.reshape(4, 4)
 
     begin_y = 0.025
     end_y = 0.95
@@ -255,24 +258,18 @@ for name_plot, max_x in product(
             )
 
             axes[i, j].set_xlim(-max_x * 0.1, max_x * 1.1)
-            # axes[i, j].set_ylim(-0.01, 0.11)
             axes[i, j].set_ylim(-max_y * 0.1, max_y * 1.1)
 
             if i != 0:
                 axes[i, j].set_xticks([])
             else:
                 axes[i, j].set_xticks([0, max_x])
-                axes[i, j].set_xticklabels([0, max_x])
+                axes[i, j].set_xticklabels([0, max_x_])
             if j != 0:
                 axes[i][j].set_yticks([])
-            # else:
-            #     axes[i][j].set_yticks([0, 0.02])
-            #     axes[i][j].set_yticklabels([0, 0.02])
-            # axes[i][j].set_yticks([0, 0.01, 0.02, 0.03])
-            # axes[i][j].set_yticklabels([0, 0.01, 0.02, 0.03])
 
     for i in range(argsort_.shape[0]):
-        axes_i, axes_j = np.unravel_index(i, (10, 10))
+        axes_i, axes_j = np.unravel_index(i, (4, 4))
         for j in range(indices.shape[1]):
             axes[axes_i, axes_j].scatter(
                 distances[i][j],
@@ -287,5 +284,6 @@ for name_plot, max_x in product(
             transform=axes[axes_i, axes_j].transAxes,
             va="top",
         )
-    plt.savefig(f"{name_plot}-{max_x}/test.pdf", dpi=300)
+    plt.savefig(f"plot/{name_plot}-{max_x_}/test.pdf", dpi=300, bbox_inches="tight")
+    plt.savefig(f"plot/{name_plot}-{max_x_}/test.png", dpi=300, bbox_inches="tight")
     plt.clf()
