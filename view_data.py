@@ -20,6 +20,8 @@ for name_plot, max_x_ in product(
         1e-4,
         1e-6,
         1e-8,
+        1e-10,
+        1e-12,
     ],
 ):
     x = data["x"]

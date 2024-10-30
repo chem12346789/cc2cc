@@ -204,7 +204,11 @@ class DataBase:
                 input_mat = data["rho_cube"]
             else:
                 input_mat = data["rho_inv_4_norm"]
-            output_mat = data["exc_over_dm_cc_grids"]
+
+            output_mat = data["exc_over_dm_b3lyp_grids"]
+            output_mat += data["exc_over_dm_cc_2_grids"]
+            output_mat += data["exc_over_dm_cc_1_j_grids"]
+            output_mat += data["exc_over_dm_cc_1_k_grids"]
             weights_mat = data["weights"]
 
             input_ = {}
