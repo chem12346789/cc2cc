@@ -8,7 +8,6 @@ from cc2cc.utils import AU2KCALMOL
 
 from krr import load_data, evaluate, add_data, add_args, hash_value
 from krr import KernelRidgeModified
-from krr import HASHLEN
 
 
 DATA_PATH = Path("data/grids_dft")

@@ -5,13 +5,10 @@ import numpy as np
 
 from krr import load_data, add_args, hash_value
 from krr import KernelRidgeModified
-from krr import HASHLEN
 
 DATA_PATH = Path("data/grids_dft")
 AUTOKCALMOL = 627.509
 BASIS = "cc-pVDZ"
-HASHLEN = 21
-HASHSIZE = 10
 
 parser = argparse.ArgumentParser(
     description="Generate the inversed potential and energy."
