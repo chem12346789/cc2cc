@@ -49,6 +49,7 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
         output_3 = data["exc_over_dm_cc_1_j_grids"]
         output_4 = data["exc_over_dm_cc_1_k_grids"]
         output_ = output_1 + output_2 + output_3 + output_4
+        print(output_.shape)
 
         weights_ = data["weights"]
         coords_cube = data["coor_cube"]
