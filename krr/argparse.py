@@ -40,7 +40,7 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--load_number",
         type=int,
-        default=1,
+        default=-1,
     )
     parser.add_argument(
         "--molecular_list",

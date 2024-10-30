@@ -7,6 +7,8 @@ from pathlib import Path
 
 import faiss
 
+from cc2cc.utils import ARRAY_USE_MIDDLE
+
 data = np.load("data/save/train_test-0-0-0-0.npz")
 
 for name_plot, max_x_ in product(
@@ -57,7 +59,9 @@ for name_plot, max_x_ in product(
     name = data["name"]
 
     max_x = max_x_**2 * x.shape[1]
-    var_y = np.var(np.einsum("ij,i->ij", y[indices], x[:, 0] * w), axis=1)
+    var_y = np.var(
+        np.einsum("ij,i->ij", y[indices], x[:, ARRAY_USE_MIDDLE] * w), axis=1
+    )
 
     mean_of_distances = np.max(distances, axis=1)
     mean_of_distances[mean_of_distances < max_x] = -1
@@ -67,7 +71,9 @@ for name_plot, max_x_ in product(
     plot_number = 16
     argsort_ = np.argsort(mean_of_distances * var_y)[::-1][:plot_number]
 
-    energy = np.einsum("ij,i->ij", y[indices[argsort_]], (x[:, 0] * w)[argsort_])
+    energy = np.einsum(
+        "ij,i->ij", y[indices[argsort_]], (x[:, ARRAY_USE_MIDDLE] * w)[argsort_]
+    )
     distances = distances[argsort_]
     name = name[indices[argsort_]]
     max_y = np.max(np.abs(energy - energy[:, [0]])) * 627.509

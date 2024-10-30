@@ -88,7 +88,7 @@ train_error_sum = 0
 energy_correct_sum = 0
 
 for index_ in x_keys:
-    if int(index_.split("-")[0]) != 0:
+    if int(index_.split("_")[0]) != 0:
         break
     np.savez_compressed(
         f"data/save/train_test_new-{index_}.npz",

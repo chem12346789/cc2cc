@@ -4,31 +4,31 @@ from numba import njit, prange
 
 from sklearn.kernel_ridge import KernelRidge
 
-from cc2cc.utils import AU2KCALMOL
+from cc2cc.utils import AU2KCALMOL, ARRAY_USE_MIDDLE, ARRAY_USE
 
-HASHSIZE = 20
-HASHLEN = HASHSIZE * 2 + 2
+HASHSIZE = 10
+HASHLEN = 21
 
 
 def hash_value(input_):
     """
     Hash the value.
     """
-    index_round0 = int(input_[0] * HASHSIZE)
-    index_round1 = int(input_[1] * HASHSIZE)
-    index_round2 = int(input_[2] * HASHSIZE)
-    index_round3 = int(input_[3] * HASHSIZE)
+    index_round0 = int(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 0] * HASHSIZE)
+    index_round1 = int(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 1] * HASHSIZE)
+    index_round2 = int(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 2] * HASHSIZE)
+    index_round3 = int(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 3] * HASHSIZE)
 
     if np.abs(index_round0) >= HASHLEN // 2:
-        index_round0 = np.sign(index_round0) * HASHLEN // 2
+        index_round0 = HASHLEN // 2 if index_round0 > 0 else np.negative(HASHLEN // 2)
     if np.abs(index_round1) >= HASHLEN // 2:
-        index_round1 = np.sign(index_round1) * HASHLEN // 2
+        index_round1 = HASHLEN // 2 if index_round1 > 0 else np.negative(HASHLEN // 2)
     if np.abs(index_round2) >= HASHLEN // 2:
-        index_round2 = np.sign(index_round2) * HASHLEN // 2
+        index_round2 = HASHLEN // 2 if index_round2 > 0 else np.negative(HASHLEN // 2)
     if np.abs(index_round3) >= HASHLEN // 2:
-        index_round3 = np.sign(index_round3) * HASHLEN // 2
+        index_round3 = HASHLEN // 2 if index_round3 > 0 else np.negative(HASHLEN // 2)
 
-    return f"{index_round0}-{index_round1}-{index_round2}-{index_round3}"
+    return f"{index_round0}_{index_round1}_{index_round2}_{index_round3}"
 
 
 @njit(parallel=True)
@@ -89,18 +89,26 @@ def evaluate(krr, x_train, y_train, w_train, x_all, y_all, w_all):
     """
     print("Krr perdict:")
     train_error = AU2KCALMOL * np.sum(
-        (np.abs(y_train - krr.predict_data(x_train)) * w_train * x_train[:, 0])
+        (
+            np.abs(y_train - krr.predict_data(x_train))
+            * w_train
+            * x_train[:, ARRAY_USE_MIDDLE]
+        )
     )
     print(f"train, {train_error} KCAL/MOL", flush=True)
     error_krr = AU2KCALMOL * np.sum(
-        (np.abs(y_all - krr.predict_data(x_all)) * w_all * x_all[:, 0])
+        (np.abs(y_all - krr.predict_data(x_all)) * w_all * x_all[:, ARRAY_USE_MIDDLE])
     )
     print(f"test, {error_krr} KCAL/MOL", flush=True)
 
     print("B3lyp perdict:")
-    b3lyp_error = AU2KCALMOL * np.sum(np.abs(y_train * w_train * x_train[:, 0]))
+    b3lyp_error = AU2KCALMOL * np.sum(
+        np.abs(y_train * w_train * x_train[:, ARRAY_USE_MIDDLE])
+    )
     print("train", b3lyp_error, "KCAL/MOL", flush=True)
-    b3lyp_error = AU2KCALMOL * np.sum(np.abs(y_all * w_all * x_all[:, 0]))
+    b3lyp_error = AU2KCALMOL * np.sum(
+        np.abs(y_all * w_all * x_all[:, ARRAY_USE_MIDDLE])
+    )
     print("test", b3lyp_error, "KCAL/MOL", flush=True)
     print("End of evaluate.\n", flush=True)
     return error_krr, train_error
@@ -111,7 +119,9 @@ def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
     Add data which has large error.
     """
     print("Add data:", flush=True)
-    error_test = (y_test - krr.predict_data(x_test)) * w_test * x_test[:, 0]
+    error_test = (
+        (y_test - krr.predict_data(x_test)) * w_test * x_test[:, ARRAY_USE_MIDDLE]
+    )
 
     index_add = (
         np.array([True] * len(error_test))

@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from cc2cc.utils import AU2KCALMOL
+from cc2cc.utils import AU2KCALMOL, ARRAY_USE_MIDDLE
 
 from krr import load_data, evaluate, add_data, add_args, hash_value
 from krr import KernelRidgeModified
@@ -90,16 +90,16 @@ for index_ in x_keys:
     print(f"Round {index_}", flush=True)
 
     if (
-        int(index_.split("-")[0]) == 0
-        and int(index_.split("-")[1]) == 0
-        and int(index_.split("-")[2]) == 0
-        and int(index_.split("-")[3]) == 0
+        int(index_.split("_")[0]) == 0
+        and int(index_.split("_")[1]) == 0
+        and int(index_.split("_")[2]) == 0
+        and int(index_.split("_")[3]) == 0
     ):
         krr.alpha = args.alpha
         krr.gamma = args.gamma
         krr.kernel_type = "rbf"
         ERROR_KRR_CONVERGE = 0.5
-    elif int(index_.split("-")[0]) == 0:
+    elif int(index_.split("_")[0]) == 0:
         krr.alpha = args.alpha
         krr.gamma = 1
         krr.kernel_type = "rbf"
@@ -149,10 +149,12 @@ for index_ in x_keys:
         np.abs(
             (y_all[index_] - krr.predict_data(x_all[index_]))
             * w_all[index_]
-            * x_all[index_][:, 0]
+            * x_all[index_][:, ARRAY_USE_MIDDLE]
         )
     )
-    energy_correct = np.sum(np.abs(y_all[index_] * w_all[index_] * x_all[index_][:, 0]))
+    energy_correct = np.sum(
+        np.abs(y_all[index_] * w_all[index_] * x_all[index_][:, ARRAY_USE_MIDDLE])
+    )
 
     train_error_sum += train_error
     energy_correct_sum += energy_correct

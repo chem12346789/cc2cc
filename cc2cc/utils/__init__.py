@@ -22,6 +22,8 @@ from cc2cc.utils.env_var import (
     CUBE_LEN,
     CUBE_USE,
     CUBE_USE_MIDDLE,
+    ARRAY_USE_MIDDLE,
+    ARRAY_USE,
     ORIENTATION_NUMBER_DICT,
     LEVEL,
     PERIOD,
@@ -67,10 +69,10 @@ def extend(
     if "-" in extend_atom:
         if "." in extend_atom:
             extend_atom_1_l = [
-                int(i_atom) for i_atom in extend_atom.split("-")[0].split(".")
+                int(i_atom) for i_atom in extend_atom.split("_")[0].split(".")
             ]
             extend_atom_2_l = [
-                int(i_atom) for i_atom in extend_atom.split("-")[1].split(".")
+                int(i_atom) for i_atom in extend_atom.split("_")[1].split(".")
             ]
             print(extend_atom_1_l, extend_atom_2_l)
             for extend_i in extend_atom_1_l:
@@ -95,7 +97,7 @@ def extend(
                         distance * distance_1_2_array[i - 1] / distance_1_2
                     )
         else:
-            extend_atom_1, extend_atom_2 = map(int, extend_atom.split("-"))
+            extend_atom_1, extend_atom_2 = map(int, extend_atom.split("_"))
             if extend_atom_1 >= len(Mol[name_mol]) or extend_atom_2 >= len(
                 Mol[name_mol]
             ):
