@@ -45,7 +45,7 @@ def cc(molecular, name, args):
     mdft.xc = "b3lyp"
     mdft.kernel()
 
-    grids = Grid(mol, level=1, period=1)
+    grids = Grid(mol, level=1, period=2)
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
     rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
     rho_cc_all = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="mGGA")

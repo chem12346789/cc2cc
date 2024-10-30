@@ -44,22 +44,22 @@ for item in Path(main_dir).glob("*"):
 LIST_OF_GPU = itertools.cycle([0, 1])
 GPU_NODE_POOL = itertools.cycle(
     [
-        "gpu01",
-        "gpu01",
-        "gpu01",
-        "gpu01",
-        "gpu02",
-        "gpu02",
-        "gpu02",
-        "gpu02",
-        "gpu03",
-        "gpu03",
-        "gpu03",
-        "gpu03",
-        "gpu04",
-        "gpu04",
-        "gpu04",
-        "gpu04",
+        "gpu06",
+        "gpu06",
+        "gpu06",
+        "gpu06",
+        "gpu07",
+        "gpu07",
+        "gpu07",
+        "gpu07",
+        "gpu06",
+        "gpu06",
+        "gpu06",
+        "gpu06",
+        "gpu07",
+        "gpu07",
+        "gpu07",
+        "gpu07",
     ]
 )
 
