@@ -6,16 +6,16 @@ description = "cc2cc: AI for density functional theory"
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = [
-    "basis_set_exchange==0.10",
-    "numpy==1.26.4",
-    "opt_einsum==3.3.0",
-    "pandas==2.2.2",
-    "pyscf==2.6.1",
-    "scipy==1.14.0",
-    "segmentation_models_pytorch==0.3.3",
-    "torch==2.4.0",
-    "tqdm==4.65.0",
-    "wandb==0.17.5",
+    "basis_set_exchange",
+    "numpy",
+    "opt_einsum",
+    "pandas",
+    "pyscf",
+    "scipy",
+    "segmentation_models_pytorch",
+    "torch",
+    "tqdm",
+    "wandb",
     "setuptools >= 40.6.0",
 ]
 
