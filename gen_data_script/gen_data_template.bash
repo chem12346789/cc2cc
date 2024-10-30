@@ -23,7 +23,7 @@ export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=c
 # export CUDA_VISIBLE_DEVICES=NUMBER_OF_GPU
 
 # ~/anaconda3/envs/pyscf/bin/python gen_data.py -dl START END STEP -b BASIS --extend_atom EXTEND_ATOM --extend_xyz 0 --name_mol hexane
-~/anaconda3/envs/pyscf/bin/python gen_data.py -dl START END STEP -b BASIS --extend_atom EXTEND_ATOM --extend_xyz 0 --name_mol methane ethane ethylene acetylene 
+~/anaconda3/envs/pyscf/bin/python gen_data.py -dl START END STEP -b BASIS --extend_atom EXTEND_ATOM --extend_xyz 0 --name_mol propane 
 # cyclopropene cyclopropane allene propyne propane propylene butane butyne isobutane butadiene bicyclobutane cyclobutane benzene spiropentane cyclopropylmethyl neopentane cyclopentane pentane isopentane
 # 
 # ~/anaconda3/envs/pyscf/bin/python gen_data.py -dl START END STEP -b BASIS --extend_atom EXTEND_ATOM --extend_xyz 0 --name_mol spiropentane cyclopropylmethyl neopentane cyclopentane pentane isopentane
