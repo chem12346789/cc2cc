@@ -16,4 +16,4 @@ export NUMBA_NUM_THREADS=12
 export PYTHONPATH=~/python:$PYTHONPATH
 export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
 
-~/anaconda3/envs/pyscf/bin/python view_data.py --gamma BASH_GAMMA --alpha BASH_ALPHA
+~/anaconda3/envs/pyscf/bin/python krr_fit.py --gamma BASH_GAMMA --alpha BASH_ALPHA --distance_list -0.5 -0.5 1 --molecular_list methane ethane propane
