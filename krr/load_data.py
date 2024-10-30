@@ -9,6 +9,8 @@ from cc2cc.utils import (
     CUBE_USE,
     CUBE_MIDDLE,
     CUBE_USE_MIDDLE,
+    LEVEL,
+    PERIOD,
 )
 
 BASIS = "cc-pVDZ"
@@ -35,7 +37,7 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
         distance_list,
     ):
         name = f"{name_mol}_{BASIS}_{extend_atom}_{extend_xyz}_{distance:.4f}"
-        data_path = Path(f"{DATA_PATH}") / f"data_{name}.npz"
+        data_path = Path(f"{DATA_PATH}") / f"data_{name}_{LEVEL}_{PERIOD}.npz"
         if not (data_path).exists():
             print(f"No file: {data_path}")
             continue

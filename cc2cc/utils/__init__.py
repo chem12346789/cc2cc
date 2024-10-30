@@ -23,6 +23,8 @@ from cc2cc.utils.env_var import (
     CUBE_USE,
     CUBE_USE_MIDDLE,
     ORIENTATION_NUMBER_DICT,
+    LEVEL,
+    PERIOD,
 )
 from cc2cc.utils.Grids import Grid
 from cc2cc.utils.DataBase import DataBase, process_input

@@ -14,6 +14,8 @@ from cc2cc.utils import (
     CUBE_SIZE,
     CUBE_LEN,
     CUBE_MIDDLE,
+    LEVEL,
+    PERIOD,
 )
 
 
@@ -45,7 +47,7 @@ def cc(molecular, name, args):
     mdft.xc = "b3lyp"
     mdft.kernel()
 
-    grids = Grid(mol, level=1, period=2)
+    grids = Grid(mol, level=LEVEL, period=PERIOD)
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
     rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
     rho_cc_all = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="mGGA")
@@ -164,7 +166,7 @@ def cc(molecular, name, args):
         rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
     np.savez_compressed(
-        DATA_PATH / f"data_{name}.npz",
+        DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
         e_cc=e_cc,
         dm_cc=dm1_cc,
         rho_inv_4_norm=rho_cc,
@@ -196,9 +198,9 @@ def cc_change_cube(molecular, name, args):
     """
     Modify cube data for the CCSD method.
     """
-    file_path = DATA_PATH / f"data_{name}.npz"
+    file_path = DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz"
     if file_path.exists():
-        print(f"Data {name} already exists.")
+        print(f"Data {name}_{LEVEL}_{PERIOD} already exists.")
 
         data = np.load(file_path)
         e_cc = data["e_cc"]
@@ -240,7 +242,7 @@ def cc_change_cube(molecular, name, args):
             rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
         np.savez_compressed(
-            DATA_PATH / f"data_{name}.npz",
+            DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
             e_cc=e_cc,
             dm_cc=dm1_cc,
             rho_inv_4_norm=rho_cc,
@@ -260,9 +262,9 @@ def cc_add_data(molecular, name, args):
     """
     Append data for the CCSD method.
     """
-    file_path = DATA_PATH / f"data_{name}.npz"
+    file_path = DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz"
     if file_path.exists():
-        print(f"Data {name} already exists.")
+        print(f"Data {name}_{LEVEL}_{PERIOD} already exists.")
 
         data = np.load(file_path)
         e_cc = data["e_cc"]
@@ -286,7 +288,7 @@ def cc_add_data(molecular, name, args):
         grids = Grid(mol, level=1)
 
         np.savez_compressed(
-            DATA_PATH / f"data_{name}.npz",
+            DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
             e_cc=e_cc,
             dm_cc=dm1_cc,
             rho_inv_4_norm=rho_cc,

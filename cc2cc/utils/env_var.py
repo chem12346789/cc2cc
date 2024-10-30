@@ -10,6 +10,13 @@ STRUCTURE = os.environ.get("DFT2CC_STRUCTURE")
 if STRUCTURE is None:
     STRUCTURE = "cnn3d"
 
+LEVEL = int(os.environ.get("DFT2CC_LEVEL"))
+if LEVEL is None:
+    LEVEL = 1
+PERIOD = int(os.environ.get("DFT2CC_PERIOD"))
+if PERIOD is None:
+    PERIOD = 2
+
 ORIENTATION_NUMBER_DICT = {"x": 0, "y": 1, "z": 2}
 CUBE_SIZE = 5
 CUBE_MIDDLE = CUBE_SIZE // 2

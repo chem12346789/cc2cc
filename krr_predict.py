@@ -8,7 +8,6 @@ from krr import KernelRidgeModified
 
 DATA_PATH = Path("data/grids_dft")
 AUTOKCALMOL = 627.509
-BASIS = "cc-pVDZ"
 
 parser = argparse.ArgumentParser(
     description="Generate the inversed potential and energy."
