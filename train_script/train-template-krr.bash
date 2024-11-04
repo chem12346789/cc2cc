@@ -2,8 +2,7 @@
 
 #slurm options
 #SBATCH -n 24
-#SBATCH -p gpu
-#SBATCH --nodelist=gpu01
+#SBATCH -p cpu
 #SBATCH -J train-ccdft-BASH_GAMMA-BASH_ALPHA
 #SBATCH -o log/BASH_GAMMA-BASH_ALPHA.log
 

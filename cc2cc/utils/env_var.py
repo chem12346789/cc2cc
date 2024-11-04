@@ -10,12 +10,16 @@ STRUCTURE = os.environ.get("DFT2CC_STRUCTURE")
 if STRUCTURE is None:
     STRUCTURE = "cnn3d"
 
-LEVEL = int(os.environ.get("DFT2CC_LEVEL"))
+LEVEL = os.environ.get("DFT2CC_LEVEL")
 if LEVEL is None:
     LEVEL = 1
-PERIOD = int(os.environ.get("DFT2CC_PERIOD"))
+else:
+    LEVEL = int(LEVEL)
+PERIOD = os.environ.get("DFT2CC_PERIOD")
 if PERIOD is None:
     PERIOD = 2
+else:
+    PERIOD = int(PERIOD)
 
 ORIENTATION_NUMBER_DICT = {"x": 0, "y": 1, "z": 2}
 CUBE_SIZE = 5
@@ -81,6 +85,8 @@ if CHECKPOINTS_PATH is None:
 else:
     CHECKPOINTS_PATH = Path(CHECKPOINTS_PATH)
 
+print(f"LEVEL: {LEVEL}")
+print(f"PERIOD: {PERIOD}")
 print(f"MAIN_PATH: {MAIN_PATH.resolve()}")
 print(f"DATA_PATH: {DATA_PATH.resolve()}")
 print(f"DATA_CC_PATH: {DATA_CC_PATH.resolve()}")
