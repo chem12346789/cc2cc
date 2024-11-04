@@ -87,6 +87,8 @@ if CHECKPOINTS_PATH is None:
 else:
     CHECKPOINTS_PATH = Path(CHECKPOINTS_PATH)
 
+print(f"LEVEL: {LEVEL}")
+print(f"PERIOD: {PERIOD}")
 print(f"MAIN_PATH: {MAIN_PATH.resolve()}")
 print(f"DATA_PATH: {DATA_PATH.resolve()}")
 print(f"DATA_CC_PATH: {DATA_CC_PATH.resolve()}")

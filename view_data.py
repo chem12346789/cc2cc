@@ -58,7 +58,7 @@ for name_plot, max_x_ in product(
     distances, indices = index.search(b, 20)
     name = data["name"]
 
-    max_x = max_x_**2 * x.shape[1]
+    max_x = (max_x_ * x.shape[1]) ** 2
     var_y = np.var(
         np.einsum("ij,i->ij", y[indices], x[:, ARRAY_USE_MIDDLE] * w), axis=1
     )
