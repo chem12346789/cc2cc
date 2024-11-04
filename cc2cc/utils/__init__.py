@@ -97,7 +97,7 @@ def extend(
                         distance * distance_1_2_array[i - 1] / distance_1_2
                     )
         else:
-            extend_atom_1, extend_atom_2 = map(int, extend_atom.split("_"))
+            extend_atom_1, extend_atom_2 = map(int, extend_atom.split("-"))
             if extend_atom_1 >= len(Mol[name_mol]) or extend_atom_2 >= len(
                 Mol[name_mol]
             ):

@@ -6,27 +6,33 @@ from sklearn.kernel_ridge import KernelRidge
 
 from cc2cc.utils import AU2KCALMOL, ARRAY_USE_MIDDLE, ARRAY_USE
 
-HASHSIZE = 10
-HASHLEN = 21
+
+def cut_off(x, hashtable):
+    """
+    Cut off the value.
+    """
+    return np.sum(hashtable < x) - len(hashtable) // 2
 
 
-def hash_value(input_):
+def hash_value(input_, hashtable):
     """
     Hash the value.
+    hashtable:
+        shape [:, 3] (float1, float2, int1)
+        meaning:
+            float1: begin of the key range
+            float2: end of the key range
+            int1: value of the key
     """
-    index_round0 = int(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 0] * HASHSIZE)
-    index_round1 = int(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 1] * HASHSIZE)
-    index_round2 = int(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 2] * HASHSIZE)
-    index_round3 = int(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 3] * HASHSIZE)
+    index_round0 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 0], hashtable)
+    index_round1 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 1], hashtable)
+    index_round2 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 2], hashtable)
+    index_round3 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 3], hashtable)
 
-    if np.abs(index_round0) >= HASHLEN // 2:
-        index_round0 = HASHLEN // 2 if index_round0 > 0 else np.negative(HASHLEN // 2)
-    if np.abs(index_round1) >= HASHLEN // 2:
-        index_round1 = HASHLEN // 2 if index_round1 > 0 else np.negative(HASHLEN // 2)
-    if np.abs(index_round2) >= HASHLEN // 2:
-        index_round2 = HASHLEN // 2 if index_round2 > 0 else np.negative(HASHLEN // 2)
-    if np.abs(index_round3) >= HASHLEN // 2:
-        index_round3 = HASHLEN // 2 if index_round3 > 0 else np.negative(HASHLEN // 2)
+    if index_round0 == -len(hashtable) // 2 or index_round0 == len(hashtable) // 2:
+        index_round1 = np.sign(index_round1) * len(hashtable) // 2
+        index_round2 = np.sign(index_round2) * len(hashtable) // 2
+        index_round3 = np.sign(index_round3) * len(hashtable) // 2
 
     return f"{index_round0}_{index_round1}_{index_round2}_{index_round3}"
 

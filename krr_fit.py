@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 
 from cc2cc.utils import AU2KCALMOL, ARRAY_USE_MIDDLE
 
-from krr import load_data, evaluate, add_data, add_args, hash_value
+from krr import load_data, evaluate, add_data, add_args, hash_value, append
 from krr import KernelRidgeModified
 
 
@@ -57,6 +57,16 @@ model_para = {
     "kernel_type": {},
 }
 
+center_piont = [-0.01, -0.001, 0.001, 0.01]
+hashtable = append(
+    np.linspace(-1, 0, 11)[:-1],
+    center_piont,
+    np.linspace(0, 1, 11)[1:],
+)
+list_1 = list(range(-len(center_piont) // 2, len(center_piont) // 2 + 1, 1))
+list_2 = [-len(hashtable) // 2, len(hashtable) // 2]
+print(hashtable, list_1, list_2)
+
 for key in keys_list:
     print(f"Key: {key}", flush=True)
     for index_ in range(len(input_dict[key])):
@@ -66,7 +76,10 @@ for key in keys_list:
                 flush=True,
             )
 
-        index_round = hash_value(input_dict[key][index_])
+        index_round = hash_value(
+            input_dict[key][index_],
+            hashtable=hashtable,
+        )
 
         if index_round not in x_all:
             x_all[index_round] = [input_dict[key][index_]]
@@ -89,26 +102,26 @@ energy_correct_sum = 0
 for index_ in x_keys:
     print(f"Round {index_}", flush=True)
 
+    krr.alpha = args.alpha
+    krr.kernel_type = "rbf"
     if (
-        int(index_.split("_")[0]) == 0
-        and int(index_.split("_")[1]) == 0
-        and int(index_.split("_")[2]) == 0
-        and int(index_.split("_")[3]) == 0
+        int(index_.split("_")[0]) in list_1
+        and int(index_.split("_")[1]) in list_1
+        and int(index_.split("_")[2]) in list_1
+        and int(index_.split("_")[3]) in list_1
     ):
-        krr.alpha = args.alpha
-        krr.gamma = args.gamma
-        krr.kernel_type = "rbf"
-        ERROR_KRR_CONVERGE = 0.5
-    elif int(index_.split("_")[0]) == 0:
-        krr.alpha = args.alpha
-        krr.gamma = 1
-        krr.kernel_type = "rbf"
-        ERROR_KRR_CONVERGE = 1e-2
+        krr.gamma = args.gamma[0]
+    elif int(index_.split("_")[0]) in list_1:
+        krr.gamma = args.gamma[0] if len(args.gamma) <= 1 else args.gamma[1]
+    elif (
+        int(index_.split("_")[0]) in list_2
+        or int(index_.split("_")[1]) in list_2
+        or int(index_.split("_")[2]) in list_2
+        or int(index_.split("_")[3]) in list_2
+    ):
+        krr.gamma = args.gamma[0] if len(args.gamma) <= 3 else args.gamma[3]
     else:
-        krr.alpha = args.alpha
-        krr.gamma = 0.1
-        krr.kernel_type = "rbf"
-        ERROR_KRR_CONVERGE = 1e-2
+        krr.gamma = args.gamma[0] if len(args.gamma) <= 2 else args.gamma[2]
 
     if len(x_all[index_]) < 500:
         krr.fit_data(x_all[index_], y_all[index_])
@@ -135,7 +148,7 @@ for index_ in x_keys:
                 w_all[index_],
             )
             print(error_krr, train_error, error_krr < 2 * train_error, flush=True)
-            if error_krr < ERROR_KRR_CONVERGE or error_krr < 2 * train_error:
+            if (error_krr < 1e-6 * len(x_all[index_])) or (error_krr < 2 * train_error):
                 print(f"Error is small: {error_krr}", flush=True)
                 CONVERGE_STEP += 1
                 if CONVERGE_STEP == 1:
@@ -181,6 +194,7 @@ np.savez_compressed(
     f"data/save/dual_coef-final-{random_number}.npz",
     dual_coef=dual_coef,
     model_para=model_para,
+    hashtable=hashtable,
 )
 
 print(

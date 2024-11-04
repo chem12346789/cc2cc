@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 from cc2cc.utils import AU2KCALMOL, ARRAY_USE_MIDDLE
 
@@ -38,6 +39,38 @@ krr = KernelRidgeModified(
     kernel_type="rbf",
 )
 
+# load the model
+if args.load_number == -1:
+    list_of_path = list(Path("data/save/").glob("dual_coef-final-*.npz"))
+    load_path = max(list_of_path, key=lambda p: p.stat().st_ctime)
+else:
+    load_path = Path(f"data/save/dual_coef-final-{args.load_number}.npz")
+print(f"Load the model: {load_path}", flush=True)
+model = np.load(load_path, allow_pickle=True)
+model_coef = model["dual_coef"].item()
+model_para = model["model_para"].item()
+hashtable = model["hashtable"]
+csv_file = Path(f"data/save/{load_path.stem}.csv")
+csv_data = {
+    "index": [],
+    "predict_error": [],
+    "energy_correct": [],
+    "predict_error_abs": [],
+    "energy_correct_abs": [],
+    "predict_error_sum": [],
+    "energy_correct_sum": [],
+    "predict_error_abs_sum": [],
+    "energy_correct_abs_sum": [],
+}
+if csv_file.exists():
+    print(f"Warning: {csv_file} exists.", flush=True)
+
+model_coef_keys = list(model_coef.keys())
+model_coef_keys_array = np.array(
+    [[int(j) for j in i.split("_")] for i in model_coef_keys]
+)
+print(model_coef_keys_array)
+
 x_all = {}
 y_all = {}
 w_all = {}
@@ -55,7 +88,10 @@ for key in keys_list:
                 flush=True,
             )
 
-        index_round = hash_value(input_dict[key][index_])
+        index_round = hash_value(
+            input_dict[key][index_],
+            hashtable=hashtable,
+        )
 
         if index_round not in x_all:
             x_all[index_round] = [input_dict[key][index_]]
@@ -77,26 +113,7 @@ energy_correct_sum = 0
 predict_error_abs_sum = 0
 energy_correct_abs_sum = 0
 
-# load the model
-if args.load_number == -1:
-    list_of_path = list(Path("data/save/").glob("dual_coef-final-*.npz"))
-    load_path = max(list_of_path, key=lambda p: p.stat().st_ctime)
-    print(f"Load the latest model: {load_path}", flush=True)
-else:
-    load_path = Path(f"data/save/dual_coef-final-{args.load_number}.npz")
-model = np.load(load_path, allow_pickle=True)
-model_coef = model["dual_coef"].item()
-model_para = model["model_para"].item()
-
-model_coef_keys = list(model_coef.keys())
-model_coef_keys_array = np.array(
-    [[int(j) for j in i.split("_")] for i in model_coef_keys]
-)
-print(model_coef_keys_array)
-
 for index_ in x_keys:
-    print(f"Round {index_}", flush=True)
-
     if index_ in model_coef:
         index_search = index_
     else:
@@ -107,7 +124,7 @@ for index_ in x_keys:
             )
         )
         index_search = list(model_coef_keys)[index_search_index]
-        print(f"Index search: index_, found: {index_search}", flush=True)
+        print(f"Index search: {index_}, found: {index_search}", flush=True)
 
     krr.dual_coef_ = model_coef[index_search]
     krr.x_fit = model_para["x_fit"][index_search]
@@ -139,14 +156,15 @@ for index_ in x_keys:
     predict_error_abs_sum += predict_error_abs
     energy_correct_abs_sum += energy_correct_abs
 
-    print(
-        f"Round {index_}\n",
-        f"Length of x_fit: {len(krr.x_fit)}\n",
-        f"Predict error: {AU2KCALMOL * predict_error} KCAL/MOL\n",
-        f"Predict abs sum error: {AU2KCALMOL * predict_error_abs_sum} KCAL/MOL\n",
-        f"Energy correct: {AU2KCALMOL * energy_correct} KCAL/MOL\n",
-        flush=True,
-    )
+    csv_data["index"].append(index_)
+    csv_data["predict_error"].append(AU2KCALMOL * predict_error)
+    csv_data["energy_correct"].append(AU2KCALMOL * energy_correct)
+    csv_data["predict_error_abs"].append(AU2KCALMOL * predict_error_abs)
+    csv_data["energy_correct_abs"].append(AU2KCALMOL * energy_correct_abs)
+    csv_data["predict_error_sum"].append(AU2KCALMOL * predict_error_sum)
+    csv_data["energy_correct_sum"].append(AU2KCALMOL * energy_correct_sum)
+    csv_data["predict_error_abs_sum"].append(AU2KCALMOL * predict_error_abs_sum)
+    csv_data["energy_correct_abs_sum"].append(AU2KCALMOL * energy_correct_abs_sum)
 
 print(
     "\nSummary of the model:\n",
@@ -156,3 +174,5 @@ print(
     f"Predict error abs sum: {AU2KCALMOL * predict_error_abs_sum} KCAL/MOL\n",
     flush=True,
 )
+
+pd.DataFrame(csv_data).to_csv(csv_file, index=csv_data["index"])

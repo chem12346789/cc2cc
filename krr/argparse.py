@@ -25,6 +25,7 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--gamma",
         type=float,
+        nargs="+",
         default=100,
     )
     parser.add_argument(
