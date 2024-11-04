@@ -9,6 +9,7 @@ from cc2cc.utils import (
     CUBE_USE,
     CUBE_MIDDLE,
     CUBE_USE_MIDDLE,
+    ARRAY_USE_MIDDLE,
     LEVEL,
     PERIOD,
 )
@@ -44,8 +45,6 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
 
         data = np.load(data_path)
 
-        output_ = data["exc_over_dm_lda_grids"]
-
         output_1 = data["exc_over_dm_b3lyp_grids"]
         output_2 = data["exc_over_dm_cc_2_grids"]
         output_3 = data["exc_over_dm_cc_1_j_grids"]
@@ -70,24 +69,15 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
             CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
             CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
         ]
-        if CUBE_USE > 1:
-            swap_ = input_[:, :, 0, 0, 0].copy()
-            input_[:, :, 0, 0, 0] = input_[:, :, 1, 1, 1].copy()
-            input_[:, :, 1, 1, 1] = swap_.copy()
-        input_ = input_.reshape(-1, (CUBE_USE) ** 3 * 4)
 
+        input_ = input_.reshape(-1, (CUBE_USE) ** 3 * 4)
         # input_ = np.transpose(data["rho_inv_4_norm"], (1, 0))
 
         input_dict[name] = input_
-        print(f"max input: {np.max(input_)}, min input: {np.min(input_)}")
-
         output_dict[name] = output_
         weights_dict[name] = weights_
+        print(f"max input: {np.max(input_)}, min input: {np.min(input_)}")
 
-        if CUBE_USE > 1:
-            swap_ = coords_cube[:, 0, 0, 0, :].copy()
-            coords_cube[:, 0, 0, 0, :] = coords_cube[:, 1, 1, 1, :].copy()
-            coords_cube[:, 1, 1, 1, :] = swap_.copy()
         coords_cube = coords_cube.reshape(-1, (CUBE_USE) ** 3, 3)
         coords_dict[name] = coords_cube
 
@@ -97,12 +87,16 @@ def load_data(molecular_list, extend_atom, extend_xyz, distance_list):
                 AU2KCALMOL
                 * np.sum(
                     np.abs(
-                        input_dict[name][:, 0] * output_dict[name] * weights_dict[name]
+                        input_dict[name][:, ARRAY_USE_MIDDLE]
+                        * output_dict[name]
+                        * weights_dict[name]
                     )
                 ),
                 AU2KCALMOL
                 * np.sum(
-                    input_dict[name][:, 0] * output_dict[name] * weights_dict[name]
+                    input_dict[name][:, ARRAY_USE_MIDDLE]
+                    * output_dict[name]
+                    * weights_dict[name]
                 ),
             )
     return input_dict, output_dict, weights_dict, coords_dict, keys_list
