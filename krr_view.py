@@ -5,7 +5,7 @@ import numpy as np
 
 from sklearn.kernel_ridge import KernelRidge
 
-from krr import add_args, load_data, hash_value
+from krr import add_args, load_data, hash_value, append
 
 DATA_PATH = Path("data/grids_dft")
 BASIS = "cc-pVDZ"
@@ -49,6 +49,15 @@ name_all = {}
 dual_coef = {}
 x_fit = {}
 
+center_piont = [-0.01, -0.001, 0.001, 0.01]
+hashtable = append(
+    np.linspace(-1, 0, 11)[:-1],
+    center_piont,
+    np.linspace(0, 1, 11)[1:],
+)
+list_1 = list(range(-len(center_piont) // 2, len(center_piont) // 2 + 1, 1))
+list_2 = [-len(hashtable) // 2, len(hashtable) // 2]
+print(hashtable, list_1, list_2)
 shape_matrix = (20, 194, 40)
 
 for key in keys_list:
@@ -60,7 +69,7 @@ for key in keys_list:
                 flush=True,
             )
 
-        index_round = hash_value(input_dict[key][index_])
+        index_round = hash_value(input_dict[key][index_], hashtable=hashtable)
         (iatm, iang, irad) = np.unravel_index(index_, shape_matrix)
 
         if index_round not in x_all:

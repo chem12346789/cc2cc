@@ -76,10 +76,7 @@ for key in keys_list:
                 flush=True,
             )
 
-        index_round = hash_value(
-            input_dict[key][index_],
-            hashtable=hashtable,
-        )
+        index_round = hash_value(input_dict[key][index_], hashtable=hashtable)
 
         if index_round not in x_all:
             x_all[index_round] = [input_dict[key][index_]]
