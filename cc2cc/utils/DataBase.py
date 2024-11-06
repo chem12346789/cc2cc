@@ -5,7 +5,14 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from cc2cc.utils.env_var import DATA_PATH, STRUCTURE, CUBE_MIDDLE, CUBE_USE_MIDDLE
+from cc2cc.utils.env_var import (
+    DATA_PATH,
+    STRUCTURE,
+    CUBE_MIDDLE,
+    CUBE_USE_MIDDLE,
+    LEVEL,
+    PERIOD,
+)
 from cc2cc.utils.mol import AU2KCALMOL
 
 
@@ -152,14 +159,18 @@ class DataBase:
             if "openshell" in name:
                 for i_spin in range(2):
                     name_ = f"{name}_{i_spin}"
-                    if not (Path(f"{DATA_PATH}") / f"data_{name_}.npz").exists():
+                    if not (
+                        Path(f"{DATA_PATH}") / f"data_{name_}_{LEVEL}_{PERIOD}.npz"
+                    ).exists():
                         print(f"No file: {name_:>40}", flush=True)
                         continue
                     print(f"Load: {name_:>40}", flush=True)
                     self.name_list.append(f"{name_}")
                     self.load_data(name_)
             else:
-                if not (Path(f"{DATA_PATH}") / f"data_{name}.npz").exists():
+                if not (
+                    Path(f"{DATA_PATH}") / f"data_{name}_{LEVEL}_{PERIOD}.npz"
+                ).exists():
                     print(f"No file: {name:>40}", flush=True)
                     continue
                 print(f"Load: {name:>40}", flush=True)
@@ -170,7 +181,7 @@ class DataBase:
         """
         Load the data.
         """
-        data = np.load(Path(f"{DATA_PATH}") / f"data_{name}.npz")
+        data = np.load(Path(f"{DATA_PATH}") / f"data_{name}_{LEVEL}_{PERIOD}.npz")
         print(AU2KCALMOL * data["error_energy"])
 
         if "unet" in STRUCTURE:

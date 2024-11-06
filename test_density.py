@@ -70,7 +70,7 @@ if __name__ == "__main__":
     name_mol_now = args.name_mol[0]
 
     df_dict_path = Path(
-        f"{MAIN_PATH}/validate/ccdft_{args.load}_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}_{np.random.randint(10000) if os.environ.get("DFT2CC_VALIDATE_NAME") is None else os.environ.get("DFT2CC_VALIDATE_NAME")}.csv"
+        f"{MAIN_PATH}/validate/ccdft_{args.load}_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}.csv"
     )
 
     for (
@@ -116,7 +116,7 @@ if __name__ == "__main__":
         mdft.xc = "b3lyp"
         mdft.kernel()
 
-        grids = Grid(mol, level=1, period=2)
+        grids = Grid(mol, level=1, period=1)
         ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
         rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
         exc_over_dm_cc_grids = np.zeros_like(rho_cc[0])
