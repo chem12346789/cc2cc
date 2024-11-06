@@ -30,6 +30,7 @@ print("kernel:", args.kernel, flush=True)
     args.extend_atom,
     args.extend_xyz,
     args.distance_list,
+    view_=True,
 )
 
 krr = KernelRidge(
@@ -97,8 +98,8 @@ train_error_sum = 0
 energy_correct_sum = 0
 
 for index_ in x_keys:
-    if int(index_.split("_")[0]) != 0:
-        break
+    if index_ != "0_0_0_0":
+        continue
     np.savez_compressed(
         f"data/save/train_test_new-{index_}.npz",
         x=x_all[index_],

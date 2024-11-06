@@ -29,7 +29,7 @@ if __name__ == "__main__":
         molecular, name = extend(
             name_mol, extend_atom, extend_xyz, distance, args.basis
         )
-        # rotate(molecular)
+        rotate(molecular)
 
         if "open-shell" in name:
             continue
