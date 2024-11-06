@@ -127,9 +127,7 @@ class ModelDict:
                 load_path = max(list_of_path, key=lambda p: p.stat().st_ctime)
                 if self.load_epoch != -1:
                     load_path = load_checkpoint / f"{self.load_epoch}.pth"
-                state_dict = torch.load(
-                    load_path, map_location=self.device, weights_only=True
-                )
+                state_dict = torch.load(load_path, map_location=self.device)
                 self.model.load_state_dict(state_dict)
                 print(f"Model loaded from {load_path}")
             else:
