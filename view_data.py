@@ -9,7 +9,7 @@ import faiss
 
 from cc2cc.utils import ARRAY_USE_MIDDLE
 
-data = np.load("data/save/train_test-0-0-0-0.npz")
+data = np.load("data/save/train_test_0_0_0_0.npz")
 
 for name_plot, max_x_ in product(
     [
@@ -33,16 +33,15 @@ for name_plot, max_x_ in product(
 
     if name_plot == "plot-b3lyp":
         y = y[:, 0]
-    if name_plot == "plot-cc-b3lyp":
-        y = y[:, 0] + y[:, 1] + y[:, 2] + y[:, 3]
-    if name_plot == "plot-cc":
-        y = y[:, 1] + y[:, 2]
-    if name_plot == "plot-lda":
-        y = y[:, 4]
+    if name_plot == "plot-mrks-lda":
+        y = y[:, 1]
+    if name_plot == "plot-v-mrks-lda":
+        y = y[:, 2]
     # exc_over_dm_b3lyp_grids
     # exc_over_dm_cc_2_grids
     # exc_over_dm_cc_1_j_grids
     # exc_over_dm_cc_1_k_grids
+    # exc_over_dm_cc_lda_grids
     name_plot = f"{name_plot}-{x.shape[1]}"
     Path(f"plot/{name_plot}-{max_x_}/plot/").mkdir(parents=True, exist_ok=True)
     print(x.shape, flush=True)

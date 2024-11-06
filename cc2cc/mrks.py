@@ -19,7 +19,7 @@ from cc2cc.utils import (
 )
 
 
-def cc(molecular, name, args):
+def mrks(molecular, name, args):
     """
     Generate data for the CCSD method. (Restrict scenario to spin 0).
     """
@@ -36,49 +36,20 @@ def cc(molecular, name, args):
     print(mol.atom)
     print(f"Generate data for {name}")
 
-    mf = pyscf.scf.RHF(mol)
-    mf.kernel()
-    mycc = pyscf.cc.CCSD(mf)
-    mycc.kernel()
-    dm1_cc = mycc.make_rdm1(ao_repr=True)
-    e_cc = mycc.e_tot
-
-    mdft = pyscf.scf.RKS(mol)
-    mdft.xc = "b3lyp"
-    mdft.kernel()
+    data = np.load(DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz")
+    dm1_inv = data["dm1_inv"]
 
     grids = Grid(mol, level=LEVEL, period=PERIOD)
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
-    rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
-    rho_cc_all = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="mGGA")
-    exc_over_dm_b3lyp_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0]
-    exc_over_dm_lda_grids = -pyscf.dft.libxc.eval_xc("lda", rho_cc[0])[0]
-    exc_over_dm_cc_2_grids = np.zeros_like(exc_over_dm_b3lyp_grids)
-    exc_over_dm_cc_1_j_grids = np.zeros_like(exc_over_dm_b3lyp_grids)
+    rho_inv = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_inv, xctype="GGA")
+    exc_over_dm_b3lyp_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_inv)[0]
     exc_over_dm_cc_1_k_grids = np.zeros_like(exc_over_dm_b3lyp_grids)
+    exc_over_dm_lda_grids = -pyscf.dft.libxc.eval_xc("lda", rho_inv[0])[0]
+    vxc_over_dm_lda_grids = -pyscf.dft.libxc.eval_xc("lda", rho_inv[0])[1]
 
-    dm2_cc = mycc.make_rdm2(ao_repr=True)
-    expr_rinv_dm2_r = oe.contract_expression(
-        "ijkl,i,j,kl->",
-        0.5 * dm2_cc,
-        (mol.nao,),
-        (mol.nao,),
-        (mol.nao, mol.nao),
-        constants=[0],
-        optimize="optimal",
-    )
-    expr_rinv_dm1_j_r = oe.contract_expression(
-        "ijkl,i,j,kl->",
-        -0.5 * oe.contract("pq,rs->pqrs", dm1_cc, dm1_cc),
-        (mol.nao,),
-        (mol.nao,),
-        (mol.nao, mol.nao),
-        constants=[0],
-        optimize="optimal",
-    )
     expr_rinv_dm1_k_r = oe.contract_expression(
         "ijkl,i,j,kl->",
-        0.05 * oe.contract("pr,qs->pqrs", dm1_cc, dm1_cc),
+        0.05 * oe.contract("pr,qs->pqrs", rho_inv, rho_inv),
         (mol.nao,),
         (mol.nao,),
         (mol.nao, mol.nao),
@@ -91,58 +62,20 @@ def cc(molecular, name, args):
             print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
 
         ao_0_i = ao_value[0][i]
-        if abs(rho_cc[0][i]) < 1e-14:
-            continue
         with mol.with_rinv_origin(coord):
             rinv = mol.intor("int1e_rinv")
-            exc_over_dm_cc_2_grids[i] += expr_rinv_dm2_r(
-                ao_0_i,
-                ao_0_i,
-                rinv,
-                backend="torch",
-            ) / (rho_cc[0][i] + 1e-14)
-            exc_over_dm_cc_1_j_grids[i] += expr_rinv_dm1_j_r(
-                ao_0_i,
-                ao_0_i,
-                rinv,
-                backend="torch",
-            ) / (rho_cc[0][i] + 1e-14)
             exc_over_dm_cc_1_k_grids[i] += expr_rinv_dm1_k_r(
                 ao_0_i,
                 ao_0_i,
                 rinv,
                 backend="torch",
-            ) / (rho_cc[0][i] + 1e-14)
+            ) / (rho_inv[0][i] + 1e-14)
 
-    error_energy = e_cc - mdft.energy_tot(dm1_cc)
-    error = (
-        np.sum(
-            (
-                exc_over_dm_b3lyp_grids
-                + exc_over_dm_cc_2_grids
-                + exc_over_dm_cc_1_j_grids
-                + exc_over_dm_cc_1_k_grids
-            )
-            * grids.weights
-            * rho_cc[0]
-        )
-        - error_energy
-    )
-    print(f"error_energy: {AU2KCALMOL * error_energy}, Error: {AU2KCALMOL * error}")
     print(
-        f"0: {AU2KCALMOL * np.sum(exc_over_dm_b3lyp_grids * grids.weights * rho_cc[0])}"
+        f"0: {AU2KCALMOL * np.sum(exc_over_dm_b3lyp_grids * grids.weights * rho_inv[0])}"
     )
     print(
-        f"1: {AU2KCALMOL * np.sum(exc_over_dm_cc_2_grids * grids.weights * rho_cc[0])}"
-    )
-    print(
-        f"2: {AU2KCALMOL * np.sum(exc_over_dm_cc_1_j_grids * grids.weights * rho_cc[0])}"
-    )
-    print(
-        f"3: {AU2KCALMOL * np.sum(exc_over_dm_cc_1_k_grids * grids.weights * rho_cc[0])}"
-    )
-    print(
-        f"4: {AU2KCALMOL * np.sum(exc_over_dm_lda_grids * grids.weights * rho_cc[0])}"
+        f"1: {AU2KCALMOL * np.sum(exc_over_dm_cc_1_k_grids * grids.weights * rho_inv[0])}"
     )
 
     rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
@@ -162,37 +95,31 @@ def cc(molecular, name, args):
         coords_cube = coords_cube.reshape(-1, 3)
 
         ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
-        rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="GGA")
+        rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_inv, xctype="GGA")
         rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
-    data = np.load(DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz")
+    vxc = grids.matrix_to_vector(data["vxc"])
+    exc1_tr = grids.matrix_to_vector(data["exc1_tr"])
+    vxc1_lda = grids.matrix_to_vector(data["vxc1_lda"])
+    exc1_tr_lda = grids.matrix_to_vector(data["exc1_tr_lda"])
+    weights = grids.matrix_to_vector(data["weights"])
+    print(np.sum(np.abs(weights - grids.weights)))
 
     np.savez_compressed(
         DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
-        e_cc=e_cc,
-        dm_cc=dm1_cc,
-        rho_inv_4_norm=rho_cc,
-        rho_inv_4_norm_matrix=process_input(rho_cc, grids),
-        weights=grids.weights,
-        weights_matrix=grids.vector_to_matrix(grids.weights),
+        e_cc=data["e_cc"],
+        dm_cc=data["dm_cc"],
+        dm_inv=data["dm_inv"],
+        weights=data["weights"],
+        vxc=vxc,
+        exc1_tr=exc1_tr,
+        vxc_over_dm_mrks_grids=vxc1_lda,
+        exc_over_dm_mrks_grids=exc1_tr_lda,
         exc_over_dm_lda_grids=exc_over_dm_lda_grids,
-        exc_over_dm_lda_grids_matrix=grids.vector_to_matrix(exc_over_dm_lda_grids),
         exc_over_dm_b3lyp_grids=exc_over_dm_b3lyp_grids,
-        exc_over_dm_b3lyp_grids_matrix=grids.vector_to_matrix(exc_over_dm_b3lyp_grids),
-        exc_over_dm_cc_2_grids=exc_over_dm_cc_2_grids,
-        exc_over_dm_cc_2_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_2_grids),
-        exc_over_dm_cc_1_j_grids=exc_over_dm_cc_1_j_grids,
-        exc_over_dm_cc_1_j_grids_matrix=grids.vector_to_matrix(
-            exc_over_dm_cc_1_j_grids
-        ),
         exc_over_dm_cc_1_k_grids=exc_over_dm_cc_1_k_grids,
-        exc_over_dm_cc_1_k_grids_matrix=grids.vector_to_matrix(
-            exc_over_dm_cc_1_k_grids
-        ),
-        rho_cc_all=rho_cc_all,
         rho_cube=rho_cube,
         coor_cube=coor_cube,
-        error_energy=error_energy,
     )
 
 
