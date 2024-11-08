@@ -5,7 +5,7 @@
 import argparse
 from itertools import product
 
-from cc2cc import add_args, extend, cc, cc_change_cube, cc_add_data
+from cc2cc import add_args, extend, cc, cc_change_cube, cc_add_data, mrks, mrks_append
 from cc2cc.utils import rotate
 
 
@@ -34,6 +34,8 @@ if __name__ == "__main__":
         if "open-shell" in name:
             continue
         else:
-            cc(molecular, name, args)
+            # cc(molecular, name, args)
             # cc_add_data(molecular, name, args)
             # cc_change_cube(molecular, name, args)
+            # mrks(molecular, name, args)
+            mrks_append(molecular, name, args)

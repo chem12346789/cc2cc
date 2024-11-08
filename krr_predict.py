@@ -51,6 +51,7 @@ for (
         [extend_atom],
         [extend_xyz],
         [distance],
+        args.basis,
     )
 
     krr = KernelRidgeModified(

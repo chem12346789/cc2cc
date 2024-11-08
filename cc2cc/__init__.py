@@ -1,4 +1,5 @@
 from cc2cc.cc import cc, cc_change_cube, cc_add_data
+from cc2cc.mrks import mrks, mrks_append
 from cc2cc.train_model import train_model
 from cc2cc.test_rks import test_rks
 from cc2cc.test_uks import test_uks

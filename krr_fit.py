@@ -33,6 +33,7 @@ print("kernel:", args.kernel, flush=True)
     args.extend_atom,
     args.extend_xyz,
     args.distance_list,
+    args.basis,
 )
 
 
@@ -63,7 +64,7 @@ hashtable = append(
     center_piont,
     np.linspace(0, 1, 11)[1:],
 )
-list_1 = list(range(-len(center_piont) // 2, len(center_piont) // 2 + 1, 1))
+list_1 = list(range(-len(center_piont) // 2 + 1, len(center_piont) // 2, 1))
 list_2 = [-len(hashtable) // 2, len(hashtable) // 2]
 print(hashtable, list_1, list_2)
 
@@ -108,17 +109,15 @@ for index_ in x_keys:
         and int(index_.split("_")[3]) in list_1
     ):
         krr.gamma = args.gamma[0]
-    elif int(index_.split("_")[0]) in list_1:
-        krr.gamma = args.gamma[0] if len(args.gamma) <= 1 else args.gamma[1]
     elif (
         int(index_.split("_")[0]) in list_2
         or int(index_.split("_")[1]) in list_2
         or int(index_.split("_")[2]) in list_2
         or int(index_.split("_")[3]) in list_2
     ):
-        krr.gamma = args.gamma[0] if len(args.gamma) <= 3 else args.gamma[3]
-    else:
         krr.gamma = args.gamma[0] if len(args.gamma) <= 2 else args.gamma[2]
+    else:
+        krr.gamma = args.gamma[0] if len(args.gamma) <= 1 else args.gamma[1]
 
     if len(x_all[index_]) < 500:
         krr.fit_data(x_all[index_], y_all[index_])
@@ -145,7 +144,7 @@ for index_ in x_keys:
                 w_all[index_],
             )
             print(error_krr, train_error, error_krr < 2 * train_error, flush=True)
-            if (error_krr < 1e-6 * len(x_all[index_])) or (error_krr < 2 * train_error):
+            if (error_krr < 1e-5 * len(x_all[index_])) or (error_krr < 2 * train_error):
                 print(f"Error is small: {error_krr}", flush=True)
                 CONVERGE_STEP += 1
                 if CONVERGE_STEP == 1:

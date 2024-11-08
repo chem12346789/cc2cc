@@ -38,11 +38,13 @@ def add_args(parser: argparse.ArgumentParser):
         type=str,
         default="rbf",
     )
+
     parser.add_argument(
         "--load_number",
         type=int,
         default=-1,
     )
+
     parser.add_argument(
         "--molecular_list",
         nargs="+",
@@ -76,6 +78,13 @@ def add_args(parser: argparse.ArgumentParser):
         default=[0],
         help="Number of xyz to extend. 0 for x, 1 for y, 2 for z. Default is 0.",
     )
+    parser.add_argument(
+        "--basis",
+        type=str,
+        default="cc-pVDZ",
+        help="Basis set for the calculation.",
+    )
+
     args = parser.parse_args()
     for i in range(len(args.extend_xyz)):
         args.extend_xyz[i] += 1
