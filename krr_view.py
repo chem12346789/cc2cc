@@ -1,14 +1,16 @@
 import argparse
+from itertools import product
 from pathlib import Path
+from matplotlib import pyplot as plt
 
 import numpy as np
+
+import faiss
 
 from sklearn.kernel_ridge import KernelRidge
 
 from krr import add_args, load_data, hash_value, append
-
-DATA_PATH = Path("data/grids_dft")
-BASIS = "cc-pVDZ"
+from cc2cc.utils import ARRAY_USE_MIDDLE
 
 parser = argparse.ArgumentParser(
     description="Generate the inversed potential and energy."
@@ -18,6 +20,19 @@ args = add_args(parser)
 print("gamma:", args.gamma)
 print("alpha:", args.alpha)
 print("kernel:", args.kernel, flush=True)
+
+# view_keys = [
+#     "exc_over_dm_b3lyp_grids",
+#     "exc_over_dm_mrks_grids",
+#     "vxc_over_dm_mrks_grids",
+# ]
+
+view_keys = [
+    "exc_over_dm_b3lyp_grids",
+    "exc_over_dm_b3lyp_grids+exc_over_dm_cc_2_grids+exc_over_dm_cc_1_j_grids+exc_over_dm_cc_1_k_grids",
+    # "exc_over_dm_cc_1_j_grids"
+    # "exc_over_dm_cc_1_k_grids"
+]
 
 (
     input_dict,
@@ -30,14 +45,11 @@ print("kernel:", args.kernel, flush=True)
     args.extend_atom,
     args.extend_xyz,
     args.distance_list,
-    view_=True,
+    args.basis,
+    view_keys=view_keys,
 )
 
-krr = KernelRidge(
-    alpha=args.alpha,
-    gamma=args.gamma,
-    kernel="precomputed",
-)
+krr = KernelRidge(alpha=args.alpha, gamma=args.gamma, kernel="precomputed")
 
 x_all = {}
 y_all = {}
@@ -51,11 +63,7 @@ dual_coef = {}
 x_fit = {}
 
 center_piont = [-0.01, -0.001, 0.001, 0.01]
-hashtable = append(
-    np.linspace(-1, 0, 11)[:-1],
-    center_piont,
-    np.linspace(0, 1, 11)[1:],
-)
+hashtable = append(np.linspace(-1, 0, 11)[:-1], center_piont, np.linspace(0, 1, 11)[1:])
 list_1 = list(range(-len(center_piont) // 2, len(center_piont) // 2 + 1, 1))
 list_2 = [-len(hashtable) // 2, len(hashtable) // 2]
 print(hashtable, list_1, list_2)
@@ -98,13 +106,233 @@ train_error_sum = 0
 energy_correct_sum = 0
 
 for index_ in x_keys:
-    if index_ != "0_0_0_0":
+    if index_ not in ["0_0_0_0", "2_2_2_2", "12_12_12_12"]:
         continue
-    np.savez_compressed(
-        f"data/save/train_test_new-{index_}.npz",
-        x=x_all[index_],
-        y=y_all[index_],
-        w=w_all[index_],
-        coor=coor_all[index_],
-        name=name_all[index_],
-    )
+
+    for name_plot_i, name_plot in enumerate(view_keys):
+        name_plot = name_plot + index_
+        x = np.array(x_all[index_], dtype=np.float32)
+        y = np.array(y_all[index_], dtype=np.float32)
+        w = np.array(w_all[index_], dtype=np.float32)
+        coor = np.array(coor_all[index_], dtype=np.float32)
+        name = name_all[index_]
+        y = y[:, name_plot_i]
+
+        name_plot = f"{name_plot}-{x.shape[1]}"
+        print(x.shape, flush=True)
+
+        (num_sample, dim_sample) = x.shape
+        res = faiss.StandardGpuResources()
+        flat_config = faiss.GpuIndexFlatConfig()
+        flat_config.device = 0
+        index = faiss.GpuIndexFlatL2(res, dim_sample, flat_config)
+        index.add(x)
+        b = x.copy()
+        distances, indices = index.search(b, 20)
+        var_y = np.var(
+            np.einsum("ij,i->ij", y[indices], x[:, ARRAY_USE_MIDDLE] * w), axis=1
+        )
+
+        for max_x_ in [1e-2, 1e-4, 1e-6]:
+            print("\n begin of print", flush=True)
+            Path(f"plot/{name_plot}-{max_x_}/plot/").mkdir(parents=True, exist_ok=True)
+            max_x = max_x_**2 * x.shape[1]
+
+            mean_of_distances = np.max(distances, axis=1)
+            mean_of_distances[mean_of_distances < max_x] = -1
+            mean_of_distances[mean_of_distances > max_x] = 0
+            mean_of_distances = -mean_of_distances
+
+            plot_number = 16
+            argsort_ = np.argsort(mean_of_distances * var_y)[::-1][:plot_number]
+
+            energy = np.einsum(
+                "ij,i->ij", y[indices[argsort_]], (x[:, ARRAY_USE_MIDDLE] * w)[argsort_]
+            )
+            distances_ = distances[argsort_]
+            name_ = name[indices[argsort_]]
+            max_y = np.max(np.abs(energy - energy[:, [0]])) * 627.509
+            print(
+                np.sum(
+                    (x[indices[argsort_]] - x[indices[argsort_]][[0], :, :]) ** 2,
+                    axis=1,
+                ),
+                flush=True,
+            )
+            print(distances_, flush=True)
+            print(np.max(np.abs((energy - energy[0]) * 627.509)), flush=True)
+            print(name_, flush=True)
+
+            INDEX_CHECK = 0
+            plt.rcParams["figure.figsize"] = np.array([0.5, 0.5]) * 520 / 72
+            name_energy_dict = {}
+
+            for i in range(plot_number):
+                name_energy_dict[name_[INDEX_CHECK][i]] = (
+                    energy[INDEX_CHECK][i] - energy[INDEX_CHECK][0]
+                ) * 627.509
+
+            x_name_dict = {}
+            x_energy_dict = {}
+
+            for name_i, energy_i in name_energy_dict.items():
+                x_ = (
+                    name_i.split("_")[0]
+                    + name_i.split("_")[5]
+                    + name_i.split("_")[6]
+                    + name_i.split("_")[7]
+                )
+                if x_ in x_name_dict:
+                    x_name_dict[x_].append([name_i, energy_i])
+                else:
+                    x_name_dict[x_] = [[name_i, energy_i]]
+                plt.scatter(x_, energy_i, c="b")
+
+            for key_, value_ in x_name_dict.items():
+                for j in value_:
+                    plt.scatter(float(j[0].split("_")[4]), j[1], c="r")
+                plt.xticks(rotation=90)
+                plt.xlabel(r"$\Delta$ x ($\AA$)")
+                plt.ylabel(r"Energy (kcal/mol)")
+                plt.xlim(-0.575, 0.575)
+                plt.xticks(np.arange(-0.5, 0.6, 0.1))
+                plt.savefig(
+                    f"plot/{name_plot}-{max_x_}/plot/{key_}_{len(value_)}.pdf",
+                    bbox_inches="tight",
+                )
+                plt.savefig(
+                    f"plot/{name_plot}-{max_x_}/plot/{key_}_{len(value_)}.png",
+                    bbox_inches="tight",
+                    dpi=300,
+                )
+                plt.close()
+                print(key_, [i[0] for i in value_], flush=True)
+            print("\n end of print", flush=True)
+
+            color_dict = {
+                "methane": "#004D40",
+                "ethane": "#1A237E",
+                "ethylene": "#212121",
+                "acetylene": "#7B1FA2",
+            }
+
+            plt.rcParams["figure.figsize"] = np.array([0.5, 0.5]) * 520 / 72
+
+            f, axes = plt.subplots(1, 1)
+            axes = np.array(axes).reshape(1, 1)
+
+            shapexy = np.shape(axes)
+            inter_x = np.linspace(0.175, 0.995, shapexy[1] + 1)
+            inter_y = np.linspace(0.125, 0.995, shapexy[0] + 1)
+            delta_x = inter_x[1] - inter_x[0]
+            delta_y = inter_y[1] - inter_y[0]
+
+            for i in range(shapexy[0]):
+                for j in range(shapexy[1]):
+                    axes[i][j].set_position(
+                        [
+                            inter_x[j],
+                            inter_y[i],
+                            inter_x[j + 1] - inter_x[j],
+                            inter_y[i + 1] - inter_y[i],
+                        ]
+                    )
+                    axes[i][j].xaxis.set_tick_params(
+                        direction="in", which="both", bottom=True, top=True
+                    )
+                    axes[i][j].yaxis.set_tick_params(
+                        direction="in", which="both", left=True, right=True
+                    )
+
+                    axes[i, j].set_xlim(-max_x * 0.1, max_x * 1.1)
+                    axes[i, j].set_ylim(-max_y * 1.1, max_y * 1.1)
+
+                    if i != 0:
+                        axes[i, j].set_xticks([])
+                    else:
+                        axes[i, j].set_xticks([0, max_x])
+                        axes[i, j].set_xticklabels([0, max_x_])
+
+            for j in range(indices.shape[1]):
+                axes[0, 0].scatter(
+                    distances_[INDEX_CHECK][j],
+                    (energy[INDEX_CHECK][j] - energy[INDEX_CHECK][0]) * 627.509,
+                    c=(color_dict[name_[INDEX_CHECK][j].split("_")[0]],),
+                )
+
+            for i, c in color_dict.items():
+                axes[0, 0].scatter([-1], [-1], c=c, label=i)
+
+            plt.xlabel("Distance of cube")
+            plt.ylabel(r"$\Delta$ Energy (kcal/mol)")
+            plt.legend()
+
+            plt.savefig(
+                f"plot/{name_plot}-{max_x_}/sub_test.pdf", dpi=300, bbox_inches="tight"
+            )
+            plt.savefig(
+                f"plot/{name_plot}-{max_x_}/sub_test.png", dpi=300, bbox_inches="tight"
+            )
+            plt.clf()
+
+            plt.rcParams["figure.figsize"] = np.array([1.25, 1.25]) * 520 / 72
+            f, axes = plt.subplots(4, 4)
+            axes = axes.reshape(4, 4)
+
+            shapexy = np.shape(axes)
+            inter_x = np.linspace(0.025, 0.95, shapexy[1] + 1)
+            inter_y = np.linspace(0.025, 0.95, shapexy[0] + 1)
+            delta_x = inter_x[1] - inter_x[0]
+            delta_y = inter_y[1] - inter_y[0]
+
+            for i in range(shapexy[0]):
+                for j in range(shapexy[1]):
+                    axes[i][j].set_position(
+                        [
+                            inter_x[j],
+                            inter_y[i],
+                            inter_x[j + 1] - inter_x[j],
+                            inter_y[i + 1] - inter_y[i],
+                        ]
+                    )
+                    axes[i][j].xaxis.set_tick_params(
+                        direction="in", which="both", bottom=True, top=True
+                    )
+                    axes[i][j].yaxis.set_tick_params(
+                        direction="in", which="both", left=True, right=True
+                    )
+
+                    axes[i, j].set_xlim(-max_x * 0.1, max_x * 1.1)
+                    axes[i, j].set_ylim(-max_y * 0.1, max_y * 1.1)
+
+                    if i != 0:
+                        axes[i, j].set_xticks([])
+                    else:
+                        axes[i, j].set_xticks([0, max_x])
+                        axes[i, j].set_xticklabels([0, max_x_])
+                    if j != 0:
+                        axes[i][j].set_yticks([])
+
+            for i in range(argsort_.shape[0]):
+                axes_i, axes_j = np.unravel_index(i, (4, 4))
+                for j in range(indices.shape[1]):
+                    axes[axes_i, axes_j].scatter(
+                        distances_[i][j],
+                        np.abs(energy[i][j] - energy[i][0]) * 627.509,
+                        c=(color_dict[name_[i][j].split("_")[0]],),
+                    )
+
+                axes[axes_i, axes_j].text(
+                    0.01,
+                    1 - 0.01,
+                    f"{i}",
+                    transform=axes[axes_i, axes_j].transAxes,
+                    va="top",
+                )
+            plt.savefig(
+                f"plot/{name_plot}-{max_x_}/test.pdf", dpi=300, bbox_inches="tight"
+            )
+            plt.savefig(
+                f"plot/{name_plot}-{max_x_}/test.png", dpi=300, bbox_inches="tight"
+            )
+            plt.clf()

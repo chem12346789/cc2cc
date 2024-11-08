@@ -34,10 +34,10 @@ def mrks(molecular, name, args):
     )
 
     print(mol.atom)
-    print(f"Generate data for {name}")
+    print(f"Generate data for data_{name}_{LEVEL}_{PERIOD}")
 
     data = np.load(DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz")
-    dm1_inv = data["dm1_inv"]
+    dm1_inv = data["dm_inv"]
 
     grids = Grid(mol, level=LEVEL, period=PERIOD)
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
@@ -45,11 +45,10 @@ def mrks(molecular, name, args):
     exc_over_dm_b3lyp_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_inv)[0]
     exc_over_dm_cc_1_k_grids = np.zeros_like(exc_over_dm_b3lyp_grids)
     exc_over_dm_lda_grids = -pyscf.dft.libxc.eval_xc("lda", rho_inv[0])[0]
-    vxc_over_dm_lda_grids = -pyscf.dft.libxc.eval_xc("lda", rho_inv[0])[1]
 
     expr_rinv_dm1_k_r = oe.contract_expression(
         "ijkl,i,j,kl->",
-        0.05 * oe.contract("pr,qs->pqrs", rho_inv, rho_inv),
+        0.05 * oe.contract("pr,qs->pqrs", dm1_inv, dm1_inv),
         (mol.nao,),
         (mol.nao,),
         (mol.nao, mol.nao),
@@ -107,10 +106,9 @@ def mrks(molecular, name, args):
 
     np.savez_compressed(
         DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
-        e_cc=data["e_cc"],
         dm_cc=data["dm_cc"],
         dm_inv=data["dm_inv"],
-        weights=data["weights"],
+        weights=weights,
         vxc=vxc,
         exc1_tr=exc1_tr,
         vxc_over_dm_mrks_grids=vxc1_lda,
@@ -123,111 +121,34 @@ def mrks(molecular, name, args):
     )
 
 
-def cc_change_cube(molecular, name, args):
-    """
-    Modify cube data for the CCSD method.
-    """
-    file_path = DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz"
-    if file_path.exists():
-        print(f"Data {name}_{LEVEL}_{PERIOD} already exists.")
+def mrks_append(molecular, name, args):
+    mol = pyscf.M(
+        atom=molecular,
+        basis=gen_basis(
+            molecular,
+            args.basis,
+            args.if_basis_str,
+        ),
+        spin=0,
+    )
 
-        data = np.load(file_path)
-        e_cc = data["e_cc"]
-        dm1_cc = data["dm_cc"]
-        rho_cc = data["rho_inv_4_norm"]
-        exc_over_dm_cc_grids = data["exc_over_dm_cc_grids"]
-        error_energy = data["error_energy"]
-        rho_cc_all = data["rho_cc_all"]
+    data = np.load(DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz")
 
-        mol = pyscf.M(
-            atom=molecular,
-            basis=gen_basis(
-                molecular,
-                args.basis,
-                args.if_basis_str,
-            ),
-            spin=0,
-        )
-        grids = Grid(mol, level=1)
+    grids = Grid(mol, level=LEVEL, period=PERIOD)
+    weights = grids.matrix_to_vector(data["weights"])
 
-        rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
-        coor_cube = np.zeros((len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
-        for p, p_coords in enumerate(grids.coords):
-            if p * 10 % len(grids.coords) == 0:
-                print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
-
-            coords_cube = np.zeros((CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
-            for i, j, k in product(range(CUBE_SIZE), repeat=3):
-                coords_cube[i, j, k] = p_coords + [
-                    (i - CUBE_MIDDLE) * CUBE_LEN,
-                    (j - CUBE_MIDDLE) * CUBE_LEN,
-                    (k - CUBE_MIDDLE) * CUBE_LEN,
-                ]
-            coor_cube[p] = coords_cube.copy()
-            coords_cube = coords_cube.reshape(-1, 3)
-
-            ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
-            rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="GGA")
-            rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-
-        np.savez_compressed(
-            DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
-            e_cc=e_cc,
-            dm_cc=dm1_cc,
-            rho_inv_4_norm=rho_cc,
-            rho_inv_4_norm_matrix=process_input(rho_cc, grids),
-            weights=grids.weights,
-            weights_matrix=grids.vector_to_matrix(grids.weights),
-            exc_over_dm_cc_grids=exc_over_dm_cc_grids,
-            exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
-            rho_cc_all=rho_cc_all,
-            rho_cube=rho_cube,
-            coor_cube=coor_cube,
-            error_energy=error_energy,
-        )
-
-
-def cc_add_data(molecular, name, args):
-    """
-    Append data for the CCSD method.
-    """
-    file_path = DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz"
-    if file_path.exists():
-        print(f"Data {name}_{LEVEL}_{PERIOD} already exists.")
-
-        data = np.load(file_path)
-        e_cc = data["e_cc"]
-        dm1_cc = data["dm_cc"]
-        rho_cc = data["rho_inv_4_norm"]
-        exc_over_dm_cc_grids = data["exc_over_dm_cc_grids"]
-        error_energy = data["error_energy"]
-        rho_cube = data["rho_cube"]
-        coor_cube = data["coor_cube"]
-        rho_cc_all = data["rho_cc_all"]
-
-        mol = pyscf.M(
-            atom=molecular,
-            basis=gen_basis(
-                molecular,
-                args.basis,
-                args.if_basis_str,
-            ),
-            spin=0,
-        )
-        grids = Grid(mol, level=1)
-
-        np.savez_compressed(
-            DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
-            e_cc=e_cc,
-            dm_cc=dm1_cc,
-            rho_inv_4_norm=rho_cc,
-            rho_inv_4_norm_matrix=process_input(rho_cc, grids),
-            weights=grids.weights,
-            weights_matrix=grids.vector_to_matrix(grids.weights),
-            exc_over_dm_cc_grids=exc_over_dm_cc_grids,
-            exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
-            rho_cc_all=rho_cc_all,
-            rho_cube=rho_cube,
-            coor_cube=coor_cube,
-            error_energy=error_energy,
-        )
+    np.savez_compressed(
+        DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
+        dm_cc=data["dm_cc"],
+        dm_inv=data["dm_inv"],
+        weights=weights,
+        vxc=data["vxc"],
+        exc1_tr=data["exc1_tr"],
+        vxc_over_dm_mrks_grids=data["vxc_over_dm_mrks_grids"],
+        exc_over_dm_mrks_grids=data["exc_over_dm_mrks_grids"],
+        exc_over_dm_lda_grids=data["exc_over_dm_lda_grids"],
+        exc_over_dm_b3lyp_grids=data["exc_over_dm_b3lyp_grids"],
+        exc_over_dm_cc_1_k_grids=data["exc_over_dm_cc_1_k_grids"],
+        rho_cube=data["rho_cube"],
+        coor_cube=data["coor_cube"],
+    )

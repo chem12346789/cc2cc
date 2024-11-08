@@ -14,15 +14,13 @@ from cc2cc.utils import (
     PERIOD,
 )
 
-BASIS = "cc-pVDZ"
-
-
 def load_data(
     molecular_list,
     extend_atom,
     extend_xyz,
     distance_list,
-    view_=False,
+    basis="cc-pVDZ",
+    view_keys=[],
 ):
     """
     Load the data.
@@ -43,7 +41,7 @@ def load_data(
         extend_xyz,
         distance_list,
     ):
-        name = f"{name_mol}_{BASIS}_{extend_atom}_{extend_xyz}_{distance:.4f}"
+        name = f"{name_mol}_{basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
         data_path = Path(f"{DATA_PATH}") / f"data_{name}_{LEVEL}_{PERIOD}.npz"
         if not (data_path).exists():
             print(f"No file: {data_path}")
@@ -51,15 +49,27 @@ def load_data(
 
         data = np.load(data_path)
 
-        output_1 = data["exc_over_dm_b3lyp_grids"]
-        output_2 = data["exc_over_dm_cc_2_grids"]
-        output_3 = data["exc_over_dm_cc_1_j_grids"]
-        output_4 = data["exc_over_dm_cc_1_k_grids"]
-        if view_:
-            output_5 = data["exc_over_dm_lda_grids"]
-            output_ = [output_1, output_2, output_3, output_4, output_5]
+        if view_keys:
+            output_ = []
+            for key in view_keys:
+                if "+" in key:
+                    data_ = []
+                    for key_i in key.split("+"):
+                        data_.append(data[key_i])
+                    output_.append(np.sum(data_, axis=0))
+                else:
+                    output_.append(data[key])
+            output_ = np.array(output_).T
         else:
-            output_ = output_1 + output_2 + output_3 + output_4
+            if "exc_over_dm_mrks_grids" in data.files:
+                output_1 = data["exc_over_dm_mrks_grids"]
+                output_ = output_1
+            else:
+                output_1 = data["exc_over_dm_b3lyp_grids"]
+                output_2 = data["exc_over_dm_cc_2_grids"]
+                output_3 = data["exc_over_dm_cc_1_j_grids"]
+                output_4 = data["exc_over_dm_cc_1_k_grids"]
+                output_ = output_1 + output_2 + output_3 + output_4
         print(output_.shape)
 
         weights_ = data["weights"]
