@@ -64,7 +64,7 @@ x_fit = {}
 
 center_piont = [-0.01, -0.001, 0.001, 0.01]
 hashtable = append(np.linspace(-1, 0, 11)[:-1], center_piont, np.linspace(0, 1, 11)[1:])
-list_1 = list(range(-len(center_piont) // 2, len(center_piont) // 2 + 1, 1))
+list_1 = list(range(-len(center_piont) // 2 + 1, len(center_piont) // 2, 1))
 list_2 = [-len(hashtable) // 2, len(hashtable) // 2]
 print(hashtable, list_1, list_2)
 shape_matrix = (20, 194, 40)
