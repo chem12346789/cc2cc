@@ -46,6 +46,8 @@ def load_data(
         if not (data_path).exists():
             print(f"No file: {data_path}")
             continue
+        else:
+            print(f"Load the data: {data_path}")
 
         data = np.load(data_path)
 
@@ -62,14 +64,9 @@ def load_data(
             output_ = np.array(output_).T
         else:
             if "exc_over_dm_mrks_grids" in data.files:
-                output_1 = data["exc_over_dm_mrks_grids"]
-                output_ = output_1
+                output_ = data["exc_over_dm_mrks_grids"]
             else:
-                output_1 = data["exc_over_dm_b3lyp_grids"]
-                output_2 = data["exc_over_dm_cc_2_grids"]
-                output_3 = data["exc_over_dm_cc_1_j_grids"]
-                output_4 = data["exc_over_dm_cc_1_k_grids"]
-                output_ = output_1 + output_2 + output_3 + output_4
+                output_ = data["exc_over_dm_cc_grids"]
         print(output_.shape)
 
         weights_ = data["weights"]

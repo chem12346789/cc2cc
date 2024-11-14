@@ -49,7 +49,6 @@ def add_args(parser: argparse.ArgumentParser):
         default="HH",
         help=f"Name of molecular. Must in {list(Mol.keys())}.",
     )
-
     parser.add_argument(
         "--distance_list",
         "-dl",
@@ -58,7 +57,6 @@ def add_args(parser: argparse.ArgumentParser):
         help="Distance between atom H to the origin. Default is 1.0.",
         default=1.0,
     )
-
     parser.add_argument(
         "--extend_atom",
         type=str,
@@ -66,7 +64,6 @@ def add_args(parser: argparse.ArgumentParser):
         default=0,
         help="Number of atoms to extend. Default is 0.",
     )
-
     parser.add_argument(
         "--extend_xyz",
         type=int,
@@ -74,15 +71,12 @@ def add_args(parser: argparse.ArgumentParser):
         default=0,
         help="Number of xyz to extend. 0 for x, 1 for y, 2 for z. Default is 0.",
     )
-
     parser.add_argument(
         "--basis",
-        "-b",
         type=str,
-        default="cc-pv5z",
-        help="Name of basis. We use cc-pv5z as default. Note we will remove core correlation of H atom; See https://github.com/pyscf/pyscf/issues/1795",
+        default="cc-pVDZ",
+        help="Basis set for the calculation.",
     )
-
     parser.add_argument(
         "--level",
         type=int,
@@ -92,7 +86,6 @@ def add_args(parser: argparse.ArgumentParser):
 
     parser.add_argument(
         "--if_basis_str",
-        "-bs",
         type=str2bool,
         default=True,
         help="Weather to use the basis set from basissetexchange. See https://www.basissetexchange.org. Default is False.",
@@ -149,7 +142,7 @@ def add_args(parser: argparse.ArgumentParser):
         default=100,
         help="Step for evaluation. Default is 100.",
     )
-    
+
     # foe testing
     parser.add_argument(
         "--load_epoch",

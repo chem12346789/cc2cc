@@ -14,6 +14,8 @@ import numpy as np
 import pyscf
 import opt_einsum as oe
 
+from pyscf.dft.numint import _dot_ao_dm, _contract_rho
+
 from cc2cc import add_args, extend
 from cc2cc.utils import ModelDict, MAIN_PATH
 from cc2cc.utils import rotate
@@ -26,6 +28,8 @@ from cc2cc.utils import (
     CUBE_LEN,
     CUBE_MIDDLE,
     STRUCTURE,
+    LEVEL,
+    PERIOD,
 )
 from cc2cc.test_rks import TEST_DATA
 
@@ -90,7 +94,8 @@ if __name__ == "__main__":
         if molecular is None:
             print(f"Skip: {name:>40}")
             continue
-        rotate(molecular)
+        # rotate(molecular)
+        rotate(molecular, rotation="r")
 
         mol = pyscf.M(
             atom=molecular,
@@ -102,8 +107,23 @@ if __name__ == "__main__":
             spin=0,
         )
 
-        print(mol.atom)
         print(f"Generate data for {name}")
+
+        mdft = pyscf.scf.RKS(mol)
+        mdft.xc = "b3lyp"
+        mdft.kernel()
+
+        grids = Grid(mol, level=LEVEL, period=PERIOD)
+        ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+
+        name = f"{name_mol}_{args.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
+        data_path = Path(f"{DATA_PATH}") / f"data_{name}_{LEVEL}_{PERIOD}.npz"
+        if not (data_path).exists():
+            print(f"No file: {data_path}")
+            continue
+        else:
+            print(f"Load the data: {data_path}")
+        data = np.load(data_path)
 
         mf = pyscf.scf.RHF(mol)
         mf.kernel()
@@ -112,69 +132,76 @@ if __name__ == "__main__":
         dm1_cc = mycc.make_rdm1(ao_repr=True)
         e_cc = mycc.e_tot
 
-        mdft = pyscf.scf.RKS(mol)
-        mdft.xc = "b3lyp"
-        mdft.kernel()
+        rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value[:4], dm1_cc, xctype="GGA")
+        weights = grids.weights
 
-        grids = Grid(mol, level=1, period=1)
-        ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
-        rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
-        exc_over_dm_cc_grids = np.zeros_like(rho_cc[0])
+        rho_cc_save = data["rho_inv_4_norm"]
+        weights_save = data["weights"]
 
-        dm2_cc = mycc.make_rdm2(ao_repr=True)
-        exc_over_dm_cc_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0]
-        expr_rinv_dm2_r = oe.contract_expression(
-            "ijkl,i,j,kl->",
-            0.5 * (dm2_cc - oe.contract("pq,rs->pqrs", dm1_cc, dm1_cc))
-            + 0.05 * oe.contract("pr,qs->pqrs", dm1_cc, dm1_cc),
-            (mol.nao,),
-            (mol.nao,),
-            (mol.nao, mol.nao),
-            constants=[0],
-            optimize="optimal",
-        )
-
-        for i, coord in enumerate(grids.coords):
-            if i * 10 % len(grids.coords) == 0:
-                print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
-
-            ao_0_i = ao_value[0][i]
-            if abs(rho_cc[0][i]) < 1e-14:
-                continue
-            with mol.with_rinv_origin(coord):
-                rinv = mol.intor("int1e_rinv")
-                exc_over_dm_cc_grids[i] += expr_rinv_dm2_r(
-                    ao_0_i,
-                    ao_0_i,
-                    rinv,
-                    backend="torch",
-                ) / (rho_cc[0][i] + 1e-14)
-
-        error_energy = e_cc - mdft.energy_tot(dm1_cc)
-        error = np.sum(exc_over_dm_cc_grids * grids.weights * rho_cc[0]) - error_energy
-        print(f"error_energy: {AU2KCALMOL * error_energy}, Error: {AU2KCALMOL * error}")
+        if "exc_over_dm_mrks_grids" in data.files:
+            output_ = data["exc_over_dm_mrks_grids"]
+        else:
+            output_ = data["exc_over_dm_cc_grids"]
+            print(
+                f"{AU2KCALMOL * np.sum(output_ * rho_cc[0] * weights):.2f} kcal/mol\n"
+            )
 
         if STRUCTURE == "cnn3d":
+            rho_cc_1 = np.zeros((3, len(grids.coords)))
+            rho_cc_2 = np.zeros((3, 3, len(grids.coords)))
+            shls_slice = (0, mol.nbas)
+            ao_loc = mol.ao_loc_nr()
+
+            # Hessian matrix
+            assert (
+                np.linalg.norm(dm1_cc.conj().T - dm1_cc) < 1e-10
+            ), "Density matrix is not symmetric."
+            c0 = _dot_ao_dm(mol, ao_value[0], dm1_cc, None, shls_slice, ao_loc)
+            rho_cc_1[0, :] = _contract_rho(ao_value[1], c0)
+            rho_cc_1[1, :] = _contract_rho(ao_value[2], c0)
+            rho_cc_1[2, :] = _contract_rho(ao_value[3], c0)
+            rho_cc_2[0, 0, :] = _contract_rho(ao_value[4], c0)
+            rho_cc_2[1, 1, :] = _contract_rho(ao_value[7], c0)
+            rho_cc_2[2, 2, :] = _contract_rho(ao_value[9], c0)
+            rho_cc_2[0, 1, :] = _contract_rho(ao_value[5], c0)
+            rho_cc_2[0, 2, :] = _contract_rho(ao_value[6], c0)
+            rho_cc_2[1, 2, :] = _contract_rho(ao_value[8], c0)
+            rho_cc_2[1, 0, :] = rho_cc_2[0, 1, :]
+            rho_cc_2[2, 0, :] = rho_cc_2[0, 2, :]
+            rho_cc_2[2, 1, :] = rho_cc_2[1, 2, :]
             rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+            coor_cube = np.zeros(
+                (len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3)
+            )
             for p, p_coords in enumerate(grids.coords):
                 if p * 10 % len(grids.coords) == 0:
                     print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
 
+                norm_2d = rho_cc_2[:, :, p]
+                eig_val, eig_vec = np.linalg.eigh(norm_2d)
+                eig_val_sort = np.argsort(eig_val)
+                eig_vec = eig_vec[:, eig_val_sort]
+                norm_1d = rho_cc_1[:, p]
+                for i in range(3):
+                    if eig_vec[:, i] @ norm_1d < 0:
+                        eig_vec[:, i] *= -1
+
                 coords_cube = np.zeros((CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
                 for i, j, k in product(range(CUBE_SIZE), repeat=3):
-                    coords_cube[i, j, k] = p_coords + [
-                        (i - CUBE_MIDDLE) * CUBE_LEN,
-                        (j - CUBE_MIDDLE) * CUBE_LEN,
-                        (k - CUBE_MIDDLE) * CUBE_LEN,
-                    ]
-
+                    coords_cube[i, j, k, :] = (
+                        p_coords
+                        + (i - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 0]
+                        + (j - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 1]
+                        + (k - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 2]
+                    )
+                coor_cube[p] = coords_cube.copy()
                 coords_cube = coords_cube.reshape(-1, 3)
+
                 ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
                 rho_cube_p = pyscf.dft.numint.eval_rho(
                     mol, ao_cube, dm1_cc, xctype="GGA"
                 )
                 rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-
             input_mat = torch.tensor(rho_cube, dtype=modeldict.dtype).to("cuda")
         elif STRUCTURE == "unet":
             input_mat = process_input(rho_cc, grids)
@@ -191,23 +218,18 @@ if __name__ == "__main__":
             correct_ene = grids.matrix_to_vector(
                 (output_mat.cpu().detach().numpy())[:, 0, :, :]
             )
+        else:
+            raise ValueError("Unknown structure.")
 
         exc_over_dm_cc_predict = (
-            (correct_ene - exc_over_dm_cc_grids) * rho_cc[0] * grids.weights
+            correct_ene * rho_cc[0] * weights - output_ * rho_cc_save[0] * weights_save
         )
         print(
-            AU2KCALMOL * np.sum(exc_over_dm_cc_predict),
-            AU2KCALMOL * np.sum(np.abs(exc_over_dm_cc_predict)),
-            AU2KCALMOL
-            * (
-                e_cc
-                - mdft.energy_tot(dm1_cc)
-                - np.sum(correct_ene * rho_cc[0] * grids.weights)
-            ),
-            AU2KCALMOL
-            * (
-                e_cc
-                - mdft.energy_tot(dm1_cc)
-                - np.sum(exc_over_dm_cc_grids * rho_cc[0] * grids.weights)
-            ),
+            f"ERROR: {AU2KCALMOL * np.sum(exc_over_dm_cc_predict):.2f} kcal/mol\n",
+            f"ABS ERROR: {AU2KCALMOL * np.sum(np.abs(exc_over_dm_cc_predict)):.2f} kcal/mol\n",
+            f"GRIDS ERROR AI: {AU2KCALMOL * (e_cc - mdft.energy_tot(mycc.make_rdm1(ao_repr=True)) - np.sum(correct_ene * rho_cc[0] * weights)):.2f} kcal/mol\n",
+            f"GRIDS ERROR CC: {AU2KCALMOL * (e_cc - mdft.energy_tot(dm1_cc) - np.sum(output_ * rho_cc_save[0] * weights_save)):.2f} kcal/mol\n",
         )
+        print(AU2KCALMOL * (mycc.e_tot - data["e_cc"]))
+        print(AU2KCALMOL * (mdft.e_tot - data["e_cc"]))
+        print(np.linalg.norm(mycc.make_rdm1(ao_repr=True) - data["dm_cc"]))

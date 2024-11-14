@@ -91,7 +91,7 @@ def get_inertia_moment(molecular):
     return I
 
 
-def rotate(molecular):
+def rotate(molecular, rotation=None, degree=None):
     """
     Rotate the molecular to certain direction, center of mass is at the origin, and the (three) principal axis of charge is along the x, y, z axis.
     """
@@ -151,13 +151,56 @@ def rotate(molecular):
             index_ = np.argsort(np.abs(x_array))[-1]
             mol[1] = x_array[index_]
 
-    if molecular[0][1] > 0:
-        for mol in molecular:
-            mol[1] = -mol[1]
-    if molecular[0][2] > 0:
-        for mol in molecular:
-            mol[2] = -mol[2]
-    if molecular[0][3] > 0:
-        for mol in molecular:
-            mol[3] = -mol[3]
+    I = get_inertia_moment(molecular)
+    eig_val, eig_vec = np.linalg.eig(I)
+    index2 = np.argsort(eig_val)[0]
+    list_max_eig = eig_vec[:, index2]
+    rotation_matrix = rotation_matrix_from_vectors(list_max_eig, [1, 0, 0])
+    for mol in molecular:
+        x_array = np.array(mol[1:])
+        x_array = rotation_matrix @ x_array
+        mol[1] = x_array[0]
+        mol[2] = x_array[1]
+        mol[3] = x_array[2]
     print(f"after rotation {molecular}")
+
+    if rotation is not None:
+        if degree is None:
+            degree = np.pi / 2
+        if rotation == "x":
+            rotation = np.array(
+                [
+                    [1, 0, 0],
+                    [0, np.cos(degree), -np.sin(degree)],
+                    [0, np.sin(degree), np.cos(degree)],
+                ]
+            )
+        elif rotation == "y":
+            rotation = np.array(
+                [
+                    [np.cos(degree), 0, np.sin(degree)],
+                    [0, 1, 0],
+                    [-np.sin(degree), 0, np.cos(degree)],
+                ]
+            )
+        elif rotation == "z":
+            rotation = np.array(
+                [
+                    [np.cos(degree), -np.sin(degree), 0],
+                    [np.sin(degree), np.cos(degree), 0],
+                    [0, 0, 1],
+                ]
+            )
+        else:
+            print("random rotation")
+            random_axis = np.random.uniform(-1, 1, 3)
+            random_axis = random_axis / np.linalg.norm(random_axis)
+            rotation = rotation_matrix_from_vectors([0, 0, 1], random_axis)
+
+        for mol in molecular:
+            x_array = np.array(mol[1:])
+            x_array = rotation @ x_array
+            mol[1] = x_array[0]
+            mol[2] = x_array[1]
+            mol[3] = x_array[2]
+        print(f"after test rotation {molecular}")

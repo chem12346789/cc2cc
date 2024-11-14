@@ -4,7 +4,7 @@ import numpy as np
 import pyscf
 
 # from pyscf.grad import ccsd as ccsd_grad
-
+from pyscf.dft.numint import _dot_ao_dm, _contract_rho
 import opt_einsum as oe
 
 from cc2cc.utils import gen_basis, process_input, Grid
@@ -33,7 +33,6 @@ def cc(molecular, name, args):
         spin=0,
     )
 
-    print(mol.atom)
     print(f"Generate data for {name}")
 
     mf = pyscf.scf.RHF(mol)
@@ -48,37 +47,50 @@ def cc(molecular, name, args):
     mdft.kernel()
 
     grids = Grid(mol, level=LEVEL, period=PERIOD)
-    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
+    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
     rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
-    rho_cc_all = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="mGGA")
-    exc_over_dm_b3lyp_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0]
-    exc_over_dm_lda_grids = -pyscf.dft.libxc.eval_xc("lda", rho_cc[0])[0]
-    exc_over_dm_cc_2_grids = np.zeros_like(exc_over_dm_b3lyp_grids)
-    exc_over_dm_cc_1_j_grids = np.zeros_like(exc_over_dm_b3lyp_grids)
-    exc_over_dm_cc_1_k_grids = np.zeros_like(exc_over_dm_b3lyp_grids)
+    exc_over_dm_cc_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0]
+    rho_cc_1 = np.zeros((3, len(grids.coords)))
+    rho_cc_2 = np.zeros((3, 3, len(grids.coords)))
+    shls_slice = (0, mol.nbas)
+    ao_loc = mol.ao_loc_nr()
+
+    # Hessian matrix
+    assert (
+        np.linalg.norm(dm1_cc.conj().T - dm1_cc) < 1e-10
+    ), "Density matrix is not symmetric."
+    c0 = _dot_ao_dm(mol, ao_value[0], dm1_cc, None, shls_slice, ao_loc)
+    rho_cc_1[0, :] = _contract_rho(ao_value[1], c0)
+    rho_cc_1[1, :] = _contract_rho(ao_value[2], c0)
+    rho_cc_1[2, :] = _contract_rho(ao_value[3], c0)
+    rho_cc_2[0, 0, :] = _contract_rho(ao_value[4], c0)
+    rho_cc_2[0, 1, :] = _contract_rho(ao_value[5], c0)
+    rho_cc_2[0, 2, :] = _contract_rho(ao_value[6], c0)
+    rho_cc_2[1, 1, :] = _contract_rho(ao_value[7], c0)
+    rho_cc_2[1, 2, :] = _contract_rho(ao_value[8], c0)
+    rho_cc_2[2, 2, :] = _contract_rho(ao_value[9], c0)
+    rho_cc_2[1, 0, :] = rho_cc_2[0, 1, :]
+    rho_cc_2[2, 0, :] = rho_cc_2[0, 2, :]
+    rho_cc_2[2, 1, :] = rho_cc_2[1, 2, :]
+
+    # # approximation of Hessian matrix using Jacobian matrix
+    # c1 = [
+    #     _dot_ao_dm(mol, ao_value[1], dm1_cc, None, shls_slice, ao_loc),
+    #     _dot_ao_dm(mol, ao_value[2], dm1_cc, None, shls_slice, ao_loc),
+    #     _dot_ao_dm(mol, ao_value[3], dm1_cc, None, shls_slice, ao_loc),
+    # ]
+    # for iter_1 in range(3):
+    #     for iter_2 in range(3):
+    #         rho_cc_2[iter_1, iter_2, :] = _contract_rho(
+    #             ao_value[iter_1 + 1], c1[iter_2]
+    #         )
 
     dm2_cc = mycc.make_rdm2(ao_repr=True)
     expr_rinv_dm2_r = oe.contract_expression(
         "ijkl,i,j,kl->",
-        0.5 * dm2_cc,
-        (mol.nao,),
-        (mol.nao,),
-        (mol.nao, mol.nao),
-        constants=[0],
-        optimize="optimal",
-    )
-    expr_rinv_dm1_j_r = oe.contract_expression(
-        "ijkl,i,j,kl->",
-        -0.5 * oe.contract("pq,rs->pqrs", dm1_cc, dm1_cc),
-        (mol.nao,),
-        (mol.nao,),
-        (mol.nao, mol.nao),
-        constants=[0],
-        optimize="optimal",
-    )
-    expr_rinv_dm1_k_r = oe.contract_expression(
-        "ijkl,i,j,kl->",
-        0.05 * oe.contract("pr,qs->pqrs", dm1_cc, dm1_cc),
+        0.5 * dm2_cc
+        - 0.5 * oe.contract("pq,rs->pqrs", dm1_cc, dm1_cc)
+        + 0.05 * oe.contract("pr,qs->pqrs", dm1_cc, dm1_cc),
         (mol.nao,),
         (mol.nao,),
         (mol.nao, mol.nao),
@@ -95,19 +107,7 @@ def cc(molecular, name, args):
             continue
         with mol.with_rinv_origin(coord):
             rinv = mol.intor("int1e_rinv")
-            exc_over_dm_cc_2_grids[i] += expr_rinv_dm2_r(
-                ao_0_i,
-                ao_0_i,
-                rinv,
-                backend="torch",
-            ) / (rho_cc[0][i] + 1e-14)
-            exc_over_dm_cc_1_j_grids[i] += expr_rinv_dm1_j_r(
-                ao_0_i,
-                ao_0_i,
-                rinv,
-                backend="torch",
-            ) / (rho_cc[0][i] + 1e-14)
-            exc_over_dm_cc_1_k_grids[i] += expr_rinv_dm1_k_r(
+            exc_over_dm_cc_grids[i] += expr_rinv_dm2_r(
                 ao_0_i,
                 ao_0_i,
                 rinv,
@@ -115,35 +115,8 @@ def cc(molecular, name, args):
             ) / (rho_cc[0][i] + 1e-14)
 
     error_energy = e_cc - mdft.energy_tot(dm1_cc)
-    error = (
-        np.sum(
-            (
-                exc_over_dm_b3lyp_grids
-                + exc_over_dm_cc_2_grids
-                + exc_over_dm_cc_1_j_grids
-                + exc_over_dm_cc_1_k_grids
-            )
-            * grids.weights
-            * rho_cc[0]
-        )
-        - error_energy
-    )
+    error = np.sum(exc_over_dm_cc_grids * grids.weights * rho_cc[0]) - error_energy
     print(f"error_energy: {AU2KCALMOL * error_energy}, Error: {AU2KCALMOL * error}")
-    print(
-        f"0: {AU2KCALMOL * np.sum(exc_over_dm_b3lyp_grids * grids.weights * rho_cc[0])}"
-    )
-    print(
-        f"1: {AU2KCALMOL * np.sum(exc_over_dm_cc_2_grids * grids.weights * rho_cc[0])}"
-    )
-    print(
-        f"2: {AU2KCALMOL * np.sum(exc_over_dm_cc_1_j_grids * grids.weights * rho_cc[0])}"
-    )
-    print(
-        f"3: {AU2KCALMOL * np.sum(exc_over_dm_cc_1_k_grids * grids.weights * rho_cc[0])}"
-    )
-    print(
-        f"4: {AU2KCALMOL * np.sum(exc_over_dm_lda_grids * grids.weights * rho_cc[0])}"
-    )
 
     rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
     coor_cube = np.zeros((len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
@@ -151,21 +124,29 @@ def cc(molecular, name, args):
         if p * 10 % len(grids.coords) == 0:
             print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
 
+        norm_2d = rho_cc_2[:, :, p]
+        eig_val, eig_vec = np.linalg.eigh(norm_2d)
+        eig_val_sort = np.argsort(eig_val)
+        eig_vec = eig_vec[:, eig_val_sort]
+        norm_1d = rho_cc_1[:, p]
+        for i in range(3):
+            if eig_vec[:, i] @ norm_1d < 0:
+                eig_vec[:, i] *= -1
+
         coords_cube = np.zeros((CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
         for i, j, k in product(range(CUBE_SIZE), repeat=3):
-            coords_cube[i, j, k] = p_coords + [
-                (i - CUBE_MIDDLE) * CUBE_LEN,
-                (j - CUBE_MIDDLE) * CUBE_LEN,
-                (k - CUBE_MIDDLE) * CUBE_LEN,
-            ]
+            coords_cube[i, j, k, :] = (
+                p_coords
+                + (i - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 0]
+                + (j - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 1]
+                + (k - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 2]
+            )
         coor_cube[p] = coords_cube.copy()
         coords_cube = coords_cube.reshape(-1, 3)
 
         ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
         rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="GGA")
         rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-
-    data = np.load(DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz")
 
     np.savez_compressed(
         DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
@@ -175,23 +156,11 @@ def cc(molecular, name, args):
         rho_inv_4_norm_matrix=process_input(rho_cc, grids),
         weights=grids.weights,
         weights_matrix=grids.vector_to_matrix(grids.weights),
-        exc_over_dm_lda_grids=exc_over_dm_lda_grids,
-        exc_over_dm_lda_grids_matrix=grids.vector_to_matrix(exc_over_dm_lda_grids),
-        exc_over_dm_b3lyp_grids=exc_over_dm_b3lyp_grids,
-        exc_over_dm_b3lyp_grids_matrix=grids.vector_to_matrix(exc_over_dm_b3lyp_grids),
-        exc_over_dm_cc_2_grids=exc_over_dm_cc_2_grids,
-        exc_over_dm_cc_2_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_2_grids),
-        exc_over_dm_cc_1_j_grids=exc_over_dm_cc_1_j_grids,
-        exc_over_dm_cc_1_j_grids_matrix=grids.vector_to_matrix(
-            exc_over_dm_cc_1_j_grids
-        ),
-        exc_over_dm_cc_1_k_grids=exc_over_dm_cc_1_k_grids,
-        exc_over_dm_cc_1_k_grids_matrix=grids.vector_to_matrix(
-            exc_over_dm_cc_1_k_grids
-        ),
-        rho_cc_all=rho_cc_all,
+        exc_over_dm_cc_grids=exc_over_dm_cc_grids,
+        exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
         rho_cube=rho_cube,
         coor_cube=coor_cube,
+        coor=grids.coords,
         error_energy=error_energy,
     )
 
@@ -203,14 +172,14 @@ def cc_change_cube(molecular, name, args):
     file_path = DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz"
     if file_path.exists():
         print(f"Data {name}_{LEVEL}_{PERIOD} already exists.")
-
         data = np.load(file_path)
         e_cc = data["e_cc"]
         dm1_cc = data["dm_cc"]
         rho_cc = data["rho_inv_4_norm"]
         exc_over_dm_cc_grids = data["exc_over_dm_cc_grids"]
         error_energy = data["error_energy"]
-        rho_cc_all = data["rho_cc_all"]
+        weights = data["weights"]
+        weights_matrix = data["weights_matrix"]
 
         mol = pyscf.M(
             atom=molecular,
@@ -221,7 +190,44 @@ def cc_change_cube(molecular, name, args):
             ),
             spin=0,
         )
-        grids = Grid(mol, level=1)
+
+        grids = Grid(mol, level=LEVEL, period=PERIOD)
+        ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+        rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
+        rho_cc_1 = np.zeros((3, len(grids.coords)))
+        rho_cc_2 = np.zeros((3, 3, len(grids.coords)))
+        shls_slice = (0, mol.nbas)
+        ao_loc = mol.ao_loc_nr()
+
+        # Hessian matrix
+        assert (
+            np.linalg.norm(dm1_cc.conj().T - dm1_cc) < 1e-10
+        ), "Density matrix is not symmetric."
+        c0 = _dot_ao_dm(mol, ao_value[0], dm1_cc, None, shls_slice, ao_loc)
+        rho_cc_1[0, :] = _contract_rho(ao_value[1], c0)
+        rho_cc_1[1, :] = _contract_rho(ao_value[2], c0)
+        rho_cc_1[2, :] = _contract_rho(ao_value[3], c0)
+        rho_cc_2[0, 0, :] = _contract_rho(ao_value[4], c0)
+        rho_cc_2[0, 1, :] = _contract_rho(ao_value[5], c0)
+        rho_cc_2[0, 2, :] = _contract_rho(ao_value[6], c0)
+        rho_cc_2[1, 1, :] = _contract_rho(ao_value[7], c0)
+        rho_cc_2[1, 2, :] = _contract_rho(ao_value[8], c0)
+        rho_cc_2[2, 2, :] = _contract_rho(ao_value[9], c0)
+        rho_cc_2[1, 0, :] = rho_cc_2[0, 1, :]
+        rho_cc_2[2, 0, :] = rho_cc_2[0, 2, :]
+        rho_cc_2[2, 1, :] = rho_cc_2[1, 2, :]
+
+        # # approximation of Hessian matrix using Jacobian matrix
+        # c1 = [
+        #     _dot_ao_dm(mol, ao_value[1], dm1_cc, None, shls_slice, ao_loc),
+        #     _dot_ao_dm(mol, ao_value[2], dm1_cc, None, shls_slice, ao_loc),
+        #     _dot_ao_dm(mol, ao_value[3], dm1_cc, None, shls_slice, ao_loc),
+        # ]
+        # for iter_1 in range(3):
+        #     for iter_2 in range(3):
+        #         rho_cc_2[iter_1, iter_2, :] = _contract_rho(
+        #             ao_value[iter_1 + 1], c1[iter_2]
+        #         )
 
         rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
         coor_cube = np.zeros((len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
@@ -229,14 +235,34 @@ def cc_change_cube(molecular, name, args):
             if p * 10 % len(grids.coords) == 0:
                 print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
 
+            norm_2d = rho_cc_2[:, :, p]
+            eig_val, eig_vec = np.linalg.eigh(norm_2d)
+            eig_val_sort = np.argsort(eig_val)
+            eig_vec = eig_vec[:, eig_val_sort]
+            norm_1d = rho_cc_1[:, p]
+            for i in range(3):
+                if eig_vec[:, i] @ norm_1d < 0:
+                    eig_vec[:, i] *= -1
+
+            assert (
+                np.linalg.norm(eig_vec @ eig_vec.T - np.eye(3)) < 1e-8
+            ), f"Eigenvectors are not orthogonal.{eig_vec}"
+            assert np.linalg.norm(
+                eig_vec @ np.diag(eig_val) @ eig_vec.T - norm_2d
+            ) < 1e-8 * np.linalg.norm(
+                norm_2d
+            ), f"Eigenvalues are not correct.{eig_vec @ np.diag(eig_val) @ eig_vec.T, norm_2d}"
+
             coords_cube = np.zeros((CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
             for i, j, k in product(range(CUBE_SIZE), repeat=3):
-                coords_cube[i, j, k] = p_coords + [
-                    (i - CUBE_MIDDLE) * CUBE_LEN,
-                    (j - CUBE_MIDDLE) * CUBE_LEN,
-                    (k - CUBE_MIDDLE) * CUBE_LEN,
-                ]
+                coords_cube[i, j, k, :] = (
+                    p_coords
+                    + (i - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 0]
+                    + (j - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 1]
+                    + (k - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 2]
+                )
             coor_cube[p] = coords_cube.copy()
+            # print(f"coords_cube: {coords_cube}")
             coords_cube = coords_cube.reshape(-1, 3)
 
             ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
@@ -249,15 +275,16 @@ def cc_change_cube(molecular, name, args):
             dm_cc=dm1_cc,
             rho_inv_4_norm=rho_cc,
             rho_inv_4_norm_matrix=process_input(rho_cc, grids),
-            weights=grids.weights,
-            weights_matrix=grids.vector_to_matrix(grids.weights),
+            weights=weights,
+            weights_matrix=weights_matrix,
             exc_over_dm_cc_grids=exc_over_dm_cc_grids,
             exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
-            rho_cc_all=rho_cc_all,
             rho_cube=rho_cube,
             coor_cube=coor_cube,
             error_energy=error_energy,
         )
+    else:
+        print(f"Data {name}_{LEVEL}_{PERIOD} does not exist.")
 
 
 def cc_add_data(molecular, name, args):
@@ -276,7 +303,6 @@ def cc_add_data(molecular, name, args):
         error_energy = data["error_energy"]
         rho_cube = data["rho_cube"]
         coor_cube = data["coor_cube"]
-        rho_cc_all = data["rho_cc_all"]
 
         mol = pyscf.M(
             atom=molecular,
@@ -287,7 +313,7 @@ def cc_add_data(molecular, name, args):
             ),
             spin=0,
         )
-        grids = Grid(mol, level=1)
+        grids = Grid(mol, level=LEVEL, period=PERIOD)
 
         np.savez_compressed(
             DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
@@ -299,7 +325,6 @@ def cc_add_data(molecular, name, args):
             weights_matrix=grids.vector_to_matrix(grids.weights),
             exc_over_dm_cc_grids=exc_over_dm_cc_grids,
             exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
-            rho_cc_all=rho_cc_all,
             rho_cube=rho_cube,
             coor_cube=coor_cube,
             error_energy=error_energy,
