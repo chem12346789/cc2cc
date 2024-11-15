@@ -21,18 +21,18 @@ print("gamma:", args.gamma)
 print("alpha:", args.alpha)
 print("kernel:", args.kernel, flush=True)
 
-# view_keys = [
+# view_dict = [
 #     "exc_over_dm_b3lyp_grids",
 #     "exc_over_dm_mrks_grids",
 #     "vxc_over_dm_mrks_grids",
 # ]
 
-view_keys = [
-    "exc_over_dm_b3lyp_grids",
-    "exc_over_dm_b3lyp_grids+exc_over_dm_cc_2_grids+exc_over_dm_cc_1_j_grids+exc_over_dm_cc_1_k_grids",
-    # "exc_over_dm_cc_1_j_grids"
-    # "exc_over_dm_cc_1_k_grids"
-]
+view_dict = {
+    "b3lyp": "exc_over_dm_b3lyp_grids",
+    "cc": "exc_over_dm_b3lyp_grids+exc_over_dm_cc_2_grids+exc_over_dm_cc_1_j_grids+exc_over_dm_cc_1_k_grids",
+}
+# "exc_over_dm_cc_1_j_grids"
+# "exc_over_dm_cc_1_k_grids"
 
 (
     input_dict,
@@ -46,7 +46,7 @@ view_keys = [
     args.extend_xyz,
     args.distance_list,
     args.basis,
-    view_keys=view_keys,
+    view_dict=view_dict,
 )
 
 krr = KernelRidge(alpha=args.alpha, gamma=args.gamma, kernel="precomputed")
@@ -106,15 +106,20 @@ train_error_sum = 0
 energy_correct_sum = 0
 
 for index_ in x_keys:
-    if index_ not in ["0_0_0_0", "2_2_2_2", "12_12_12_12"]:
+    if index_ not in [
+        # "0_0_0_0",
+        # "1_1_1_1",
+        # "2_2_2_2",
+        f"{len(hashtable)//2}_{len(hashtable)//2}_{len(hashtable)//2}_{len(hashtable)//2}",
+    ]:
         continue
 
-    for name_plot_i, name_plot in enumerate(view_keys):
-        name_plot = name_plot + index_
-        x = np.array(x_all[index_], dtype=np.float32)
-        y = np.array(y_all[index_], dtype=np.float32)
-        w = np.array(w_all[index_], dtype=np.float32)
-        coor = np.array(coor_all[index_], dtype=np.float32)
+    for name_plot_i, name_plot in enumerate(view_dict.keys()):
+        name_plot = name_plot + "-" + index_
+        x = x_all[index_]
+        y = y_all[index_]
+        w = w_all[index_]
+        coor = coor_all[index_]
         name = name_all[index_]
         y = y[:, name_plot_i]
 
@@ -133,7 +138,7 @@ for index_ in x_keys:
             np.einsum("ij,i->ij", y[indices], x[:, ARRAY_USE_MIDDLE] * w), axis=1
         )
 
-        for max_x_ in [1e-2, 1e-4, 1e-6]:
+        for max_x_ in [1e-2, 1e-3, 1e-4, 1e-5]:
             print("\n begin of print", flush=True)
             Path(f"plot/{name_plot}-{max_x_}/plot/").mkdir(parents=True, exist_ok=True)
             max_x = max_x_**2 * x.shape[1]

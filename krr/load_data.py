@@ -14,13 +14,14 @@ from cc2cc.utils import (
     PERIOD,
 )
 
+
 def load_data(
     molecular_list,
     extend_atom,
     extend_xyz,
     distance_list,
     basis="cc-pVDZ",
-    view_keys=[],
+    view_dict={},
 ):
     """
     Load the data.
@@ -51,9 +52,9 @@ def load_data(
 
         data = np.load(data_path)
 
-        if view_keys:
+        if view_dict:
             output_ = []
-            for key in view_keys:
+            for key in view_dict.values():
                 if "+" in key:
                     data_ = []
                     for key_i in key.split("+"):
