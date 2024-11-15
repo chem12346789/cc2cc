@@ -207,6 +207,7 @@ for index_ in x_keys:
                 "ethane": "#1A237E",
                 "ethylene": "#212121",
                 "acetylene": "#7B1FA2",
+                "propane": "#FF6F00",
             }
 
             plt.rcParams["figure.figsize"] = np.array([0.5, 0.5]) * 520 / 72
@@ -258,7 +259,7 @@ for index_ in x_keys:
 
             plt.xlabel("Distance of cube")
             plt.ylabel(r"$\Delta$ Energy (kcal/mol)")
-            plt.legend()
+            plt.legend(loc="best")
 
             plt.savefig(
                 f"plot/{name_plot}-{max_x_}/sub_test.pdf", dpi=300, bbox_inches="tight"
@@ -322,6 +323,11 @@ for index_ in x_keys:
                     transform=axes[axes_i, axes_j].transAxes,
                     va="top",
                 )
+
+            for i, c in color_dict.items():
+                axes[0, 0].scatter([-1], [-1], c=c, label=i)
+            plt.legend()
+
             plt.savefig(
                 f"plot/{name_plot}-{max_x_}/test.pdf", dpi=300, bbox_inches="tight"
             )
