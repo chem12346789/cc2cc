@@ -118,7 +118,7 @@ def cc(molecular, name, args):
     error = np.sum(exc_over_dm_cc_grids * grids.weights * rho_cc[0]) - error_energy
     print(f"error_energy: {AU2KCALMOL * error_energy}, Error: {AU2KCALMOL * error}")
 
-    rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+    rho_cube = np.zeros((len(grids.coords), 2, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
     coor_cube = np.zeros((len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
     for p, p_coords in enumerate(grids.coords):
         if p * 10 % len(grids.coords) == 0:
@@ -146,7 +146,12 @@ def cc(molecular, name, args):
 
         ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
         rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="GGA")
-        rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+        rho_cube_p_norm = np.zeros((2, CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
+        rho_cube_p_norm[0, :] = rho_cube_p[0, :]
+        rho_cube_p_norm[1, :] = (
+            rho_cube_p[1, :] ** 2 + rho_cube_p[2, :] ** 2 + rho_cube_p[3, :] ** 2
+        )
+        rho_cube[p] = rho_cube_p_norm.reshape(2, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
     np.savez_compressed(
         DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
@@ -229,7 +234,7 @@ def cc_change_cube(molecular, name, args):
         #             ao_value[iter_1 + 1], c1[iter_2]
         #         )
 
-        rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        rho_cube = np.zeros((len(grids.coords), 2, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
         coor_cube = np.zeros((len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
         for p, p_coords in enumerate(grids.coords):
             if p * 10 % len(grids.coords) == 0:
@@ -267,7 +272,12 @@ def cc_change_cube(molecular, name, args):
 
             ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
             rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="GGA")
-            rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+            rho_cube_p_norm = np.zeros((2, CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
+            rho_cube_p_norm[0, :] = rho_cube_p[0, :]
+            rho_cube_p_norm[1, :] = (
+                rho_cube_p[1, :] ** 2 + rho_cube_p[2, :] ** 2 + rho_cube_p[3, :] ** 2
+            )
+            rho_cube[p] = rho_cube_p_norm.reshape(2, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
         np.savez_compressed(
             DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
@@ -281,6 +291,7 @@ def cc_change_cube(molecular, name, args):
             exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
             rho_cube=rho_cube,
             coor_cube=coor_cube,
+            coor=grids.coords,
             error_energy=error_energy,
         )
     else:

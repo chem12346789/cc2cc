@@ -23,5 +23,5 @@ export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=c
 # export CUDA_VISIBLE_DEVICES=NUMBER_OF_GPU
 # export DFT2CC_STRUCTURE=unet
 
-nohup bash -c '~/anaconda3/envs/pyscf3.8/bin/python train.py -dl -0.5 0.5 11 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --eval_step 10 --batch_size 10000 --epoch 2500 --with_eval True --precision float64' >log/train.log &
+nohup bash -c '~/anaconda3/envs/pyscf3.8/bin/python train.py -dl -0.5 0.5 11 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --eval_step 10 --batch_size 10000 --epoch 2500 --with_eval True --precision float32' >log/train0.log &
 # nohup bash -c '~/anaconda3/envs/pyscf3.8/bin/python train.py -dl -0.5 0.5 11 -b cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --eval_step 10 --batch_size 10000 --epoch 2500 --with_eval True --precision float32'  > log/train.log &

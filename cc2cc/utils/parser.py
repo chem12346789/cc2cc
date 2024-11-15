@@ -139,8 +139,8 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--eval_step",
         type=int,
-        default=100,
-        help="Step for evaluation. Default is 100.",
+        default=1,
+        help="Step for evaluation. Default is 1.",
     )
 
     # foe testing

@@ -95,7 +95,7 @@ if __name__ == "__main__":
             print(f"Skip: {name:>40}")
             continue
         # rotate(molecular)
-        rotate(molecular, rotation="r")
+        rotation = rotate(molecular, rotation="r")
 
         mol = pyscf.M(
             atom=molecular,
@@ -113,9 +113,6 @@ if __name__ == "__main__":
         mdft.xc = "b3lyp"
         mdft.kernel()
 
-        grids = Grid(mol, level=LEVEL, period=PERIOD)
-        ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
-
         name = f"{name_mol}_{args.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
         data_path = Path(f"{DATA_PATH}") / f"data_{name}_{LEVEL}_{PERIOD}.npz"
         if not (data_path).exists():
@@ -132,11 +129,18 @@ if __name__ == "__main__":
         dm1_cc = mycc.make_rdm1(ao_repr=True)
         e_cc = mycc.e_tot
 
-        rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value[:4], dm1_cc, xctype="GGA")
-        weights = grids.weights
+        grids = Grid(mol, level=LEVEL, period=PERIOD)
+        # coords = grids.coords
+        # weights = grids.weights
+        coords = data["coor"]
+        coords = (rotation @ coords.T).T
+        print(f"Number of grids: {len(coords)}")
+        weights = data["weights"]
 
-        rho_cc_save = data["rho_inv_4_norm"]
         weights_save = data["weights"]
+        ao_value = pyscf.dft.numint.eval_ao(mol, coords, deriv=2)
+        rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value[:4], dm1_cc, xctype="GGA")
+        rho_cc_save = data["rho_inv_4_norm"]
 
         if "exc_over_dm_mrks_grids" in data.files:
             output_ = data["exc_over_dm_mrks_grids"]
@@ -147,8 +151,8 @@ if __name__ == "__main__":
             )
 
         if STRUCTURE == "cnn3d":
-            rho_cc_1 = np.zeros((3, len(grids.coords)))
-            rho_cc_2 = np.zeros((3, 3, len(grids.coords)))
+            rho_cc_1 = np.zeros((3, len(coords)))
+            rho_cc_2 = np.zeros((3, 3, len(coords)))
             shls_slice = (0, mol.nbas)
             ao_loc = mol.ao_loc_nr()
 
@@ -161,21 +165,21 @@ if __name__ == "__main__":
             rho_cc_1[1, :] = _contract_rho(ao_value[2], c0)
             rho_cc_1[2, :] = _contract_rho(ao_value[3], c0)
             rho_cc_2[0, 0, :] = _contract_rho(ao_value[4], c0)
-            rho_cc_2[1, 1, :] = _contract_rho(ao_value[7], c0)
-            rho_cc_2[2, 2, :] = _contract_rho(ao_value[9], c0)
             rho_cc_2[0, 1, :] = _contract_rho(ao_value[5], c0)
             rho_cc_2[0, 2, :] = _contract_rho(ao_value[6], c0)
+            rho_cc_2[1, 1, :] = _contract_rho(ao_value[7], c0)
             rho_cc_2[1, 2, :] = _contract_rho(ao_value[8], c0)
+            rho_cc_2[2, 2, :] = _contract_rho(ao_value[9], c0)
             rho_cc_2[1, 0, :] = rho_cc_2[0, 1, :]
             rho_cc_2[2, 0, :] = rho_cc_2[0, 2, :]
             rho_cc_2[2, 1, :] = rho_cc_2[1, 2, :]
-            rho_cube = np.zeros((len(grids.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
-            coor_cube = np.zeros(
-                (len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3)
-            )
-            for p, p_coords in enumerate(grids.coords):
-                if p * 10 % len(grids.coords) == 0:
-                    print(f"Progress: {(p*100)/len(grids.coords):.1f}%", flush=True)
+            rho_cube = np.zeros((len(coords), 2, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+            coor_cube = np.zeros((len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
+            rho_cube_save = data["rho_cube"]
+            coor_cube_save = data["coor_cube"]
+            for p, p_coords in enumerate(coords):
+                if p * 10 % len(coords) == 0:
+                    print(f"Progress: {(p*100)/len(coords):.1f}%", flush=True)
 
                 norm_2d = rho_cc_2[:, :, p]
                 eig_val, eig_vec = np.linalg.eigh(norm_2d)
@@ -201,7 +205,37 @@ if __name__ == "__main__":
                 rho_cube_p = pyscf.dft.numint.eval_rho(
                     mol, ao_cube, dm1_cc, xctype="GGA"
                 )
-                rho_cube[p] = rho_cube_p.reshape(4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+                rho_cube_p_norm = np.zeros((2, CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
+                rho_cube_p_norm[0, :] = rho_cube_p[0, :]
+                rho_cube_p_norm[1, :] = (
+                    rho_cube_p[1, :] ** 2
+                    + rho_cube_p[2, :] ** 2
+                    + rho_cube_p[3, :] ** 2
+                ) ** (1 / 2)
+                rho_cube[p] = rho_cube_p_norm.reshape(
+                    2, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE
+                )
+
+                # if np.linalg.norm(rho_cube[p] - rho_cube_save[p]) > 1e-10:
+                #     print(
+                #         f"Error: {np.linalg.norm(coor_cube[p] - coor_cube_save[p]):.2e}"
+                #     )
+                #     print(
+                #         f"Error: {coor_cube[p][0, 0, 0, :]}"
+                #         f"{rotation @ coor_cube_save[p][0, 0, 0, :]}"
+                #     )
+                #     print(
+                #         f"Error: {coor_cube[p][1, 1, 1, :]}"
+                #         f"{rotation @ coor_cube_save[p][1, 1, 1, :]}"
+                #     )
+                #     print(
+                #         f"Error: {rho_cube[p][:, 0, 0, 0]}"
+                #         f"{rho_cube_save[p][:, 0, 0, 0]}"
+                #     )
+                #     print(
+                #         f"Error: {rho_cube[p][:, 1, 1, 1]}"
+                #         f"{rho_cube_save[p][:, 1, 1, 1]}"
+                #     )
             input_mat = torch.tensor(rho_cube, dtype=modeldict.dtype).to("cuda")
         elif STRUCTURE == "unet":
             input_mat = process_input(rho_cc, grids)

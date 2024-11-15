@@ -210,6 +210,8 @@ class DataBase:
         else:
             if "3d" in STRUCTURE:
                 input_mat = data["rho_cube"]
+                input_mat[:, 0, :, :, :] = input_mat[:, 0, :, :, :]
+                input_mat[:, 1, :, :, :] = input_mat[:, 1, :, :, :] ** (1 / 2)
             else:
                 input_mat = data["rho_inv_4_norm"]
 

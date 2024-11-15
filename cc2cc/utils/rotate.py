@@ -204,3 +204,5 @@ def rotate(molecular, rotation=None, degree=None):
             mol[2] = x_array[1]
             mol[3] = x_array[2]
         print(f"after test rotation {molecular}")
+        return rotation
+    return np.eye(3)

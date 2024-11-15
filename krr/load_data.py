@@ -87,7 +87,9 @@ def load_data(
             CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
         ]
 
-        input_ = input_.reshape(-1, (CUBE_USE) ** 3 * 4)
+        input_[:, 0, :, :, :] = input_[:, 0, :, :, :]
+        input_[:, 1, :, :, :] = input_[:, 1, :, :, :] ** (1 / 2)
+        input_ = input_.reshape(-1, (CUBE_USE) ** 3 * 2)
         # input_ = np.transpose(data["rho_inv_4_norm"], (1, 0))
 
         input_dict[name] = input_

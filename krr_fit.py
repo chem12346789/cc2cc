@@ -105,15 +105,11 @@ for index_ in x_keys:
     if (
         int(index_.split("_")[0]) in list_1
         and int(index_.split("_")[1]) in list_1
-        and int(index_.split("_")[2]) in list_1
-        and int(index_.split("_")[3]) in list_1
     ):
         krr.gamma = args.gamma[0]
     elif (
         int(index_.split("_")[0]) in list_2
         or int(index_.split("_")[1]) in list_2
-        or int(index_.split("_")[2]) in list_2
-        or int(index_.split("_")[3]) in list_2
     ):
         krr.gamma = args.gamma[0] if len(args.gamma) <= 2 else args.gamma[2]
     else:

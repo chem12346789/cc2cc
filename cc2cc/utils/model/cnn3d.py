@@ -15,18 +15,18 @@ class Model(nn.Module):
 
         def __init__(self):
             super().__init__()
-            # input size = torch.Size([1, 4, 3, 3, 3])
+            # input size = torch.Size([1, 2, 3, 3, 3])
             self.cnn = nn.Sequential(
-                nn.Conv3d(4, 64, 2),
+                nn.Conv3d(2, 32, 2),
                 nn.ReLU(),
-                # output size = torch.Size([1, 64, 2, 2, 2])
-                nn.Conv3d(64, 128, 2),
+                # output size = torch.Size([1, 32, 2, 2, 2])
+                nn.Conv3d(32, 256, 2),
                 nn.ReLU(),
                 # output size = torch.Size([1, 128, 1, 1, 1])
             )
 
             self.fc = nn.Sequential(
-                nn.Linear(128, 16),
+                nn.Linear(256, 16),
                 nn.ReLU(),
                 nn.Linear(16, 1),
             )
@@ -35,84 +35,25 @@ class Model(nn.Module):
 
         def __init__(self):
             super().__init__()
-            # input size = torch.Size([1, 4, 5, 5, 5])
+            # input size = torch.Size([1, 2, 5, 5, 5])
             self.cnn = nn.Sequential(
-                nn.Conv3d(4, 64, 3),
+                nn.Conv3d(2, 8, 2),
                 nn.ReLU(),
-                # output size = torch.Size([1, 64, 3, 3, 3])
-                nn.Conv3d(64, 128, 3),
+                # output size = torch.Size([1, 8, 4, 4, 4])
+                nn.Conv3d(8, 32, 2),
                 nn.ReLU(),
-                # output size = torch.Size([1, 128, 1, 1, 1])
-            )
-            # self.cnn = nn.Sequential(
-            #     nn.Conv3d(4, 64, 2),
-            #     nn.ReLU(),
-            #     # output size = torch.Size([1, 64, 4, 4, 4])
-            #     nn.Conv3d(64, 128, 2),
-            #     nn.ReLU(),
-            #     # output size = torch.Size([1, 128, 3, 3, 3])
-            #     nn.Conv3d(128, 256, 2),
-            #     nn.ReLU(),
-            #     # output size = torch.Size([1, 256, 2, 2, 2])
-            #     nn.Conv3d(256, 512, 2),
-            #     nn.ReLU(),
-            #     # output size = torch.Size([1, 512, 1, 1, 1])
-            # )
-
-            self.fc = nn.Sequential(
-                nn.Linear(128, 16),
-                # nn.Linear(512, 16),
+                # output size = torch.Size([1, 32, 3, 3, 3])
+                nn.Conv3d(32, 128, 2),
                 nn.ReLU(),
-                nn.Linear(16, 1),
-            )
-
-    elif CUBE_USE == 7:
-
-        def __init__(self):
-            super().__init__()
-            # input size = torch.Size([1, 4, 7, 7, 7])
-            self.cnn = nn.Sequential(
-                nn.Conv3d(4, 32, 3),
-                nn.ReLU(),
-                # output size = torch.Size([1, 32, 5, 5, 5])
-                nn.Conv3d(32, 64, 3),
-                nn.ReLU(),
-                # output size = torch.Size([1, 64, 3, 3, 3])
-                nn.Conv3d(64, 128, 3),
-                nn.ReLU(),
-                # output size = torch.Size([1, 128, 1, 1, 1])
-            )
-
-            self.fc = nn.Sequential(
-                nn.Linear(128, 16),
-                nn.ReLU(),
-                nn.Linear(16, 1),
-            )
-
-    elif CUBE_USE == 9:
-
-        def __init__(self):
-            super().__init__()
-            # input size = torch.Size([1, 4, 9, 9, 9])
-            self.cnn = nn.Sequential(
-                nn.Conv3d(4, 32, 3),
-                nn.ReLU(),
-                # output size = torch.Size([1, 32, 7, 7, 7])
-                nn.Conv3d(32, 64, 3),
-                nn.ReLU(),
-                # output size = torch.Size([1, 64, 5, 5, 5])
-                nn.Conv3d(64, 128, 3),
-                nn.ReLU(),
-                # output size = torch.Size([1, 128, 3, 3, 3])
-                nn.Conv3d(128, 256, 3),
+                # output size = torch.Size([1, 128, 2, 2, 2])
+                nn.Conv3d(128, 256, 2),
                 nn.ReLU(),
                 # output size = torch.Size([1, 256, 1, 1, 1])
             )
 
             self.fc = nn.Sequential(
-                nn.Linear(256, 64),
-                nn.ReLU(),
-                nn.Linear(64, 16),
+                nn.Linear(256, 16),
+                # nn.Linear(512, 16),
                 nn.ReLU(),
                 nn.Linear(16, 1),
             )
