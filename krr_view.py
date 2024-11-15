@@ -21,18 +21,9 @@ print("gamma:", args.gamma)
 print("alpha:", args.alpha)
 print("kernel:", args.kernel, flush=True)
 
-# view_dict = [
-#     "exc_over_dm_b3lyp_grids",
-#     "exc_over_dm_mrks_grids",
-#     "vxc_over_dm_mrks_grids",
-# ]
-
 view_dict = {
-    "b3lyp": "exc_over_dm_b3lyp_grids",
-    "cc": "exc_over_dm_b3lyp_grids+exc_over_dm_cc_2_grids+exc_over_dm_cc_1_j_grids+exc_over_dm_cc_1_k_grids",
+    "cc": "exc_over_dm_cc_grids",
 }
-# "exc_over_dm_cc_1_j_grids"
-# "exc_over_dm_cc_1_k_grids"
 
 (
     input_dict,
@@ -54,9 +45,6 @@ krr = KernelRidge(alpha=args.alpha, gamma=args.gamma, kernel="precomputed")
 x_all = {}
 y_all = {}
 w_all = {}
-# x_neighborhood = {}
-# y_neighborhood = {}
-# w_neighborhood = {}
 coor_all = {}
 name_all = {}
 dual_coef = {}
@@ -107,9 +95,9 @@ energy_correct_sum = 0
 
 for index_ in x_keys:
     if index_ not in [
-        # "0_0_0_0",
-        # "1_1_1_1",
-        # "2_2_2_2",
+        "0_0_0_0",
+        "1_1_1_1",
+        "2_2_2_2",
         f"{len(hashtable)//2}_{len(hashtable)//2}_{len(hashtable)//2}_{len(hashtable)//2}",
     ]:
         continue
