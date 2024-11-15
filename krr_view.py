@@ -95,10 +95,10 @@ energy_correct_sum = 0
 
 for index_ in x_keys:
     if index_ not in [
-        "0_0_0_0",
-        "1_1_1_1",
-        "2_2_2_2",
-        f"{len(hashtable)//2}_{len(hashtable)//2}_{len(hashtable)//2}_{len(hashtable)//2}",
+        "0_0",
+        "1_1",
+        "2_2",
+        f"{len(hashtable)//2}_{len(hashtable)//2}",
     ]:
         continue
 
