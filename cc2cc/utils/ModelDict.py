@@ -70,23 +70,7 @@ class ModelDict:
         self.model_dict["size"] = {}
         self.optimizer_dict = {}
         self.scheduler_dict = {}
-
-        if STRUCTURE == "krr":
-            database_model = DataBase(
-                ["methane"],
-                [0],
-                [1],
-                [0],
-                "cc-pVDZ",
-                2**15,
-                device,
-                precision,
-            )
-            self.model: torch.nn.Module = Model(
-                database_model.data_gpu["methane_cc-pVDZ_0_1_0.0000"][0]["input"]
-            ).to(device)
-        else:
-            self.model: torch.nn.Module = Model().to(device)
+        self.model: torch.nn.Module = Model().to(device)
 
         if precision == "float64":
             self.model.double()
@@ -107,7 +91,6 @@ class ModelDict:
             )
 
         self.loss_multiplier = 1.0
-
         self.loss_ene = torch.nn.L1Loss()
         # self.loss_ene = torch.nn.MSELoss()
 

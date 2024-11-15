@@ -23,11 +23,11 @@ else:
 
 ORIENTATION_NUMBER_DICT = {"x": 0, "y": 1, "z": 2}
 
-CUBE_USE = os.environ.get("DFT2CC_CUBE_USE")
-if CUBE_USE is None:
-    CUBE_SIZE = 5
+CUBE_SIZE = os.environ.get("DFT2CC_CUBE_SIZE")
+if CUBE_SIZE is None:
+    CUBE_SIZE = 3
 else:
-    CUBE_SIZE = int(CUBE_USE)
+    CUBE_SIZE = int(CUBE_SIZE)
 CUBE_MIDDLE = CUBE_SIZE // 2
 CUBE_LEN = 0.1
 

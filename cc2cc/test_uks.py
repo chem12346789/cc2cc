@@ -25,7 +25,7 @@ class TEST_DATA:
         self.basis = basis
         self.if_basis_str = if_basis_str
 
-        # rotate(molecular)
+        rotate(molecular)
 
         self.mol = pyscf.M(
             atom=molecular,
