@@ -60,9 +60,9 @@ model_para = {
 
 center_piont = [-0.01, -0.001, 0.001, 0.01]
 hashtable = append(
-    np.linspace(-1, 0, 11)[:-1],
+    np.linspace(-10, 0, 101)[:-1],
     center_piont,
-    np.linspace(0, 1, 11)[1:],
+    np.linspace(0, 10, 101)[1:],
 )
 list_1 = list(range(-len(center_piont) // 2 + 1, len(center_piont) // 2, 1))
 list_2 = [-len(hashtable) // 2, len(hashtable) // 2]
@@ -102,15 +102,9 @@ for index_ in x_keys:
 
     krr.alpha = args.alpha
     krr.kernel_type = "rbf"
-    if (
-        int(index_.split("_")[0]) in list_1
-        and int(index_.split("_")[1]) in list_1
-    ):
+    if int(index_.split("_")[0]) in list_1 and int(index_.split("_")[1]) in list_1:
         krr.gamma = args.gamma[0]
-    elif (
-        int(index_.split("_")[0]) in list_2
-        or int(index_.split("_")[1]) in list_2
-    ):
+    elif int(index_.split("_")[0]) in list_2 or int(index_.split("_")[1]) in list_2:
         krr.gamma = args.gamma[0] if len(args.gamma) <= 2 else args.gamma[2]
     else:
         krr.gamma = args.gamma[0] if len(args.gamma) <= 1 else args.gamma[1]

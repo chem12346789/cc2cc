@@ -86,9 +86,6 @@ for (
     x_all = {}
     y_all = {}
     w_all = {}
-    # x_neighborhood = {}
-    # y_neighborhood = {}
-    # w_neighborhood = {}
     dual_coef = {}
 
     for key in keys_list:
