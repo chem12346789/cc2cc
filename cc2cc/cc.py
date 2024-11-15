@@ -144,14 +144,17 @@ def cc(molecular, name, args):
         coor_cube[p] = coords_cube.copy()
         coords_cube = coords_cube.reshape(-1, 3)
 
-        ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
-        rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="GGA")
-        rho_cube_p_norm = np.zeros((2, CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
+        ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=2)
+        rho_cube_p = pyscf.dft.numint.eval_rho(
+            mol, ao_cube, dm1_cc, xctype="mGGA", with_lapl=False
+        )
+        rho_cube_p_norm = np.zeros((3, CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
         rho_cube_p_norm[0, :] = rho_cube_p[0, :]
         rho_cube_p_norm[1, :] = (
             rho_cube_p[1, :] ** 2 + rho_cube_p[2, :] ** 2 + rho_cube_p[3, :] ** 2
         )
-        rho_cube[p] = rho_cube_p_norm.reshape(2, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+        rho_cube_p_norm[2, :] = rho_cube_p[4, :]
+        rho_cube[p] = rho_cube_p_norm.reshape(3, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
     np.savez_compressed(
         DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
@@ -271,13 +274,14 @@ def cc_change_cube(molecular, name, args):
             coords_cube = coords_cube.reshape(-1, 3)
 
             ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
-            rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="GGA")
-            rho_cube_p_norm = np.zeros((2, CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
+            rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="mGGA")
+            rho_cube_p_norm = np.zeros((3, CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
             rho_cube_p_norm[0, :] = rho_cube_p[0, :]
             rho_cube_p_norm[1, :] = (
                 rho_cube_p[1, :] ** 2 + rho_cube_p[2, :] ** 2 + rho_cube_p[3, :] ** 2
             )
-            rho_cube[p] = rho_cube_p_norm.reshape(2, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+            rho_cube_p_norm[2, :] = rho_cube_p[4, :]
+            rho_cube[p] = rho_cube_p_norm.reshape(3, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
         np.savez_compressed(
             DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
