@@ -203,17 +203,18 @@ if __name__ == "__main__":
 
                 ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
                 rho_cube_p = pyscf.dft.numint.eval_rho(
-                    mol, ao_cube, dm1_cc, xctype="GGA"
+                    mol, ao_cube, dm1_cc, xctype="mGGA"
                 )
-                rho_cube_p_norm = np.zeros((2, CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
+                rho_cube_p_norm = np.zeros((3, CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
                 rho_cube_p_norm[0, :] = rho_cube_p[0, :]
                 rho_cube_p_norm[1, :] = (
                     rho_cube_p[1, :] ** 2
                     + rho_cube_p[2, :] ** 2
                     + rho_cube_p[3, :] ** 2
                 ) ** (1 / 2)
+                rho_cube_p_norm[2, :] = rho_cube_p[4, :]
                 rho_cube[p] = rho_cube_p_norm.reshape(
-                    2, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE
+                    3, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE
                 )
 
                 # if np.linalg.norm(rho_cube[p] - rho_cube_save[p]) > 1e-10:
