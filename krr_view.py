@@ -145,6 +145,7 @@ for index_ in x_keys:
             distances_ = distances[argsort_]
             name_ = name[indices[argsort_]]
             max_y = np.max(np.abs(energy - energy[:, [0]])) * 627.509
+            print()
             print(
                 np.sum(
                     (x[indices[argsort_]] - x[indices[argsort_]][[0], :, :]) ** 2,
