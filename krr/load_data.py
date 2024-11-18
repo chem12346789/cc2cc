@@ -90,13 +90,19 @@ def load_data(
 
         input_[:, 0, :, :, :] = input_[:, 0, :, :, :]
         input_[:, 1, :, :, :] = input_[:, 1, :, :, :] ** (1 / 2)
-        input_ = input_.reshape(-1, (CUBE_USE) ** 3 * 2)
+        input_[:, 2, :, :, :] = input_[:, 2, :, :, :]
+        print(
+            f"input, \n"
+            f"max: {np.max(input_[:, 0, :, :, :])}, min: {np.min(input_[:, 0, :, :, :])}\n"
+            f"max: {np.max(input_[:, 1, :, :, :])}, min: {np.min(input_[:, 1, :, :, :])}\n"
+            f"max: {np.max(input_[:, 2, :, :, :])}, min: {np.min(input_[:, 2, :, :, :])}\n"
+        )
+        input_ = input_.reshape(-1, (CUBE_USE) ** 3 * 3)
         # input_ = np.transpose(data["rho_inv_4_norm"], (1, 0))
 
         input_dict[name] = input_
         output_dict[name] = output_
         weights_dict[name] = weights_
-        print(f"max input: {np.max(input_)}, min input: {np.min(input_)}")
 
         coords_cube = coords_cube.reshape(-1, (CUBE_USE) ** 3, 3)
         coords_dict[name] = coords_cube

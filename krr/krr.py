@@ -26,11 +26,13 @@ def hash_value(input_, hashtable):
     """
     index_round0 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 0], hashtable)
     index_round1 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 1], hashtable)
+    index_round2 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 2], hashtable)
 
     if index_round0 == -len(hashtable) // 2 or index_round0 == len(hashtable) // 2:
         index_round1 = np.sign(index_round1) * len(hashtable) // 2
+        index_round2 = np.sign(index_round2) * len(hashtable) // 2
 
-    return f"{index_round0}_{index_round1}"
+    return f"{index_round0}_{index_round1}_{index_round2}"
 
 
 @njit(parallel=True)

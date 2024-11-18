@@ -50,6 +50,7 @@ def cc(molecular, name, args):
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
     rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
     exc_over_dm_cc_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0]
+    exc_over_dm_b3lyp_grids = exc_over_dm_cc_grids.copy()
     rho_cc_1 = np.zeros((3, len(grids.coords)))
     rho_cc_2 = np.zeros((3, 3, len(grids.coords)))
     shls_slice = (0, mol.nbas)
@@ -118,7 +119,7 @@ def cc(molecular, name, args):
     error = np.sum(exc_over_dm_cc_grids * grids.weights * rho_cc[0]) - error_energy
     print(f"error_energy: {AU2KCALMOL * error_energy}, Error: {AU2KCALMOL * error}")
 
-    rho_cube = np.zeros((len(grids.coords), 2, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+    rho_cube = np.zeros((len(grids.coords), 3, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
     coor_cube = np.zeros((len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
     for p, p_coords in enumerate(grids.coords):
         if p * 10 % len(grids.coords) == 0:
@@ -166,6 +167,8 @@ def cc(molecular, name, args):
         weights_matrix=grids.vector_to_matrix(grids.weights),
         exc_over_dm_cc_grids=exc_over_dm_cc_grids,
         exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
+        exc_over_dm_b3lyp_grids=exc_over_dm_b3lyp_grids,
+        exc_over_dm_b3lyp_grids_matrix=grids.vector_to_matrix(exc_over_dm_b3lyp_grids),
         rho_cube=rho_cube,
         coor_cube=coor_cube,
         coor=grids.coords,
@@ -185,6 +188,7 @@ def cc_change_cube(molecular, name, args):
         dm1_cc = data["dm_cc"]
         rho_cc = data["rho_inv_4_norm"]
         exc_over_dm_cc_grids = data["exc_over_dm_cc_grids"]
+        exc_over_dm_b3lyp_grids = data["exc_over_dm_b3lyp_grids"]
         error_energy = data["error_energy"]
         weights = data["weights"]
         weights_matrix = data["weights_matrix"]
@@ -237,7 +241,7 @@ def cc_change_cube(molecular, name, args):
         #             ao_value[iter_1 + 1], c1[iter_2]
         #         )
 
-        rho_cube = np.zeros((len(grids.coords), 2, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        rho_cube = np.zeros((len(grids.coords), 3, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
         coor_cube = np.zeros((len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
         for p, p_coords in enumerate(grids.coords):
             if p * 10 % len(grids.coords) == 0:
@@ -274,7 +278,9 @@ def cc_change_cube(molecular, name, args):
             coords_cube = coords_cube.reshape(-1, 3)
 
             ao_cube = pyscf.dft.numint.eval_ao(mol, coords_cube, deriv=1)
-            rho_cube_p = pyscf.dft.numint.eval_rho(mol, ao_cube, dm1_cc, xctype="mGGA")
+            rho_cube_p = pyscf.dft.numint.eval_rho(
+                mol, ao_cube, dm1_cc, xctype="mGGA", with_lapl=False
+            )
             rho_cube_p_norm = np.zeros((3, CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
             rho_cube_p_norm[0, :] = rho_cube_p[0, :]
             rho_cube_p_norm[1, :] = (
@@ -293,6 +299,10 @@ def cc_change_cube(molecular, name, args):
             weights_matrix=weights_matrix,
             exc_over_dm_cc_grids=exc_over_dm_cc_grids,
             exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
+            exc_over_dm_b3lyp_grids=exc_over_dm_b3lyp_grids,
+            exc_over_dm_b3lyp_grids_matrix=grids.vector_to_matrix(
+                exc_over_dm_b3lyp_grids
+            ),
             rho_cube=rho_cube,
             coor_cube=coor_cube,
             coor=grids.coords,
@@ -330,6 +340,8 @@ def cc_add_data(molecular, name, args):
         )
         grids = Grid(mol, level=LEVEL, period=PERIOD)
 
+        exc_over_dm_b3lyp_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0]
+
         np.savez_compressed(
             DATA_PATH / f"data_{name}_{LEVEL}_{PERIOD}.npz",
             e_cc=e_cc,
@@ -340,7 +352,12 @@ def cc_add_data(molecular, name, args):
             weights_matrix=grids.vector_to_matrix(grids.weights),
             exc_over_dm_cc_grids=exc_over_dm_cc_grids,
             exc_over_dm_cc_grids_matrix=grids.vector_to_matrix(exc_over_dm_cc_grids),
+            exc_over_dm_b3lyp_grids=exc_over_dm_b3lyp_grids,
+            exc_over_dm_b3lyp_grids_matrix=grids.vector_to_matrix(
+                exc_over_dm_b3lyp_grids
+            ),
             rho_cube=rho_cube,
             coor_cube=coor_cube,
+            coor=grids.coords,
             error_energy=error_energy,
         )
