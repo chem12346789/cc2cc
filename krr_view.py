@@ -127,9 +127,16 @@ for index_ in x_keys:
             np.einsum("ij,i->ij", y[indices], x[:, ARRAY_USE_MIDDLE] * w), axis=1
         )
 
-        for max_x_ in [1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-8]:
+        for if_kcal, max_x_ in product(
+            [False, True],
+            [1e-2, 1e-4, 1e-6, 1e-8],
+        ):
             print("\n begin of print", flush=True)
-            Path(f"plot/{name_plot}-{max_x_}/plot/").mkdir(parents=True, exist_ok=True)
+            if if_kcal:
+                plot_name = f"{name_plot}-{max_x_}-kcal"
+            else:
+                plot_name = f"{name_plot}-{max_x_}-au"
+            Path(f"plot/{plot_name}/plot/").mkdir(parents=True, exist_ok=True)
             max_x = max_x_**2 * x.shape[1]
 
             mean_of_distances = np.max(distances, axis=1)
@@ -140,21 +147,21 @@ for index_ in x_keys:
             plot_number = 16
             argsort_ = np.argsort(mean_of_distances * var_y)[::-1][:plot_number]
 
-            energy = np.einsum(
-                "ij,i->ij", y[indices[argsort_]], (x[:, ARRAY_USE_MIDDLE] * w)[argsort_]
-            )
+            if if_kcal:
+                energy = np.einsum(
+                    "ij,i->ij",
+                    y[indices[argsort_]],
+                    (x[:, ARRAY_USE_MIDDLE] * w)[argsort_],
+                )
+            else:
+                energy = y[indices[argsort_]]
             distances_ = distances[argsort_]
             name_ = name[indices[argsort_]]
             max_y = np.max(np.abs(energy - energy[:, [0]])) * 627.509
-            print(
-                np.sum(
-                    (x[indices[argsort_]] - x[indices[argsort_]][[0], :, :]) ** 2,
-                    axis=1,
-                ),
-                flush=True,
-            )
-            print(distances_, flush=True)
-            print(np.max(np.abs((energy - energy[0]) * 627.509)), flush=True)
+            if if_kcal:
+                print(f"{np.abs((energy - energy[0]) * 627.509)} kcal/mol", flush=True)
+            else:
+                print(f"{np.abs((energy - energy[0]) * 627.509)} au", flush=True)
             print(name_, flush=True)
 
             INDEX_CHECK = 0
@@ -180,22 +187,24 @@ for index_ in x_keys:
                     x_name_dict[x_].append([name_i, energy_i])
                 else:
                     x_name_dict[x_] = [[name_i, energy_i]]
-                plt.scatter(x_, energy_i, c="b")
 
             for key_, value_ in x_name_dict.items():
                 for j in value_:
                     plt.scatter(float(j[0].split("_")[4]), j[1], c="r")
                 plt.xticks(rotation=90)
                 plt.xlabel(r"$\Delta$ x ($\AA$)")
-                plt.ylabel(r"Energy (kcal/mol)")
+                if if_kcal:
+                    plt.ylabel(r"Energy (kcal/mol)")
+                else:
+                    plt.ylabel(r"Energy (au)")
                 plt.xlim(-0.575, 0.575)
                 plt.xticks(np.arange(-0.5, 0.6, 0.1))
                 plt.savefig(
-                    f"plot/{name_plot}-{max_x_}/plot/{key_}_{len(value_)}.pdf",
+                    f"plot/{plot_name}/plot/{key_}_{len(value_)}.pdf",
                     bbox_inches="tight",
                 )
                 plt.savefig(
-                    f"plot/{name_plot}-{max_x_}/plot/{key_}_{len(value_)}.png",
+                    f"plot/{plot_name}/plot/{key_}_{len(value_)}.png",
                     bbox_inches="tight",
                     dpi=300,
                 )
@@ -259,15 +268,14 @@ for index_ in x_keys:
                 axes[0, 0].scatter([-1], [-1], c=c, label=i)
 
             plt.xlabel("Distance of cube")
-            plt.ylabel(r"$\Delta$ Energy (kcal/mol)")
+            if if_kcal:
+                plt.ylabel(r"Energy (kcal/mol)")
+            else:
+                plt.ylabel(r"Energy (au)")
             plt.legend(loc="best")
 
-            plt.savefig(
-                f"plot/{name_plot}-{max_x_}/sub_test.pdf", dpi=300, bbox_inches="tight"
-            )
-            plt.savefig(
-                f"plot/{name_plot}-{max_x_}/sub_test.png", dpi=300, bbox_inches="tight"
-            )
+            plt.savefig(f"plot/{plot_name}/sub_test.pdf", dpi=300, bbox_inches="tight")
+            plt.savefig(f"plot/{plot_name}/sub_test.png", dpi=300, bbox_inches="tight")
             plt.clf()
 
             plt.rcParams["figure.figsize"] = np.array([1.25, 1.25]) * 520 / 72
@@ -326,13 +334,9 @@ for index_ in x_keys:
                 )
 
             for i, c in color_dict.items():
-                axes[0, 0].scatter([-1], [-1], c=c, label=i)
-            plt.legend()
+                axes[-1, -1].scatter([-1], [-1], c=c, label=i)
+            axes[-1, -1].legend(loc="best")
 
-            plt.savefig(
-                f"plot/{name_plot}-{max_x_}/test.pdf", dpi=300, bbox_inches="tight"
-            )
-            plt.savefig(
-                f"plot/{name_plot}-{max_x_}/test.png", dpi=300, bbox_inches="tight"
-            )
+            plt.savefig(f"plot/{plot_name}/test.pdf", dpi=300, bbox_inches="tight")
+            plt.savefig(f"plot/{plot_name}/test.png", dpi=300, bbox_inches="tight")
             plt.clf()
