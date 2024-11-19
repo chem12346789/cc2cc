@@ -23,7 +23,6 @@ print("kernel:", args.kernel, flush=True)
 
 view_dict = {
     "cc": "exc_over_dm_cc_grids",
-    "b3lyp": "exc_over_dm_b3lyp_grids",
 }
 
 (
@@ -96,10 +95,10 @@ energy_correct_sum = 0
 
 for index_ in x_keys:
     if index_ not in [
-        "0_0_0",
-        "1_1_1",
-        "2_2_2",
-        f"{len(hashtable)//2}_{len(hashtable)//2}_{len(hashtable)//2}",
+        "0_0",
+        "1_1",
+        "2_2",
+        f"{len(hashtable)//2}_{len(hashtable)//2}",
     ]:
         continue
 
@@ -127,7 +126,7 @@ for index_ in x_keys:
             np.einsum("ij,i->ij", y[indices], x[:, ARRAY_USE_MIDDLE] * w), axis=1
         )
 
-        for max_x_ in [1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-8]:
+        for max_x_ in [1e-2, 1e-3, 1e-4, 1e-5]:
             print("\n begin of print", flush=True)
             Path(f"plot/{name_plot}-{max_x_}/plot/").mkdir(parents=True, exist_ok=True)
             max_x = max_x_**2 * x.shape[1]
@@ -146,7 +145,6 @@ for index_ in x_keys:
             distances_ = distances[argsort_]
             name_ = name[indices[argsort_]]
             max_y = np.max(np.abs(energy - energy[:, [0]])) * 627.509
-            print()
             print(
                 np.sum(
                     (x[indices[argsort_]] - x[indices[argsort_]][[0], :, :]) ** 2,

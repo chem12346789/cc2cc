@@ -15,13 +15,13 @@ export OPENBLAS_NUM_THREADS=12
 
 export PYSCF_MAX_MEMORY=40000
 export PYTHONPATH=~/python:$PYTHONPATH
-export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=~/home/chenzihao/anaconda3/envs/pyscf/lib:$LD_LIBRARY_PATH
 export DFT2CC_DATA_PATH=~/workspace/cc2cc/data/grids_dft/
-export DFT2CC_PERIOD=1
 
 export NVIDIA_VISIBLE_DEVICES=1
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')
 # export CUDA_VISIBLE_DEVICES=NUMBER_OF_GPU
 # export DFT2CC_STRUCTURE=unet
 
-nohup bash -c '~/anaconda3/envs/pyscf/bin/python krr_view.py --alpha 1e-8 --gamma 1000 0.1 0.1 --distance_list -0.5 0.5 11 --molecular_list methane ethane ethylene acetylene' >log/view.log &
+~/anaconda3/envs/pyscf/bin/python krr_view.py --alpha 1e-8 --gamma 1000 0.1 0.1 --distance_list -0.5 0.5 11 --molecular_list methane ethane ethylene acetylene
+# nohup bash -c '~/anaconda3/envs/pyscf/bin/python krr_view.py --alpha 1e-8 --gamma 1000 0.1 0.1 --distance_list -0.5 0.5 11 --molecular_list methane ethane ethylene acetylene' >log/view.out &
