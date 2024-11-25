@@ -17,7 +17,7 @@ class Model(nn.Module):
             super().__init__()
             # input size = torch.Size([1, 2, 3, 3, 3])
             self.cnn = nn.Sequential(
-                nn.Conv3d(2, 32, 2),
+                nn.Conv3d(4, 32, 2),
                 nn.ReLU(),
                 # output size = torch.Size([1, 32, 2, 2, 2])
                 nn.Conv3d(32, 256, 2),
@@ -37,13 +37,13 @@ class Model(nn.Module):
             super().__init__()
             # input size = torch.Size([1, 2, 5, 5, 5])
             self.cnn = nn.Sequential(
-                nn.Conv3d(2, 8, 2),
+                nn.Conv3d(4, 32, 2),
                 nn.ReLU(),
                 # output size = torch.Size([1, 8, 4, 4, 4])
-                nn.Conv3d(8, 32, 2),
+                nn.Conv3d(32, 64, 2),
                 nn.ReLU(),
                 # output size = torch.Size([1, 32, 3, 3, 3])
-                nn.Conv3d(32, 128, 2),
+                nn.Conv3d(64, 128, 2),
                 nn.ReLU(),
                 # output size = torch.Size([1, 128, 2, 2, 2])
                 nn.Conv3d(128, 256, 2),

@@ -94,8 +94,8 @@ if __name__ == "__main__":
         if molecular is None:
             print(f"Skip: {name:>40}")
             continue
-        # rotate(molecular)
-        rotation = rotate(molecular, rotation="r")
+        # rotate(molecular, verbose=True)
+        rotation = rotate(molecular, rotation="r", verbose=True)
 
         mol = pyscf.M(
             atom=molecular,
@@ -173,7 +173,8 @@ if __name__ == "__main__":
             rho_cc_2[1, 0, :] = rho_cc_2[0, 1, :]
             rho_cc_2[2, 0, :] = rho_cc_2[0, 2, :]
             rho_cc_2[2, 1, :] = rho_cc_2[1, 2, :]
-            rho_cube = np.zeros((len(coords), 2, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+
+            rho_cube = np.zeros((len(coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
             coor_cube = np.zeros((len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
             rho_cube_save = data["rho_cube"]
             coor_cube_save = data["coor_cube"]
@@ -205,38 +206,32 @@ if __name__ == "__main__":
                 rho_cube_p = pyscf.dft.numint.eval_rho(
                     mol, ao_cube, dm1_cc, xctype="mGGA"
                 )
-                rho_cube_p_norm = np.zeros((3, CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
-                rho_cube_p_norm[0, :] = rho_cube_p[0, :]
-                rho_cube_p_norm[1, :] = (
-                    rho_cube_p[1, :] ** 2
-                    + rho_cube_p[2, :] ** 2
-                    + rho_cube_p[3, :] ** 2
-                ) ** (1 / 2)
-                rho_cube_p_norm[2, :] = rho_cube_p[4, :]
-                rho_cube[p] = rho_cube_p_norm.reshape(
-                    3, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE
+
+                # rho_cube_p_norm = np.zeros((3, CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
+                # rho_cube_p_norm[0, :] = rho_cube_p[0, :]
+                # rho_cube_p_norm[1, :] = (
+                #     rho_cube_p[1, :] ** 2
+                #     + rho_cube_p[2, :] ** 2
+                #     + rho_cube_p[3, :] ** 2
+                # ) ** (1 / 2)
+                # rho_cube_p_norm[2, :] = rho_cube_p[4, :]
+                # rho_cube[p] = np.reshape(
+                #     rho_cube_p_norm, (3, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+                # )
+
+                exc_slater = pyscf.dft.libxc.eval_xc("SLATER,", rho_cube_p[0])[0]
+                exc_b88 = pyscf.dft.libxc.eval_xc("B88,", rho_cube_p[:4])[0]
+                exc_lyp = pyscf.dft.libxc.eval_xc(",LYP", rho_cube_p[:4])[0]
+                exc_vwn = pyscf.dft.libxc.eval_xc(",VWN3", rho_cube_p[0])[0]
+                rho_cube_p_norm = np.zeros((4, CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
+                rho_cube_p_norm[0, :] = exc_slater
+                rho_cube_p_norm[1, :] = exc_b88
+                rho_cube_p_norm[2, :] = exc_lyp
+                rho_cube_p_norm[3, :] = exc_vwn
+                rho_cube[p] = np.reshape(
+                    rho_cube_p_norm, (4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
                 )
 
-                # if np.linalg.norm(rho_cube[p] - rho_cube_save[p]) > 1e-10:
-                #     print(
-                #         f"Error: {np.linalg.norm(coor_cube[p] - coor_cube_save[p]):.2e}"
-                #     )
-                #     print(
-                #         f"Error: {coor_cube[p][0, 0, 0, :]}"
-                #         f"{rotation @ coor_cube_save[p][0, 0, 0, :]}"
-                #     )
-                #     print(
-                #         f"Error: {coor_cube[p][1, 1, 1, :]}"
-                #         f"{rotation @ coor_cube_save[p][1, 1, 1, :]}"
-                #     )
-                #     print(
-                #         f"Error: {rho_cube[p][:, 0, 0, 0]}"
-                #         f"{rho_cube_save[p][:, 0, 0, 0]}"
-                #     )
-                #     print(
-                #         f"Error: {rho_cube[p][:, 1, 1, 1]}"
-                #         f"{rho_cube_save[p][:, 1, 1, 1]}"
-                #     )
             input_mat = torch.tensor(rho_cube, dtype=modeldict.dtype).to("cuda")
         elif STRUCTURE == "unet":
             input_mat = process_input(rho_cc, grids)

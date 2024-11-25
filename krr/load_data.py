@@ -87,15 +87,16 @@ def load_data(
             CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
             CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
         ]
-
-        input_[:, 0, :, :, :] = input_[:, 0, :, :, :]
         input_[:, 1, :, :, :] = input_[:, 1, :, :, :] ** (1 / 2)
-        input_[:, 2, :, :, :] = input_[:, 2, :, :, :]
+
         print(
+            f"output, \n"
+            f"max: {np.max(output_)}, min: {np.min(output_)}\n"
             f"input, \n"
             f"max: {np.max(input_[:, 0, :, :, :])}, min: {np.min(input_[:, 0, :, :, :])}\n"
             f"max: {np.max(input_[:, 1, :, :, :])}, min: {np.min(input_[:, 1, :, :, :])}\n"
             f"max: {np.max(input_[:, 2, :, :, :])}, min: {np.min(input_[:, 2, :, :, :])}\n"
+            # f"max: {np.max(input_[:, 3, :, :, :])}, min: {np.min(input_[:, 3, :, :, :])}\n"
         )
         input_ = input_.reshape(-1, (CUBE_USE) ** 3 * 3)
         # input_ = np.transpose(data["rho_inv_4_norm"], (1, 0))

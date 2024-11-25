@@ -210,13 +210,27 @@ class DataBase:
         else:
             if "3d" in STRUCTURE:
                 input_mat = data["rho_cube"]
-                input_mat[:, 0, :, :, :] = input_mat[:, 0, :, :, :]
-                input_mat[:, 1, :, :, :] = input_mat[:, 1, :, :, :] ** (1 / 2)
             else:
                 input_mat = data["rho_inv_4_norm"]
 
             output_mat = data["exc_over_dm_cc_grids"]
             weights_mat = data["weights"]
+
+            if "3d" in STRUCTURE:
+                print(
+                    AU2KCALMOL
+                    * np.sum(
+                        output_mat
+                        * (
+                            input_mat[
+                                :, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE
+                            ]
+                            / (-3 / 4 * (3 / np.pi) ** (1 / 3))
+                        )
+                        ** 3
+                        * weights_mat
+                    )
+                )
 
             input_ = {}
             weight_ = {}

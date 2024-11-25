@@ -175,45 +175,25 @@ class ModelDict:
         #     )
 
         if "3d" in STRUCTURE:
-            if TEST:
-                loss_ene_tot = torch.sum(
-                    output_mat_real[:, 0]
-                    * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
-                    * weight[:, 0]
+            loss_ene_tot = torch.sum(
+                (output_mat_real[:, 0] - output_mat[:, 0])
+                * (
+                    input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
+                    / (-3 / 4 * (3 / np.pi) ** (1 / 3))
                 )
-            else:
-                loss_ene_tot = torch.sum(
-                    (output_mat_real[:, 0] - output_mat[:, 0])
-                    * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
-                    * weight[:, 0]
-                )
+                ** 3
+                * weight[:, 0]
+            )
         elif "unet" in STRUCTURE:
-            if TEST:
-                loss_ene_tot = torch.sum(
-                    output_mat_real * input_mat[:, [0], :, :] * weight
-                )
-            else:
-                loss_ene_tot = torch.sum(
-                    (output_mat_real - output_mat) * input_mat[:, [0], :, :] * weight
-                )
-        elif "krr" in STRUCTURE:
-            if TEST:
-                loss_ene_tot = torch.sum(output_mat_real * input_mat[:, 0] * weight)
-            else:
-                loss_ene_tot = torch.sum(
-                    (output_mat_real - output_mat) * input_mat[:, 0] * weight
-                )
+            loss_ene_tot = torch.sum(
+                (output_mat_real - output_mat) * input_mat[:, [0], :, :] * weight
+            )
         else:
-            if TEST:
-                loss_ene_tot = torch.sum(
-                    output_mat_real[:, 0] * input_mat[:, 0] * weight[:, 0]
-                )
-            else:
-                loss_ene_tot = torch.sum(
-                    (output_mat_real[:, 0] - output_mat[:, 0])
-                    * input_mat[:, 0]
-                    * weight[:, 0]
-                )
+            loss_ene_tot = torch.sum(
+                (output_mat_real[:, 0] - output_mat[:, 0])
+                * input_mat[:, 0]
+                * weight[:, 0]
+            )
 
         return loss_ene, loss_ene_tot
 
