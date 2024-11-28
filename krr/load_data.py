@@ -87,7 +87,6 @@ def load_data(
             CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
             CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
         ]
-        input_[:, 1, :, :, :] = input_[:, 1, :, :, :] ** (1 / 2)
 
         print(
             f"output, \n"
@@ -96,10 +95,10 @@ def load_data(
             f"max: {np.max(input_[:, 0, :, :, :])}, min: {np.min(input_[:, 0, :, :, :])}\n"
             f"max: {np.max(input_[:, 1, :, :, :])}, min: {np.min(input_[:, 1, :, :, :])}\n"
             f"max: {np.max(input_[:, 2, :, :, :])}, min: {np.min(input_[:, 2, :, :, :])}\n"
-            # f"max: {np.max(input_[:, 3, :, :, :])}, min: {np.min(input_[:, 3, :, :, :])}\n"
+            f"max: {np.max(input_[:, 3, :, :, :])}, min: {np.min(input_[:, 3, :, :, :])}\n"
         )
-        input_ = input_.reshape(-1, (CUBE_USE) ** 3 * 3)
-        # input_ = np.transpose(data["rho_inv_4_norm"], (1, 0))
+        input_ = input_.reshape(-1, (CUBE_USE) ** 3 * 4)
+        print(input_.shape)
 
         input_dict[name] = input_
         output_dict[name] = output_
@@ -113,17 +112,17 @@ def load_data(
             print(
                 AU2KCALMOL
                 * np.sum(
+                    input_dict[name][:, ARRAY_USE_MIDDLE]
+                    * output_dict[name]
+                    * weights_dict[name]
+                ),
+                AU2KCALMOL
+                * np.sum(
                     np.abs(
                         input_dict[name][:, ARRAY_USE_MIDDLE]
                         * output_dict[name]
                         * weights_dict[name]
                     )
-                ),
-                AU2KCALMOL
-                * np.sum(
-                    input_dict[name][:, ARRAY_USE_MIDDLE]
-                    * output_dict[name]
-                    * weights_dict[name]
                 ),
             )
     return input_dict, output_dict, weights_dict, coords_dict, keys_list

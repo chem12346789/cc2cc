@@ -12,7 +12,7 @@ import faiss
 from sklearn.kernel_ridge import KernelRidge
 
 from krr import add_args, load_data, hash_value, append
-from cc2cc.utils import ARRAY_USE_MIDDLE, Mol, rotate
+from cc2cc.utils import ARRAY_USE_MIDDLE, DATA_PATH, Mol, rotate
 
 faiss.cvar.distance_compute_blas_threshold = 8000000
 
@@ -26,8 +26,9 @@ print("alpha:", args.alpha)
 print("kernel:", args.kernel, flush=True)
 
 view_dict = {
-    "cc": "exc_over_dm_cc_grids",
-    "b3lyp": "exc_over_dm_b3lyp_grids",
+    # "cc": "exc_over_dm_cc_grids",
+    # "b3lyp": "exc_over_dm_b3lyp_grids",
+    "mrks": "exc_over_dm_mrks_grids",
 }
 
 (
@@ -106,6 +107,8 @@ color_dict_atom = {
 PLOT_NUMBER = 16
 SEARCH_NUMBER = 100
 
+
+# for index_ in []:
 for index_ in x_keys:
     if index_ not in [
         "0_0_0",
@@ -159,7 +162,8 @@ for index_ in x_keys:
                 plot_name = f"{name_plot}-{max_x_}-kcal"
             else:
                 plot_name = f"{name_plot}-{max_x_}-au"
-            plot_path = Path(f"plot-gga/{plot_name}")
+            plot_path = Path(f"plot-{Path(DATA_PATH).parts[-1]}/{plot_name}")
+            print("Save to", plot_path, flush=True)
             (plot_path / "plot").mkdir(parents=True, exist_ok=True)
             max_x = max_x_**2 * x.shape[1]
 
@@ -172,8 +176,7 @@ for index_ in x_keys:
                 energy = np.einsum(
                     "ij,i->ij",
                     y[indices],
-                    x[:, ARRAY_USE_MIDDLE]
-                    * w,
+                    x[:, ARRAY_USE_MIDDLE] * w,
                 )
                 var_energy = np.var(energy, axis=1)
                 argsort_ = np.argsort(mean_of_distances * var_energy)[::-1][

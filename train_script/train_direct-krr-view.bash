@@ -9,14 +9,14 @@
 #SBATCH -o log/%j.log
 
 ## user's own commands below
-export OMP_NUM_THREADS=64
-export MKL_NUM_THREADS=64
-export OPENBLAS_NUM_THREADS=64
+export OMP_NUM_THREADS=32
+export MKL_NUM_THREADS=32
+export OPENBLAS_NUM_THREADS=32
 
 export PYSCF_MAX_MEMORY=40000
 export PYTHONPATH=~/python:$PYTHONPATH
 export LD_LIBRARY_PATH=~/home/chenzihao/anaconda3/envs/pyscf/lib:$LD_LIBRARY_PATH
-export DFT2CC_DATA_PATH=~/workspace/cc2cc/data/grids_dft_mix/
+export DFT2CC_DATA_PATH=~/workspace/cc2cc/data/grids_mrks/
 
 export NVIDIA_VISIBLE_DEVICES=1
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')

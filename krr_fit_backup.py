@@ -58,7 +58,7 @@ model_para = {
     "kernel_type": {},
 }
 
-hashtable = np.linspace(-5, 5, 101)
+hashtable = np.linspace(-6000, 6000, 2)
 list_1 = []
 list_2 = []
 print(hashtable, list_1, list_2)
@@ -114,11 +114,6 @@ for index_ in x_keys:
             train_size=50,
             random_state=42,
         )
-        (x_fitted, y_fitted, w_fitted) = (
-            np.empty_like(x_train),
-            np.empty_like(y_train),
-            np.empty_like(w_train),
-        )
 
         CONVERGE_STEP = 0
         for i_step in range(250):
@@ -140,27 +135,8 @@ for index_ in x_keys:
                 if CONVERGE_STEP == 1:
                     print("Converge.")
                     break
-            (
-                x_train,
-                y_train,
-                w_train,
-                x_test,
-                y_test,
-                w_test,
-                x_fitted,
-                y_fitted,
-                w_fitted,
-            ) = add_data(
-                krr,
-                x_train,
-                y_train,
-                w_train,
-                x_test,
-                y_test,
-                w_test,
-                x_fitted,
-                y_fitted,
-                w_fitted,
+            x_train, y_train, w_train, x_test, y_test, w_test = add_data(
+                krr, x_train, y_train, w_train, x_test, y_test, w_test
             )
 
     train_error = np.sum(

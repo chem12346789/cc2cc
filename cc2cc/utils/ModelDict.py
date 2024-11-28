@@ -23,9 +23,6 @@ elif STRUCTURE == "fc":
     from cc2cc.utils.model.fc_net import Model
 elif STRUCTURE == "unet":
     from cc2cc.utils.model.unet import Model
-elif STRUCTURE == "krr":
-    from cc2cc.utils.model.krr import Model
-    from cc2cc.utils.DataBase import DataBase
 
 
 class ModelDict:
@@ -70,12 +67,12 @@ class ModelDict:
         self.model_dict["size"] = {}
         self.optimizer_dict = {}
         self.scheduler_dict = {}
-        self.model: torch.nn.Module = Model().to(device)
 
+        self.model: torch.nn.Module = Model().to(device)
         if precision == "float64":
             self.model.double()
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
 
         if self.with_eval:
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -149,30 +146,8 @@ class ModelDict:
         input_mat = batch["input"]
         weight = batch["weight"]
         output_mat_real = batch["output"]
-
         output_mat = self.model(input_mat)
-
         loss_ene = self.loss_ene(output_mat, output_mat_real)
-
-        # if "3d" in STRUCTURE:
-        #     loss_ene = self.loss_ene(
-        #         output_mat
-        #         * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
-        #         * weight[:, 0],
-        #         output_mat_real
-        #         * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
-        #         * weight[:, 0],
-        #     )
-        # elif "unet" in STRUCTURE:
-        #     loss_ene = self.loss_ene(
-        #         output_mat * input_mat[:, [0], :, :] * weight,
-        #         output_mat_real * input_mat[:, [0], :, :] * weight,
-        #     )
-        # else:
-        #     loss_ene = self.loss_ene(
-        #         output_mat * input_mat[:, 0] * weight[:, 0],
-        #         output_mat_real * input_mat[:, 0] * weight[:, 0],
-        #     )
 
         if "3d" in STRUCTURE:
             loss_ene_tot = torch.sum(

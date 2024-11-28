@@ -26,16 +26,7 @@ def hash_value(input_, hashtable):
     """
     index_round0 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 0], hashtable)
     index_round1 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 1], hashtable)
-    index_round2 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 2], hashtable)
-    # index_round3 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 3], hashtable)
-
-    if index_round0 == -len(hashtable) // 2 or index_round0 == len(hashtable) // 2:
-        index_round1 = np.sign(index_round1) * len(hashtable) // 2
-        index_round2 = np.sign(index_round2) * len(hashtable) // 2
-        # index_round3 = np.sign(index_round3) * len(hashtable) // 2
-
-    return f"{index_round0}_{index_round1}_{index_round2}"
-    # return f"{index_round0}_{index_round1}_{index_round2}_{index_round3}"
+    return f"{index_round0}_{index_round1}"
 
 
 @njit(parallel=True)
@@ -118,10 +109,21 @@ def evaluate(krr, x_train, y_train, w_train, x_all, y_all, w_all):
     )
     print("test", b3lyp_error, "KCAL/MOL", flush=True)
     print("End of evaluate.\n", flush=True)
-    return error_krr, train_error
+    return np.abs(error_krr), np.abs(train_error)
 
 
-def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
+def add_data(
+    krr,
+    x_train,
+    y_train,
+    w_train,
+    x_test,
+    y_test,
+    w_test,
+    x_fitted,
+    y_fitted,
+    w_fitted,
+):
     """
     Add data which has large error.
     """
@@ -130,36 +132,66 @@ def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
         (y_test - krr.predict_data(x_test)) * w_test * x_test[:, ARRAY_USE_MIDDLE]
     )
 
-    index_add = (
+    index_add_test = (
         np.array([True] * len(error_test))
         if len(error_test) < 51
         else (error_test**2 > np.sort(error_test**2, axis=0)[-51])
     )
     print(
         np.array2string(
-            AU2KCALMOL * error_test[index_add],
+            AU2KCALMOL * error_test[index_add_test],
             formatter={"float_kind": lambda x: f"{x:.6f}"},
-        )
-    )
-    print(
+        ),
         np.array2string(
-            np.max(krr.kernel_matrix[index_add], axis=1),
+            AU2KCALMOL * (y_test - krr.predict_data(x_test))[index_add_test],
             formatter={"float_kind": lambda x: f"{x:.6f}"},
-        )
+        ),
+        np.array2string(
+            np.max(krr.kernel_matrix[index_add_test], axis=1),
+            formatter={"float_kind": lambda x: f"{x:.6f}"},
+        ),
     )
-    x_train = np.concatenate([x_train, x_test[index_add]])
-    y_train = np.concatenate([y_train, y_test[index_add]])
-    w_train = np.concatenate([w_train, w_test[index_add]])
-    x_test = x_test[~index_add]
-    y_test = y_test[~index_add]
-    w_test = w_test[~index_add]
+    x_train = np.concatenate([x_train, x_test[index_add_test]])
+    y_train = np.concatenate([y_train, y_test[index_add_test]])
+    w_train = np.concatenate([w_train, w_test[index_add_test]])
+    x_test = x_test[~index_add_test]
+    y_test = y_test[~index_add_test]
+    w_test = w_test[~index_add_test]
+
+    error_test = (
+        (y_test - krr.predict_data(x_test)) * w_test * x_test[:, ARRAY_USE_MIDDLE]
+    )
+    index_add_fitted = (
+        np.array([True] * len(error_test))
+        if len(error_test) < 51
+        else (error_test**2 < 1e-8**2)
+    )
+    x_fitted = np.concatenate([x_fitted, x_test[index_add_fitted]])
+    y_fitted = np.concatenate([y_fitted, y_test[index_add_fitted]])
+    w_fitted = np.concatenate([w_fitted, w_test[index_add_fitted]])
+    x_test = x_test[~index_add_fitted]
+    y_test = y_test[~index_add_fitted]
+    w_test = w_test[~index_add_fitted]
 
     print(
         "Length of x_train:",
         len(x_train),
         "Length of x_test:",
         len(x_test),
+        "Length of x_fitted:",
+        len(x_fitted),
         flush=True,
     )
     print("End of add data.\n", flush=True)
-    return x_train, y_train, w_train, x_test, y_test, w_test
+
+    return (
+        x_train,
+        y_train,
+        w_train,
+        x_test,
+        y_test,
+        w_test,
+        x_fitted,
+        y_fitted,
+        w_fitted,
+    )
