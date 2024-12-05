@@ -11,7 +11,6 @@ import wandb
 
 from cc2cc.utils import add_args, save_csv_loss
 from cc2cc.utils import DataBase, ModelDict
-from cc2cc.utils import STRUCTURE
 
 
 def train_model(train_str_dict, eval_str_dict):
@@ -76,7 +75,6 @@ def train_model(train_str_dict, eval_str_dict):
         "load": args.load,
         "jobid": os.environ.get("SLURM_JOB_ID"),
         "checkpoint": modeldict.dir_checkpoint.stem,
-        "structure": STRUCTURE,
     }
     print(experiment_dict)
     experiment.config.update(experiment_dict)

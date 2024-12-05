@@ -58,7 +58,7 @@ model_para = {
     "kernel_type": {},
 }
 
-hashtable = np.linspace(-5, 5, 101)
+hashtable = np.linspace(-5, 5, 100 + 1)
 list_1 = []
 list_2 = []
 print(hashtable, list_1, list_2)
@@ -97,12 +97,7 @@ for index_ in x_keys:
 
     krr.alpha = args.alpha
     krr.kernel_type = "rbf"
-    if int(index_.split("_")[0]) in list_1 and int(index_.split("_")[1]) in list_1:
-        krr.gamma = args.gamma[0]
-    elif int(index_.split("_")[0]) in list_2 or int(index_.split("_")[1]) in list_2:
-        krr.gamma = args.gamma[0] if len(args.gamma) <= 2 else args.gamma[2]
-    else:
-        krr.gamma = args.gamma[0] if len(args.gamma) <= 1 else args.gamma[1]
+    krr.gamma = args.gamma[0]
 
     if len(x_all[index_]) < 500:
         krr.fit_data(x_all[index_], y_all[index_])
@@ -140,6 +135,10 @@ for index_ in x_keys:
                 if CONVERGE_STEP == 1:
                     print("Converge.")
                     break
+
+            if len(x_test) == 0:
+                break
+
             (
                 x_train,
                 y_train,
@@ -179,7 +178,6 @@ for index_ in x_keys:
 
     if np.abs(AU2KCALMOL * train_error) > 0.001:
         print(
-            f"Round {index_}\n",
             f"Length of x_all: {len(x_all[index_])}\n",
             f"Train error: {AU2KCALMOL * train_error} KCAL/MOL\n",
             f"Energy correct: {AU2KCALMOL * energy_correct} KCAL/MOL\n",

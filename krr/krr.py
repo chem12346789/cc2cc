@@ -25,8 +25,7 @@ def hash_value(input_, hashtable):
             int1: value of the key
     """
     index_round0 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 0], hashtable)
-    index_round1 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 1], hashtable)
-    return f"{index_round0}_{index_round1}"
+    return f"{index_round0}"
 
 
 @njit(parallel=True)
@@ -128,6 +127,19 @@ def add_data(
     Add data which has large error.
     """
     print("Add data:", flush=True)
+    if len(x_test) == 0:
+        print("No data to add.")
+        return (
+            x_train,
+            y_train,
+            w_train,
+            x_test,
+            y_test,
+            w_test,
+            x_fitted,
+            y_fitted,
+            w_fitted,
+        )
     error_test = (
         (y_test - krr.predict_data(x_test)) * w_test * x_test[:, ARRAY_USE_MIDDLE]
     )
@@ -158,13 +170,26 @@ def add_data(
     y_test = y_test[~index_add_test]
     w_test = w_test[~index_add_test]
 
+    if len(x_test) == 0:
+        print("No data to add.")
+        return (
+            x_train,
+            y_train,
+            w_train,
+            x_test,
+            y_test,
+            w_test,
+            x_fitted,
+            y_fitted,
+            w_fitted,
+        )
     error_test = (
         (y_test - krr.predict_data(x_test)) * w_test * x_test[:, ARRAY_USE_MIDDLE]
     )
     index_add_fitted = (
         np.array([True] * len(error_test))
         if len(error_test) < 51
-        else (error_test**2 < 1e-8**2)
+        else (error_test**2 < 1e-10**2)
     )
     x_fitted = np.concatenate([x_fitted, x_test[index_add_fitted]])
     y_fitted = np.concatenate([y_fitted, y_test[index_add_fitted]])

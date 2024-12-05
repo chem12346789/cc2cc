@@ -26,9 +26,9 @@ print("alpha:", args.alpha)
 print("kernel:", args.kernel, flush=True)
 
 view_dict = {
-    # "cc": "exc_over_dm_cc_grids",
+    "cc": "exc_over_dm_cc_grids",
     # "b3lyp": "exc_over_dm_b3lyp_grids",
-    "mrks": "exc_over_dm_mrks_grids",
+    # "mrks": "exc_over_dm_mrks_grids",
 }
 
 (
@@ -58,7 +58,7 @@ x_fit = {}
 
 # center_piont = []
 # hashtable = append(np.linspace(-1, 0, 11)[:-1], center_piont, np.linspace(0, 1, 11)[1:])
-hashtable = np.linspace(-6000, 6000, 2)
+hashtable = np.linspace(-1e4, 1e4, 2)
 print(hashtable)
 shape_matrix = (20, 194, 40)
 
@@ -111,7 +111,7 @@ SEARCH_NUMBER = 100
 # for index_ in []:
 for index_ in x_keys:
     if index_ not in [
-        "0_0_0",
+        "0",
         # "1_1_1_1",
         # "2_2_2_2",
         # f"{len(hashtable)//2}_{len(hashtable)//2}_{len(hashtable)//2}_{len(hashtable)//2}",

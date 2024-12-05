@@ -26,12 +26,14 @@ from cc2cc.utils import (
     AU2KCALMOL,
     CUBE_SIZE,
     CUBE_LEN,
+    CUBE_USE_MIDDLE,
     CUBE_MIDDLE,
-    STRUCTURE,
     LEVEL,
     PERIOD,
 )
 from cc2cc.test_rks import TEST_DATA
+
+LOAD = True
 
 # from cadft.utils.ModelDict_xy import ModelDict
 # from cadft.utils import ModelDict_xy1 as ModelDict
@@ -94,8 +96,7 @@ if __name__ == "__main__":
         if molecular is None:
             print(f"Skip: {name:>40}")
             continue
-        # rotate(molecular, verbose=True)
-        rotation = rotate(molecular, rotation="r", verbose=True)
+        rotate(molecular, verbose=True)
 
         mol = pyscf.M(
             atom=molecular,
@@ -122,35 +123,52 @@ if __name__ == "__main__":
             print(f"Load the data: {data_path}")
         data = np.load(data_path)
 
-        mf = pyscf.scf.RHF(mol)
-        mf.kernel()
-        mycc = pyscf.cc.CCSD(mf)
-        mycc.kernel()
-        dm1_cc = mycc.make_rdm1(ao_repr=True)
-        e_cc = mycc.e_tot
-
-        grids = Grid(mol, level=LEVEL, period=PERIOD)
-        # coords = grids.coords
-        # weights = grids.weights
-        coords = data["coor"]
-        coords = (rotation @ coords.T).T
-        print(f"Number of grids: {len(coords)}")
-        weights = data["weights"]
-
-        weights_save = data["weights"]
-        ao_value = pyscf.dft.numint.eval_ao(mol, coords, deriv=2)
-        rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value[:4], dm1_cc, xctype="GGA")
-        rho_cc_save = data["rho_inv_4_norm"]
-
         if "exc_over_dm_mrks_grids" in data.files:
             output_ = data["exc_over_dm_mrks_grids"]
         else:
             output_ = data["exc_over_dm_cc_grids"]
-            print(
-                f"{AU2KCALMOL * np.sum(output_ * rho_cc[0] * weights):.2f} kcal/mol\n"
-            )
 
-        if STRUCTURE == "cnn3d":
+        weights_save = data["weights"]
+        rho_cc_save = data["rho_inv_4_norm"]
+
+        if LOAD:
+            weights = weights_save
+            rho_cc = rho_cc_save
+            e_cc = data["e_cc"]
+            input_mat = data["rho_cube"]
+            input_mat = input_mat[
+                :,
+                :,
+                CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+                CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+                CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+            ]
+            input_mat = torch.tensor(input_mat, dtype=modeldict.dtype).to("cuda")
+
+        else:
+            mf = pyscf.scf.RHF(mol)
+            mf.kernel()
+            mycc = pyscf.cc.CCSD(mf)
+            mycc.kernel()
+            dm1_cc = mycc.make_rdm1(ao_repr=True)
+            e_cc = mycc.e_tot
+
+            rotation = rotate(molecular, rotation="r", verbose=True)
+            grids = Grid(mol, level=LEVEL, period=PERIOD)
+            # coords = grids.coords
+            # weights = grids.weights
+            coords = data["coor"]
+            coords = (rotation @ coords.T).T
+            print(f"Number of grids: {len(coords)}")
+            weights = data["weights"]
+            ao_value = pyscf.dft.numint.eval_ao(mol, coords, deriv=2)
+            rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value[:4], dm1_cc, xctype="GGA")
+
+            if "exc_over_dm_mrks_grids" in data.files:
+                print(
+                    f"{AU2KCALMOL * np.sum(output_ * rho_cc[0] * weights):.2f} kcal/mol\n"
+                )
+
             rho_cc_1 = np.zeros((3, len(coords)))
             rho_cc_2 = np.zeros((3, 3, len(coords)))
             shls_slice = (0, mol.nbas)
@@ -233,23 +251,11 @@ if __name__ == "__main__":
                 )
 
             input_mat = torch.tensor(rho_cube, dtype=modeldict.dtype).to("cuda")
-        elif STRUCTURE == "unet":
-            input_mat = process_input(rho_cc, grids)
-            input_mat = np.transpose(input_mat, (1, 0, 2, 3))
-            input_mat = input_mat[:, [0], :, :]
-            input_mat = torch.tensor(input_mat, dtype=modeldict.dtype).to("cuda")
 
         with torch.no_grad():
             output_mat = modeldict.model(input_mat)
 
-        if STRUCTURE == "cnn3d":
-            correct_ene = output_mat.cpu().detach().numpy()[:, 0]
-        elif STRUCTURE == "unet":
-            correct_ene = grids.matrix_to_vector(
-                (output_mat.cpu().detach().numpy())[:, 0, :, :]
-            )
-        else:
-            raise ValueError("Unknown structure.")
+        correct_ene = output_mat.cpu().detach().numpy()[:, 0]
 
         exc_over_dm_cc_predict = (
             correct_ene * rho_cc[0] * weights - output_ * rho_cc_save[0] * weights_save
@@ -257,9 +263,12 @@ if __name__ == "__main__":
         print(
             f"ERROR: {AU2KCALMOL * np.sum(exc_over_dm_cc_predict):.2f} kcal/mol\n",
             f"ABS ERROR: {AU2KCALMOL * np.sum(np.abs(exc_over_dm_cc_predict)):.2f} kcal/mol\n",
-            f"GRIDS ERROR AI: {AU2KCALMOL * (e_cc - mdft.energy_tot(mycc.make_rdm1(ao_repr=True)) - np.sum(correct_ene * rho_cc[0] * weights)):.2f} kcal/mol\n",
-            f"GRIDS ERROR CC: {AU2KCALMOL * (e_cc - mdft.energy_tot(dm1_cc) - np.sum(output_ * rho_cc_save[0] * weights_save)):.2f} kcal/mol\n",
         )
-        print(AU2KCALMOL * (mycc.e_tot - data["e_cc"]))
-        print(AU2KCALMOL * (mdft.e_tot - data["e_cc"]))
-        print(np.linalg.norm(mycc.make_rdm1(ao_repr=True) - data["dm_cc"]))
+        if not LOAD:
+            print(
+                f"GRIDS ERROR AI: {AU2KCALMOL * (e_cc - mdft.energy_tot(mycc.make_rdm1(ao_repr=True)) - np.sum(correct_ene * rho_cc[0] * weights)):.2f} kcal/mol\n",
+                f"GRIDS ERROR CC: {AU2KCALMOL * (e_cc - mdft.energy_tot(dm1_cc) - np.sum(output_ * rho_cc_save[0] * weights_save)):.2f} kcal/mol\n",
+            )
+            print(AU2KCALMOL * (mycc.e_tot - data["e_cc"]))
+            print(AU2KCALMOL * (mdft.e_tot - data["e_cc"]))
+            print(np.linalg.norm(mycc.make_rdm1(ao_repr=True) - data["dm_cc"]))

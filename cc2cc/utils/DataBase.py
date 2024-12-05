@@ -7,7 +7,6 @@ from torch.utils.data import DataLoader
 
 from cc2cc.utils.env_var import (
     DATA_PATH,
-    STRUCTURE,
     CUBE_MIDDLE,
     CUBE_USE_MIDDLE,
     LEVEL,
@@ -186,46 +185,35 @@ class DataBase:
         data = np.load(Path(f"{DATA_PATH}") / f"data_{name}_{LEVEL}_{PERIOD}.npz")
         weights_mat = data["weights"]
 
-        if "3d" in STRUCTURE:
-            input_mat = data["rho_cube"]
-        else:
-            input_mat = data["rho_inv_4_norm"]
+        input_mat = data["rho_cube"]
+        output_mat = data["exc_over_dm_cc_grids"]
 
-        if "exc_over_dm_mrks_grids" in data.files:
-            output_mat = data["exc_over_dm_mrks_grids"]
-        else:
-            output_mat = data["exc_over_dm_cc_grids"]
-
-        if "3d" in STRUCTURE:
-            print(AU2KCALMOL * data["error_energy"])
-            print(
-                AU2KCALMOL
-                * np.sum(
-                    output_mat
-                    * (
-                        input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-                        / (-3 / 4 * (3 / np.pi) ** (1 / 3))
-                    )
-                    ** 3
-                    * weights_mat
+        print(AU2KCALMOL * data["error_energy"])
+        print(
+            AU2KCALMOL
+            * np.sum(
+                output_mat
+                * (
+                    input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+                    / (-3 / 4 * (3 / np.pi) ** (1 / 3))
                 )
+                ** 3
+                * weights_mat
             )
+        )
 
         input_ = {}
         weight_ = {}
         output_ = {}
 
         for i_coord in range(len(weights_mat)):
-            if "3d" in STRUCTURE:
-                input_[i_coord] = input_mat[
-                    i_coord,
-                    :,
-                    CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-                    CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-                    CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-                ]
-            else:
-                input_[i_coord] = input_mat[:, i_coord]
+            input_[i_coord] = input_mat[
+                i_coord,
+                :,
+                CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+                CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+                CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
+            ]
             weight_[i_coord] = weights_mat[[i_coord]]
             output_[i_coord] = output_mat[[i_coord]]
 

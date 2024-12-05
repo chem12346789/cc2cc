@@ -54,8 +54,8 @@ for mol, basis_set, (range_list, extend_atom) in itertools.product(
     ],
     ["cc-pVDZ"],
     [
-        # ((-0.5, 0.5, 11), "0-1"),
-        ((-0.5, 0.5, 11), "0-1"),
+        # ((0, 0, 1), "0-1"),
+        ((-0.5, 0.5, 3), "0-1"),
     ],
 ):
     number_of_gpu = next(LIST_OF_GPU)

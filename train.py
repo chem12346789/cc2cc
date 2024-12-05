@@ -2,9 +2,9 @@ from cc2cc import train_model
 
 TRAIN_STR_DICT = [
     "methane",
-    # "ethane",
-    # "ethylene",
-    # "acetylene",
+    "ethane",
+    "ethylene",
+    "acetylene",
     # "cyclopropene",
     # "cyclopropane",
     # "propylene",
@@ -13,7 +13,7 @@ TRAIN_STR_DICT = [
     # "methyl-openshell",
 ]
 EVAL_STR_DICT = [
-    # "propane",
+    "propane",
     # "isobutane",
     # "cyclobutane",
     # "butane",

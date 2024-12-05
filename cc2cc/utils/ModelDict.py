@@ -10,19 +10,12 @@ import torch
 import torch.optim as optim
 import pyscf
 
-from cc2cc.utils.env_var import CHECKPOINTS_PATH, STRUCTURE, CUBE_USE_MIDDLE, TEST
+from cc2cc.utils.env_var import CHECKPOINTS_PATH, CUBE_USE_MIDDLE, TEST
 from cc2cc.utils.mol import AU2KCALMOL, AU2DEBYE
 from cc2cc.utils.get_input import get_input_mat
 from cc2cc.utils.Grids import Grid
 
-if STRUCTURE == "cnn3d":
-    from cc2cc.utils.model.cnn3d import Model
-elif STRUCTURE == "fc_3d":
-    from cc2cc.utils.model.fc_3d import Model
-elif STRUCTURE == "fc":
-    from cc2cc.utils.model.fc_net import Model
-elif STRUCTURE == "unet":
-    from cc2cc.utils.model.unet import Model
+from cc2cc.utils.model.cnn3d import Model
 
 
 class ModelDict:
@@ -72,7 +65,8 @@ class ModelDict:
         if precision == "float64":
             self.model.double()
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
+        # self.optimizer = optim.SGD(self.model.parameters(), lr=1e-4)
 
         if self.with_eval:
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -82,14 +76,19 @@ class ModelDict:
                 patience=10,
             )
         else:
-            self.scheduler = optim.lr_scheduler.ExponentialLR(
+            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
-                gamma=1.0 - 1e-4,
+                T_max=1000,
+                eta_min=1e-6,
             )
 
-        self.loss_multiplier = 1.0
-        self.loss_ene = torch.nn.L1Loss()
-        # self.loss_ene = torch.nn.MSELoss()
+        self.loss_multiplier = 0.1
+
+        self.loss_ene = torch.nn.L1Loss(reduction="none")
+        self.loss_ene_tot = torch.nn.L1Loss(reduction="sum")
+
+        # self.loss_ene = torch.nn.MSELoss(reduction="none")
+        # self.loss_ene_tot = torch.nn.MSELoss(reduction="sum")
 
     def load_model(self):
         """
@@ -147,28 +146,45 @@ class ModelDict:
         weight = batch["weight"]
         output_mat_real = batch["output"]
         output_mat = self.model(input_mat)
-        loss_ene = self.loss_ene(output_mat, output_mat_real)
+        loss_ene_mat = self.loss_ene(output_mat, output_mat_real)
+        # loss_ene_mat = self.loss_ene(
+        #     output_mat_real[:, 0]
+        #     * (
+        #         input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
+        #         / (-3 / 4 * (3 / np.pi) ** (1 / 3))
+        #     )
+        #     ** 3
+        #     * weight[:, 0],
+        #     output_mat[:, 0]
+        #     * (
+        #         input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
+        #         / (-3 / 4 * (3 / np.pi) ** (1 / 3))
+        #     )
+        #     ** 3
+        #     * weight[:, 0],
+        # )
+        loss_ene = torch.mean(loss_ene_mat)
 
-        if "3d" in STRUCTURE:
-            loss_ene_tot = torch.sum(
-                (output_mat_real[:, 0] - output_mat[:, 0])
+        loss_ene_tot = self.loss_ene_tot(
+            torch.sum(
+                output_mat_real[:, 0]
                 * (
                     input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
                     / (-3 / 4 * (3 / np.pi) ** (1 / 3))
                 )
                 ** 3
                 * weight[:, 0]
-            )
-        elif "unet" in STRUCTURE:
-            loss_ene_tot = torch.sum(
-                (output_mat_real - output_mat) * input_mat[:, [0], :, :] * weight
-            )
-        else:
-            loss_ene_tot = torch.sum(
-                (output_mat_real[:, 0] - output_mat[:, 0])
-                * input_mat[:, 0]
+            ),
+            torch.sum(
+                output_mat[:, 0]
+                * (
+                    input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
+                    / (-3 / 4 * (3 / np.pi) ** (1 / 3))
+                )
+                ** 3
                 * weight[:, 0]
-            )
+            ),
+        )
 
         return loss_ene, loss_ene_tot
 
@@ -201,14 +217,23 @@ class ModelDict:
             for batch in database_train.data_gpu[name]:
                 self.zero_grad()
                 loss_ene, loss_ene_tot = self.loss(batch)
-                loss_ene.backward()
+                if isinstance(self.loss_ene, torch.nn.L1Loss):
+                    (loss_ene + self.loss_multiplier * loss_ene_tot).backward()
+                else:
+                    (loss_ene + self.loss_multiplier**2 * loss_ene_tot).backward()
                 self.step()
                 batch_name += len(batch["weight"])
                 loss_ene_name += loss_ene.item() * len(batch["weight"])
                 loss_ene_tot_name += loss_ene_tot.item()
 
-            loss_ene_l.append(AU2KCALMOL * loss_ene_name / batch_name)
-            loss_ene_tot_l.append(AU2KCALMOL * np.abs(loss_ene_tot_name))
+            if isinstance(self.loss_ene, torch.nn.L1Loss):
+                loss_ene_l.append(AU2KCALMOL * loss_ene_name / batch_name)
+            else:
+                loss_ene_l.append(AU2KCALMOL * np.sqrt(loss_ene_name / batch_name))
+            if isinstance(self.loss_ene_tot, torch.nn.L1Loss):
+                loss_ene_tot_l.append(AU2KCALMOL * np.abs(loss_ene_tot_name))
+            else:
+                loss_ene_tot_l.append(AU2KCALMOL * np.sqrt(np.abs(loss_ene_tot_name)))
 
         return np.array(loss_ene_l), np.array(loss_ene_tot_l)
 
@@ -231,8 +256,14 @@ class ModelDict:
                 loss_ene_name += loss_ene.item() * len(batch["weight"])
                 loss_ene_tot_name += loss_ene_tot.item()
 
-            loss_ene_l.append(AU2KCALMOL * loss_ene_name / batch_name)
-            loss_ene_tot_l.append(AU2KCALMOL * np.abs(loss_ene_tot_name))
+            if isinstance(self.loss_ene, torch.nn.L1Loss):
+                loss_ene_l.append(AU2KCALMOL * loss_ene_name / batch_name)
+            else:
+                loss_ene_l.append(AU2KCALMOL * np.sqrt(loss_ene_name / batch_name))
+            if isinstance(self.loss_ene_tot, torch.nn.L1Loss):
+                loss_ene_tot_l.append(AU2KCALMOL * np.abs(loss_ene_tot_name))
+            else:
+                loss_ene_tot_l.append(AU2KCALMOL * np.sqrt(np.abs(loss_ene_tot_name)))
 
         return np.array(loss_ene_l), np.array(loss_ene_tot_l)
 
@@ -257,20 +288,11 @@ class ModelDict:
         output_mat = output_mat.cpu().detach().numpy()
         input_mat = input_mat.cpu().detach().numpy()
 
-        if "3d" in STRUCTURE:
-            correct_ene = np.sum(
-                (output_mat[:, 0])
-                * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
-                * grids.weights
-            )
-        elif "unet" in STRUCTURE:
-            correct_ene = np.sum(
-                output_mat[:, 0, :, :]
-                * input_mat[:, 0, :, :]
-                * grids.vector_to_matrix(grids.weights)
-            )
-        else:
-            correct_ene = np.sum((output_mat[:, 0]) * input_mat[:, 0] * grids.weights)
+        correct_ene = np.sum(
+            (output_mat[:, 0])
+            * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
+            * grids.weights
+        )
         return correct_ene
 
     def get_e_density(
@@ -294,18 +316,11 @@ class ModelDict:
         output_mat = output_mat.cpu().detach().numpy()
         input_mat = input_mat.cpu().detach().numpy()
 
-        if "3d" in STRUCTURE:
-            correct_ene = (
-                output_mat[:, 0]
-                * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
-                * grids.weights
-            )
-        elif "unet" in STRUCTURE:
-            correct_ene = grids.matrix_to_vector(
-                output_mat[:, 0, :, :] * input_mat[:, 0, :, :]
-            ) * grids.vector_to_matrix(grids.weights)
-        else:
-            correct_ene = output_mat[:, 0] * input_mat[:, 0] * grids.weights
+        correct_ene = (
+            output_mat[:, 0]
+            * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
+            * grids.weights
+        )
         return correct_ene
 
     def get_v(
@@ -322,26 +337,4 @@ class ModelDict:
         if dms is None:
             dms = dft.make_rdm1()
 
-        if "3d" in STRUCTURE:
-            output_mat = output_mat.cpu().detach().numpy()
-            return output_mat[:, 0] * grids.weights
-        elif "unet" in STRUCTURE:
-            input_mat = get_input_mat(dft, grids, dms)
-            input_mat = torch.tensor(input_mat, dtype=self.dtype).to("cuda")
-            with torch.no_grad():
-                output_mat = self.model(input_mat)
-            input_mat = input_mat.requires_grad_(True)
-            middle_mat = (
-                torch.autograd.grad(
-                    torch.sum(output_mat[:, 0, :, :] * input_mat[:, 0, :, :]),
-                    input_mat,
-                    create_graph=True,
-                )[0]
-                .detach()
-                .cpu()
-                .numpy()
-            )
-            vxc = grids.matrix_to_vector(middle_mat[:, 0, :, :])
-        else:
-            raise NotImplementedError
-        return vxc
+        return
