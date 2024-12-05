@@ -57,7 +57,7 @@ def cc(molecular, name, args):
         "ijkl,i,j,kl->",
         0.5 * dm2_cc
         - 0.5 * oe.contract("pq,rs->pqrs", dm1_cc, dm1_cc)
-        + 0.05 * oe.contract("pr,qs->pqrs", dm1_dft, dm1_dft),
+        + 0.05 * oe.contract("pr,qs->pqrs", dm1_cc, dm1_cc),
         (mol.nao,),
         (mol.nao,),
         (mol.nao, mol.nao),
