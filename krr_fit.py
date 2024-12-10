@@ -1,16 +1,14 @@
 import argparse
-from pathlib import Path
 
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from cc2cc.utils import AU2KCALMOL, ARRAY_USE_MIDDLE
+from cc2cc.utils import AU2KCALMOL, CUBE_SIZE
 
-from krr import load_data, evaluate, add_data, add_args, hash_value, append
+from krr import load_data, evaluate, add_data, add_args, hash_value
 from krr import KernelRidgeModified
 
 
-DATA_PATH = Path("data/grids_dft")
 BASIS = "cc-pVDZ"
 
 parser = argparse.ArgumentParser(
@@ -166,11 +164,11 @@ for index_ in x_keys:
         np.abs(
             (y_all[index_] - krr.predict_data(x_all[index_]))
             * w_all[index_]
-            * x_all[index_][:, ARRAY_USE_MIDDLE]
+            * x_all[index_][:, CUBE_SIZE**3]
         )
     )
     energy_correct = np.sum(
-        np.abs(y_all[index_] * w_all[index_] * x_all[index_][:, ARRAY_USE_MIDDLE])
+        np.abs(y_all[index_] * w_all[index_] * x_all[index_][:, CUBE_SIZE**3])
     )
 
     train_error_sum += train_error

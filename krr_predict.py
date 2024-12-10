@@ -5,12 +5,10 @@ from itertools import product
 import numpy as np
 import pandas as pd
 
-from cc2cc.utils import AU2KCALMOL, ARRAY_USE_MIDDLE
+from cc2cc.utils import AU2KCALMOL, CUBE_SIZE
 
 from krr import load_data, add_args, hash_value
 from krr import KernelRidgeModified
-
-DATA_PATH = Path("data/grids_dft")
 
 parser = argparse.ArgumentParser(
     description="Generate the inversed potential and energy."
@@ -142,20 +140,20 @@ for (
         predict_error = np.sum(
             (y_all[index_] - krr.predict_data(x_all[index_]))
             * w_all[index_]
-            * x_all[index_][:, ARRAY_USE_MIDDLE]
+            * x_all[index_][:, CUBE_SIZE**3]
         )
         energy_correct = np.sum(
-            y_all[index_] * w_all[index_] * x_all[index_][:, ARRAY_USE_MIDDLE]
+            y_all[index_] * w_all[index_] * x_all[index_][:, CUBE_SIZE**3]
         )
         predict_error_abs = np.sum(
             np.abs(
                 (y_all[index_] - krr.predict_data(x_all[index_]))
                 * w_all[index_]
-                * x_all[index_][:, ARRAY_USE_MIDDLE]
+                * x_all[index_][:, CUBE_SIZE**3]
             )
         )
         energy_correct_abs = np.sum(
-            np.abs(y_all[index_] * w_all[index_] * x_all[index_][:, ARRAY_USE_MIDDLE])
+            np.abs(y_all[index_] * w_all[index_] * x_all[index_][:, CUBE_SIZE**3])
         )
 
         predict_error_sum += predict_error

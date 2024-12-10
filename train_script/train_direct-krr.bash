@@ -25,6 +25,6 @@ export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=c
 
 export DFT2CC_CUBE_USE=3
 
-nohup bash -c '~/anaconda3/envs/pyscf/bin/python krr_fit.py --alpha 1e-8 --gamma 1000 --distance_list -0.5 0.5 3 --molecular_list methane ethane ethylene acetylene' >log/krr4.log 2>&1 &
+nohup bash -c '~/anaconda3/envs/pyscf/bin/python krr_fit.py --alpha 1e-8 --gamma 1000 --distance_list -0.5 0.5 3 --molecular_list methane ethane ethylene acetylene' >log/krr5.log 2>&1 &
 # nohup bash -c '~/anaconda3/envs/pyscf/bin/python krr_fit.py --alpha 1e-8 --gamma 1000 --distance_list -0.5 0.5 11 --molecular_list methane' >log/krr2.log 2>&1 &
 echo $! >>log/save_pid.txt 2>&1

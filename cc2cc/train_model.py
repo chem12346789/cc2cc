@@ -75,6 +75,7 @@ def train_model(train_str_dict, eval_str_dict):
         "load": args.load,
         "jobid": os.environ.get("SLURM_JOB_ID"),
         "checkpoint": modeldict.dir_checkpoint.stem,
+        "loss_multiplier": modeldict.loss_multiplier,
     }
     print(experiment_dict)
     experiment.config.update(experiment_dict)

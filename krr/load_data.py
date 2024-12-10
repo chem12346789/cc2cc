@@ -3,16 +3,7 @@ from itertools import product
 
 import numpy as np
 
-from cc2cc.utils import (
-    AU2KCALMOL,
-    DATA_PATH,
-    CUBE_USE,
-    CUBE_MIDDLE,
-    CUBE_USE_MIDDLE,
-    ARRAY_USE_MIDDLE,
-    LEVEL,
-    PERIOD,
-)
+from cc2cc.utils import AU2KCALMOL, DATA_PATH, CUBE_SIZE
 
 
 def load_data(
@@ -43,7 +34,7 @@ def load_data(
         distance_list,
     ):
         name = f"{name_mol}_{basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
-        data_path = Path(f"{DATA_PATH}") / f"data_{name}_{LEVEL}_{PERIOD}.npz"
+        data_path = Path(f"{DATA_PATH}") / f"data_{name}.npz"
         if not (data_path).exists():
             print(f"No file: {data_path}")
             continue
@@ -72,21 +63,9 @@ def load_data(
 
         weights_ = data["weights"]
         coords_cube = data["coor_cube"]
-        coords_cube = coords_cube[
-            :,
-            CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-            CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-            CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-            :,
-        ]
+        coords_cube = coords_cube[:, :, :, :, :]
         input_ = data["rho_cube"]
-        input_ = input_[
-            :,
-            :,
-            CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-            CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-            CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-        ]
+        input_ = input_[:, :, :, :, :]
 
         print(
             f"output, \n"
@@ -95,16 +74,16 @@ def load_data(
             f"max: {np.max(input_[:, 0, :, :, :])}, min: {np.min(input_[:, 0, :, :, :])}\n"
             f"max: {np.max(input_[:, 1, :, :, :])}, min: {np.min(input_[:, 1, :, :, :])}\n"
             f"max: {np.max(input_[:, 2, :, :, :])}, min: {np.min(input_[:, 2, :, :, :])}\n"
-            f"max: {np.max(input_[:, 3, :, :, :])}, min: {np.min(input_[:, 3, :, :, :])}\n"
+            # f"max: {np.max(input_[:, 3, :, :, :])}, min: {np.min(input_[:, 3, :, :, :])}\n"
         )
-        input_ = input_.reshape(-1, (CUBE_USE) ** 3 * 4)
+        input_ = input_.reshape(-1, (CUBE_SIZE) ** 3 * 4)
         print(input_.shape)
 
         input_dict[name] = input_
         output_dict[name] = output_
         weights_dict[name] = weights_
 
-        coords_cube = coords_cube.reshape(-1, (CUBE_USE) ** 3, 3)
+        coords_cube = coords_cube.reshape(-1, (CUBE_SIZE) ** 3, 3)
         coords_dict[name] = coords_cube
 
         keys_list.append(name)
@@ -112,14 +91,14 @@ def load_data(
             print(
                 AU2KCALMOL
                 * np.sum(
-                    input_dict[name][:, ARRAY_USE_MIDDLE]
+                    input_dict[name][:, CUBE_SIZE**3]
                     * output_dict[name]
                     * weights_dict[name]
                 ),
                 AU2KCALMOL
                 * np.sum(
                     np.abs(
-                        input_dict[name][:, ARRAY_USE_MIDDLE]
+                        input_dict[name][:, CUBE_SIZE**3]
                         * output_dict[name]
                         * weights_dict[name]
                     )

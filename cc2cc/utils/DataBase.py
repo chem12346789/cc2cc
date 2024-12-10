@@ -5,29 +5,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from cc2cc.utils.env_var import (
-    DATA_PATH,
-    CUBE_MIDDLE,
-    CUBE_USE_MIDDLE,
-    LEVEL,
-    PERIOD,
-)
+from cc2cc.utils.env_var import DATA_PATH, CUBE_MIDDLE
 from cc2cc.utils.mol import AU2KCALMOL
-
-
-def process_input(data, grids):
-    """
-    process the input
-    """
-    data_grids_norm = np.zeros((4, len(grids.coord_list), grids.n_rad, grids.n_ang))
-    for oxyz in range(4):
-        if oxyz == 0:
-            data_grids_norm[oxyz, :, :, :] = grids.vector_to_matrix(data[oxyz, :])
-        else:
-            data_grids_norm[oxyz, :, :, :] = grids.vector_to_matrix(
-                np.abs(data[oxyz, :])
-            )
-    return data_grids_norm
 
 
 def process(data, dtype):
@@ -157,32 +136,19 @@ class DataBase:
         ):
             name = f"{name_mol}_{self.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
 
-            if "openshell" in name:
-                for i_spin in range(2):
-                    name_ = f"{name}_{i_spin}"
-                    path_name_ = (
-                        Path(f"{DATA_PATH}") / f"data_{name_}_{LEVEL}_{PERIOD}.npz"
-                    )
-                    if not (path_name_).exists():
-                        print(f"No file: {path_name_.as_posix():>40}", flush=True)
-                        continue
-                    print(f"Load: {name_:>40}", flush=True)
-                    self.name_list.append(f"{name_}")
-                    self.load_data(name_)
-            else:
-                path_name_ = Path(f"{DATA_PATH}") / f"data_{name}_{LEVEL}_{PERIOD}.npz"
-                if not (path_name_).exists():
-                    print(f"No file: {path_name_.as_posix():>40}", flush=True)
-                    continue
-                print(f"Load: {name:>40}", flush=True)
-                self.name_list.append(name)
-                self.load_data(name)
+            path_name_ = DATA_PATH / f"data_{name}.npz"
+            if not (path_name_).exists():
+                print(f"No file: {path_name_.as_posix():>40}", flush=True)
+                continue
+            print(f"Load: {name:>40}", flush=True)
+            self.name_list.append(name)
+            self.load_data(name)
 
     def load_data(self, name):
         """
         Load the data.
         """
-        data = np.load(Path(f"{DATA_PATH}") / f"data_{name}_{LEVEL}_{PERIOD}.npz")
+        data = np.load(DATA_PATH / f"data_{name}.npz")
         weights_mat = data["weights"]
 
         input_mat = data["rho_cube"]
@@ -195,9 +161,8 @@ class DataBase:
                 output_mat
                 * (
                     input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-                    / (-3 / 4 * (3 / np.pi) ** (1 / 3))
+                    + input_mat[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
                 )
-                ** 3
                 * weights_mat
             )
         )
@@ -207,13 +172,7 @@ class DataBase:
         output_ = {}
 
         for i_coord in range(len(weights_mat)):
-            input_[i_coord] = input_mat[
-                i_coord,
-                :,
-                CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-                CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-                CUBE_MIDDLE - CUBE_USE_MIDDLE : CUBE_MIDDLE + CUBE_USE_MIDDLE + 1,
-            ]
+            input_[i_coord] = input_mat[i_coord, :, :, :, :]
             weight_[i_coord] = weights_mat[[i_coord]]
             output_[i_coord] = output_mat[[i_coord]]
 

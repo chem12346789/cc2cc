@@ -77,12 +77,6 @@ def add_args(parser: argparse.ArgumentParser):
         default="cc-pVDZ",
         help="Basis set for the calculation.",
     )
-    parser.add_argument(
-        "--level",
-        type=int,
-        default=1,
-        help="Level of grids, default is 1.",
-    )
 
     parser.add_argument(
         "--if_basis_str",

@@ -6,7 +6,7 @@ import numpy as np
 import pyscf
 from pyscf.grad import ccsd as ccsd_grad
 
-from cc2cc.utils import MAIN_PATH, DATA_TEST_PATH, AU2KCALMOL, AU2DEBYE
+from cc2cc.utils import DATA_TEST_PATH, AU2KCALMOL, AU2DEBYE
 from cc2cc.utils import gen_basis
 from cc2cc.utils import Grid
 
@@ -88,7 +88,7 @@ class TEST_DATA:
             )
 
             np.savez_compressed(
-                Path(f"{MAIN_PATH}/data/test/data_{self.name}.npz"),
+                DATA_TEST_PATH / f"data_{self.name}.npz",
                 cc_dipole=self.cc_dipole,
                 e_cc=self.e_cc,
                 grad_ccsd=self.grad_ccsd,
@@ -118,29 +118,4 @@ def test_uks(
     )
     test_data.test_mol()
 
-    grids = Grid(test_data.mol, level=1, period=2)
-    ao_1 = pyscf.dft.numint.eval_ao(test_data.mol, grids.coords, deriv=1)
-    dft_r_3 = pyscf.dft.numint.eval_rho(
-        test_data.mol, ao_1, test_data.dm1_dft, xctype="GGA"
-    )
-    correct_ene, correct_dipole, correct_force = modeldict.get_val(dft_r_3, grids)
-
-    ene_scf = test_data.e_cc - (correct_ene + test_data.e_dft)
-    df_dict["error_scf_ene"].append(AU2KCALMOL * (test_data.e_cc - ene_scf))
-    df_dict["error_dft_ene"].append(AU2KCALMOL * (test_data.e_cc - test_data.e_dft))
-    df_dict["abs_cc_ene"].append(AU2KCALMOL * test_data.e_cc)
-
-    error_dipole = test_data.cc_dipole - test_data.dft_dipole
-    df_dict["dipole_diff_scf"].append(
-        AU2DEBYE * np.linalg.norm(error_dipole - correct_dipole)
-    )
-    df_dict["dipole_diff_dft"].append(AU2DEBYE * np.linalg.norm(error_dipole))
-
-    error_force = test_data.grad_ccsd - test_data.grad_dft
-    df_dict["force_diff_scf"].append(
-        AU2KCALMOL * np.linalg.norm(error_force - correct_force)
-    )
-    df_dict["force_diff_dft"].append(AU2KCALMOL * np.linalg.norm(error_force))
-
-    df = pd.DataFrame(df_dict)
-    df.to_csv(df_dict_path, index=False)
+    grids = Grid(test_data.mol)

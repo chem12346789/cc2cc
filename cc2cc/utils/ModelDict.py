@@ -8,11 +8,11 @@ import datetime
 import numpy as np
 import torch
 import torch.optim as optim
+
 import pyscf
 
-from cc2cc.utils.env_var import CHECKPOINTS_PATH, CUBE_USE_MIDDLE, TEST
+from cc2cc.utils.env_var import CHECKPOINTS_PATH, CUBE_MIDDLE
 from cc2cc.utils.mol import AU2KCALMOL, AU2DEBYE
-from cc2cc.utils.get_input import get_input_mat
 from cc2cc.utils.Grids import Grid
 
 from cc2cc.utils.model.cnn3d import Model
@@ -65,7 +65,7 @@ class ModelDict:
         if precision == "float64":
             self.model.double()
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
         # self.optimizer = optim.SGD(self.model.parameters(), lr=1e-4)
 
         if self.with_eval:
@@ -83,12 +83,8 @@ class ModelDict:
             )
 
         self.loss_multiplier = 0.1
-
         self.loss_ene = torch.nn.L1Loss(reduction="none")
         self.loss_ene_tot = torch.nn.L1Loss(reduction="sum")
-
-        # self.loss_ene = torch.nn.MSELoss(reduction="none")
-        # self.loss_ene_tot = torch.nn.MSELoss(reduction="sum")
 
     def load_model(self):
         """
@@ -150,17 +146,15 @@ class ModelDict:
         # loss_ene_mat = self.loss_ene(
         #     output_mat_real[:, 0]
         #     * (
-        #         input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
-        #         / (-3 / 4 * (3 / np.pi) ** (1 / 3))
+        #         input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        #         + input_mat[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         #     )
-        #     ** 3
         #     * weight[:, 0],
         #     output_mat[:, 0]
         #     * (
-        #         input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
-        #         / (-3 / 4 * (3 / np.pi) ** (1 / 3))
+        #         input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        #         + input_mat[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         #     )
-        #     ** 3
         #     * weight[:, 0],
         # )
         loss_ene = torch.mean(loss_ene_mat)
@@ -169,19 +163,17 @@ class ModelDict:
             torch.sum(
                 output_mat_real[:, 0]
                 * (
-                    input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
-                    / (-3 / 4 * (3 / np.pi) ** (1 / 3))
+                    input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+                    + input_mat[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
                 )
-                ** 3
                 * weight[:, 0]
             ),
             torch.sum(
                 output_mat[:, 0]
                 * (
-                    input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
-                    / (-3 / 4 * (3 / np.pi) ** (1 / 3))
+                    input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+                    + input_mat[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
                 )
-                ** 3
                 * weight[:, 0]
             ),
         )
@@ -192,7 +184,7 @@ class ModelDict:
         """
         Calculate the total loss.
         """
-        return loss_ene
+        return loss_ene + self.loss_multiplier * loss_ene_tot
 
     def save_model(self, epoch):
         """
@@ -210,30 +202,21 @@ class ModelDict:
         database_train.rng.shuffle(database_train.name_list)
 
         for name in database_train.name_list:
-            batch_name = 0
             loss_ene_name = 0.0
+            number_batch_name = 0
             loss_ene_tot_name = 0.0
 
             for batch in database_train.data_gpu[name]:
                 self.zero_grad()
                 loss_ene, loss_ene_tot = self.loss(batch)
-                if isinstance(self.loss_ene, torch.nn.L1Loss):
-                    (loss_ene + self.loss_multiplier * loss_ene_tot).backward()
-                else:
-                    (loss_ene + self.loss_multiplier**2 * loss_ene_tot).backward()
+                self.tot_loss(loss_ene, loss_ene_tot).backward()
                 self.step()
-                batch_name += len(batch["weight"])
+                number_batch_name += len(batch["weight"])
                 loss_ene_name += loss_ene.item() * len(batch["weight"])
                 loss_ene_tot_name += loss_ene_tot.item()
 
-            if isinstance(self.loss_ene, torch.nn.L1Loss):
-                loss_ene_l.append(AU2KCALMOL * loss_ene_name / batch_name)
-            else:
-                loss_ene_l.append(AU2KCALMOL * np.sqrt(loss_ene_name / batch_name))
-            if isinstance(self.loss_ene_tot, torch.nn.L1Loss):
-                loss_ene_tot_l.append(AU2KCALMOL * np.abs(loss_ene_tot_name))
-            else:
-                loss_ene_tot_l.append(AU2KCALMOL * np.sqrt(np.abs(loss_ene_tot_name)))
+            loss_ene_l.append(AU2KCALMOL * loss_ene_name / number_batch_name)
+            loss_ene_tot_l.append(AU2KCALMOL * np.abs(loss_ene_tot_name))
 
         return np.array(loss_ene_l), np.array(loss_ene_tot_l)
 
@@ -245,25 +228,19 @@ class ModelDict:
         loss_ene_l, loss_ene_tot_l = [], []
 
         for name in database_eval.name_list:
-            batch_name = 0
             loss_ene_name = 0.0
+            number_batch_name = 0
             loss_ene_tot_name = 0.0
 
             for batch in database_eval.data_gpu[name]:
                 with torch.no_grad():
                     loss_ene, loss_ene_tot = self.loss(batch)
-                batch_name += len(batch["weight"])
+                number_batch_name += len(batch["weight"])
                 loss_ene_name += loss_ene.item() * len(batch["weight"])
                 loss_ene_tot_name += loss_ene_tot.item()
 
-            if isinstance(self.loss_ene, torch.nn.L1Loss):
-                loss_ene_l.append(AU2KCALMOL * loss_ene_name / batch_name)
-            else:
-                loss_ene_l.append(AU2KCALMOL * np.sqrt(loss_ene_name / batch_name))
-            if isinstance(self.loss_ene_tot, torch.nn.L1Loss):
-                loss_ene_tot_l.append(AU2KCALMOL * np.abs(loss_ene_tot_name))
-            else:
-                loss_ene_tot_l.append(AU2KCALMOL * np.sqrt(np.abs(loss_ene_tot_name)))
+            loss_ene_l.append(AU2KCALMOL * loss_ene_name / number_batch_name)
+            loss_ene_tot_l.append(AU2KCALMOL * np.abs(loss_ene_tot_name))
 
         return np.array(loss_ene_l), np.array(loss_ene_tot_l)
 
@@ -281,19 +258,7 @@ class ModelDict:
         if dms is None:
             dms = dft.make_rdm1()
 
-        input_mat = get_input_mat(dft, grids, dms)
-        input_mat = torch.tensor(input_mat, dtype=self.dtype).to("cuda")
-        with torch.no_grad():
-            output_mat = self.model(input_mat)
-        output_mat = output_mat.cpu().detach().numpy()
-        input_mat = input_mat.cpu().detach().numpy()
-
-        correct_ene = np.sum(
-            (output_mat[:, 0])
-            * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
-            * grids.weights
-        )
-        return correct_ene
+        return
 
     def get_e_density(
         self,
@@ -309,19 +274,7 @@ class ModelDict:
         if dms is None:
             dms = dft.make_rdm1()
 
-        input_mat = get_input_mat(dft, grids, dms)
-        input_mat = torch.tensor(input_mat, dtype=self.dtype).to("cuda")
-        with torch.no_grad():
-            output_mat = self.model(input_mat)
-        output_mat = output_mat.cpu().detach().numpy()
-        input_mat = input_mat.cpu().detach().numpy()
-
-        correct_ene = (
-            output_mat[:, 0]
-            * input_mat[:, 0, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE, CUBE_USE_MIDDLE]
-            * grids.weights
-        )
-        return correct_ene
+        return
 
     def get_v(
         self,

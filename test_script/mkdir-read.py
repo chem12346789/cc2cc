@@ -65,14 +65,14 @@ gpu_node_pool = itertools.cycle(
 
 for (
     checkpoint_hidden_size,
-    cube_use,
+    cube_size,
     (range_list, extend_atom),
 ) in itertools.product(
     [
         # "checkpoint-ccdft_2024-09-27-14-27-34",
         "checkpoint-ccdft_2024-09-29-18-16-08",
     ],  # checkpoint_hidden_size
-    [3],  # cube_use
+    [3],  # cube_size
     [
         ((-0.5, -0.5, 1), "0-1"),
         ((-0.4, -0.4, 1), "0-1"),
@@ -92,7 +92,7 @@ for (
     cmd = f"""cp {template_bash} {work_bash}"""
     gpu_node = next(gpu_node_pool)
     cmd += "&&" + f"""sed -i "s/BASH_GPU_NODE/{gpu_node}/g" {work_bash}"""
-    cmd += "&&" + f"""sed -i "s/BASH_CUBE_USE/{cube_use}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/BASH_CUBE_SIZE/{cube_size}/g" {work_bash}"""
     cmd += "&&" + f"""sed -i "s/CHECKPOINT/{checkpoint}/g" {work_bash}"""
     cmd += "&&" + f"""sed -i "s/EXTEND_ATOM/{extend_atom}/g" {work_bash}"""
 

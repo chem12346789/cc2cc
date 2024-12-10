@@ -4,7 +4,7 @@ from numba import njit, prange
 
 from sklearn.kernel_ridge import KernelRidge
 
-from cc2cc.utils import AU2KCALMOL, ARRAY_USE_MIDDLE, ARRAY_USE
+from cc2cc.utils import AU2KCALMOL, CUBE_SIZE
 
 
 def cut_off(x, hashtable):
@@ -24,7 +24,7 @@ def hash_value(input_, hashtable):
             float2: end of the key range
             int1: value of the key
     """
-    index_round0 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 0], hashtable)
+    index_round0 = cut_off(input_[CUBE_SIZE **3 + CUBE_SIZE **3 * 0], hashtable)
     return f"{index_round0}"
 
 
@@ -86,26 +86,18 @@ def evaluate(krr, x_train, y_train, w_train, x_all, y_all, w_all):
     """
     print("Krr perdict:")
     train_error = AU2KCALMOL * np.sum(
-        (
-            np.abs(y_train - krr.predict_data(x_train))
-            * w_train
-            * x_train[:, ARRAY_USE_MIDDLE]
-        )
+        (np.abs(y_train - krr.predict_data(x_train)) * w_train * x_train[:, CUBE_SIZE **3])
     )
     print(f"train, {train_error} KCAL/MOL", flush=True)
     error_krr = AU2KCALMOL * np.sum(
-        (np.abs(y_all - krr.predict_data(x_all)) * w_all * x_all[:, ARRAY_USE_MIDDLE])
+        (np.abs(y_all - krr.predict_data(x_all)) * w_all * x_all[:, CUBE_SIZE **3])
     )
     print(f"test, {error_krr} KCAL/MOL", flush=True)
 
     print("B3lyp perdict:")
-    b3lyp_error = AU2KCALMOL * np.sum(
-        np.abs(y_train * w_train * x_train[:, ARRAY_USE_MIDDLE])
-    )
+    b3lyp_error = AU2KCALMOL * np.sum(np.abs(y_train * w_train * x_train[:, CUBE_SIZE **3]))
     print("train", b3lyp_error, "KCAL/MOL", flush=True)
-    b3lyp_error = AU2KCALMOL * np.sum(
-        np.abs(y_all * w_all * x_all[:, ARRAY_USE_MIDDLE])
-    )
+    b3lyp_error = AU2KCALMOL * np.sum(np.abs(y_all * w_all * x_all[:, CUBE_SIZE **3]))
     print("test", b3lyp_error, "KCAL/MOL", flush=True)
     print("End of evaluate.\n", flush=True)
     return np.abs(error_krr), np.abs(train_error)
@@ -140,9 +132,7 @@ def add_data(
             y_fitted,
             w_fitted,
         )
-    error_test = (
-        (y_test - krr.predict_data(x_test)) * w_test * x_test[:, ARRAY_USE_MIDDLE]
-    )
+    error_test = (y_test - krr.predict_data(x_test)) * w_test * x_test[:, CUBE_SIZE **3]
 
     index_add_test = (
         np.array([True] * len(error_test))
@@ -183,9 +173,7 @@ def add_data(
             y_fitted,
             w_fitted,
         )
-    error_test = (
-        (y_test - krr.predict_data(x_test)) * w_test * x_test[:, ARRAY_USE_MIDDLE]
-    )
+    error_test = (y_test - krr.predict_data(x_test)) * w_test * x_test[:, CUBE_SIZE **3]
     index_add_fitted = (
         np.array([True] * len(error_test))
         if len(error_test) < 51

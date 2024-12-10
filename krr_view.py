@@ -11,8 +11,8 @@ import faiss
 
 from sklearn.kernel_ridge import KernelRidge
 
-from krr import add_args, load_data, hash_value, append
-from cc2cc.utils import ARRAY_USE_MIDDLE, DATA_PATH, Mol, rotate
+from krr import add_args, load_data, hash_value
+from cc2cc.utils import CUBE_SIZE, DATA_PATH, Mol, rotate
 
 faiss.cvar.distance_compute_blas_threshold = 8000000
 
@@ -124,7 +124,7 @@ for index_ in x_keys:
         x = x_all[index_]
         y = y_all[index_]
         w = w_all[index_]
-        coor = coor_all[index_][:, ARRAY_USE_MIDDLE, :]
+        coor = coor_all[index_][:, CUBE_SIZE**3, :]
         name = name_all[index_]
         y = y[:, name_plot_i]
 
@@ -176,7 +176,7 @@ for index_ in x_keys:
                 energy = np.einsum(
                     "ij,i->ij",
                     y[indices],
-                    x[:, ARRAY_USE_MIDDLE] * w,
+                    x[:, CUBE_SIZE**3] * w,
                 )
                 var_energy = np.var(energy, axis=1)
                 argsort_ = np.argsort(mean_of_distances * var_energy)[::-1][
