@@ -1,5 +1,3 @@
-import pandas as pd
-
 from cc2cc.utils.basis import gen_basis
 from cc2cc.utils.parser import add_args
 from cc2cc.utils.mol import Mol, AU2KCALMOL, AU2DEBYE
@@ -15,24 +13,10 @@ from cc2cc.utils.env_var import (
 )
 from cc2cc.utils.Grids import Grid
 from cc2cc.utils.DataBase import DataBase
-from cc2cc.utils.ModelDict import ModelDict
+from cc2cc.utils.Model_Dict import Model_Dict
 from cc2cc.utils.rotate import rotate
-
-
-def save_csv_loss(
-    name_list,
-    path,
-    dict_: dict,
-):
-    """
-    save the loss to a csv file
-    """
-    dict_empty = {}
-    dict_["name"] = name_list
-    for key, val in dict_.items():
-        dict_empty[key] = val
-    df = pd.DataFrame(dict_empty)
-    df.to_csv(path, index=False)
+from cc2cc.utils.Data_Record import Data_Record
+from cc2cc.utils.Test_Data import Test_Data
 
 
 __all__ = [
@@ -49,9 +33,10 @@ __all__ = [
     "CUBE_MIDDLE",
     "CUBE_LEN",
     "Grid",
+    "Test_Data",
     "DataBase",
-    "ModelDict",
+    "Model_Dict",
     "rotate",
     "extend",
-    "save_csv_loss",
+    "Data_Record",
 ]

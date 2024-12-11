@@ -4,23 +4,14 @@ import pyscf
 # from pyscf.grad import ccsd as ccsd_grad
 import opt_einsum as oe
 
-from cc2cc.utils import gen_basis, Grid
+from cc2cc.utils import Grid
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 
 
-def cc(molecular, name, args):
+def cc(mol, name):
     """
     Generate data for the CCSD method. (Restrict scenario to spin 0).
     """
-    mol = pyscf.M(
-        atom=molecular,
-        basis=gen_basis(
-            molecular,
-            args.basis,
-            args.if_basis_str,
-        ),
-        spin=0,
-    )
 
     print(f"Generate data for {name}")
 

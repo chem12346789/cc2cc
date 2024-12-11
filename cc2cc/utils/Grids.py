@@ -6,9 +6,10 @@ More details.
 
 import ctypes
 from itertools import product
+import os
 
 import numpy as np
-
+from joblib import Parallel, parallel_config, delayed
 import pyscf
 from pyscf import dft, gto, lib
 from pyscf.dft.numint import _dot_ao_dm, _contract_rho
@@ -23,6 +24,7 @@ from cc2cc.utils.env_var import (
 
 libdft = lib.load_library("libdft")
 
+LEN = 7
 
 LEBEDEV_ORDER = {
     0: 1,
@@ -219,24 +221,20 @@ class Grid(dft.gen_grid.Grids):
             mol: An instance of :class:`Mole'.
             dm1_input: Density matrix, 2D array with shape (nao, nao). The orientation of the cube is determined by the eigenvectors of the Hessian matrix(secondary derivation of the density).
         """
-        if self.coor_cube is None:
-            self.coor_cube = np.zeros(
-                (len(self.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3)
-            )
-        else:
+        if self.coor_cube is not None:
             print("Error: self.coor_cube is initialized!")
             return
 
         ao_value = pyscf.dft.numint.eval_ao(mol, self.coords, deriv=2)
 
         # Hessian matrix
+        assert (
+            np.linalg.norm(dm1_input.conj().T - dm1_input) < 1e-10
+        ), "Density matrix is not symmetric."
         shls_slice = (0, mol.nbas)
         ao_loc = mol.ao_loc_nr()
         rho_input_1 = np.zeros((3, len(self.coords)))
         rho_input_2 = np.zeros((3, 3, len(self.coords)))
-        assert (
-            np.linalg.norm(dm1_input.conj().T - dm1_input) < 1e-10
-        ), "Density matrix is not symmetric."
         c0 = _dot_ao_dm(mol, ao_value[0], dm1_input, None, shls_slice, ao_loc)
         rho_input_1[0, :] = _contract_rho(ao_value[1], c0)
         rho_input_1[1, :] = _contract_rho(ao_value[2], c0)
@@ -251,10 +249,7 @@ class Grid(dft.gen_grid.Grids):
         rho_input_2[2, 0, :] = rho_input_2[0, 2, :]
         rho_input_2[2, 1, :] = rho_input_2[1, 2, :]
 
-        for p, p_coords in enumerate(self.coords):
-            if p * 10 % len(self.coords) == 0:
-                print(f"Progress: {(p*100)/len(self.coords):.1f}%", flush=True)
-
+        def gen_cube_p(p):
             norm_2d = rho_input_2[:, :, p]
             eig_val, eig_vec = np.linalg.eigh(norm_2d)
             eig_val_sort = np.argsort(eig_val)
@@ -264,6 +259,7 @@ class Grid(dft.gen_grid.Grids):
                 if eig_vec[:, i] @ norm_1d < 0:
                     eig_vec[:, i] *= -1
 
+            p_coords = self.coords[p]
             coords_cube = np.zeros((CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
             for i, j, k in product(range(CUBE_SIZE), repeat=3):
                 coords_cube[i, j, k, :] = (
@@ -272,7 +268,23 @@ class Grid(dft.gen_grid.Grids):
                     + (j - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 1]
                     + (k - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 2]
                 )
-            self.coor_cube[p] = coords_cube.copy()
+            return coords_cube
+
+        with parallel_config(
+            backend="loky",
+            n_jobs=int(os.environ.get("OMP_NUM_THREADS", 6)),
+            inner_max_num_threads=1,
+        ):
+            self.coor_cube = Parallel()(
+                delayed(gen_cube_p)(p) for p in range(len(self.coords))
+            )
+        self.coor_cube = np.array(self.coor_cube)
+
+    def gen_cube_mask(self):
+        for p_coor_cube in self.coor_cube:
+            for i_coor_cube in p_coor_cube:
+                mask = np.where(np.linspace.norm(i_coor_cube - self.coords) < 1e-10)
+                print(mask)
 
     def gen_cube_rho(self, mol, dm1_input, xc_type="MGGA"):
         """
@@ -282,13 +294,7 @@ class Grid(dft.gen_grid.Grids):
             print("Warning: coor_cube is not initialized!")
             self.gen_cube(mol, dm1_input)
 
-        if xc_type == "GGA":
-            LEN = 5
-        elif xc_type == "MGGA":
-            LEN = 7
-        rho_cube = np.zeros((len(self.coords), LEN, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
-
-        for p, _ in enumerate(self.coords):
+        def gen_cube_rho_p(p):
             ao_cube = pyscf.dft.numint.eval_ao(
                 mol, self.coor_cube[p].reshape(-1, 3), deriv=2
             )
@@ -296,8 +302,21 @@ class Grid(dft.gen_grid.Grids):
                 mol, ao_cube, dm1_input, xctype="mGGA", with_lapl=False
             )
             rho_cube_p_norm = gen_input(rho_cube_p, mol.spin, xc_type)
-            rho_cube[p] = np.reshape(
-                rho_cube_p_norm, (LEN, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+            return np.reshape(rho_cube_p_norm, (LEN, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+
+        with parallel_config(
+            backend="loky",
+            n_jobs=int(os.environ.get("OMP_NUM_THREADS", 6)),
+            inner_max_num_threads=1,
+        ):
+            rho_cube = Parallel()(
+                delayed(gen_cube_rho_p)(p) for p in range(len(self.coords))
             )
 
-        return rho_cube
+        return np.array(rho_cube)
+
+    def get_center_rho(self, rho_cube):
+        return (
+            rho_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + rho_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        )

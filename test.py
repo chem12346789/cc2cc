@@ -9,12 +9,17 @@ from pathlib import Path
 import datetime
 import os
 
-import torch
 import numpy as np
+import torch
+import pyscf
 
 from cc2cc import add_args, extend
 from cc2cc import test_rks, test_uks
-from cc2cc.utils import ModelDict, MAIN_PATH
+from cc2cc.utils import gen_basis, rotate
+
+from cc2cc.utils import Model_Dict, Data_Record
+
+from cc2cc.utils import MAIN_PATH
 
 
 # from cadft.utils.ModelDict_xy import ModelDict
@@ -31,7 +36,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # 1. Init the model
-    modeldict = ModelDict(
+    modeldict = Model_Dict(
         load=args.load,
         device=device,
         precision=args.precision,
@@ -42,24 +47,7 @@ if __name__ == "__main__":
     modeldict.eval()
 
     # 2. Test loop
-    df_dict = {
-        "name": [],
-        "error_scf_ene": [],
-        "error_dft_ene": [],
-        "abs_cc_ene": [],
-        "density_diff_scf": [],
-        "density_diff_dft": [],
-        "dipole_diff_scf": [],
-        "dipole_diff_dft": [],
-        "force_diff_scf": [],
-        "force_diff_dft": [],
-    }
-
-    name_mol_now = args.name_mol[0]
-
-    df_dict_path = Path(
-        f"{MAIN_PATH}/validate/ccdft_{args.load}_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}_{np.random.randint(10000) if os.environ.get("DFT2CC_VALIDATE_NAME") is None else os.environ.get("DFT2CC_VALIDATE_NAME")}.csv"
-    )
+    data_record = Data_Record(MAIN_PATH / f"validate/ccdft_{args.load}.csv")
 
     for (
         name_mol,
@@ -72,14 +60,33 @@ if __name__ == "__main__":
         args.extend_xyz,
         args.distance_list,
     ):
+        SPIN = 0
+        if "-openshell" in name_mol:
+            if "_" in name_mol:
+                SPIN = int(name_mol.split("_")[-1])
+                name_mol = name_mol.split("_")[0]
+                name_mol = name_mol.replace("-openshell", "")
+            else:
+                SPIN = 1
+
         molecular, name = extend(
             name_mol, extend_atom, extend_xyz, distance, args.basis
         )
-        if molecular is None:
-            print(f"Skip: {name:>40}")
-            continue
 
-        if "openshell" in name_mol:
-            test_uks(args, molecular, name, modeldict, df_dict, df_dict_path)
+        rotate(molecular, rotation="r")
+
+        mol = pyscf.M(
+            atom=molecular,
+            basis=gen_basis(
+                molecular,
+                args.basis,
+                args.if_basis_str,
+            ),
+            verbose=4,
+            spin=0,
+        )
+
+        if SPIN == 0:
+            test_rks(mol, name, modeldict, data_record)
         else:
-            test_rks(args, molecular, name, modeldict, df_dict, df_dict_path)
+            test_uks(mol, name, modeldict, data_record)

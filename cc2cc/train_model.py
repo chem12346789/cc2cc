@@ -9,8 +9,8 @@ import torch
 import numpy as np
 import wandb
 
-from cc2cc.utils import add_args, save_csv_loss
-from cc2cc.utils import DataBase, ModelDict
+from cc2cc.utils import add_args, Data_Record
+from cc2cc.utils import DataBase, Model_Dict
 
 
 def train_model(train_str_dict, eval_str_dict):
@@ -36,7 +36,7 @@ def train_model(train_str_dict, eval_str_dict):
     wandb.define_metric("*", step_metric="global_step")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    modeldict = ModelDict(
+    modeldict = Model_Dict(
         args.load,
         device,
         args.precision,
@@ -117,21 +117,29 @@ def train_model(train_str_dict, eval_str_dict):
             )
 
         if (epoch % (args.eval_step * 50) == 0) and (epoch != 0):
-            save_csv_loss(
+            data_record_train = Data_Record(
+                modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}"
+            )
+            data_record_train.add_data(
                 database_train.name_list,
-                modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}",
                 {
                     "train_loss_ene": train_loss_ene,
                     "train_loss_ene_tot": train_loss_ene_tot,
                 },
             )
-            save_csv_loss(
+            data_record_train.save_csv()
+
+            data_record_eval = Data_Record(
+                modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}"
+            )
+            data_record_eval.add_data(
                 database_eval.name_list,
-                modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}",
                 {
                     "eval_loss_ene": eval_loss_ene,
                     "eval_loss_ene_tot": eval_loss_ene_tot,
                 },
             )
+            data_record_eval.save_csv()
+
             modeldict.save_model(epoch)
     pbar0.close()
