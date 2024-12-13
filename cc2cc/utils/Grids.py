@@ -286,12 +286,14 @@ class Grid(dft.gen_grid.Grids):
                 mask = np.where(np.linspace.norm(i_coor_cube - self.coords) < 1e-10)
                 print(mask)
 
-    def gen_cube_rho(self, mol, dm1_input, xc_type="MGGA"):
+    def gen_cube_rho(self, mol, dm1_input, reset=False, xc_type="MGGA"):
         """
         Generate the cube density for the given molecule.
         """
         if self.coor_cube is None:
             print("Warning: coor_cube is not initialized!")
+            self.gen_cube(mol, dm1_input)
+        elif reset:
             self.gen_cube(mol, dm1_input)
 
         def gen_cube_rho_p(p):
@@ -320,3 +322,6 @@ class Grid(dft.gen_grid.Grids):
             rho_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
             + rho_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         )
+
+    def get_center_density(self, den_cube):
+        return den_cube[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]

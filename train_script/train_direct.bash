@@ -23,5 +23,10 @@ export NVIDIA_VISIBLE_DEVICES=1
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')
 # export CUDA_VISIBLE_DEVICES=NUMBER_OF_GPU
 
-nohup bash -c '~/anaconda3/envs/pyscf/bin/python train.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --eval_step 10 --batch_size 100000 --epoch 50000 --with_eval False --precision float32' >log/train3.log 2>&1 &
+# nohup bash -c '~/anaconda3/envs/pyscf/bin/python train.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --eval_step 10 --batch_size 100000 --epoch 50000 --with_eval False --precision float32' >log/train0.log 2>&1 &
+# 
+nohup bash -c '~/anaconda3/envs/pyscf/bin/python train.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --eval_step 10 --batch_size 100000 --epoch 50000 --with_eval False --precision float32' >log/train0.log 2>&1 &
+# 
+# nohup bash -c '~/anaconda3/envs/pyscf/bin/python train.py -dl 0 0 1 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --eval_step 10 --batch_size 100000 --epoch 50000 --with_eval False --precision float32' >log/train.log 2>&1 &
+# 
 echo $! >>log/save_pid.txt 2>&1

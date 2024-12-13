@@ -8,7 +8,7 @@ from cc2cc.utils import Grid
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 
 
-def cc(mol, name):
+def dft2cc(mol, name):
     """
     Generate data for the CCSD method. (Restrict scenario to spin 0).
     """
@@ -26,18 +26,17 @@ def cc(mol, name):
     mdft = pyscf.scf.RKS(mol)
     mdft.xc = "b3lyp"
     mdft.kernel()
-    dm1_dft = mdft.make_rdm1(ao_repr=True)
 
     grids = Grid(mol)
-    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
-    rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
-    exc_cc_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0]
+    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
+    rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
+    exc_cc_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0]
 
     expr_rinv_dm2_r = oe.contract_expression(
         "ijkl,i,j,kl->",
         0.5 * dm2_cc
         - 0.5 * oe.contract("pq,rs->pqrs", dm1_cc, dm1_cc)
-        + 0.05 * oe.contract("pr,qs->pqrs", dm1_dft, dm1_dft),
+        + 0.05 * oe.contract("pr,qs->pqrs", dm1_cc, dm1_cc),
         (mol.nao,),
         (mol.nao,),
         (mol.nao, mol.nao),
@@ -60,37 +59,14 @@ def cc(mol, name):
                 backend="torch",
             )
 
-    tau_rho_wf = gen_tau_rho(
-        rho_cc,
-        eigs_v_dm1,
-        eigs_e_dm1,
-        oe_tau_rho,
-        backend="torch",
-    )
-    tau_rho_ks = gen_tau_rho(
-        dm1_inv_r,
-        mo_inv[:, :nocc],
-        2 * np.ones(nocc),
-        oe_tau_rho,
-        backend="torch",
-    )
-        
-    kin = mol.intor("int1e_kin")
-    error_kin = np.einsum("pq,pq", kin, dm1_cc) - np.einsum("pq,pq", kin, dm1_dft)
-    nuc = mol.intor("int1e_nuc")
-    error_nuc = np.einsum("pq,pq", nuc, dm1_cc) - np.einsum("pq,pq", nuc, dm1_dft)
-    eri = mol.intor("int2e")
-    error_eris = 0.5 * np.einsum("pqrs,pq,rs", eri, dm1_cc, dm1_cc) - 0.5 * np.einsum(
-        "pqrs,pq,rs", eri, dm1_dft, dm1_dft
-    )
-    error_energy = e_cc - error_kin - error_nuc - error_eris - mdft.energy_tot(dm1_dft)
+    error_energy = e_cc - mdft.energy_tot(dm1_cc)
     error = np.sum(exc_cc_grids * grids.weights) - error_energy
     print(
         f"error_energy: {AU2KCALMOL * error_energy},",
         f"Error: {AU2KCALMOL * error},",
     )
 
-    rho_cube = grids.gen_cube_rho(mol, dm1_dft)
+    rho_cube = grids.gen_cube_rho(mol, dm1_cc)
 
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",

@@ -54,6 +54,6 @@ if __name__ == "__main__":
         )
 
         if SPIN == 0:
-            cc(mol, name, args)
+            cc(mol, name)
         else:
             continue

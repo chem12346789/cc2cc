@@ -36,17 +36,9 @@ DATA_TEST_PATH = MAIN_PATH / "data" / "test"
 DATA_SCF_PATH = MAIN_PATH / "data" / "grids_scf"
 CHECKPOINTS_PATH = MAIN_PATH / "checkpoints"
 
-print(f"MAIN_PATH: {MAIN_PATH.resolve()}")
-print(f"DATA_PATH: {DATA_PATH.resolve()}")
-print(f"DATA_TEST_PATH: {DATA_TEST_PATH.resolve()}")
-print(f"STRUCTURE: {STRUCTURE}")
-print(f"TEST: {TEST}")
-
 if __name__ == "__main__":
-    print(MAIN_PATH)
-    print(DATA_PATH)
-    print(DATA_TEST_PATH)
-    print(CHECKPOINTS_PATH)
-    print(STRUCTURE)
-    print(TEST)
-    print(CUBE_SIZE)
+    print(f"MAIN_PATH: {MAIN_PATH.resolve()}")
+    print(f"DATA_PATH: {DATA_PATH.resolve()}")
+    print(f"DATA_TEST_PATH: {DATA_TEST_PATH.resolve()}")
+    print(f"STRUCTURE: {STRUCTURE}")
+    print(f"TEST: {TEST}")

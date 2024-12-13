@@ -14,9 +14,11 @@ class Test_Data:
         self,
         mol,
         name="methane",
+        xc_code="b3lyp",
     ):
         self.name = name
         self.mol = mol
+        self.xc_code = xc_code
 
     # pylint: disable=W0201
     def test_mol(self):
@@ -28,7 +30,7 @@ class Test_Data:
         if self.mol.spin == 0:
             time_start = timer()
             mdft = pyscf.scf.RKS(self.mol)
-            mdft.xc = "b3lyp"
+            mdft.xc = self.xc_code
             mdft.max_cycle = 250
             mdft.kernel()
             self.dm1_dft = mdft.make_rdm1(ao_repr=True)
@@ -63,7 +65,7 @@ class Test_Data:
         else:
             time_start = timer()
             mdft = pyscf.scf.UKS(self.mol)
-            mdft.xc = "b3lyp"
+            mdft.xc = self.xc_code
             mdft.max_cycle = 250
             mdft.kernel()
             self.dm1_dft = mdft.make_rdm1(ao_repr=True)
@@ -95,17 +97,3 @@ class Test_Data:
                 unit="A.U.",
             )
             self.time_cc = timer() - time_start
-
-        np.savez_compressed(
-            DATA_TEST_PATH / f"data_{self.name}.npz",
-            cc_dipole=self.cc_dipole,
-            e_cc=self.e_cc,
-            dm1_cc=self.dm1_cc,
-            grad_ccsd=self.grad_ccsd,
-            time_cc=self.time_cc,
-            e_dft=self.e_dft,
-            dm1_dft=self.dm1_dft,
-            dft_dipole=self.dft_dipole,
-            grad_dft=self.grad_dft,
-            time_dft=self.time_dft,
-        )

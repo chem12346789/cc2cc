@@ -151,29 +151,25 @@ class DataBase:
         data = np.load(DATA_PATH / f"data_{name}.npz")
 
         input_mat = data["rho_cube"]
-        input_rho = (
-            input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + input_mat[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-        )
-        rho_weight_mat = input_rho * data["weights"]
-        output_mat = data["exc_over_dm_cc_grids"]
+        weight_mat = data["weights"]
+        output_mat = data["exc_cc_grids"]
 
         print(AU2KCALMOL * data["error_energy"])
-        print(AU2KCALMOL * np.sum(output_mat * rho_weight_mat))
+        print(AU2KCALMOL * np.sum(output_mat * weight_mat))
 
         input_ = {}
-        rho_weight_ = {}
+        weight_ = {}
         output_ = {}
 
         for i_coord in range(len(input_mat)):
             input_[i_coord] = input_mat[i_coord, :, :, :, :]
-            rho_weight_[i_coord] = rho_weight_mat[[i_coord]]
+            weight_[i_coord] = weight_mat[[i_coord]]
             output_[i_coord] = output_mat[[i_coord]]
 
         self.data_gpu[name] = BasicDataset(
             {
                 "input": input_,
-                "rho_weight": rho_weight_,
+                "weight": weight_,
                 "output": output_,
             },
             self.batch_size,

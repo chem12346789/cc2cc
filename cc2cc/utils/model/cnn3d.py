@@ -1,7 +1,8 @@
 # An 3d cnn model
 import torch
-
 import torch.nn as nn
+
+from cc2cc.utils import CUBE_MIDDLE
 
 ESP = torch.finfo(torch.float32).eps
 LEN = 4
@@ -55,12 +56,13 @@ class Model(nn.Module):
 
         rho0 = x[:, 0, :, :, :]
         rho1 = x[:, 1, :, :, :]
+        rho = rho0 + rho1
+        rho_lda = (rho + ESP) ** (1 / 3)
+        rho_spin = (rho0 - rho1) / (rho + ESP)
+        xi = (1 + rho_spin + ESP) ** (4 / 3) + (1 - rho_spin + ESP) ** (4 / 3)
 
-        rho_lda = (rho0 + rho1) ** (1 / 3)
         t[:, 0, :, :, :] = rho_lda
-
-        rho_spin = (rho0 - rho1) / (rho0 + rho1 + ESP)
-        t[:, 1, :, :, :] = (1 + rho_spin) ** (4 / 3) + (1 - rho_spin) ** (4 / 3)
+        t[:, 1, :, :, :] = xi
         t[:, 2, :, :, :] = (
             x[:, 2, :, :, :] + 2 * x[:, 3, :, :, :] + x[:, 4, :, :, :]
         ) / (rho_lda**4 + ESP)
@@ -75,4 +77,5 @@ class Model(nn.Module):
         t = t.reshape(x.size(0), -1)
         # x = self.dropout(x)
         t = self.fc(t)
+        t = t * rho[:, [CUBE_MIDDLE], CUBE_MIDDLE, CUBE_MIDDLE]
         return t

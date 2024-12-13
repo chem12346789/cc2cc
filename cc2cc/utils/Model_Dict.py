@@ -10,6 +10,8 @@ import torch
 import torch.optim as optim
 
 import pyscf
+from pyscf.dft.numint import _rks_gga_wv0, _scale_ao, _dot_ao_ao
+from pyscf.dft.libxc import xc_type
 
 from cc2cc.utils.env_var import CHECKPOINTS_PATH
 from cc2cc.utils.mol import AU2KCALMOL, AU2DEBYE
@@ -57,7 +59,7 @@ class Model_Dict:
         if precision == "float64":
             self.model.double()
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
         # self.optimizer = optim.SGD(self.model.parameters(), lr=1e-4)
 
         if self.with_eval:
@@ -74,7 +76,7 @@ class Model_Dict:
                 eta_min=1e-6,
             )
 
-        self.loss_multiplier = 0.1
+        self.loss_multiplier = 1
         self.loss_ene = torch.nn.L1Loss(reduction="none")
         self.loss_ene_tot = torch.nn.L1Loss(reduction="sum")
 
@@ -133,19 +135,20 @@ class Model_Dict:
         Calculate the loss.
         """
         input_mat = batch["input"]
-        rho_weight = batch["rho_weight"]
+        weight = batch["weight"]
         output_mat_real = batch["output"]
         output_mat = self.model(input_mat)
-        loss_ene_mat = self.loss_ene(output_mat, output_mat_real)
-        # loss_ene_mat = self.loss_ene(
-        #     output_mat_real[:, 0] * rho_weight[:, 0],
-        #     output_mat[:, 0] * rho_weight[:, 0],
-        # )
-        loss_ene = torch.mean(loss_ene_mat)
+        loss_ene_mat = self.loss_ene(
+            output_mat * weight,
+            output_mat_real * weight,
+        )
+        loss_ene = torch.sum(loss_ene_mat)
 
-        loss_ene_tot = self.loss_ene_tot(
-            torch.sum(output_mat_real[:, 0] * rho_weight[:, 0]),
-            torch.sum(output_mat[:, 0] * rho_weight[:, 0]),
+        loss_ene_tot = (
+            self.loss_ene_tot(
+                torch.sum(output_mat_real * weight),
+                torch.sum(output_mat * weight),
+            )
         )
 
         return loss_ene, loss_ene_tot
@@ -181,8 +184,8 @@ class Model_Dict:
                 loss_ene, loss_ene_tot = self.loss(batch)
                 self.tot_loss(loss_ene, loss_ene_tot).backward()
                 self.step()
-                number_batch_name += len(batch["rho_weight"])
-                loss_ene_name += loss_ene.item() * len(batch["rho_weight"])
+                number_batch_name += len(batch["weight"])
+                loss_ene_name += loss_ene.item() * len(batch["weight"])
                 loss_ene_tot_name += loss_ene_tot.item()
 
             loss_ene_l.append(AU2KCALMOL * loss_ene_name / number_batch_name)
@@ -205,8 +208,8 @@ class Model_Dict:
             for batch in database_eval.data_gpu[name]:
                 with torch.no_grad():
                     loss_ene, loss_ene_tot = self.loss(batch)
-                number_batch_name += len(batch["rho_weight"])
-                loss_ene_name += loss_ene.item() * len(batch["rho_weight"])
+                number_batch_name += len(batch["weight"])
+                loss_ene_name += loss_ene.item() * len(batch["weight"])
                 loss_ene_tot_name += loss_ene_tot.item()
 
             loss_ene_l.append(AU2KCALMOL * loss_ene_name / number_batch_name)
@@ -216,7 +219,7 @@ class Model_Dict:
 
     def get_e(
         self,
-        rks: pyscf.dft.rks.RKS,
+        ks: pyscf.dft.rks.RKS,
         grids: Grid,
         dms: np.ndarray = None,
     ):
@@ -226,13 +229,14 @@ class Model_Dict:
         Output: the potential (ngrids).
         """
         if dms is None:
-            dms = rks.make_rdm1()
+            dms = ks.make_rdm1()
 
-        rho_cube = grids.gen_cube_rho(rks.mol, dms)
+        rho_cube = grids.gen_cube_rho(ks.mol, dms)
         rho = grids.get_center_rho(rho_cube)
         input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
-        output_mat = self.model(input_mat)
-        exc_over_rho_cc_grids = output_mat.detach().cpu().numpy()
+        with torch.no_grad():
+            output_mat = self.model(input_mat)
+        exc_over_rho_cc_grids = output_mat.detach().cpu().numpy()[:, 0]
 
         return (
             np.sum(rho * grids.weights),
@@ -241,7 +245,7 @@ class Model_Dict:
 
     def get_e_density(
         self,
-        rks: pyscf.dft.rks.RKS,
+        ks: pyscf.dft.rks.RKS,
         grids: Grid,
         dms: np.ndarray = None,
         rho_cube: np.ndarray = None,
@@ -252,44 +256,94 @@ class Model_Dict:
         Output: the potential (ngrids).
         """
         if dms is None:
-            dms = rks.make_rdm1()
+            dms = ks.make_rdm1()
 
         if rho_cube is None:
-            rho_cube = grids.gen_cube_rho(rks.mol, dms)
+            rho_cube = grids.gen_cube_rho(ks.mol, dms)
 
-        input_ = {}
-        for i_coord in range(len(rho_cube)):
-            input_[i_coord] = rho_cube[i_coord, :, :, :, :]
-        data_gpu = BasicDataset(
-            {
-                "input": input_,
-            },
-            1000000,
-            self.dtype,
-        ).load_to_gpu()
-
-        for batch in data_gpu:
-            with torch.no_grad():
-                input_mat = batch["input"]
-                output_mat = self.model(input_mat)
-
+        rho_cube = grids.gen_cube_rho(ks.mol, dms)
+        rho = grids.get_center_rho(rho_cube)
+        input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
+        with torch.no_grad():
+            output_mat = self.model(input_mat)
         exc_over_rho_cc_grids = output_mat.detach().cpu().numpy()[:, 0]
         rho = grids.get_center_rho(rho_cube)
 
         return rho, exc_over_rho_cc_grids
 
-    def get_v(
+    def get_nev(
         self,
-        dft: pyscf.dft.rks.RKS,
+        ni,
+        ks: pyscf.dft.rks.RKS,
         grids: Grid,
-        dms: np.ndarray = None,
+        dms,
+        xc_code="b3lyp",
+        hermi=1,
+        max_memory=2000,
     ):
         """
         Obtain the energy density.
         Input: dft instance and grids instance.
         Output: the potential (ngrids).
         """
-        if dms is None:
-            dms = dft.make_rdm1()
+        rho_cube = grids.gen_cube_rho(ks.mol, dms)
+        input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
+        input_mat.requires_grad = True
+        output_mat = self.model(input_mat)[:, 0]
 
-        return
+        middle_cube = torch.autograd.grad(
+            torch.sum(output_mat),
+            input_mat,
+            create_graph=True,
+        )[0]
+        middle_mat = grids.get_center_density(middle_cube).detach().cpu().numpy()
+        exc = output_mat.detach().cpu().numpy()
+
+        # exc = np.zeros_like(exc)
+        # middle_mat = np.zeros_like(middle_mat)
+        # print("middle_mat", middle_mat)
+
+        if ks.mol.spin == 0:
+            vrho = (middle_mat[:, 0] + middle_mat[:, 1]) / 2
+            vsigma = (middle_mat[:, 2] + middle_mat[:, 3] + middle_mat[:, 4]) / 4
+            vtau = (middle_mat[:, 5] + middle_mat[:, 6]) / 2
+        else:
+            vrho = np.array((middle_mat[:, 0], middle_mat[:, 1]))
+            vsigma = np.array(([middle_mat[:, 2], middle_mat[:, 3], middle_mat[:, 4]]))
+            vtau = np.array((middle_mat[:, 5], middle_mat[:, 6]))
+
+        ao = ni.eval_ao(ks.mol, grids.coords, deriv=1)
+        rho = ni.eval_rho(ks.mol, ao, dms, xctype=xc_type(xc_code))
+        b3lyp_xc = pyscf.dft.libxc.eval_xc(xc_code, rho, ks.mol.spin)
+        exc += b3lyp_xc[0]
+        vrho += b3lyp_xc[1][0]
+        vsigma += b3lyp_xc[1][1]
+
+        vxc = (vrho, vsigma, np.zeros_like(vrho), vtau)
+
+        vmat = np.zeros((ks.mol.nao, ks.mol.nao))
+        aow = None
+
+        if ks.mol.spin == 0:
+            ao = ni.eval_ao(ks.mol, grids.coords, deriv=2)
+            aow = np.ndarray(ao[0].shape, order="F", buffer=aow)
+
+            den = rho[0] * grids.weights
+            nelec = den.sum()
+            excsum = np.dot(den, exc)
+
+            wv = _rks_gga_wv0(rho, vxc, grids.weights)
+            #:aow = numpy.einsum('npi,np->pi', ao[:4], wv, out=aow)
+            aow = _scale_ao(ao[:4], wv, out=aow)
+            vmat += _dot_ao_ao(ks.mol, ao[0], aow, None, None, None)
+
+            # FIXME: .5 * .5   First 0.5 for v+v.T symmetrization.
+            # Second 0.5 is due to the Libxc convention tau = 1/2 \nabla\phi\dot\nabla\phi
+            wv = (0.5 * 0.5 * grids.weights * vtau).reshape(-1, 1)
+            vmat += _dot_ao_ao(ks.mol, ao[1], wv * ao[1], None, None, None)
+            vmat += _dot_ao_ao(ks.mol, ao[2], wv * ao[2], None, None, None)
+            vmat += _dot_ao_ao(ks.mol, ao[3], wv * ao[3], None, None, None)
+
+            rho = exc = vxc = vrho = vsigma = wv = None
+
+        return nelec, excsum, vmat + vmat.T

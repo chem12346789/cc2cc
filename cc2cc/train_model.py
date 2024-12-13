@@ -112,34 +112,15 @@ def train_model(train_str_dict, eval_str_dict):
             experiment.log(experiment_dict)
 
             pbar0.set_description(
-                f"Epoch: {epoch}, Ene loss tot: {experiment_dict['train_loss_ene_tot']:.2f}, Ene loss eval tot: {experiment_dict['eval_loss_ene_tot']:.2f}, Loss: {experiment_dict['train_loss_tot']:.2f}, Loss_eval: {experiment_dict['eval_loss_tot']:.2f}, lr: {experiment_dict['lr']:.2e}",
+                f"Epoch: {epoch}, "
+                f"Ene loss tot: {experiment_dict['train_loss_ene_tot']:.2f}, "
+                f"Ene loss eval tot: {experiment_dict['eval_loss_ene_tot']:.2f}, "
+                f"Loss: {experiment_dict['train_loss_tot']:.2f}, "
+                f"Loss_eval: {experiment_dict['eval_loss_tot']:.2f}, "
+                f"lr: {experiment_dict['lr']:.2e}",
                 refresh=False,
             )
 
         if (epoch % (args.eval_step * 50) == 0) and (epoch != 0):
-            data_record_train = Data_Record(
-                modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}"
-            )
-            data_record_train.add_data(
-                database_train.name_list,
-                {
-                    "train_loss_ene": train_loss_ene,
-                    "train_loss_ene_tot": train_loss_ene_tot,
-                },
-            )
-            data_record_train.save_csv()
-
-            data_record_eval = Data_Record(
-                modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}"
-            )
-            data_record_eval.add_data(
-                database_eval.name_list,
-                {
-                    "eval_loss_ene": eval_loss_ene,
-                    "eval_loss_ene_tot": eval_loss_ene_tot,
-                },
-            )
-            data_record_eval.save_csv()
-
             modeldict.save_model(epoch)
     pbar0.close()
