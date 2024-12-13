@@ -20,7 +20,6 @@ def load_data(
     input_dict = {}
     output_dict = {}
     weights_dict = {}
-    coords_dict = {}
     keys_list = []
     for (
         name_mol,
@@ -62,8 +61,6 @@ def load_data(
         print(output_.shape)
 
         weights_ = data["weights"]
-        coords_cube = data["coor_cube"]
-        coords_cube = coords_cube[:, :, :, :, :]
         input_ = data["rho_cube"]
         input_ = input_[:, :, :, :, :]
 
@@ -76,15 +73,12 @@ def load_data(
             f"max: {np.max(input_[:, 2, :, :, :])}, min: {np.min(input_[:, 2, :, :, :])}\n"
             # f"max: {np.max(input_[:, 3, :, :, :])}, min: {np.min(input_[:, 3, :, :, :])}\n"
         )
-        input_ = input_.reshape(-1, (CUBE_SIZE) ** 3 * 4)
+        input_ = input_.reshape(-1, (CUBE_SIZE) ** 3 * input_.shape[1])
         print(input_.shape)
 
         input_dict[name] = input_
         output_dict[name] = output_
         weights_dict[name] = weights_
-
-        coords_cube = coords_cube.reshape(-1, (CUBE_SIZE) ** 3, 3)
-        coords_dict[name] = coords_cube
 
         keys_list.append(name)
         if len(np.shape(output_dict[name])) == 1:
@@ -104,4 +98,4 @@ def load_data(
                     )
                 ),
             )
-    return input_dict, output_dict, weights_dict, coords_dict, keys_list
+    return input_dict, output_dict, weights_dict, keys_list

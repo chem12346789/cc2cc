@@ -144,11 +144,9 @@ class Model_Dict:
         )
         loss_ene = torch.sum(loss_ene_mat)
 
-        loss_ene_tot = (
-            self.loss_ene_tot(
-                torch.sum(output_mat_real * weight),
-                torch.sum(output_mat * weight),
-            )
+        loss_ene_tot = self.loss_ene_tot(
+            torch.sum(output_mat_real * weight),
+            torch.sum(output_mat * weight),
         )
 
         return loss_ene, loss_ene_tot
@@ -232,44 +230,12 @@ class Model_Dict:
             dms = ks.make_rdm1()
 
         rho_cube = grids.gen_cube_rho(ks.mol, dms)
-        rho = grids.get_center_rho(rho_cube)
         input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
         with torch.no_grad():
             output_mat = self.model(input_mat)
-        exc_over_rho_cc_grids = output_mat.detach().cpu().numpy()[:, 0]
+        exc_cc_grids = output_mat.detach().cpu().numpy()[:, 0]
 
-        return (
-            np.sum(rho * grids.weights),
-            np.sum(exc_over_rho_cc_grids * rho * grids.weights),
-        )
-
-    def get_e_density(
-        self,
-        ks: pyscf.dft.rks.RKS,
-        grids: Grid,
-        dms: np.ndarray = None,
-        rho_cube: np.ndarray = None,
-    ):
-        """
-        Obtain the energy density.
-        Input: dft instance and grids instance.
-        Output: the potential (ngrids).
-        """
-        if dms is None:
-            dms = ks.make_rdm1()
-
-        if rho_cube is None:
-            rho_cube = grids.gen_cube_rho(ks.mol, dms)
-
-        rho_cube = grids.gen_cube_rho(ks.mol, dms)
-        rho = grids.get_center_rho(rho_cube)
-        input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
-        with torch.no_grad():
-            output_mat = self.model(input_mat)
-        exc_over_rho_cc_grids = output_mat.detach().cpu().numpy()[:, 0]
-        rho = grids.get_center_rho(rho_cube)
-
-        return rho, exc_over_rho_cc_grids
+        return np.sum(exc_cc_grids * grids.weights)
 
     def get_nev(
         self,
@@ -297,7 +263,7 @@ class Model_Dict:
             create_graph=True,
         )[0]
         middle_mat = grids.get_center_density(middle_cube).detach().cpu().numpy()
-        exc = output_mat.detach().cpu().numpy()
+        excsum = (output_mat.detach().cpu().numpy() * grids.weights).sum()
 
         # exc = np.zeros_like(exc)
         # middle_mat = np.zeros_like(middle_mat)
@@ -315,7 +281,7 @@ class Model_Dict:
         ao = ni.eval_ao(ks.mol, grids.coords, deriv=1)
         rho = ni.eval_rho(ks.mol, ao, dms, xctype=xc_type(xc_code))
         b3lyp_xc = pyscf.dft.libxc.eval_xc(xc_code, rho, ks.mol.spin)
-        exc += b3lyp_xc[0]
+        exc_b3lyp = b3lyp_xc[0]
         vrho += b3lyp_xc[1][0]
         vsigma += b3lyp_xc[1][1]
 
@@ -330,7 +296,7 @@ class Model_Dict:
 
             den = rho[0] * grids.weights
             nelec = den.sum()
-            excsum = np.dot(den, exc)
+            excsum += np.dot(den, exc_b3lyp)
 
             wv = _rks_gga_wv0(rho, vxc, grids.weights)
             #:aow = numpy.einsum('npi,np->pi', ao[:4], wv, out=aow)

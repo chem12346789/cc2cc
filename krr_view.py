@@ -26,7 +26,7 @@ print("alpha:", args.alpha)
 print("kernel:", args.kernel, flush=True)
 
 view_dict = {
-    "cc": "exc_over_dm_cc_grids",
+    "cc": "exc_cc_grids",
     # "b3lyp": "exc_over_dm_b3lyp_grids",
     # "mrks": "exc_over_dm_mrks_grids",
 }
@@ -35,7 +35,6 @@ view_dict = {
     input_dict,
     output_dict,
     weights_dict,
-    coords_dict,
     keys_list,
 ) = load_data(
     args.molecular_list,
@@ -51,14 +50,13 @@ krr = KernelRidge(alpha=args.alpha, gamma=args.gamma, kernel="precomputed")
 x_all = {}
 y_all = {}
 w_all = {}
-coor_all = {}
 name_all = {}
 dual_coef = {}
 x_fit = {}
 
 # center_piont = []
 # hashtable = append(np.linspace(-1, 0, 11)[:-1], center_piont, np.linspace(0, 1, 11)[1:])
-hashtable = np.linspace(-1e4, 1e4, 2)
+hashtable = np.linspace(-1e10, 1e10, 2)
 print(hashtable)
 shape_matrix = (20, 194, 40)
 
@@ -78,13 +76,11 @@ for key in keys_list:
             x_all[index_round] = [input_dict[key][index_]]
             y_all[index_round] = [output_dict[key][index_]]
             w_all[index_round] = [weights_dict[key][index_]]
-            coor_all[index_round] = [coords_dict[key][index_]]
             name_all[index_round] = [f"{key}_{iatm}_{irad}_{iang}"]
         else:
             x_all[index_round].append(input_dict[key][index_])
             y_all[index_round].append(output_dict[key][index_])
             w_all[index_round].append(weights_dict[key][index_])
-            coor_all[index_round].append(coords_dict[key][index_])
             name_all[index_round].append(f"{key}_{iatm}_{irad}_{iang}")
 
 x_keys = list(x_all.keys())
@@ -92,7 +88,6 @@ for index_ in np.sort(list(x_all.keys())):
     x_all[index_] = np.array(x_all[index_])
     y_all[index_] = np.array(y_all[index_])
     w_all[index_] = np.array(w_all[index_])
-    coor_all[index_] = np.array(coor_all[index_])
     name_all[index_] = np.array(name_all[index_])
 
 train_error_sum = 0
@@ -124,7 +119,6 @@ for index_ in x_keys:
         x = x_all[index_]
         y = y_all[index_]
         w = w_all[index_]
-        coor = coor_all[index_][:, CUBE_SIZE**3, :]
         name = name_all[index_]
         y = y[:, name_plot_i]
 
@@ -146,7 +140,7 @@ for index_ in x_keys:
         for if_kcal, max_x_ in product(
             [
                 False,
-                True,
+                # True,
             ],
             [
                 1e-2,
@@ -192,43 +186,39 @@ for index_ in x_keys:
 
             distances_ = distances[argsort_]
             name_ = name[indices[argsort_]]
-            coor_ = coor[indices[argsort_]]
             x_ = x[indices[argsort_]]
             print(np.sum((x_ - x_[:, [0], :]) ** 2, axis=2))
             print(distances_)
             print(x_.shape)
-            print(energy.shape, distances_.shape, name_.shape, coor_.shape, flush=True)
-            print(y.shape, distances.shape, name.shape, coor.shape, flush=True)
+            print(energy.shape, distances_.shape, name_.shape, flush=True)
+            print(y.shape, distances.shape, name.shape, flush=True)
             max_y = np.max(np.abs(energy - energy[:, [0]]))
 
             INDEX_CHECK = 0
             name_energy_dict = {}
-            name_corr_dict = {}
             for i in range(SEARCH_NUMBER):
                 if if_kcal:
                     name_energy_dict[name_[INDEX_CHECK][i]] = energy[INDEX_CHECK][i]
-                    name_corr_dict[name_[INDEX_CHECK][i]] = coor_[INDEX_CHECK][i]
                 else:
                     name_energy_dict[name_[INDEX_CHECK][i]] = energy[INDEX_CHECK][i]
-                    name_corr_dict[name_[INDEX_CHECK][i]] = coor_[INDEX_CHECK][i]
 
             x_name_dict = {}
             for name_i, energy_i in name_energy_dict.items():
                 x_ = f"{name_i.split("_")[0]}_{name_i.split("_")[5]}_{name_i.split("_")[6]}_{name_i.split("_")[7]}"
                 if x_ in x_name_dict:
-                    x_name_dict[x_].append([name_i, energy_i, name_corr_dict[name_i]])
+                    x_name_dict[x_].append([name_i, energy_i])
                 else:
-                    x_name_dict[x_] = [[name_i, energy_i, name_corr_dict[name_i]]]
+                    x_name_dict[x_] = [[name_i, energy_i]]
 
             plt.rcParams["figure.figsize"] = np.array([0.95, 0.5]) * 520 / 72
             for key_, value_ in x_name_dict.items():
                 if if_kcal:
                     for j in value_:
-                        print(f"{j[0]:20} {j[1]:10.5e} {j[2]}", flush=True)
+                        print(f"{j[0]:20} {j[1]:10.5e}", flush=True)
                     print("kcal/mol")
                 else:
                     for j in value_:
-                        print(f"{j[0]:20} {j[1]:10.5e} {j[2]}", flush=True)
+                        print(f"{j[0]:20} {j[1]:10.5e}", flush=True)
                     print("au")
                 f, axes = plt.subplots(2, 1)
                 axes[1].remove()
@@ -275,9 +265,6 @@ for index_ in x_keys:
                         i_mol[3],
                         c=color_dict_atom[i_mol[0]],
                     )
-                # plot the coor_all_
-                for j in value_:
-                    axes[0, 1].scatter(j[2][0], j[2][1], j[2][2], c="r")
 
                 plt.savefig(
                     plot_path / f"plot/{key_}_{len(value_)}.pdf",

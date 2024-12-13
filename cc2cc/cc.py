@@ -30,7 +30,9 @@ def cc(mol, name):
 
     grids = Grid(mol)
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+    ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
     rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
+    # rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
     exc_cc_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0]
 
     expr_rinv_dm2_r = oe.contract_expression(
@@ -60,31 +62,51 @@ def cc(mol, name):
                 backend="torch",
             )
 
-    tau_rho_wf = gen_tau_rho(
-        rho_cc,
-        eigs_v_dm1,
-        eigs_e_dm1,
-        oe_tau_rho,
-        backend="torch",
-    )
-    tau_rho_ks = gen_tau_rho(
-        dm1_inv_r,
-        mo_inv[:, :nocc],
-        2 * np.ones(nocc),
-        oe_tau_rho,
-        backend="torch",
-    )
-        
-    kin = mol.intor("int1e_kin")
-    error_kin = np.einsum("pq,pq", kin, dm1_cc) - np.einsum("pq,pq", kin, dm1_dft)
+        # for i_atom in range(mol.natm):
+        #     exc_cc_grids[i] -= (
+        #         (rho_cc[0][i] - rho_dft[0][i])
+        #         * mol.atom_charges()[i_atom]
+        #         / (np.linalg.norm(mol.atom_coords()[i_atom] - coord))
+        #     )
+
+    dm1_cc_mo = mycc.make_rdm1(ao_repr=False)
+    eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo)
+    eigs_v_dm1 = mf.mo_coeff @ eigs_v_dm1
+    for i in range(np.shape(eigs_v_dm1)[1]):
+        part = oe.contract(
+            "pm,m,n,pn->p",
+            ao_value[0],
+            eigs_v_dm1[:, i],
+            eigs_v_dm1[:, i],
+            ao_2_diag,
+        )
+        exc_cc_grids -= part * eigs_e_dm1[i] / 2
+
+    for i in range(mol.nelec[0]):
+        part = oe.contract(
+            "pm,m,n,pn->p",
+            ao_value[0],
+            mdft.mo_coeff[:, i],
+            mdft.mo_coeff[:, i],
+            ao_2_diag,
+        )
+        exc_cc_grids += part
+
     nuc = mol.intor("int1e_nuc")
     error_nuc = np.einsum("pq,pq", nuc, dm1_cc) - np.einsum("pq,pq", nuc, dm1_dft)
     eri = mol.intor("int2e")
     error_eris = 0.5 * np.einsum("pqrs,pq,rs", eri, dm1_cc, dm1_cc) - 0.5 * np.einsum(
         "pqrs,pq,rs", eri, dm1_dft, dm1_dft
     )
-    error_energy = e_cc - error_kin - error_nuc - error_eris - mdft.energy_tot(dm1_dft)
+    error_energy = e_cc - error_nuc - error_eris - mdft.energy_tot(dm1_dft)
     error = np.sum(exc_cc_grids * grids.weights) - error_energy
+    print(
+        "exc_cc_grids: ",
+        f"max exc_cc_grids: {np.max(exc_cc_grids)}",
+        f"min exc_cc_grids: {np.min(exc_cc_grids)}",
+        f"mean exc_cc_grids: {np.mean(exc_cc_grids)}",
+        f"var exc_cc_grids: {np.var(exc_cc_grids)}",
+    )
     print(
         f"error_energy: {AU2KCALMOL * error_energy},",
         f"Error: {AU2KCALMOL * error},",

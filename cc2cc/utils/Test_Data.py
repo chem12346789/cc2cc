@@ -21,7 +21,7 @@ class Test_Data:
         self.xc_code = xc_code
 
     # pylint: disable=W0201
-    def test_mol(self):
+    def test_mol(self, if_grad=False):
         """
         Generate 1-RDM, energy, dipole, and gradient for the molecule.
         """
@@ -35,13 +35,14 @@ class Test_Data:
             mdft.kernel()
             self.dm1_dft = mdft.make_rdm1(ao_repr=True)
             self.e_dft = mdft.e_tot
-            g = mdft.nuc_grad_method()
-            self.grad_dft = g.kernel()
             self.dft_dipole = pyscf.scf.hf.dip_moment(
                 mol=self.mol,
                 dm=self.dm1_dft,
                 unit="A.U.",
             )
+            if if_grad:
+                g = mdft.nuc_grad_method()
+                self.grad_dft = g.kernel()
             self.time_dft = timer() - time_start
 
             time_start = timer()
@@ -54,13 +55,14 @@ class Test_Data:
             mycc.kernel()
             self.dm1_cc = mycc.make_rdm1(ao_repr=True)
             self.e_cc = mycc.e_tot
-            g = ccsd_grad.Gradients(mycc)
-            self.grad_ccsd = g.kernel()
             self.cc_dipole = pyscf.scf.hf.dip_moment(
                 mol=self.mol,
                 dm=self.dm1_cc,
                 unit="A.U.",
             )
+            if if_grad:
+                g = ccsd_grad.Gradients(mycc)
+                self.grad_ccsd = g.kernel()
             self.time_cc = timer() - time_start
         else:
             time_start = timer()
@@ -70,13 +72,14 @@ class Test_Data:
             mdft.kernel()
             self.dm1_dft = mdft.make_rdm1(ao_repr=True)
             self.e_dft = mdft.e_tot
-            g = mdft.nuc_grad_method()
-            self.grad_dft = g.kernel()
             self.dft_dipole = pyscf.scf.hf.dip_moment(
                 mol=self.mol,
                 dm=self.dm1_dft,
                 unit="A.U.",
             )
+            if if_grad:
+                g = mdft.nuc_grad_method()
+                self.grad_dft = g.kernel()
             self.time_dft = timer() - time_start
 
             time_start = timer()
@@ -89,11 +92,12 @@ class Test_Data:
             mycc.kernel()
             self.dm1_cc = mycc.make_rdm1(ao_repr=True)
             self.e_cc = mycc.e_tot
-            g = uccsd_grad.Gradients(mycc)
-            self.grad_ccsd = g.kernel()
             self.cc_dipole = pyscf.scf.uhf.dip_moment(
                 mol=self.mol,
                 dm=self.dm1_cc,
                 unit="A.U.",
             )
+            if if_grad:
+                g = uccsd_grad.Gradients(mycc)
+                self.grad_ccsd = g.kernel()
             self.time_cc = timer() - time_start

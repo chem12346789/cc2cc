@@ -319,8 +319,8 @@ class Grid(dft.gen_grid.Grids):
 
     def get_center_rho(self, rho_cube):
         return (
-            rho_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + rho_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            rho_cube[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + rho_cube[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         )
 
     def get_center_density(self, den_cube):

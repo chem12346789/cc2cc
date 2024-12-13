@@ -106,24 +106,34 @@ def test_rks(
         return vxc
 
     mdft.get_veff = types.MethodType(get_veff_modified, mdft)
-    # mdft.conv_tol = 1e-6
+    mdft.conv_tol = 1e-6
     mdft.kernel()
 
-    # _, e_scf = modeldict.get_e(mdft, grids, test_data.dm1_cc)
-    # print(AU2KCALMOL * e_scf)
+    scf_dipole = pyscf.scf.hf.dip_moment(
+        mol=mol,
+        dm=mdft.make_rdm1(),
+        unit="A.U.",
+    )
+
+    # e_scf = modeldict.get_e(mdft, grids, test_data.dm1_cc)
     # print(AU2KCALMOL * (test_data.e_cc - mdft.energy_tot(test_data.dm1_cc)))
+    # print(AU2KCALMOL * e_scf)
     # e_scf += mdft.energy_tot(test_data.dm1_cc)
 
     time_ai = timer() - time_ai_start
 
     error_dft_ene = AU2KCALMOL * (test_data.e_dft - test_data.e_cc)
     error_scf_ene = AU2KCALMOL * (mdft.e_tot - test_data.e_cc)
+    error_dft_dip = np.linalg.norm(test_data.dft_dipole - test_data.cc_dipole)
+    error_scf_dip = np.linalg.norm(scf_dipole - test_data.cc_dipole)
 
     data_record.add_data(
         name,
         {
             "error_scf_ene": error_scf_ene,
             "error_dft_ene": error_dft_ene,
+            "error_scf_dip": error_scf_dip,
+            "error_dft_dip": error_dft_dip,
             "time_cc": test_data.time_cc,
             "time_dft": test_data.time_dft,
             "time_ai": time_ai,
