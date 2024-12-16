@@ -1,16 +1,14 @@
 import argparse
-from pathlib import Path
 
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from cc2cc.utils import AU2KCALMOL, ARRAY_USE_MIDDLE
+from cc2cc.utils import AU2KCALMOL, CUBE_SIZE
 
-from krr import load_data, evaluate, add_data, add_args, hash_value, append
+from krr import load_data, evaluate, add_data, add_args, hash_value
 from krr import KernelRidgeModified
 
 
-DATA_PATH = Path("data/grids_dft")
 BASIS = "cc-pVDZ"
 
 parser = argparse.ArgumentParser(
@@ -58,14 +56,9 @@ model_para = {
     "kernel_type": {},
 }
 
-center_piont = [-0.01, -0.001, 0.001, 0.01]
-hashtable = append(
-    np.linspace(-10, 0, 101)[:-1],
-    center_piont,
-    np.linspace(0, 10, 101)[1:],
-)
-list_1 = list(range(-len(center_piont) // 2 + 1, len(center_piont) // 2, 1))
-list_2 = [-len(hashtable) // 2, len(hashtable) // 2]
+hashtable = np.linspace(-5, 5, 100 + 1)
+list_1 = []
+list_2 = []
 print(hashtable, list_1, list_2)
 
 for key in keys_list:
@@ -102,12 +95,7 @@ for index_ in x_keys:
 
     krr.alpha = args.alpha
     krr.kernel_type = "rbf"
-    if int(index_.split("_")[0]) in list_1 and int(index_.split("_")[1]) in list_1:
-        krr.gamma = args.gamma[0]
-    elif int(index_.split("_")[0]) in list_2 or int(index_.split("_")[1]) in list_2:
-        krr.gamma = args.gamma[0] if len(args.gamma) <= 2 else args.gamma[2]
-    else:
-        krr.gamma = args.gamma[0] if len(args.gamma) <= 1 else args.gamma[1]
+    krr.gamma = args.gamma[0]
 
     if len(x_all[index_]) < 500:
         krr.fit_data(x_all[index_], y_all[index_])
@@ -118,6 +106,11 @@ for index_ in x_keys:
             w_all[index_],
             train_size=50,
             random_state=42,
+        )
+        (x_fitted, y_fitted, w_fitted) = (
+            np.empty_like(x_train),
+            np.empty_like(y_train),
+            np.empty_like(w_train),
         )
 
         CONVERGE_STEP = 0
@@ -140,19 +133,42 @@ for index_ in x_keys:
                 if CONVERGE_STEP == 1:
                     print("Converge.")
                     break
-            x_train, y_train, w_train, x_test, y_test, w_test = add_data(
-                krr, x_train, y_train, w_train, x_test, y_test, w_test
+
+            if len(x_test) == 0:
+                break
+
+            (
+                x_train,
+                y_train,
+                w_train,
+                x_test,
+                y_test,
+                w_test,
+                x_fitted,
+                y_fitted,
+                w_fitted,
+            ) = add_data(
+                krr,
+                x_train,
+                y_train,
+                w_train,
+                x_test,
+                y_test,
+                w_test,
+                x_fitted,
+                y_fitted,
+                w_fitted,
             )
 
     train_error = np.sum(
         np.abs(
             (y_all[index_] - krr.predict_data(x_all[index_]))
             * w_all[index_]
-            * x_all[index_][:, ARRAY_USE_MIDDLE]
+            * x_all[index_][:, CUBE_SIZE**3]
         )
     )
     energy_correct = np.sum(
-        np.abs(y_all[index_] * w_all[index_] * x_all[index_][:, ARRAY_USE_MIDDLE])
+        np.abs(y_all[index_] * w_all[index_] * x_all[index_][:, CUBE_SIZE**3])
     )
 
     train_error_sum += train_error
@@ -160,7 +176,6 @@ for index_ in x_keys:
 
     if np.abs(AU2KCALMOL * train_error) > 0.001:
         print(
-            f"Round {index_}\n",
             f"Length of x_all: {len(x_all[index_])}\n",
             f"Train error: {AU2KCALMOL * train_error} KCAL/MOL\n",
             f"Energy correct: {AU2KCALMOL * energy_correct} KCAL/MOL\n",

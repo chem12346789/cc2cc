@@ -5,28 +5,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from cc2cc.utils.env_var import (
-    DATA_PATH,
-    STRUCTURE,
-    CUBE_MIDDLE,
-    CUBE_USE_MIDDLE,
-    LEVEL,
-    PERIOD,
-)
+from cc2cc.utils.env_var import DATA_PATH, CUBE_MIDDLE
 from cc2cc.utils.mol import AU2KCALMOL
-
-
-def process_input(data, grids):
-    """
-    process the input
-    """
-    data_grids_norm = np.zeros((4, len(grids.coord_list), grids.n_rad, grids.n_ang))
-    for oxyz in range(4):
-        if oxyz == 0:
-            data_grids_norm[oxyz, :, :, :] = grids.vector_to_matrix(data[oxyz, :])
-        else:
-            data_grids_norm[oxyz, :, :, :] = grids.vector_to_matrix(data[oxyz, :])
-    return data_grids_norm
 
 
 def process(data, dtype):
@@ -156,101 +136,42 @@ class DataBase:
         ):
             name = f"{name_mol}_{self.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
 
-            if "openshell" in name:
-                for i_spin in range(2):
-                    name_ = f"{name}_{i_spin}"
-                    if not (
-                        Path(f"{DATA_PATH}") / f"data_{name_}_{LEVEL}_{PERIOD}.npz"
-                    ).exists():
-                        print(f"No file: {name_:>40}", flush=True)
-                        continue
-                    print(f"Load: {name_:>40}", flush=True)
-                    self.name_list.append(f"{name_}")
-                    self.load_data(name_)
-            else:
-                if not (
-                    Path(f"{DATA_PATH}") / f"data_{name}_{LEVEL}_{PERIOD}.npz"
-                ).exists():
-                    print(f"No file: {name:>40}", flush=True)
-                    continue
-                print(f"Load: {name:>40}", flush=True)
-                self.name_list.append(name)
-                self.load_data(name)
+            path_name_ = DATA_PATH / f"data_{name}.npz"
+            if not (path_name_).exists():
+                print(f"No file: {path_name_.as_posix():>40}", flush=True)
+                continue
+            print(f"Load: {name:>40}", flush=True)
+            self.name_list.append(name)
+            self.load_data(name)
 
     def load_data(self, name):
         """
         Load the data.
         """
-        data = np.load(Path(f"{DATA_PATH}") / f"data_{name}_{LEVEL}_{PERIOD}.npz")
+        data = np.load(DATA_PATH / f"data_{name}.npz")
+
+        input_mat = data["rho_cube"]
+        weight_mat = data["weights"]
+        output_mat = data["exc_cc_grids"]
+
         print(AU2KCALMOL * data["error_energy"])
+        print(AU2KCALMOL * np.sum(output_mat * weight_mat))
 
-        if "unet" in STRUCTURE:
-            input_mat = data["rho_inv_4_norm_matrix"]
-            output_mat = data["exc_over_dm_cc_grids"]
-            weights_mat = data["weights_matrix"]
+        input_ = {}
+        weight_ = {}
+        output_ = {}
 
-            input_ = {}
-            weight_ = {}
-            output_ = {}
+        for i_coord in range(len(input_mat)):
+            input_[i_coord] = input_mat[i_coord, :, :, :, :]
+            weight_[i_coord] = weight_mat[[i_coord]]
+            output_[i_coord] = output_mat[[i_coord]]
 
-            for i_atom in range(output_mat.shape[0]):
-                input_[i_atom] = input_mat[[0], i_atom, :, :]
-                weight_[i_atom] = weights_mat[[i_atom], :, :]
-                output_[i_atom] = output_mat[[i_atom], :, :]
-
-            self.data_gpu[name] = BasicDataset(
-                {
-                    "input": input_,
-                    "output": output_,
-                    "weight": weight_,
-                },
-                self.batch_size,
-                self.dtype,
-            ).load_to_gpu()
-        else:
-            if "3d" in STRUCTURE:
-                input_mat = data["rho_cube"]
-                input_mat[:, 0, :, :, :] = input_mat[:, 0, :, :, :]
-                input_mat[:, 1, :, :, :] = input_mat[:, 1, :, :, :] ** (1 / 2)
-            else:
-                input_mat = data["rho_inv_4_norm"]
-
-            output_mat = data["exc_over_dm_cc_grids"]
-            weights_mat = data["weights"]
-
-            input_ = {}
-            weight_ = {}
-            output_ = {}
-
-            for i_coord in range(len(weights_mat)):
-                if "3d" in STRUCTURE:
-                    input_[i_coord] = input_mat[
-                        i_coord,
-                        :,
-                        CUBE_MIDDLE
-                        - CUBE_USE_MIDDLE : CUBE_MIDDLE
-                        + CUBE_USE_MIDDLE
-                        + 1,
-                        CUBE_MIDDLE
-                        - CUBE_USE_MIDDLE : CUBE_MIDDLE
-                        + CUBE_USE_MIDDLE
-                        + 1,
-                        CUBE_MIDDLE
-                        - CUBE_USE_MIDDLE : CUBE_MIDDLE
-                        + CUBE_USE_MIDDLE
-                        + 1,
-                    ]
-                else:
-                    input_[i_coord] = input_mat[:, i_coord]
-                weight_[i_coord] = weights_mat[[i_coord]]
-                output_[i_coord] = output_mat[[i_coord]]
-
-            self.data_gpu[name] = BasicDataset(
-                {
-                    "input": input_,
-                    "weight": weight_,
-                    "output": output_,
-                },
-                self.batch_size,
-                self.dtype,
-            ).load_to_gpu()
+        self.data_gpu[name] = BasicDataset(
+            {
+                "input": input_,
+                "weight": weight_,
+                "output": output_,
+            },
+            self.batch_size,
+            self.dtype,
+        ).load_to_gpu()

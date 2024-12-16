@@ -4,7 +4,7 @@ from numba import njit, prange
 
 from sklearn.kernel_ridge import KernelRidge
 
-from cc2cc.utils import AU2KCALMOL, ARRAY_USE_MIDDLE, ARRAY_USE
+from cc2cc.utils import AU2KCALMOL, CUBE_SIZE
 
 
 def cut_off(x, hashtable):
@@ -24,13 +24,8 @@ def hash_value(input_, hashtable):
             float2: end of the key range
             int1: value of the key
     """
-    index_round0 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 0], hashtable)
-    index_round1 = cut_off(input_[ARRAY_USE_MIDDLE + ARRAY_USE * 1], hashtable)
-
-    if index_round0 == -len(hashtable) // 2 or index_round0 == len(hashtable) // 2:
-        index_round1 = np.sign(index_round1) * len(hashtable) // 2
-
-    return f"{index_round0}_{index_round1}"
+    index_round0 = cut_off(input_[CUBE_SIZE **3 + CUBE_SIZE **3 * 0], hashtable)
+    return f"{index_round0}"
 
 
 @njit(parallel=True)
@@ -91,70 +86,125 @@ def evaluate(krr, x_train, y_train, w_train, x_all, y_all, w_all):
     """
     print("Krr perdict:")
     train_error = AU2KCALMOL * np.sum(
-        (
-            np.abs(y_train - krr.predict_data(x_train))
-            * w_train
-            * x_train[:, ARRAY_USE_MIDDLE]
-        )
+        (np.abs(y_train - krr.predict_data(x_train)) * w_train * x_train[:, CUBE_SIZE **3])
     )
     print(f"train, {train_error} KCAL/MOL", flush=True)
     error_krr = AU2KCALMOL * np.sum(
-        (np.abs(y_all - krr.predict_data(x_all)) * w_all * x_all[:, ARRAY_USE_MIDDLE])
+        (np.abs(y_all - krr.predict_data(x_all)) * w_all * x_all[:, CUBE_SIZE **3])
     )
     print(f"test, {error_krr} KCAL/MOL", flush=True)
 
     print("B3lyp perdict:")
-    b3lyp_error = AU2KCALMOL * np.sum(
-        np.abs(y_train * w_train * x_train[:, ARRAY_USE_MIDDLE])
-    )
+    b3lyp_error = AU2KCALMOL * np.sum(np.abs(y_train * w_train * x_train[:, CUBE_SIZE **3]))
     print("train", b3lyp_error, "KCAL/MOL", flush=True)
-    b3lyp_error = AU2KCALMOL * np.sum(
-        np.abs(y_all * w_all * x_all[:, ARRAY_USE_MIDDLE])
-    )
+    b3lyp_error = AU2KCALMOL * np.sum(np.abs(y_all * w_all * x_all[:, CUBE_SIZE **3]))
     print("test", b3lyp_error, "KCAL/MOL", flush=True)
     print("End of evaluate.\n", flush=True)
-    return error_krr, train_error
+    return np.abs(error_krr), np.abs(train_error)
 
 
-def add_data(krr, x_train, y_train, w_train, x_test, y_test, w_test):
+def add_data(
+    krr,
+    x_train,
+    y_train,
+    w_train,
+    x_test,
+    y_test,
+    w_test,
+    x_fitted,
+    y_fitted,
+    w_fitted,
+):
     """
     Add data which has large error.
     """
     print("Add data:", flush=True)
-    error_test = (
-        (y_test - krr.predict_data(x_test)) * w_test * x_test[:, ARRAY_USE_MIDDLE]
-    )
+    if len(x_test) == 0:
+        print("No data to add.")
+        return (
+            x_train,
+            y_train,
+            w_train,
+            x_test,
+            y_test,
+            w_test,
+            x_fitted,
+            y_fitted,
+            w_fitted,
+        )
+    error_test = (y_test - krr.predict_data(x_test)) * w_test * x_test[:, CUBE_SIZE **3]
 
-    index_add = (
+    index_add_test = (
         np.array([True] * len(error_test))
         if len(error_test) < 51
         else (error_test**2 > np.sort(error_test**2, axis=0)[-51])
     )
     print(
         np.array2string(
-            AU2KCALMOL * error_test[index_add],
+            AU2KCALMOL * error_test[index_add_test],
             formatter={"float_kind": lambda x: f"{x:.6f}"},
-        )
-    )
-    print(
+        ),
         np.array2string(
-            np.max(krr.kernel_matrix[index_add], axis=1),
+            AU2KCALMOL * (y_test - krr.predict_data(x_test))[index_add_test],
             formatter={"float_kind": lambda x: f"{x:.6f}"},
-        )
+        ),
+        np.array2string(
+            np.max(krr.kernel_matrix[index_add_test], axis=1),
+            formatter={"float_kind": lambda x: f"{x:.6f}"},
+        ),
     )
-    x_train = np.concatenate([x_train, x_test[index_add]])
-    y_train = np.concatenate([y_train, y_test[index_add]])
-    w_train = np.concatenate([w_train, w_test[index_add]])
-    x_test = x_test[~index_add]
-    y_test = y_test[~index_add]
-    w_test = w_test[~index_add]
+    x_train = np.concatenate([x_train, x_test[index_add_test]])
+    y_train = np.concatenate([y_train, y_test[index_add_test]])
+    w_train = np.concatenate([w_train, w_test[index_add_test]])
+    x_test = x_test[~index_add_test]
+    y_test = y_test[~index_add_test]
+    w_test = w_test[~index_add_test]
+
+    if len(x_test) == 0:
+        print("No data to add.")
+        return (
+            x_train,
+            y_train,
+            w_train,
+            x_test,
+            y_test,
+            w_test,
+            x_fitted,
+            y_fitted,
+            w_fitted,
+        )
+    error_test = (y_test - krr.predict_data(x_test)) * w_test * x_test[:, CUBE_SIZE **3]
+    index_add_fitted = (
+        np.array([True] * len(error_test))
+        if len(error_test) < 51
+        else (error_test**2 < 1e-10**2)
+    )
+    x_fitted = np.concatenate([x_fitted, x_test[index_add_fitted]])
+    y_fitted = np.concatenate([y_fitted, y_test[index_add_fitted]])
+    w_fitted = np.concatenate([w_fitted, w_test[index_add_fitted]])
+    x_test = x_test[~index_add_fitted]
+    y_test = y_test[~index_add_fitted]
+    w_test = w_test[~index_add_fitted]
 
     print(
         "Length of x_train:",
         len(x_train),
         "Length of x_test:",
         len(x_test),
+        "Length of x_fitted:",
+        len(x_fitted),
         flush=True,
     )
     print("End of add data.\n", flush=True)
-    return x_train, y_train, w_train, x_test, y_test, w_test
+
+    return (
+        x_train,
+        y_train,
+        w_train,
+        x_test,
+        y_test,
+        w_test,
+        x_fitted,
+        y_fitted,
+        w_fitted,
+    )

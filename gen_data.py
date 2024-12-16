@@ -5,8 +5,10 @@
 import argparse
 from itertools import product
 
-from cc2cc import add_args, extend, cc, cc_change_cube, cc_add_data, mrks, mrks_append
-from cc2cc.utils import rotate
+import pyscf
+
+from cc2cc import add_args, extend, cc
+from cc2cc.utils import gen_basis, rotate
 
 
 if __name__ == "__main__":
@@ -26,16 +28,32 @@ if __name__ == "__main__":
         args.extend_xyz,
         args.distance_list,
     ):
+        SPIN = 0
+        if "-openshell" in name_mol:
+            if "_" in name_mol:
+                SPIN = int(name_mol.split("_")[-1])
+                name_mol = name_mol.split("_")[0]
+                name_mol = name_mol.replace("-openshell", "")
+            else:
+                SPIN = 1
+
         molecular, name = extend(
             name_mol, extend_atom, extend_xyz, distance, args.basis
         )
-        rotate(molecular)
+        rotate(molecular, verbose=True)
 
-        if "open-shell" in name:
-            continue
+        mol = pyscf.M(
+            atom=molecular,
+            basis=gen_basis(
+                molecular,
+                args.basis,
+                args.if_basis_str,
+            ),
+            verbose=4,
+            spin=0,
+        )
+
+        if SPIN == 0:
+            cc(mol, name)
         else:
-            # cc(molecular, name, args)
-            # cc_add_data(molecular, name, args)
-            cc_change_cube(molecular, name, args)
-            # mrks(molecular, name, args)
-            # mrks_append(molecular, name, args)
+            continue

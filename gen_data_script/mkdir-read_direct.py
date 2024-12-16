@@ -19,7 +19,7 @@ def clean_dir(pth):
 
 
 main_dir = Path(__file__).resolve().parents[0]
-template_bash = main_dir / "gen_data_template.bash"
+template_bash = main_dir / "gen_data_direct.bash"
 time_stamp = time.strftime("%Y%m%d%H%M%S", time.localtime())
 
 # renew out_mkdir
@@ -29,7 +29,7 @@ if (main_dir / "out_mkdir").exists():
 
 work_dir = main_dir / ("bash_submitted" + time_stamp)
 work_dir.mkdir()
-work_bash = work_dir / "gen_data_template.bash"
+work_bash = work_dir / "gen_data_direct.bash"
 
 critical_time = arrow.now().shift(hours=-72)
 for item in Path(main_dir).glob("*"):
@@ -45,10 +45,17 @@ LIST_OF_GPU = itertools.cycle([0, 1])
 GPU_NODE_POOL = itertools.cycle(["gpu03"])
 
 for mol, basis_set, (range_list, extend_atom) in itertools.product(
-    ["all"],
+    [
+        "methane",
+        "ethane",
+        "ethylene",
+        "acetylene",
+        "propane",
+    ],
     ["cc-pVDZ"],
     [
-        ((-0.5, 0.5, 11), "0-1"),
+        # ((0, 0, 1), "0-1"),
+        ((-0.5, 0.5, 3), "0-1"),
     ],
 ):
     number_of_gpu = next(LIST_OF_GPU)
@@ -85,7 +92,7 @@ for mol, basis_set, (range_list, extend_atom) in itertools.product(
 
 for child in (work_dir).glob("*.bash"):
     if child.is_file():
-        cmd = f"""sbatch < {child}"""
+        cmd = f"""bash < {child}"""
         with open(main_dir / "out_mkdir", "a", encoding="utf-8") as f:
             subprocess.call(cmd, shell=True, stdout=f)
         time.sleep(0.1)

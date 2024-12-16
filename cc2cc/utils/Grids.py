@@ -5,16 +5,26 @@ More details.
 """
 
 import ctypes
+from itertools import product
+import os
 
 import numpy as np
-from pyscf import dft
-
+from joblib import Parallel, parallel_config, delayed
 import pyscf
-from pyscf import gto
-from pyscf import lib
+from pyscf import dft, gto, lib
+from pyscf.dft.numint import _dot_ao_dm, _contract_rho
+
+from cc2cc.utils.env_var import (
+    CUBE_SIZE,
+    CUBE_LEN,
+    CUBE_MIDDLE,
+    LEVEL,
+    PERIOD,
+)
 
 libdft = lib.load_library("libdft")
 
+LEN = 7
 
 LEBEDEV_ORDER = {
     0: 1,
@@ -87,6 +97,36 @@ RAD_GRIDS = np.array(
 # fmt: on
 
 
+def gen_input(rho, spin, xc_type):
+    """
+    Generate the input for the model.
+    """
+    if spin != 0:
+        rho01, dx1, dy1, dz1 = rho[0][:4]
+        rho02, dx2, dy2, dz2 = rho[1][:4]
+        gamma1 = dx1**2 + dy1**2 + dz1**2
+        gamma2 = dx2**2 + dy2**2 + dz2**2
+        gamma12 = dx1 * dx2 + dy1 * dy2 + dz1 * dz2
+    else:
+        rho0, dx, dy, dz = rho[:4]
+        gamma1 = gamma2 = gamma12 = (dx**2 + dy**2 + dz**2) / 4
+        rho01 = rho02 = rho0 / 2
+
+    if xc_type == "GGA":
+        rho0 = np.array([rho01, rho02, gamma1, gamma12, gamma2])
+    elif xc_type == "MGGA":
+        if spin != 0:
+            tau1 = rho[0][4]
+            tau2 = rho[1][4]
+        else:
+            tau = rho[4]
+            tau1 = tau * 0.5
+            tau2 = tau * 0.5
+        rho0 = np.array([rho01, rho02, gamma1, gamma12, gamma2, tau1, tau2])
+
+    return rho0
+
+
 def gen_atomic_grids(
     mol, atom_grid, radi_method=pyscf.dft.radi.gauss_chebyshev, **kwargs
 ):
@@ -149,7 +189,7 @@ class Grid(dft.gen_grid.Grids):
     This class is modified from pyscf.dft.gen_grid.Grids. Some default parameters are changed.
     """
 
-    def __init__(self, mol, level=1, period=2):
+    def __init__(self, mol, level=LEVEL, period=PERIOD):
         super().__init__(mol)
         self.n_rad, self.n_ang = (
             RAD_GRIDS[level, period],
@@ -171,43 +211,117 @@ class Grid(dft.gen_grid.Grids):
         self.radi_method = dft.radi.gauss_chebyshev
         modified_build(self)
 
-        self.index_2d = np.arange(len(self.coords)).reshape(
-            self.natm, self.n_ang, self.n_rad
+        self.coor_cube = None
+
+    def gen_cube(self, mol, dm1_input):
+        """
+        Generate the cube coordinates for the given molecule.
+
+        Args:
+            mol: An instance of :class:`Mole'.
+            dm1_input: Density matrix, 2D array with shape (nao, nao). The orientation of the cube is determined by the eigenvectors of the Hessian matrix(secondary derivation of the density).
+        """
+        if self.coor_cube is not None:
+            print("Error: self.coor_cube is initialized!")
+            return
+
+        ao_value = pyscf.dft.numint.eval_ao(mol, self.coords, deriv=2)
+
+        # Hessian matrix
+        assert (
+            np.linalg.norm(dm1_input.conj().T - dm1_input) < 1e-10
+        ), "Density matrix is not symmetric."
+        shls_slice = (0, mol.nbas)
+        ao_loc = mol.ao_loc_nr()
+        rho_input_1 = np.zeros((3, len(self.coords)))
+        rho_input_2 = np.zeros((3, 3, len(self.coords)))
+        c0 = _dot_ao_dm(mol, ao_value[0], dm1_input, None, shls_slice, ao_loc)
+        rho_input_1[0, :] = _contract_rho(ao_value[1], c0)
+        rho_input_1[1, :] = _contract_rho(ao_value[2], c0)
+        rho_input_1[2, :] = _contract_rho(ao_value[3], c0)
+        rho_input_2[0, 0, :] = _contract_rho(ao_value[4], c0)
+        rho_input_2[0, 1, :] = _contract_rho(ao_value[5], c0)
+        rho_input_2[0, 2, :] = _contract_rho(ao_value[6], c0)
+        rho_input_2[1, 1, :] = _contract_rho(ao_value[7], c0)
+        rho_input_2[1, 2, :] = _contract_rho(ao_value[8], c0)
+        rho_input_2[2, 2, :] = _contract_rho(ao_value[9], c0)
+        rho_input_2[1, 0, :] = rho_input_2[0, 1, :]
+        rho_input_2[2, 0, :] = rho_input_2[0, 2, :]
+        rho_input_2[2, 1, :] = rho_input_2[1, 2, :]
+
+        def gen_cube_p(p):
+            norm_2d = rho_input_2[:, :, p]
+            eig_val, eig_vec = np.linalg.eigh(norm_2d)
+            eig_val_sort = np.argsort(eig_val)
+            eig_vec = eig_vec[:, eig_val_sort]
+            norm_1d = rho_input_1[:, p]
+            for i in range(3):
+                if eig_vec[:, i] @ norm_1d < 0:
+                    eig_vec[:, i] *= -1
+
+            p_coords = self.coords[p]
+            coords_cube = np.zeros((CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
+            for i, j, k in product(range(CUBE_SIZE), repeat=3):
+                coords_cube[i, j, k, :] = (
+                    p_coords
+                    + (i - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 0]
+                    + (j - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 1]
+                    + (k - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 2]
+                )
+            return coords_cube
+
+        with parallel_config(
+            backend="loky",
+            n_jobs=int(os.environ.get("OMP_NUM_THREADS", 6)),
+            inner_max_num_threads=1,
+        ):
+            self.coor_cube = Parallel()(
+                delayed(gen_cube_p)(p) for p in range(len(self.coords))
+            )
+        self.coor_cube = np.array(self.coor_cube)
+
+    def gen_cube_mask(self):
+        for p_coor_cube in self.coor_cube:
+            for i_coor_cube in p_coor_cube:
+                mask = np.where(np.linspace.norm(i_coor_cube - self.coords) < 1e-10)
+                print(mask)
+
+    def gen_cube_rho(self, mol, dm1_input, reset=False, xc_type="MGGA"):
+        """
+        Generate the cube density for the given molecule.
+        """
+        if self.coor_cube is None:
+            print("Warning: coor_cube is not initialized!")
+            self.gen_cube(mol, dm1_input)
+        elif reset:
+            self.gen_cube(mol, dm1_input)
+
+        def gen_cube_rho_p(p):
+            ao_cube = pyscf.dft.numint.eval_ao(
+                mol, self.coor_cube[p].reshape(-1, 3), deriv=2
+            )
+            rho_cube_p = pyscf.dft.numint.eval_rho(
+                mol, ao_cube, dm1_input, xctype="mGGA", with_lapl=False
+            )
+            rho_cube_p_norm = gen_input(rho_cube_p, mol.spin, xc_type)
+            return np.reshape(rho_cube_p_norm, (LEN, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+
+        with parallel_config(
+            backend="loky",
+            n_jobs=int(os.environ.get("OMP_NUM_THREADS", 6)),
+            inner_max_num_threads=1,
+        ):
+            rho_cube = Parallel()(
+                delayed(gen_cube_rho_p)(p) for p in range(len(self.coords))
+            )
+
+        return np.array(rho_cube)
+
+    def get_center_rho(self, rho_cube):
+        return (
+            rho_cube[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + rho_cube[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         )
-        self.index_2d = np.transpose(self.index_2d, axes=[0, 2, 1])
 
-    def vector_to_matrix(self, vector: np.ndarray):
-        """
-        Documentation for a method.
-        """
-        matrix = np.empty((self.natm, self.n_rad, self.n_ang), dtype=vector.dtype)
-        index_range = np.ndindex(self.natm, self.n_rad, self.n_ang)
-        for i, j, k in index_range:
-            matrix[i, j, k] = vector[self.index_2d[i, j, k]]
-        return matrix
-
-    def matrix_to_vector(self, matrix: np.ndarray):
-        """
-        Documentation for a method.
-        """
-        vector = np.empty(self.natm * self.n_rad * self.n_ang, dtype=matrix.dtype)
-        index_range = np.ndindex(self.natm, self.n_rad, self.n_ang)
-        for i, j, k in index_range:
-            vector[self.index_2d[i, j, k]] = matrix[i, j, k]
-        return vector
-
-    def matrix_to_vector_atom(self, matrix: np.ndarray, atom_number: int):
-        """
-        Documentation for a method.
-        """
-        atom_x = np.zeros(self.n_rad * self.n_ang)
-        atom_y = np.zeros(self.n_rad * self.n_ang)
-        atom_z = np.zeros(self.n_rad * self.n_ang)
-        vector = np.empty(self.n_rad * self.n_ang, dtype=matrix.dtype)
-        index_range = np.ndindex(self.n_rad, self.n_ang)
-        for i, (j, k) in enumerate(index_range):
-            vector[i] = matrix[atom_number, j, k]
-            atom_x[i] = self.coords[:, 0][self.index_2d[atom_number, j, k]]
-            atom_y[i] = self.coords[:, 1][self.index_2d[atom_number, j, k]]
-            atom_z[i] = self.coords[:, 2][self.index_2d[atom_number, j, k]]
-        return atom_x, atom_y, atom_z, vector
+    def get_center_density(self, den_cube):
+        return den_cube[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]

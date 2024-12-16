@@ -9,9 +9,8 @@ import torch
 import numpy as np
 import wandb
 
-from cc2cc.utils import add_args, save_csv_loss
-from cc2cc.utils import DataBase, ModelDict
-from cc2cc.utils import STRUCTURE
+from cc2cc.utils import add_args, Data_Record
+from cc2cc.utils import DataBase, Model_Dict
 
 
 def train_model(train_str_dict, eval_str_dict):
@@ -32,11 +31,12 @@ def train_model(train_str_dict, eval_str_dict):
         resume="allow",
         name="dft2cc",
         dir="/home/chenzihao/workdir/tmp",
+        allow_val_change=True,
     )
     wandb.define_metric("*", step_metric="global_step")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    modeldict = ModelDict(
+    modeldict = Model_Dict(
         args.load,
         device,
         args.precision,
@@ -75,13 +75,13 @@ def train_model(train_str_dict, eval_str_dict):
         "load": args.load,
         "jobid": os.environ.get("SLURM_JOB_ID"),
         "checkpoint": modeldict.dir_checkpoint.stem,
-        "structure": STRUCTURE,
+        "loss_multiplier": modeldict.loss_multiplier,
     }
     print(experiment_dict)
     experiment.config.update(experiment_dict)
 
     print(f"Start training at {modeldict.dir_checkpoint}")
-    pbar0 = trange(args.epoch + 1)
+    pbar0 = trange(args.epoch + 1, mininterval=2, maxinterval=20)
     for epoch in pbar0:
         train_loss_ene, train_loss_ene_tot = modeldict.train_model(database_train)
         if not modeldict.with_eval:
@@ -112,25 +112,15 @@ def train_model(train_str_dict, eval_str_dict):
             experiment.log(experiment_dict)
 
             pbar0.set_description(
-                f"Epoch: {epoch}, Ene loss tot: {experiment_dict['train_loss_ene_tot']:.2f}, Ene loss eval tot: {experiment_dict['eval_loss_ene_tot']:.2f}, Loss: {experiment_dict['train_loss_tot']:.2f}, Loss_eval: {experiment_dict['eval_loss_tot']:.2f}, lr: {experiment_dict['lr']:.2e}"
+                f"Epoch: {epoch}, "
+                f"Ene loss tot: {experiment_dict['train_loss_ene_tot']:.2f}, "
+                f"Ene loss eval tot: {experiment_dict['eval_loss_ene_tot']:.2f}, "
+                f"Loss: {experiment_dict['train_loss_tot']:.2f}, "
+                f"Loss_eval: {experiment_dict['eval_loss_tot']:.2f}, "
+                f"lr: {experiment_dict['lr']:.2e}",
+                refresh=False,
             )
 
         if (epoch % (args.eval_step * 50) == 0) and (epoch != 0):
-            save_csv_loss(
-                database_train.name_list,
-                modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}",
-                {
-                    "train_loss_ene": train_loss_ene,
-                    "train_loss_ene_tot": train_loss_ene_tot,
-                },
-            )
-            save_csv_loss(
-                database_eval.name_list,
-                modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}",
-                {
-                    "eval_loss_ene": eval_loss_ene,
-                    "eval_loss_ene_tot": eval_loss_ene_tot,
-                },
-            )
             modeldict.save_model(epoch)
     pbar0.close()

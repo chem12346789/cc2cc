@@ -1,6 +1,8 @@
 import argparse
+import copy
 from itertools import product
 from pathlib import Path
+
 from matplotlib import pyplot as plt
 
 import numpy as np
@@ -9,8 +11,10 @@ import faiss
 
 from sklearn.kernel_ridge import KernelRidge
 
-from krr import add_args, load_data, hash_value, append
-from cc2cc.utils import ARRAY_USE_MIDDLE
+from krr import add_args, load_data, hash_value
+from cc2cc.utils import CUBE_SIZE, DATA_PATH, Mol, rotate
+
+faiss.cvar.distance_compute_blas_threshold = 8000000
 
 parser = argparse.ArgumentParser(
     description="Generate the inversed potential and energy."
@@ -22,14 +26,15 @@ print("alpha:", args.alpha)
 print("kernel:", args.kernel, flush=True)
 
 view_dict = {
-    "cc": "exc_over_dm_cc_grids",
+    "cc": "exc_cc_grids",
+    # "b3lyp": "exc_over_dm_b3lyp_grids",
+    # "mrks": "exc_over_dm_mrks_grids",
 }
 
 (
     input_dict,
     output_dict,
     weights_dict,
-    coords_dict,
     keys_list,
 ) = load_data(
     args.molecular_list,
@@ -45,16 +50,14 @@ krr = KernelRidge(alpha=args.alpha, gamma=args.gamma, kernel="precomputed")
 x_all = {}
 y_all = {}
 w_all = {}
-coor_all = {}
 name_all = {}
 dual_coef = {}
 x_fit = {}
 
-center_piont = [-0.01, -0.001, 0.001, 0.01]
-hashtable = append(np.linspace(-1, 0, 11)[:-1], center_piont, np.linspace(0, 1, 11)[1:])
-list_1 = list(range(-len(center_piont) // 2 + 1, len(center_piont) // 2, 1))
-list_2 = [-len(hashtable) // 2, len(hashtable) // 2]
-print(hashtable, list_1, list_2)
+# center_piont = []
+# hashtable = append(np.linspace(-1, 0, 11)[:-1], center_piont, np.linspace(0, 1, 11)[1:])
+hashtable = np.linspace(-1e10, 1e10, 2)
+print(hashtable)
 shape_matrix = (20, 194, 40)
 
 for key in keys_list:
@@ -73,13 +76,11 @@ for key in keys_list:
             x_all[index_round] = [input_dict[key][index_]]
             y_all[index_round] = [output_dict[key][index_]]
             w_all[index_round] = [weights_dict[key][index_]]
-            coor_all[index_round] = [coords_dict[key][index_]]
             name_all[index_round] = [f"{key}_{iatm}_{irad}_{iang}"]
         else:
             x_all[index_round].append(input_dict[key][index_])
             y_all[index_round].append(output_dict[key][index_])
             w_all[index_round].append(weights_dict[key][index_])
-            coor_all[index_round].append(coords_dict[key][index_])
             name_all[index_round].append(f"{key}_{iatm}_{irad}_{iang}")
 
 x_keys = list(x_all.keys())
@@ -87,27 +88,37 @@ for index_ in np.sort(list(x_all.keys())):
     x_all[index_] = np.array(x_all[index_])
     y_all[index_] = np.array(y_all[index_])
     w_all[index_] = np.array(w_all[index_])
-    coor_all[index_] = np.array(coor_all[index_])
     name_all[index_] = np.array(name_all[index_])
 
 train_error_sum = 0
 energy_correct_sum = 0
 
+color_dict_atom = {
+    "C": "#283593",
+    "H": "#7CB342",
+    "O": "#D32F2F",
+}
+
+PLOT_NUMBER = 16
+SEARCH_NUMBER = 100
+
+
+# for index_ in []:
 for index_ in x_keys:
     if index_ not in [
-        "0_0",
-        "1_1",
-        "2_2",
-        f"{len(hashtable)//2}_{len(hashtable)//2}",
+        "0",
+        # "1_1_1_1",
+        # "2_2_2_2",
+        # f"{len(hashtable)//2}_{len(hashtable)//2}_{len(hashtable)//2}_{len(hashtable)//2}",
     ]:
         continue
+    print(f"Index: {index_}", flush=True)
 
     for name_plot_i, name_plot in enumerate(view_dict.keys()):
         name_plot = name_plot + "-" + index_
         x = x_all[index_]
         y = y_all[index_]
         w = w_all[index_]
-        coor = coor_all[index_]
         name = name_all[index_]
         y = y[:, name_plot_i]
 
@@ -115,20 +126,39 @@ for index_ in x_keys:
         print(x.shape, flush=True)
 
         (num_sample, dim_sample) = x.shape
-        res = faiss.StandardGpuResources()
-        flat_config = faiss.GpuIndexFlatConfig()
-        flat_config.device = 0
-        index = faiss.GpuIndexFlatL2(res, dim_sample, flat_config)
+
+        # res = faiss.StandardGpuResources()
+        # flat_config = faiss.GpuIndexFlatConfig()
+        # flat_config.device = 0
+        # index = faiss.GpuIndexFlatL2(res, dim_sample, flat_config)
+
+        index = faiss.IndexFlatL2(dim_sample)
         index.add(x)
         b = x.copy()
-        distances, indices = index.search(b, 20)
-        var_y = np.var(
-            np.einsum("ij,i->ij", y[indices], x[:, ARRAY_USE_MIDDLE] * w), axis=1
-        )
+        distances, indices = index.search(b, SEARCH_NUMBER)
 
-        for max_x_ in [1e-2, 1e-3, 1e-4, 1e-5]:
+        for if_kcal, max_x_ in product(
+            [
+                False,
+                # True,
+            ],
+            [
+                1e-2,
+                1e-3,
+                1e-4,
+                1e-5,
+                1e-6,
+                1e-7,
+            ],
+        ):
             print("\n begin of print", flush=True)
-            Path(f"plot/{name_plot}-{max_x_}/plot/").mkdir(parents=True, exist_ok=True)
+            if if_kcal:
+                plot_name = f"{name_plot}-{max_x_}-kcal"
+            else:
+                plot_name = f"{name_plot}-{max_x_}-au"
+            plot_path = Path(f"plot-{Path(DATA_PATH).parts[-1]}/{plot_name}")
+            print("Save to", plot_path, flush=True)
+            (plot_path / "plot").mkdir(parents=True, exist_ok=True)
             max_x = max_x_**2 * x.shape[1]
 
             mean_of_distances = np.max(distances, axis=1)
@@ -136,70 +166,116 @@ for index_ in x_keys:
             mean_of_distances[mean_of_distances > max_x] = 0
             mean_of_distances = -mean_of_distances
 
-            plot_number = 16
-            argsort_ = np.argsort(mean_of_distances * var_y)[::-1][:plot_number]
+            if if_kcal:
+                energy = np.einsum(
+                    "ij,i->ij",
+                    y[indices],
+                    x[:, CUBE_SIZE**3] * w,
+                )
+                var_energy = np.var(energy, axis=1)
+                argsort_ = np.argsort(mean_of_distances * var_energy)[::-1][
+                    :PLOT_NUMBER
+                ]
+                energy = energy[argsort_] * 627.509
+            else:
+                var_energy = np.var(y[indices], axis=1)
+                argsort_ = np.argsort(mean_of_distances * var_energy)[::-1][
+                    :PLOT_NUMBER
+                ]
+                energy = y[indices[argsort_]] * 627.509
 
-            energy = np.einsum(
-                "ij,i->ij", y[indices[argsort_]], (x[:, ARRAY_USE_MIDDLE] * w)[argsort_]
-            )
             distances_ = distances[argsort_]
             name_ = name[indices[argsort_]]
-            max_y = np.max(np.abs(energy - energy[:, [0]])) * 627.509
-            print(
-                np.sum(
-                    (x[indices[argsort_]] - x[indices[argsort_]][[0], :, :]) ** 2,
-                    axis=1,
-                ),
-                flush=True,
-            )
-            print(distances_, flush=True)
-            print(np.max(np.abs((energy - energy[0]) * 627.509)), flush=True)
-            print(name_, flush=True)
+            x_ = x[indices[argsort_]]
+            print(np.sum((x_ - x_[:, [0], :]) ** 2, axis=2))
+            print(distances_)
+            print(x_.shape)
+            print(energy.shape, distances_.shape, name_.shape, flush=True)
+            print(y.shape, distances.shape, name.shape, flush=True)
+            max_y = np.max(np.abs(energy - energy[:, [0]]))
 
             INDEX_CHECK = 0
-            plt.rcParams["figure.figsize"] = np.array([0.5, 0.5]) * 520 / 72
             name_energy_dict = {}
-
-            for i in range(plot_number):
-                name_energy_dict[name_[INDEX_CHECK][i]] = (
-                    energy[INDEX_CHECK][i] - energy[INDEX_CHECK][0]
-                ) * 627.509
+            for i in range(SEARCH_NUMBER):
+                if if_kcal:
+                    name_energy_dict[name_[INDEX_CHECK][i]] = energy[INDEX_CHECK][i]
+                else:
+                    name_energy_dict[name_[INDEX_CHECK][i]] = energy[INDEX_CHECK][i]
 
             x_name_dict = {}
-            x_energy_dict = {}
-
             for name_i, energy_i in name_energy_dict.items():
-                x_ = (
-                    name_i.split("_")[0]
-                    + name_i.split("_")[5]
-                    + name_i.split("_")[6]
-                    + name_i.split("_")[7]
-                )
+                x_ = f"{name_i.split("_")[0]}_{name_i.split("_")[5]}_{name_i.split("_")[6]}_{name_i.split("_")[7]}"
                 if x_ in x_name_dict:
                     x_name_dict[x_].append([name_i, energy_i])
                 else:
                     x_name_dict[x_] = [[name_i, energy_i]]
-                plt.scatter(x_, energy_i, c="b")
 
+            plt.rcParams["figure.figsize"] = np.array([0.95, 0.5]) * 520 / 72
             for key_, value_ in x_name_dict.items():
+                if if_kcal:
+                    for j in value_:
+                        print(f"{j[0]:20} {j[1]:10.5e}", flush=True)
+                    print("kcal/mol")
+                else:
+                    for j in value_:
+                        print(f"{j[0]:20} {j[1]:10.5e}", flush=True)
+                    print("au")
+                f, axes = plt.subplots(2, 1)
+                axes[1].remove()
+                # 3d plot
+                axes[1] = plt.axes(projection="3d")
+                axes = np.array(axes).reshape(1, 2)
+
+                shapexy = np.shape(axes)
+                inter_x = np.linspace(0.175, 0.995, shapexy[1] + 1)
+                inter_y = np.linspace(0.125, 0.995, shapexy[0] + 1)
+                delta_x = inter_x[1] - inter_x[0]
+                delta_y = inter_y[1] - inter_y[0]
+
+                for i in range(shapexy[0]):
+                    for j in range(shapexy[1]):
+                        axes[i][j].set_position(
+                            [
+                                inter_x[j],
+                                inter_y[i],
+                                inter_x[j + 1] - inter_x[j],
+                                inter_y[i + 1] - inter_y[i],
+                            ]
+                        )
+
                 for j in value_:
-                    plt.scatter(float(j[0].split("_")[4]), j[1], c="r")
-                plt.xticks(rotation=90)
-                plt.xlabel(r"$\Delta$ x ($\AA$)")
-                plt.ylabel(r"Energy (kcal/mol)")
-                plt.xlim(-0.575, 0.575)
-                plt.xticks(np.arange(-0.5, 0.6, 0.1))
+                    axes[0, 0].scatter(float(j[0].split("_")[4]), j[1], c="r")
+                axes[0, 0].tick_params(axis="x", which="both", rotation=70)
+                axes[0, 0].set_xlabel(r"$\Delta$ x ($\AA$)")
+                if if_kcal:
+                    axes[0, 0].set_ylabel(r"Energy (kcal/mol)")
+                else:
+                    axes[0, 0].set_ylabel(r"Energy (au)")
+                axes[0, 0].set_xlim(-0.575, 0.575)
+                axes[0, 0].set_xticks(np.arange(-0.5, 0.6, 0.1))
+
+                molecular = copy.deepcopy(Mol[key_.split("_")[0]])
+                rotate(molecular, verbose=False)
+
+                # plot the molecular
+                for i_mol in molecular:
+                    axes[0, 1].scatter(
+                        i_mol[1],
+                        i_mol[2],
+                        i_mol[3],
+                        c=color_dict_atom[i_mol[0]],
+                    )
+
                 plt.savefig(
-                    f"plot/{name_plot}-{max_x_}/plot/{key_}_{len(value_)}.pdf",
+                    plot_path / f"plot/{key_}_{len(value_)}.pdf",
                     bbox_inches="tight",
                 )
                 plt.savefig(
-                    f"plot/{name_plot}-{max_x_}/plot/{key_}_{len(value_)}.png",
+                    plot_path / f"plot/{key_}_{len(value_)}.png",
                     bbox_inches="tight",
                     dpi=300,
                 )
                 plt.close()
-                print(key_, [i[0] for i in value_], flush=True)
             print("\n end of print", flush=True)
 
             color_dict = {
@@ -207,10 +283,10 @@ for index_ in x_keys:
                 "ethane": "#1A237E",
                 "ethylene": "#212121",
                 "acetylene": "#7B1FA2",
+                "propane": "#FF6F00",
             }
 
             plt.rcParams["figure.figsize"] = np.array([0.5, 0.5]) * 520 / 72
-
             f, axes = plt.subplots(1, 1)
             axes = np.array(axes).reshape(1, 1)
 
@@ -249,23 +325,21 @@ for index_ in x_keys:
             for j in range(indices.shape[1]):
                 axes[0, 0].scatter(
                     distances_[INDEX_CHECK][j],
-                    (energy[INDEX_CHECK][j] - energy[INDEX_CHECK][0]) * 627.509,
+                    energy[INDEX_CHECK][j] - energy[INDEX_CHECK][0],
                     c=(color_dict[name_[INDEX_CHECK][j].split("_")[0]],),
                 )
 
             for i, c in color_dict.items():
                 axes[0, 0].scatter([-1], [-1], c=c, label=i)
 
+            if if_kcal:
+                plt.ylabel(r"Energy (kcal/mol)")
+            else:
+                plt.ylabel(r"Energy (au)")
+            plt.legend(loc="best")
             plt.xlabel("Distance of cube")
-            plt.ylabel(r"$\Delta$ Energy (kcal/mol)")
-            plt.legend()
-
-            plt.savefig(
-                f"plot/{name_plot}-{max_x_}/sub_test.pdf", dpi=300, bbox_inches="tight"
-            )
-            plt.savefig(
-                f"plot/{name_plot}-{max_x_}/sub_test.png", dpi=300, bbox_inches="tight"
-            )
+            plt.savefig(plot_path / "sub_test.pdf", dpi=300, bbox_inches="tight")
+            plt.savefig(plot_path / "sub_test.png", dpi=300, bbox_inches="tight")
             plt.clf()
 
             plt.rcParams["figure.figsize"] = np.array([1.25, 1.25]) * 520 / 72
@@ -296,7 +370,7 @@ for index_ in x_keys:
                     )
 
                     axes[i, j].set_xlim(-max_x * 0.1, max_x * 1.1)
-                    axes[i, j].set_ylim(-max_y * 0.1, max_y * 1.1)
+                    axes[i, j].set_ylim(-max_y * 1.1, max_y * 1.1)
 
                     if i != 0:
                         axes[i, j].set_xticks([])
@@ -311,7 +385,7 @@ for index_ in x_keys:
                 for j in range(indices.shape[1]):
                     axes[axes_i, axes_j].scatter(
                         distances_[i][j],
-                        np.abs(energy[i][j] - energy[i][0]) * 627.509,
+                        energy[i][j] - energy[i][0],
                         c=(color_dict[name_[i][j].split("_")[0]],),
                     )
 
@@ -322,10 +396,11 @@ for index_ in x_keys:
                     transform=axes[axes_i, axes_j].transAxes,
                     va="top",
                 )
-            plt.savefig(
-                f"plot/{name_plot}-{max_x_}/test.pdf", dpi=300, bbox_inches="tight"
-            )
-            plt.savefig(
-                f"plot/{name_plot}-{max_x_}/test.png", dpi=300, bbox_inches="tight"
-            )
+
+            for i, c in color_dict.items():
+                axes[-1, -1].scatter([-1], [-1], c=c, label=i)
+            axes[-1, -1].legend(loc="best")
+
+            plt.savefig(plot_path / "test.pdf", dpi=300, bbox_inches="tight")
+            plt.savefig(plot_path / "test.png", dpi=300, bbox_inches="tight")
             plt.clf()
