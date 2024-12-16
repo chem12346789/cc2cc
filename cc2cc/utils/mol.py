@@ -6,23 +6,22 @@ import json
 from pathlib import Path
 import os
 
+import pyscf.gto
+
+from cc2cc.utils.basis import gen_basis
 
 AU2KCALMOL = 627.5096080306
 AU2DEBYE = 2.541746
-Mol = {}
+dataset = {}
 
 with importlib.resources.path("cc2cc", "utils") as resource_path:
+    for dataset_name in Path(os.fspath(resource_path)).rglob("mol.json")
     with open(
         Path(os.fspath(resource_path)) / "mol.json",
         "r",
         encoding="utf-8",
     ) as f:
-        Mol.update(json.load(f))
-
-name_mol = []
-
-for name in Mol:
-    name_mol.append(name)
+        dataset.update(json.load(f))
 
 
 def extend(
@@ -104,3 +103,31 @@ def extend(
         molecular[extend_atom][extend_xyz] += distance
     print("extend mol", molecular)
     return molecular, name
+
+
+def gen_mole(
+    name_mol: str,
+    extend_atom: str,
+    extend_xyz: int,
+    distance: float,
+    basis: str,
+    if_basis_str: bool,
+) -> pyscf.gto.Mole:
+    """
+    Function to generate the molecule
+    """
+    molecular, name = extend(name_mol, extend_atom, extend_xyz, distance, basis)
+
+    mol = pyscf.M(
+        atom=molecular,
+        basis=gen_basis(
+            molecular,
+            basis,
+            if_basis_str,
+        ),
+        verbose=3,
+        spin=Mol["spin"][name_mol],
+        charge=Mol["charge"][name_mol],
+    )
+
+    return mol, name
