@@ -56,7 +56,7 @@ def cc(mol, name):
 
         with mol.with_rinv_origin(coord):
             rinv = mol.intor("int1e_rinv")
-            exc_output_grids[i] += expr_rinv_dm2_r(
+            exc_cc_grids[i] += expr_rinv_dm2_r(
                 ao_0_i,
                 ao_0_i,
                 rinv,
@@ -66,11 +66,11 @@ def cc(mol, name):
     error_energy = e_cc - mdft.energy_tot(dm1_cc)
     error = np.sum(exc_cc_grids * grids.weights) - error_energy
     print(
-        "exc_output_grids: ",
-        f"max exc_output_grids: {np.max(exc_output_grids)}",
-        f"min exc_output_grids: {np.min(exc_output_grids)}",
-        f"mean exc_output_grids: {np.mean(exc_output_grids)}",
-        f"var exc_output_grids: {np.var(exc_output_grids)}",
+        "exc_cc_grids: ",
+        f"max exc_cc_grids: {np.max(exc_cc_grids)}",
+        f"min exc_cc_grids: {np.min(exc_cc_grids)}",
+        f"mean exc_cc_grids: {np.mean(exc_cc_grids)}",
+        f"var exc_cc_grids: {np.var(exc_cc_grids)}",
     )
     print(
         f"error_energy: {AU2KCALMOL * error_energy},",
@@ -85,7 +85,6 @@ def cc(mol, name):
         dm_cc=dm1_cc,
         rho_cube=rho_cube,
         weights=grids.weights,
-        exc_output_grids=exc_output_grids,
-        exc_over_rho_output_grids=exc_output_grids / (rho_input + 1e-14),
+        exc_cc_grids=exc_cc_grids,
         error_energy=error_energy,
     )
