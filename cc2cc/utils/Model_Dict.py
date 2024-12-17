@@ -17,7 +17,6 @@ from cc2cc.utils.env_var import CHECKPOINTS_PATH
 from cc2cc.utils.mol import AU2KCALMOL, AU2DEBYE
 
 from cc2cc.utils.Grids import Grid
-from cc2cc.utils.DataBase import BasicDataset
 from cc2cc.utils.model.cnn3d import Model
 
 
@@ -264,10 +263,6 @@ class Model_Dict:
         )[0]
         middle_mat = grids.get_center_density(middle_cube).detach().cpu().numpy()
         excsum = (output_mat.detach().cpu().numpy() * grids.weights).sum()
-
-        # exc = np.zeros_like(exc)
-        # middle_mat = np.zeros_like(middle_mat)
-        # print("middle_mat", middle_mat)
 
         if ks.mol.spin == 0:
             vrho = (middle_mat[:, 0] + middle_mat[:, 1]) / 2

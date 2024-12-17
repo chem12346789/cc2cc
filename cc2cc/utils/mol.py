@@ -1,10 +1,12 @@
 """Molecular dict"""
 
 import copy
-import importlib.resources
 import json
-from pathlib import Path
 import os
+import importlib.resources
+from pathlib import Path
+
+import numpy as np
 
 import pyscf.gto
 
@@ -15,13 +17,13 @@ AU2DEBYE = 2.541746
 dataset = {}
 
 with importlib.resources.path("cc2cc", "utils") as resource_path:
-    for dataset_name in Path(os.fspath(resource_path)).rglob("mol.json")
-    with open(
-        Path(os.fspath(resource_path)) / "mol.json",
-        "r",
-        encoding="utf-8",
-    ) as f:
-        dataset.update(json.load(f))
+    for dataset_name in Path(os.fspath(resource_path)).rglob("*.json"):
+        with open(
+            Path(os.fspath(resource_path)) / f"{dataset_name.stem}.json",
+            "r",
+            encoding="utf-8",
+        ) as f:
+            dataset[dataset_name.stem] = json.load(f)
 
 
 def extend(
@@ -30,11 +32,12 @@ def extend(
     extend_xyz: int,
     distance: float,
     basis: str,
+    dataset_name: str = "Mol",
 ) -> tuple:
     """
     Function to extend the molecular
     """
-    molecular = copy.deepcopy(Mol[name_mol])
+    molecular = np.array(copy.deepcopy(dataset[dataset_name][name_mol]), dtype=object)
     print(f"Generate {name_mol}_{distance:.4f}")
     print(f"Extend {extend_atom} {extend_xyz} {distance:.4f}")
     print("original mol", molecular)
@@ -42,67 +45,24 @@ def extend(
 
     if "-" in extend_atom:
         if "." in extend_atom:
-            extend_atom_1_l = [
-                int(i_atom) for i_atom in extend_atom.split("_")[0].split(".")
-            ]
-            extend_atom_2_l = [
-                int(i_atom) for i_atom in extend_atom.split("_")[1].split(".")
-            ]
-            print(extend_atom_1_l, extend_atom_2_l)
-            for extend_i in extend_atom_1_l:
-                if extend_i >= len(Mol[name_mol]):
-                    print(f"Skip: {name:>40}")
-                    return None, name
-            for extend_i in extend_atom_2_l:
-                if extend_i >= len(Mol[name_mol]):
-                    print(f"Skip: {name:>40}")
-                    return None, name
-            if abs(distance) < 1e-3:
-                return None, name
-            distance_1_2_array = [
-                molecular[extend_atom_2_l[0]][1] - molecular[extend_atom_1_l[0]][1],
-                molecular[extend_atom_2_l[0]][2] - molecular[extend_atom_1_l[0]][2],
-                molecular[extend_atom_2_l[0]][3] - molecular[extend_atom_1_l[0]][3],
-            ]
-            distance_1_2 = sum(map(lambda x: x**2, distance_1_2_array)) ** 0.5
-            for i in range(1, 4):
-                for extend_i in extend_atom_2_l:
-                    molecular[extend_i][i] += (
-                        distance * distance_1_2_array[i - 1] / distance_1_2
-                    )
+            atom_list_1 = np.array(extend_atom.split("-")[0].split("."), dtype=int)
+            atom_list_2 = np.array(extend_atom.split("-")[1].split("."), dtype=int)
         else:
-            extend_atom_1, extend_atom_2 = map(int, extend_atom.split("-"))
-            if extend_atom_1 >= len(Mol[name_mol]) or extend_atom_2 >= len(
-                Mol[name_mol]
-            ):
-                print(f"Skip: {name:>40}")
-                return None, name
-            if abs(distance) < 1e-3:
-                if (extend_atom_1 != 0) and (extend_atom_2 != 1):
-                    print(f"Skip: {name:>40}")
-                    return None, name
-            distance_1_2_array = [
-                molecular[extend_atom_2][1] - molecular[extend_atom_1][1],
-                molecular[extend_atom_2][2] - molecular[extend_atom_1][2],
-                molecular[extend_atom_2][3] - molecular[extend_atom_1][3],
-            ]
-            distance_1_2 = sum(map(lambda x: x**2, distance_1_2_array)) ** 0.5
-            for i in range(1, 4):
-                molecular[extend_atom_2][i] += (
-                    distance * distance_1_2_array[i - 1] / distance_1_2
-                )
+            atom_list_1 = [int(extend_atom.split("-"))[0]]
+            atom_list_2 = [int(extend_atom.split("-"))[1]]
+
+        distance_1_2_array = (
+            molecular[atom_list_2[0]][1:4] - molecular[atom_list_1[0]][1:4]
+        )
+        distance_1_2 = np.linalg.norm(distance_1_2_array)
+        molecular[atom_list_2, 1:] = molecular[atom_list_2, 1:] + (
+            distance * distance_1_2_array / distance_1_2
+        )
     else:
         extend_atom = int(extend_atom)
-        if abs(distance) < 1e-3:
-            if (extend_atom != 0) or extend_xyz != 1:
-                print(f"Skip: {name:>40}")
-                return None, name
-        if extend_atom >= len(Mol[name_mol]):
-            print(f"Skip: {name:>40}")
-            return None, name
         molecular[extend_atom][extend_xyz] += distance
     print("extend mol", molecular)
-    return molecular, name
+    return list(molecular), name
 
 
 def gen_mole(
@@ -112,11 +72,24 @@ def gen_mole(
     distance: float,
     basis: str,
     if_basis_str: bool,
+    dataset_name: str = "Mol",
 ) -> pyscf.gto.Mole:
     """
     Function to generate the molecule
     """
-    molecular, name = extend(name_mol, extend_atom, extend_xyz, distance, basis)
+    try:
+        molecular, name = extend(
+            name_mol,
+            extend_atom,
+            extend_xyz,
+            distance,
+            basis,
+            dataset_name,
+        )
+    except Exception as e:
+        print(f"Error: {name_mol} {extend_atom} {extend_xyz} {distance}")
+        print(e)
+        return None, None
 
     mol = pyscf.M(
         atom=molecular,
@@ -126,8 +99,8 @@ def gen_mole(
             if_basis_str,
         ),
         verbose=3,
-        spin=Mol["spin"][name_mol],
-        charge=Mol["charge"][name_mol],
+        spin=dataset[dataset_name]["spin"][name_mol],
+        charge=dataset[dataset_name]["charge"][name_mol],
     )
 
     return mol, name

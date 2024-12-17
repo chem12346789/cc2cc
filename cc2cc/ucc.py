@@ -8,4 +8,108 @@ from cc2cc.utils import Grid
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 
 
-def cc(mol, name):
+def ucc(mol, name):
+    """
+    Generate data for the UCCSD method.
+    """
+
+    print(f"Generate data for {name}, spin {mol.spin}")
+
+    mf = pyscf.scf.UHF(mol)
+    mf.kernel()
+    mycc = pyscf.cc.UCCSD(mf)
+    mycc.kernel()
+    dm1_cc = mycc.make_rdm1(ao_repr=True)
+    dm2_cc = mycc.make_rdm2(ao_repr=True)
+    e_cc = mycc.e_tot
+
+    mdft = pyscf.scf.UKS(mol)
+    mdft.xc = "b3lyp"
+    mdft.kernel()
+
+    grids = Grid(mol)
+    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+    rho_cc = [
+        pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
+        pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
+    ]
+    exc_cc_grids = np.zeros(len(grids.coords))
+
+    dm12 = (
+        0.5 * dm2_cc[0]
+        + 0.5 * dm2_cc[1]
+        + 0.5 * dm2_cc[1].transpose(2, 3, 0, 1)
+        + 0.5 * dm2_cc[2]
+        - 0.5
+        * oe.contract(
+            "pq,rs->pqrs",
+            dm1_cc[0] + dm1_cc[1],
+            dm1_cc[0] + dm1_cc[1],
+        )
+        + 0.1
+        * oe.contract(
+            "pr,qs->pqrs",
+            dm1_cc[0],
+            dm1_cc[0],
+        )
+        + 0.1
+        * oe.contract(
+            "pr,qs->pqrs",
+            dm1_cc[1],
+            dm1_cc[1],
+        )
+    )
+
+    expr_rinv_dm2_r = oe.contract_expression(
+        "ijkl,i,j,kl->",
+        dm12,
+        (mol.nao,),
+        (mol.nao,),
+        (mol.nao, mol.nao),
+        constants=[0],
+        optimize="optimal",
+    )
+
+    for i, coord in enumerate(grids.coords):
+        if i * 10 % len(grids.coords) == 0:
+            print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
+
+        ao_0_i = ao_value[0][i]
+
+        with mol.with_rinv_origin(coord):
+            rinv = mol.intor("int1e_rinv")
+            exc_cc_grids[i] += expr_rinv_dm2_r(
+                ao_0_i,
+                ao_0_i,
+                rinv,
+                backend="torch",
+            )
+
+    exc_cc_grids -= pyscf.dft.libxc.eval_xc("b3lyp", rho_cc, spin=1 if mol.spin else 0)[
+        0
+    ] * (rho_cc[0][0] + rho_cc[1][0])
+    error_energy = e_cc - mdft.energy_tot(dm1_cc)
+    error = np.sum(exc_cc_grids * grids.weights) - error_energy
+    print(
+        "exc_cc_grids: ",
+        f"max exc_cc_grids: {np.max(exc_cc_grids)}",
+        f"min exc_cc_grids: {np.min(exc_cc_grids)}",
+        f"mean exc_cc_grids: {np.mean(exc_cc_grids)}",
+        f"var exc_cc_grids: {np.var(exc_cc_grids)}",
+    )
+    print(
+        f"error_energy: {AU2KCALMOL * error_energy},",
+        f"Error: {AU2KCALMOL * error},",
+    )
+
+    rho_cube = grids.gen_cube_rho(mol, dm1_cc)
+
+    np.savez_compressed(
+        DATA_PATH / f"data_{name}.npz",
+        e_cc=e_cc,
+        dm_cc=dm1_cc,
+        rho_cube=rho_cube,
+        weights=grids.weights,
+        exc_cc_grids=exc_cc_grids,
+        error_energy=error_energy,
+    )

@@ -5,7 +5,7 @@ import pyscf
 from pyscf.grad import ccsd as ccsd_grad
 from pyscf.grad import uccsd as uccsd_grad
 
-from cc2cc.utils import DATA_TEST_PATH
+from cc2cc.utils.env_var import DATA_TEST_PATH
 
 
 class Test_Data:

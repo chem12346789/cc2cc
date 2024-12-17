@@ -33,9 +33,16 @@ if __name__ == "__main__":
             distance,
             args.basis,
             args.if_basis_str,
+            args.dataset,
         )
+
+        if mol is None:
+            print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+            continue
 
         if mol.spin == 0:
             cc(mol, name)
         else:
             ucc(mol, name)
+
+        print()
