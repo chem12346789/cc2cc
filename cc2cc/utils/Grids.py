@@ -104,12 +104,11 @@ def gen_input(rho, spin, xc_type):
     b88_grids = pyscf.dft.libxc.eval_xc("B88,", rho[:4], spin)[0]
     lyp_grids = pyscf.dft.libxc.eval_xc(",LYP", rho[:4], spin)[0]
     if spin == 0:
-        rho0 = rho[:1]
+        rho0 = rho[0]
         rho01 = rho02 = rho0 / 2
     else:
-        rho01 = rho[0][:1]
-        rho02 = rho[1][:1]
-    print(rho01.shape, rho02.shape, b88_grids.shape, lyp_grids.shape)
+        rho01 = rho[0][0]
+        rho02 = rho[1][0]
     rho_out = np.array([rho01, rho02, b88_grids, lyp_grids])
 
     # if spin != 0:
