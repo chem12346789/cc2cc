@@ -152,7 +152,7 @@ class DataBase:
 
         input_mat = data["rho_cube"]
         weight_mat = data["weights"]
-        output_mat = data["exc_cc_grids"]
+        output_mat = data["exc_output_grids"]
 
         print(AU2KCALMOL * data["error_energy"])
         print(AU2KCALMOL * np.sum(output_mat * weight_mat))

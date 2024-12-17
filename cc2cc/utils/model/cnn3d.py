@@ -57,6 +57,9 @@ class Model(nn.Module):
         rho0 = x[:, 0, :, :, :]
         rho1 = x[:, 1, :, :, :]
         rho = rho0 + rho1
+        rho_center = rho[:, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        rho_center = rho_center.reshape(rho_center.size(0), -1)
+
         rho_lda = (rho + ESP) ** (1 / 3)
         rho_spin = (rho0 - rho1) / (rho + ESP)
         xi = (1 + rho_spin + ESP) ** (4 / 3) + (1 - rho_spin + ESP) ** (4 / 3)
@@ -74,8 +77,8 @@ class Model(nn.Module):
 
         t = torch.log(t + ESP)
         t = self.cnn(t)
-        t = t.reshape(x.size(0), -1)
+        t = t.reshape(t.size(0), -1)
         # x = self.dropout(x)
         t = self.fc(t)
-        t = t * rho[:, [CUBE_MIDDLE], CUBE_MIDDLE, CUBE_MIDDLE]
+        t = t * rho_center
         return t
