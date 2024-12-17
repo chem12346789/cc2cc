@@ -5,17 +5,11 @@ Other parameter are from the argparse.
 
 import argparse
 from itertools import product
-from pathlib import Path
-import datetime
-import os
 
-import numpy as np
 import torch
-import pyscf
 
-from cc2cc import add_args, extend
-from cc2cc import test_rks, test_uks
-from cc2cc.utils import gen_basis, rotate
+from cc2cc import add_args, test_rks, test_uks
+from cc2cc.utils import gen_mole
 
 from cc2cc.utils import Model_Dict, Data_Record
 
@@ -60,33 +54,16 @@ if __name__ == "__main__":
         args.extend_xyz,
         args.distance_list,
     ):
-        SPIN = 0
-        if "-openshell" in name_mol:
-            if "_" in name_mol:
-                SPIN = int(name_mol.split("_")[-1])
-                name_mol = name_mol.split("_")[0]
-                name_mol = name_mol.replace("-openshell", "")
-            else:
-                SPIN = 1
-
-        molecular, name = extend(
-            name_mol, extend_atom, extend_xyz, distance, args.basis
+        mol, name = gen_mole(
+            name_mol,
+            extend_atom,
+            extend_xyz,
+            distance,
+            args.basis,
+            args.if_basis_str,
         )
 
-        rotate(molecular, rotation="r")
-
-        mol = pyscf.M(
-            atom=molecular,
-            basis=gen_basis(
-                molecular,
-                args.basis,
-                args.if_basis_str,
-            ),
-            verbose=4,
-            spin=0,
-        )
-
-        if SPIN == 0:
+        if mol.spin == 0:
             test_rks(mol, name, modeldict, data_record)
         else:
             test_uks(mol, name, modeldict, data_record)

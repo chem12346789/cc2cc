@@ -34,6 +34,8 @@ BASIS = {
     "cc-pcvdz": "cc-pvdz",
 }
 
+H_ALAIS = ["H", "h", 1]
+
 
 def gen_basis(molecular, basis_name, if_basis_str):
     """
@@ -52,7 +54,7 @@ def gen_basis(molecular, basis_name, if_basis_str):
                         elements=i_atom[0],
                         fmt="nwchem",
                     )
-                    if ((i_atom[0] == "H") and (basis_name in BASIS))
+                    if ((i_atom[0] in H_ALAIS) and (basis_name in BASIS))
                     else basis_set_exchange.api.get_basis(
                         basis_name, elements=i_atom[0], fmt="nwchem"
                     )
@@ -62,7 +64,7 @@ def gen_basis(molecular, basis_name, if_basis_str):
         else:
             basis[i_atom[0]] = (
                 BASIS[basis_name]
-                if ((i_atom[0] == "H") and (basis_name in BASIS))
+                if ((i_atom[0] in H_ALAIS) and (basis_name in BASIS))
                 else basis_name
             )
     return basis

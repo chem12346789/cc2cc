@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 
-from cc2cc.utils import CUBE_MIDDLE
+from cc2cc.utils.env_var import CUBE_MIDDLE
 
 ESP = torch.finfo(torch.float32).eps
 LEN = 4

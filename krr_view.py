@@ -12,7 +12,7 @@ import faiss
 from sklearn.kernel_ridge import KernelRidge
 
 from krr import add_args, load_data, hash_value
-from cc2cc.utils import CUBE_SIZE, DATA_PATH, Mol, rotate
+from cc2cc.utils import CUBE_SIZE, DATA_PATH
 
 faiss.cvar.distance_compute_blas_threshold = 8000000
 
@@ -253,18 +253,6 @@ for index_ in x_keys:
                     axes[0, 0].set_ylabel(r"Energy (au)")
                 axes[0, 0].set_xlim(-0.575, 0.575)
                 axes[0, 0].set_xticks(np.arange(-0.5, 0.6, 0.1))
-
-                molecular = copy.deepcopy(Mol[key_.split("_")[0]])
-                rotate(molecular, verbose=False)
-
-                # plot the molecular
-                for i_mol in molecular:
-                    axes[0, 1].scatter(
-                        i_mol[1],
-                        i_mol[2],
-                        i_mol[3],
-                        c=color_dict_atom[i_mol[0]],
-                    )
 
                 plt.savefig(
                     plot_path / f"plot/{key_}_{len(value_)}.pdf",

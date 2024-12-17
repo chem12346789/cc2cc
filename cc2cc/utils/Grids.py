@@ -228,14 +228,27 @@ class Grid(dft.gen_grid.Grids):
         ao_value = pyscf.dft.numint.eval_ao(mol, self.coords, deriv=2)
 
         # Hessian matrix
-        assert (
-            np.linalg.norm(dm1_input.conj().T - dm1_input) < 1e-10
-        ), "Density matrix is not symmetric."
         shls_slice = (0, mol.nbas)
         ao_loc = mol.ao_loc_nr()
+        if mol.spin == 0:
+            assert (
+                np.linalg.norm(dm1_input.conj().T - dm1_input) < 1e-10
+            ), "Density matrix is not symmetric."
+            c0 = _dot_ao_dm(mol, ao_value[0], dm1_input, None, shls_slice, ao_loc)
+        else:
+            assert (
+                np.linalg.norm(dm1_input[0].conj().T - dm1_input[0]) < 1e-10
+            ), "Density matrix is not symmetric."
+            assert (
+                np.linalg.norm(dm1_input[1].conj().T - dm1_input[1]) < 1e-10
+            ), "Density matrix is not symmetric."
+            c0 = _dot_ao_dm(
+                mol, ao_value[0], dm1_input[0] + dm1_input[1], None, shls_slice, ao_loc
+            )
+
         rho_input_1 = np.zeros((3, len(self.coords)))
         rho_input_2 = np.zeros((3, 3, len(self.coords)))
-        c0 = _dot_ao_dm(mol, ao_value[0], dm1_input, None, shls_slice, ao_loc)
+
         rho_input_1[0, :] = _contract_rho(ao_value[1], c0)
         rho_input_1[1, :] = _contract_rho(ao_value[2], c0)
         rho_input_1[2, :] = _contract_rho(ao_value[3], c0)
@@ -300,10 +313,21 @@ class Grid(dft.gen_grid.Grids):
             ao_cube = pyscf.dft.numint.eval_ao(
                 mol, self.coor_cube[p].reshape(-1, 3), deriv=2
             )
-            rho_cube_p = pyscf.dft.numint.eval_rho(
-                mol, ao_cube, dm1_input, xctype="mGGA", with_lapl=False
-            )
-            rho_cube_p_norm = gen_input(rho_cube_p, mol.spin, xc_type)
+            if mol.spin == 0:
+                rho_cube_p = pyscf.dft.numint.eval_rho(
+                    mol, ao_cube, dm1_input, xctype="mGGA", with_lapl=False
+                )
+                rho_cube_p_norm = gen_input(rho_cube_p, mol.spin, xc_type)
+            else:
+                rho_cube_p = [
+                    pyscf.dft.numint.eval_rho(
+                        mol, ao_cube, dm1_input[0], xctype="mGGA", with_lapl=False
+                    ),
+                    pyscf.dft.numint.eval_rho(
+                        mol, ao_cube, dm1_input[1], xctype="mGGA", with_lapl=False
+                    ),
+                ]
+                rho_cube_p_norm = gen_input(rho_cube_p, mol.spin, xc_type)
             return np.reshape(rho_cube_p_norm, (LEN, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
 
         with parallel_config(

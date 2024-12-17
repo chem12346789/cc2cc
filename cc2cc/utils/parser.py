@@ -8,7 +8,7 @@ More details.
 import argparse
 import numpy as np
 
-from cc2cc.utils.mol import Mol
+from cc2cc.utils.mol import dataset
 
 
 def str2bool(v):
@@ -46,9 +46,10 @@ def add_args(parser: argparse.ArgumentParser):
         "-m",
         nargs="+",
         type=str,
-        default="HH",
-        help=f"Name of molecular. Must in {list(Mol.keys())}.",
+        default="",
+        help="Name of molecular. Default is empty (all the dataset).",
     )
+
     parser.add_argument(
         "--distance_list",
         "-dl",
@@ -57,6 +58,7 @@ def add_args(parser: argparse.ArgumentParser):
         help="Distance between atom H to the origin. Default is 1.0.",
         default=1.0,
     )
+
     parser.add_argument(
         "--extend_atom",
         type=str,
@@ -64,6 +66,7 @@ def add_args(parser: argparse.ArgumentParser):
         default=0,
         help="Number of atoms to extend. Default is 0.",
     )
+
     parser.add_argument(
         "--extend_xyz",
         type=int,
@@ -71,6 +74,7 @@ def add_args(parser: argparse.ArgumentParser):
         default=0,
         help="Number of xyz to extend. 0 for x, 1 for y, 2 for z. Default is 0.",
     )
+
     parser.add_argument(
         "--basis",
         type=str,
@@ -83,6 +87,13 @@ def add_args(parser: argparse.ArgumentParser):
         type=str2bool,
         default=True,
         help="Weather to use the basis set from basissetexchange. See https://www.basissetexchange.org. Default is False.",
+    )
+
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="mol",
+        help="Name of the dataset. Default is mol (training and testing).",
     )
 
     parser.add_argument(
@@ -137,7 +148,7 @@ def add_args(parser: argparse.ArgumentParser):
         help="Step for evaluation. Default is 1.",
     )
 
-    # foe testing
+    # for testing
     parser.add_argument(
         "--load_epoch",
         type=int,
@@ -150,5 +161,8 @@ def add_args(parser: argparse.ArgumentParser):
         args.extend_xyz[i] += 1
 
     args.distance_list = gen_logger(args.distance_list)
+
+    if len(args.name_mol) == 0:
+        args.name_mol = dataset[args.dataset]["molecular"]
 
     return args

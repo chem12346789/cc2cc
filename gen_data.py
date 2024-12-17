@@ -5,10 +5,8 @@
 import argparse
 from itertools import product
 
-import pyscf
-
-from cc2cc import add_args, extend, cc
-from cc2cc.utils import gen_basis, rotate
+from cc2cc import add_args, cc, ucc
+from cc2cc.utils import gen_mole
 
 
 if __name__ == "__main__":
@@ -28,32 +26,23 @@ if __name__ == "__main__":
         args.extend_xyz,
         args.distance_list,
     ):
-        SPIN = 0
-        if "-openshell" in name_mol:
-            if "_" in name_mol:
-                SPIN = int(name_mol.split("_")[-1])
-                name_mol = name_mol.split("_")[0]
-                name_mol = name_mol.replace("-openshell", "")
-            else:
-                SPIN = 1
-
-        molecular, name = extend(
-            name_mol, extend_atom, extend_xyz, distance, args.basis
-        )
-        rotate(molecular, verbose=True)
-
-        mol = pyscf.M(
-            atom=molecular,
-            basis=gen_basis(
-                molecular,
-                args.basis,
-                args.if_basis_str,
-            ),
-            verbose=4,
-            spin=0,
+        mol, name = gen_mole(
+            name_mol,
+            extend_atom,
+            extend_xyz,
+            distance,
+            args.basis,
+            args.if_basis_str,
+            args.dataset,
         )
 
-        if SPIN == 0:
+        if mol is None:
+            print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+            continue
+
+        if mol.spin == 0:
             cc(mol, name)
         else:
-            continue
+            ucc(mol, name)
+
+        print()
