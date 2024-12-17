@@ -101,30 +101,41 @@ def gen_input(rho, spin, xc_type):
     """
     Generate the input for the model.
     """
-    if spin != 0:
-        rho01, dx1, dy1, dz1 = rho[0][:4]
-        rho02, dx2, dy2, dz2 = rho[1][:4]
-        gamma1 = dx1**2 + dy1**2 + dz1**2
-        gamma2 = dx2**2 + dy2**2 + dz2**2
-        gamma12 = dx1 * dx2 + dy1 * dy2 + dz1 * dz2
-    else:
-        rho0, dx, dy, dz = rho[:4]
-        gamma1 = gamma2 = gamma12 = (dx**2 + dy**2 + dz**2) / 4
+    b88_grids = pyscf.dft.libxc.eval_xc("B88,", rho[:4], spin)[0]
+    lyp_grids = pyscf.dft.libxc.eval_xc(",LYP", rho[:4], spin)[0]
+    if spin == 0:
+        rho0 = rho[:1]
         rho01 = rho02 = rho0 / 2
+    else:
+        rho01 = rho[0][:1]
+        rho02 = rho[1][:1]
+    print(rho01.shape, rho02.shape, b88_grids.shape, lyp_grids.shape)
+    rho_out = np.array([rho01, rho02, b88_grids, lyp_grids])
 
-    if xc_type == "GGA":
-        rho0 = np.array([rho01, rho02, gamma1, gamma12, gamma2])
-    elif xc_type == "MGGA":
-        if spin != 0:
-            tau1 = rho[0][4]
-            tau2 = rho[1][4]
-        else:
-            tau = rho[4]
-            tau1 = tau * 0.5
-            tau2 = tau * 0.5
-        rho0 = np.array([rho01, rho02, gamma1, gamma12, gamma2, tau1, tau2])
+    # if spin != 0:
+    #     rho01, dx1, dy1, dz1 = rho[0][:4]
+    #     rho02, dx2, dy2, dz2 = rho[1][:4]
+    #     gamma1 = dx1**2 + dy1**2 + dz1**2
+    #     gamma2 = dx2**2 + dy2**2 + dz2**2
+    #     gamma12 = dx1 * dx2 + dy1 * dy2 + dz1 * dz2
+    # else:
+    #     rho0, dx, dy, dz = rho[:4]
+    #     gamma1 = gamma2 = gamma12 = (dx**2 + dy**2 + dz**2) / 4
+    #     rho01 = rho02 = rho0 / 2
 
-    return rho0
+    # if xc_type == "GGA":
+    #     rho0 = np.array([rho01, rho02, gamma1, gamma12, gamma2])
+    # elif xc_type == "MGGA":
+    #     if spin != 0:
+    #         tau1 = rho[0][4]
+    #         tau2 = rho[1][4]
+    #     else:
+    #         tau = rho[4]
+    #         tau1 = tau * 0.5
+    #         tau2 = tau * 0.5
+    #     rho_out = np.array([rho01, rho02, gamma1, gamma12, gamma2, tau1, tau2])
+
+    return rho_out
 
 
 def gen_atomic_grids(
@@ -299,7 +310,7 @@ class Grid(dft.gen_grid.Grids):
                 mask = np.where(np.linspace.norm(i_coor_cube - self.coords) < 1e-10)
                 print(mask)
 
-    def gen_cube_rho(self, mol, dm1_input, reset=False, xc_type="MGGA"):
+    def gen_cube_rho(self, mol, dm1_input, reset=False, xc_type="GGA"):
         """
         Generate the cube density for the given molecule.
         """
@@ -315,19 +326,19 @@ class Grid(dft.gen_grid.Grids):
             )
             if mol.spin == 0:
                 rho_cube_p = pyscf.dft.numint.eval_rho(
-                    mol, ao_cube, dm1_input, xctype="mGGA", with_lapl=False
+                    mol, ao_cube, dm1_input, xctype=xc_type, with_lapl=False
                 )
-                rho_cube_p_norm = gen_input(rho_cube_p, mol.spin, xc_type)
+                rho_cube_p_norm = gen_input(rho_cube_p, 0, xc_type)
             else:
                 rho_cube_p = [
                     pyscf.dft.numint.eval_rho(
-                        mol, ao_cube, dm1_input[0], xctype="mGGA", with_lapl=False
+                        mol, ao_cube, dm1_input[0], xctype=xc_type, with_lapl=False
                     ),
                     pyscf.dft.numint.eval_rho(
-                        mol, ao_cube, dm1_input[1], xctype="mGGA", with_lapl=False
+                        mol, ao_cube, dm1_input[1], xctype=xc_type, with_lapl=False
                     ),
                 ]
-                rho_cube_p_norm = gen_input(rho_cube_p, mol.spin, xc_type)
+                rho_cube_p_norm = gen_input(rho_cube_p, 1, xc_type)
             return np.reshape(rho_cube_p_norm, (LEN, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
 
         with parallel_config(

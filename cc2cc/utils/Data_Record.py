@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 
 class Data_Record:
@@ -11,7 +12,7 @@ class Data_Record:
         """
         Add data to the dictionary
         """
-        if isinstance(name, list):
+        if isinstance(name, (list, pd.core.series.Series, np.ndarray)):
             for n in name:
                 self.df_dict["name"].append(n)
         else:
@@ -20,7 +21,7 @@ class Data_Record:
         for key, val in dict_.items():
             if key not in self.df_dict:
                 self.df_dict[key] = []
-            if isinstance(val, list):
+            if isinstance(val, (list, pd.core.series.Series, np.ndarray)):
                 for v in val:
                     self.df_dict[key].append(v)
             else:

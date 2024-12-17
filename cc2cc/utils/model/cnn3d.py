@@ -41,7 +41,6 @@ class Model(nn.Module):
         """
         Standard forward function, required for all nn.Module classes
         """
-
         t = torch.empty(
             (
                 x.shape[0],
@@ -66,19 +65,54 @@ class Model(nn.Module):
 
         t[:, 0, :, :, :] = rho_lda
         t[:, 1, :, :, :] = xi
-        t[:, 2, :, :, :] = (
-            x[:, 2, :, :, :] + 2 * x[:, 3, :, :, :] + x[:, 4, :, :, :]
-        ) / (rho_lda**4 + ESP)
+        t[:, 2, :, :, :] = x[:, 2, :, :, :]
+        t[:, 3, :, :, :] = x[:, 3, :, :, :]
 
-        if LEN == 4:
-            t[:, 3, :, :, :] = (x[:, 5, :, :, :] - x[:, 6, :, :, :]) / (
-                rho_lda**5 + ESP
-            )
-
-        t = torch.log(t + ESP)
         t = self.cnn(t)
         t = t.reshape(t.size(0), -1)
         # x = self.dropout(x)
         t = self.fc(t)
         t = t * rho_center
+
         return t
+
+        # t = torch.empty(
+        #     (
+        #         x.shape[0],
+        #         LEN,
+        #         x.shape[2],
+        #         x.shape[3],
+        #         x.shape[4],
+        #     ),
+        #     dtype=x.dtype,
+        #     device=x.device,
+        # )
+
+        # rho0 = x[:, 0, :, :, :]
+        # rho1 = x[:, 1, :, :, :]
+        # rho = rho0 + rho1
+        # rho_center = rho[:, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        # rho_center = rho_center.reshape(rho_center.size(0), -1)
+
+        # rho_lda = (rho + ESP) ** (1 / 3)
+        # rho_spin = (rho0 - rho1) / (rho + ESP)
+        # xi = (1 + rho_spin + ESP) ** (4 / 3) + (1 - rho_spin + ESP) ** (4 / 3)
+
+        # t[:, 0, :, :, :] = rho_lda
+        # t[:, 1, :, :, :] = xi
+        # t[:, 2, :, :, :] = (
+        #     x[:, 2, :, :, :] + 2 * x[:, 3, :, :, :] + x[:, 4, :, :, :]
+        # ) / (rho_lda**4 + ESP)
+
+        # if LEN == 4:
+        #     t[:, 3, :, :, :] = (x[:, 5, :, :, :] - x[:, 6, :, :, :]) / (
+        #         rho_lda**5 + ESP
+        #     )
+
+        # t = torch.tanh(t + ESP)
+        # t = self.cnn(t)
+        # t = t.reshape(t.size(0), -1)
+        # # x = self.dropout(x)
+        # t = self.fc(t)
+        # t = t * rho_center
+        # return t

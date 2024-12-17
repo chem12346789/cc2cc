@@ -46,16 +46,12 @@ GPU_NODE_POOL = itertools.cycle(["gpu03"])
 
 for mol, basis_set, (range_list, extend_atom) in itertools.product(
     [
-        "methane",
-        "ethane",
-        "ethylene",
-        "acetylene",
-        "propane",
+        "mol",
     ],
     ["cc-pVDZ"],
     [
-        # ((0, 0, 1), "0-1"),
-        ((-0.5, 0.5, 3), "0-1"),
+        ((0, 0, 1), "0"),
+        # ((-0.5, 0.5, 3), "0-1"),
     ],
 ):
     number_of_gpu = next(LIST_OF_GPU)

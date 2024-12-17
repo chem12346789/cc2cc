@@ -121,6 +121,30 @@ def train_model(train_str_dict, eval_str_dict):
                 refresh=False,
             )
 
-        if (epoch % (args.eval_step * 50) == 0) and (epoch != 0):
+        if epoch % (args.eval_step * 50) == 0:
             modeldict.save_model(epoch)
+
+            data_record_train = Data_Record(
+                modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}"
+            )
+            data_record_train.add_data(
+                database_train.name_list,
+                {
+                    "train_loss_ene": train_loss_ene,
+                    "train_loss_ene_tot": train_loss_ene_tot,
+                },
+            )
+            data_record_train.save_csv()
+
+            data_record_eval = Data_Record(
+                modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}"
+            )
+            data_record_eval.add_data(
+                database_eval.name_list,
+                {
+                    "train_loss_ene": eval_loss_ene,
+                    "train_loss_ene_tot": eval_loss_ene_tot,
+                },
+            )
+            data_record_eval.save_csv()
     pbar0.close()
