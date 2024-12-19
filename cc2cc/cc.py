@@ -22,6 +22,9 @@ def cc(mol, name):
     mdft.kernel()
 
     if TEST:
+        dm1_cc = mdft.make_rdm1(ao_repr=True)
+        e_cc = mdft.e_tot
+    else:
         mf = pyscf.scf.RHF(mol)
         mf.kernel()
         mycc = pyscf.cc.CCSD(mf)
@@ -29,9 +32,6 @@ def cc(mol, name):
         dm1_cc = mycc.make_rdm1(ao_repr=True)
         dm2_cc = mycc.make_rdm2(ao_repr=True)
         e_cc = mycc.e_tot
-    else:
-        dm1_cc = mdft.make_rdm1(ao_repr=True)
-        e_cc = mdft.e_tot
 
     grids = Grid(mol)
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)

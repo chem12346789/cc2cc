@@ -22,6 +22,9 @@ def ucc(mol, name):
     mdft.kernel()
 
     if TEST:
+        dm1_cc = mdft.make_rdm1(ao_repr=True)
+        e_cc = mdft.e_tot
+    else:
         mf = pyscf.scf.UHF(mol)
         mf.kernel()
         mycc = pyscf.cc.UCCSD(mf)
@@ -29,12 +32,9 @@ def ucc(mol, name):
         dm1_cc = mycc.make_rdm1(ao_repr=True)
         dm2_cc = mycc.make_rdm2(ao_repr=True)
         e_cc = mycc.e_tot
-    else:
-        dm1_cc = mdft.make_rdm1(ao_repr=True)
-        e_cc = mdft.e_tot
 
     grids = Grid(mol)
-    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
     rho_cc = [
         pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
         pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
