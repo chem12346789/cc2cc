@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-class Data_Record:
+class DataRecord:
 
     def __init__(self, path):
         self.df_dict = {"name": []}

@@ -6,7 +6,7 @@ import numpy as np
 import pyscf
 
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
-from cc2cc.utils import Grid, Test_Data
+from cc2cc.utils import Grid, TestData
 
 
 def test_uks(
@@ -19,7 +19,7 @@ def test_uks(
     Test the model. Restrict Khon-Sham (no spin).
     """
     # 2.0 Prepare
-    test_data = Test_Data(mol, name)
+    test_data = TestData(mol, name)
     test_data.test_mol()
     grids = Grid(test_data.mol)
 

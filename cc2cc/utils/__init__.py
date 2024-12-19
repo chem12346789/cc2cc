@@ -3,10 +3,10 @@ from cc2cc.utils.mol import gen_mole
 
 from cc2cc.utils.Grids import Grid
 from cc2cc.utils.DataBase import DataBase
-from cc2cc.utils.Model_Dict import Model_Dict
+from cc2cc.utils.ModelDict import ModelDict
 from cc2cc.utils.rotate import rotate
-from cc2cc.utils.Data_Record import Data_Record
-from cc2cc.utils.Test_Data import Test_Data
+from cc2cc.utils.DataRecord import DataRecord
+from cc2cc.utils.TestData import TestData
 
 from cc2cc.utils.env_var import (
     MAIN_PATH,
@@ -25,10 +25,10 @@ __all__ = [
     "gen_mole",
     "Grid",
     "DataBase",
-    "Model_Dict",
+    "ModelDict",
     "rotate",
-    "Data_Record",
-    "Test_Data",
+    "DataRecord",
+    "TestData",
     "MAIN_PATH",
     "DATA_PATH",
     "DATA_SCF_PATH",

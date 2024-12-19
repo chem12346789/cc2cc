@@ -21,5 +21,5 @@ export NVIDIA_VISIBLE_DEVICES=1
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')
 # export CUDA_VISIBLE_DEVICES=NUMBER_OF_GPU
 
-nohup bash -c '~/anaconda3/envs/pyscf/bin/python test.py -dl -0.25 -0.25 11 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --precision float64 --load 2024-12-13-13-11-44 --load_epoch 49000 --name_mol methane ethane ethylene acetylene propane' >log/test0.log 2>&1 &
+nohup bash -c '~/anaconda3/envs/pyscf/bin/python test.py -dl 0 0 1 --basis cc-pVDZ --extend_atom 0 --extend_xyz 0 --precision float64 --load 2024-12-19-02-31-00 --load_epoch 49000' >log/test0.log 2>&1 &
 echo $! >>log/save_pid.txt 2>&1
