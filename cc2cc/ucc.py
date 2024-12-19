@@ -39,14 +39,11 @@ def ucc(mol, name):
         pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
         pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
     ]
-    exc_dft_grids = pyscf.dft.libxc.eval_xc("b3lyp", rho_cc, spin=1 if mol.spin else 0)[
-        0
-    ] * (rho_cc[0][0] + rho_cc[1][0])
-    exc_cc_grids = -exc_dft_grids.copy()
-
-    rho_cube = grids.gen_cube_rho(mol, dm1_cc)
 
     if TEST:
+        exc_cc_grids = pyscf.dft.libxc.eval_xc(
+            "b3lyp", rho_cc, spin=1 if mol.spin else 0
+        )[0] * (rho_cc[0][0] + rho_cc[1][0])
         h1e = mdft.mol.intor("int1e_kin") + mdft.mol.intor("int1e_nuc")
         eri = mdft.mol.intor("int2e")
         error_energy = (
@@ -96,17 +93,19 @@ def ucc(mol, name):
             optimize="optimal",
         )
 
+        exc_cc_grids = -pyscf.dft.libxc.eval_xc(
+            "b3lyp", rho_cc, spin=1 if mol.spin else 0
+        )[0] * (rho_cc[0][0] + rho_cc[1][0])
+
         for i, coord in enumerate(grids.coords):
             if i * 10 % len(grids.coords) == 0:
                 print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
 
-            ao_0_i = ao_value[0][i]
-
             with mol.with_rinv_origin(coord):
                 rinv = mol.intor("int1e_rinv")
                 exc_cc_grids[i] += expr_rinv_dm2_r(
-                    ao_0_i,
-                    ao_0_i,
+                    ao_value[0][i],
+                    ao_value[0][i],
                     rinv,
                     backend="torch",
                 )
@@ -124,6 +123,8 @@ def ucc(mol, name):
             f"error_energy: {AU2KCALMOL * error_energy},",
             f"Error: {AU2KCALMOL * error},",
         )
+
+    rho_cube = grids.gen_cube_rho(mol, dm1_cc)
 
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",

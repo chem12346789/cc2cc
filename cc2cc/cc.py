@@ -34,21 +34,19 @@ def cc(mol, name):
         e_cc = mdft.e_tot
 
     grids = Grid(mol)
-    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
     rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
-    exc_cc_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0] * rho_cc[0]
-
-    rho_cube = grids.gen_cube_rho(mol, dm1_cc)
 
     if TEST:
+        exc_cc_grids = pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0] * rho_cc[0]
         h1e = mdft.mol.intor("int1e_kin") + mdft.mol.intor("int1e_nuc")
         eri = mdft.mol.intor("int2e")
         error_energy = (
             np.einsum("pq,pq", h1e, dm1_cc)
             + 0.5 * np.einsum("pqrs,pq,rs", eri, dm1_cc, dm1_cc)
             - 0.05 * np.einsum("pqrs,pr,qs", eri, dm1_cc, dm1_cc)
-            + mdft.energy_nuc()
             + np.sum(exc_cc_grids * grids.weights)
+            + mdft.energy_nuc()
             - e_cc
         )
         print(f"Error energy: {AU2KCALMOL * error_energy}")
@@ -69,17 +67,16 @@ def cc(mol, name):
             optimize="optimal",
         )
 
+        exc_cc_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_cc)[0] * rho_cc[0]
+
         for i, coord in enumerate(grids.coords):
             if i * 10 % len(grids.coords) == 0:
                 print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
-
-            ao_0_i = ao_value[0][i]
-
             with mol.with_rinv_origin(coord):
                 rinv = mol.intor("int1e_rinv")
                 exc_cc_grids[i] += expr_rinv_dm2_r(
-                    ao_0_i,
-                    ao_0_i,
+                    ao_value[0][i],
+                    ao_value[0][i],
                     rinv,
                     backend="torch",
                 )
@@ -97,6 +94,8 @@ def cc(mol, name):
             f"error_energy: {AU2KCALMOL * error_energy},",
             f"Error: {AU2KCALMOL * error},",
         )
+
+    rho_cube = grids.gen_cube_rho(mol, dm1_cc)
 
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",
