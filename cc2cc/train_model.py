@@ -9,8 +9,8 @@ import torch
 import numpy as np
 import wandb
 
-from cc2cc.utils import add_args, Data_Record
-from cc2cc.utils import DataBase, Model_Dict
+from cc2cc.utils import add_args, DataRecord
+from cc2cc.utils import DataBase, ModelDict
 
 
 def train_model(train_str_dict, eval_str_dict):
@@ -35,35 +35,11 @@ def train_model(train_str_dict, eval_str_dict):
     )
     wandb.define_metric("*", step_metric="global_step")
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    modeldict = Model_Dict(
-        args.load,
-        device,
-        args.precision,
-        with_eval=args.with_eval,
-    )
+    modeldict = ModelDict(args)
     modeldict.load_model()
 
-    database_train = DataBase(
-        train_str_dict,
-        args.extend_atom,
-        args.extend_xyz,
-        args.distance_list,
-        args.basis,
-        args.batch_size,
-        device,
-        args.precision,
-    )
-    database_eval = DataBase(
-        eval_str_dict,
-        args.extend_atom,
-        args.extend_xyz,
-        args.distance_list,
-        args.basis,
-        args.batch_size,
-        device,
-        args.precision,
-    )
+    database_train = DataBase(train_str_dict, args)
+    database_eval = DataBase(eval_str_dict, args)
 
     experiment_dict = {
         "batch_size": args.batch_size,
@@ -74,6 +50,7 @@ def train_model(train_str_dict, eval_str_dict):
         "with_eval": args.with_eval,
         "load": args.load,
         "jobid": os.environ.get("SLURM_JOB_ID"),
+        "pid": os.getpid(),
         "checkpoint": modeldict.dir_checkpoint.stem,
         "loss_multiplier": modeldict.loss_multiplier,
     }
@@ -121,10 +98,10 @@ def train_model(train_str_dict, eval_str_dict):
                 refresh=False,
             )
 
-        if epoch % (args.eval_step * 50) == 0:
+        if epoch % 1000 == 0:
             modeldict.save_model(epoch)
 
-            data_record_train = Data_Record(
+            data_record_train = DataRecord(
                 modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}"
             )
             data_record_train.add_data(
@@ -136,7 +113,7 @@ def train_model(train_str_dict, eval_str_dict):
             )
             data_record_train.save_csv()
 
-            data_record_eval = Data_Record(
+            data_record_eval = DataRecord(
                 modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}"
             )
             data_record_eval.add_data(

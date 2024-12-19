@@ -8,7 +8,7 @@ import pyscf
 from pyscf import lib
 
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
-from cc2cc.utils import Grid, Test_Data
+from cc2cc.utils import Grid, TestData
 
 
 def test_rks(
@@ -21,7 +21,7 @@ def test_rks(
     Test the model. Restrict Khon-Sham (no spin).
     """
     # 2.0 Prepare
-    test_data = Test_Data(mol, name, xc_code="b3lyp")
+    test_data = TestData(mol, name, xc_code="b3lyp")
     test_data.test_mol()
     grids = Grid(test_data.mol)
     mdft = pyscf.dft.RKS(mol)
@@ -107,7 +107,8 @@ def test_rks(
 
     mdft.get_veff = types.MethodType(get_veff_modified, mdft)
     mdft.conv_tol = 1e-6
-    mdft.kernel()
+    mdft.max_cycle = -1
+    mdft.kernel(dm0=test_data.dm1_dft)
 
     scf_dipole = pyscf.scf.hf.dip_moment(
         mol=mol,
@@ -119,6 +120,7 @@ def test_rks(
     # print(AU2KCALMOL * (test_data.e_cc - mdft.energy_tot(test_data.dm1_cc)))
     # print(AU2KCALMOL * e_scf)
     # e_scf += mdft.energy_tot(test_data.dm1_cc)
+    # scf_dipole = test_data.dft_dipole
 
     time_ai = timer() - time_ai_start
 

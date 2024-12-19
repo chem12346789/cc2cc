@@ -11,6 +11,7 @@ import numpy as np
 import pyscf.gto
 
 from cc2cc.utils.basis import gen_basis
+from cc2cc.utils.rotate import rotate
 
 AU2KCALMOL = 627.5096080306
 AU2DEBYE = 2.541746
@@ -44,12 +45,8 @@ def extend(
     name = f"{name_mol}_{basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
 
     if "-" in extend_atom:
-        if "." in extend_atom:
-            atom_list_1 = np.array(extend_atom.split("-")[0].split("."), dtype=int)
-            atom_list_2 = np.array(extend_atom.split("-")[1].split("."), dtype=int)
-        else:
-            atom_list_1 = [int(extend_atom.split("-"))[0]]
-            atom_list_2 = [int(extend_atom.split("-"))[1]]
+        atom_list_1 = np.array(extend_atom.split("-")[0].split("."), dtype=int)
+        atom_list_2 = np.array(extend_atom.split("-")[1].split("."), dtype=int)
 
         distance_1_2_array = (
             molecular[atom_list_2[0]][1:4] - molecular[atom_list_1[0]][1:4]
@@ -62,6 +59,7 @@ def extend(
         extend_atom = int(extend_atom)
         molecular[extend_atom][extend_xyz] += distance
     print("extend mol", molecular)
+    rotate(molecular, rotation="r", verbose=True)
     return list(molecular), name
 
 
@@ -98,7 +96,7 @@ def gen_mole(
             basis,
             if_basis_str,
         ),
-        verbose=3,
+        verbose=4,
         spin=dataset[dataset_name]["spin"][name_mol],
         charge=dataset[dataset_name]["charge"][name_mol],
     )

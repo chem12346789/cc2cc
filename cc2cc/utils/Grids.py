@@ -24,8 +24,6 @@ from cc2cc.utils.env_var import (
 
 libdft = lib.load_library("libdft")
 
-LEN = 7
-
 LEBEDEV_ORDER = {
     0: 1,
     3: 6,
@@ -338,7 +336,7 @@ class Grid(dft.gen_grid.Grids):
                     ),
                 ]
                 rho_cube_p_norm = gen_input(rho_cube_p, 1, xc_type)
-            return np.reshape(rho_cube_p_norm, (LEN, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+            return np.reshape(rho_cube_p_norm, (-1, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
 
         with parallel_config(
             backend="loky",

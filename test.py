@@ -11,7 +11,7 @@ import torch
 from cc2cc import add_args, test_rks, test_uks
 from cc2cc.utils import gen_mole
 
-from cc2cc.utils import Model_Dict, Data_Record
+from cc2cc.utils import ModelDict, DataRecord
 
 from cc2cc.utils import MAIN_PATH
 
@@ -27,21 +27,14 @@ if __name__ == "__main__":
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # 1. Init the model
-    modeldict = Model_Dict(
-        load=args.load,
-        device=device,
-        precision=args.precision,
-        if_mkdir=False,
-        load_epoch=args.load_epoch,
-    )
+    modeldict = ModelDict(args)
     modeldict.load_model()
     modeldict.eval()
 
     # 2. Test loop
-    data_record = Data_Record(MAIN_PATH / f"validate/ccdft_{args.load}.csv")
+    data_record = DataRecord(MAIN_PATH / f"validate/ccdft_{args.load}.csv")
 
     for (
         name_mol,
@@ -61,9 +54,14 @@ if __name__ == "__main__":
             distance,
             args.basis,
             args.if_basis_str,
+            args.dataset,
         )
+
+        if mol is None:
+            print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+            continue
 
         if mol.spin == 0:
             test_rks(mol, name, modeldict, data_record)
-        else:
-            test_uks(mol, name, modeldict, data_record)
+        # else:
+        #     test_uks(mol, name, modeldict, data_record)

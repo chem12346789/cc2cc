@@ -51,7 +51,8 @@ for mol, basis_set, (range_list, extend_atom) in itertools.product(
     ["cc-pVDZ"],
     [
         ((0, 0, 1), "0"),
-        # ((-0.5, 0.5, 3), "0-1"),
+        # ((-0.5, 0.5, 2), "0-1"),
+        # ((-0.5, 0.5, 2), "1-2"),
     ],
 ):
     number_of_gpu = next(LIST_OF_GPU)
@@ -70,7 +71,7 @@ for mol, basis_set, (range_list, extend_atom) in itertools.product(
         cmd += "&&" + f"""sed -i "s/STEP//g" {work_bash}"""
         cmd += (
             "&&"
-            + f"""mv {work_bash} {work_dir / f"gen_data_{mol}_{basis_set}_{start}.bash"}"""
+            + f"""mv {work_bash} {work_dir / f"gen_data_{mol}_{basis_set}_{start}_{extend_atom}.bash"}"""
         )
     elif isinstance(range_list, tuple):
         start = range_list[0]
@@ -81,7 +82,7 @@ for mol, basis_set, (range_list, extend_atom) in itertools.product(
         cmd += "&&" + f"""sed -i "s/STEP/{step}/g" {work_bash}"""
         cmd += (
             "&&"
-            + f"""mv {work_bash} {work_dir / f"gen_data_{mol}_{basis_set}_{start}_{end}_{step}.bash"}"""
+            + f"""mv {work_bash} {work_dir / f"gen_data_{mol}_{basis_set}_{start}_{end}_{step}_{extend_atom}.bash"}"""
         )
     with open(main_dir / "out_mkdir", "w", encoding="utf-8") as f:
         subprocess.call(cmd, shell=True, stdout=f)

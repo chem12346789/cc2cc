@@ -20,46 +20,34 @@ from cc2cc.utils.Grids import Grid
 from cc2cc.utils.model.cnn3d import Model
 
 
-class Model_Dict:
+class ModelDict:
     """
     Model_Dict
     """
 
-    def __init__(
-        self,
-        load,
-        device,
-        precision,
-        with_eval=True,
-        if_mkdir=True,
-        load_epoch=-1,
-    ):
+    def __init__(self, args):
         """
         input:
         output:
             model_dict: dictionary of models
         """
-        self.load = load
-        self.with_eval = with_eval
-        self.load_epoch = load_epoch
-
-        self.device = device
-        if precision == "float32":
-            self.dtype = torch.float32
-        else:
-            self.dtype = torch.float64
+        self.load = args.load
+        self.with_eval = args.with_eval
+        self.load_epoch = args.load_epoch
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.dtype = torch.float32
 
         self.dir_checkpoint = Path(
             CHECKPOINTS_PATH
             / f"checkpoint-ccdft_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
         ).resolve()
 
-        self.model: torch.nn.Module = Model().to(device)
-        if precision == "float64":
+        self.model: torch.nn.Module = Model().to(self.device)
+        if args.precision == "float64":
+            self.dtype = torch.float64
             self.model.double()
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
-        # self.optimizer = optim.SGD(self.model.parameters(), lr=1e-4)
 
         if self.with_eval:
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -251,7 +239,7 @@ class Model_Dict:
         Input: dft instance and grids instance.
         Output: the potential (ngrids).
         """
-        rho_cube = grids.gen_cube_rho(ks.mol, dms)
+        rho_cube = grids.gen_cube_rho(ks.mol, dms, reset=True)
         input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
         input_mat.requires_grad = True
         output_mat = self.model(input_mat)[:, 0]
@@ -266,21 +254,42 @@ class Model_Dict:
 
         if ks.mol.spin == 0:
             vrho = (middle_mat[:, 0] + middle_mat[:, 1]) / 2
-            vsigma = (middle_mat[:, 2] + middle_mat[:, 3] + middle_mat[:, 4]) / 4
-            vtau = (middle_mat[:, 5] + middle_mat[:, 6]) / 2
         else:
             vrho = np.array((middle_mat[:, 0], middle_mat[:, 1]))
-            vsigma = np.array(([middle_mat[:, 2], middle_mat[:, 3], middle_mat[:, 4]]))
-            vtau = np.array((middle_mat[:, 5], middle_mat[:, 6]))
 
         ao = ni.eval_ao(ks.mol, grids.coords, deriv=1)
         rho = ni.eval_rho(ks.mol, ao, dms, xctype=xc_type(xc_code))
-        b3lyp_xc = pyscf.dft.libxc.eval_xc(xc_code, rho, ks.mol.spin)
-        exc_b3lyp = b3lyp_xc[0]
-        vrho += b3lyp_xc[1][0]
-        vsigma += b3lyp_xc[1][1]
+        if ks.mol.spin == 0:
+            lda_grids = pyscf.dft.libxc.eval_xc("LDA,", rho[0], 0)
+            vwn_grids = pyscf.dft.libxc.eval_xc(",VWN3", rho[0], 0)
+            b88_grids = pyscf.dft.libxc.eval_xc("B88,", rho, 0)
+            lyp_grids = pyscf.dft.libxc.eval_xc(",LYP", rho, 0)
+        else:
+            lda_grids = pyscf.dft.libxc.eval_xc("LDA,", rho[0], 1)
+            vwn_grids = pyscf.dft.libxc.eval_xc(",VWN3", rho[0], 1)
+            b88_grids = pyscf.dft.libxc.eval_xc("B88,", rho, 1)
+            lyp_grids = pyscf.dft.libxc.eval_xc(",LYP", rho, 1)
 
-        vxc = (vrho, vsigma, np.zeros_like(vrho), vtau)
+        # hyb_coeff = [0.08, 0.19, 0.72, 0.81]
+        hyb_coeff = [0.0, 0.0, 0.0, 0.0]
+        exc_b3lyp = (
+            hyb_coeff[0] * lda_grids[0]
+            + hyb_coeff[1] * vwn_grids[0]
+            + hyb_coeff[2] * b88_grids[0]
+            + hyb_coeff[3] * lyp_grids[0]
+        )
+        vrho = hyb_coeff[0] * lda_grids[1][0] + hyb_coeff[1] * vwn_grids[1][0]
+        vrho += (hyb_coeff[2] + middle_mat[:, 2]) * b88_grids[1][0]
+        vrho += (hyb_coeff[3] + middle_mat[:, 3]) * lyp_grids[1][0]
+        vsigma = (hyb_coeff[2] + middle_mat[:, 2]) * b88_grids[1][1]
+        vsigma += (hyb_coeff[3] + middle_mat[:, 3]) * lyp_grids[1][1]
+
+        evxc_real = pyscf.dft.libxc.eval_xc("b3lyp", rho, 0)
+        print(evxc_real[1][0] - vrho)
+        print(evxc_real[1][1] - vsigma)
+        print(rho[0] * evxc_real[0] * grids.weights - excsum * grids.weights)
+
+        vxc = (vrho, vsigma, None, None)
 
         vmat = np.zeros((ks.mol.nao, ks.mol.nao))
         aow = None
@@ -298,12 +307,12 @@ class Model_Dict:
             aow = _scale_ao(ao[:4], wv, out=aow)
             vmat += _dot_ao_ao(ks.mol, ao[0], aow, None, None, None)
 
-            # FIXME: .5 * .5   First 0.5 for v+v.T symmetrization.
-            # Second 0.5 is due to the Libxc convention tau = 1/2 \nabla\phi\dot\nabla\phi
-            wv = (0.5 * 0.5 * grids.weights * vtau).reshape(-1, 1)
-            vmat += _dot_ao_ao(ks.mol, ao[1], wv * ao[1], None, None, None)
-            vmat += _dot_ao_ao(ks.mol, ao[2], wv * ao[2], None, None, None)
-            vmat += _dot_ao_ao(ks.mol, ao[3], wv * ao[3], None, None, None)
+            # # FIXME: .5 * .5   First 0.5 for v+v.T symmetrization.
+            # # Second 0.5 is due to the Libxc convention tau = 1/2 \nabla\phi\dot\nabla\phi
+            # wv = (0.5 * 0.5 * grids.weights * vtau).reshape(-1, 1)
+            # vmat += _dot_ao_ao(ks.mol, ao[1], wv * ao[1], None, None, None)
+            # vmat += _dot_ao_ao(ks.mol, ao[2], wv * ao[2], None, None, None)
+            # vmat += _dot_ao_ao(ks.mol, ao[3], wv * ao[3], None, None, None)
 
             rho = exc = vxc = vrho = vsigma = wv = None
 

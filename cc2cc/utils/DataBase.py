@@ -36,10 +36,7 @@ class BasicDataset:
         self.dict_const = dict_const
         self.ids = list(dict_batch["input"].keys())
         self.batch_size = batch_size
-        if dtype == "float32":
-            self.dtype = torch.float32
-        else:
-            self.dtype = torch.float64
+        self.dtype = dtype
 
     def __len__(self):
         return len(self.ids)
@@ -95,25 +92,19 @@ def gen_logger(distance_list):
 class DataBase:
     """Documentation for a class."""
 
-    def __init__(
-        self,
-        molecular_list,
-        extend_atom,
-        extend_xyz,
-        distance_list,
-        basis,
-        batch_size,
-        device,
-        dtype,
-    ):
+    def __init__(self, molecular_list, args):
         self.molecular_list = molecular_list
-        self.extend_atom = extend_atom
-        self.extend_xyz = extend_xyz
-        self.distance_list = distance_list
-        self.basis = basis
-        self.batch_size = batch_size
-        self.device = device
-        self.dtype = dtype
+        self.extend_atom = args.extend_atom
+        self.extend_xyz = args.extend_xyz
+        self.distance_list = args.distance_list
+        self.basis = args.basis
+        self.batch_size = args.batch_size
+        self.device = torch.device("cuda")
+
+        if args.precision == "float64":
+            self.dtype = torch.float64
+        else:
+            self.dtype = torch.float32
 
         self.data = {}
         self.data_gpu = {}
@@ -152,7 +143,7 @@ class DataBase:
 
         input_mat = data["rho_cube"]
         weight_mat = data["weights"]
-        output_mat = data["exc_cc_grids"]
+        output_mat = data["exc_dft_grids"]
 
         print(AU2KCALMOL * data["error_energy"])
         print(AU2KCALMOL * np.sum(output_mat * weight_mat))
