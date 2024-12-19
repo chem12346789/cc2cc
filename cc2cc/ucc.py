@@ -133,6 +133,5 @@ def ucc(mol, name):
         rho_cube=rho_cube,
         weights=grids.weights,
         exc_cc_grids=exc_cc_grids,
-        exc_dft_grids=exc_dft_grids,
         error_energy=error_energy,
     )
