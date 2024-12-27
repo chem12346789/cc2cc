@@ -10,7 +10,8 @@ import torch
 import torch.optim as optim
 
 import pyscf
-from pyscf.dft.numint import _rks_gga_wv0, _scale_ao, _dot_ao_ao
+from pyscf.dft.numint import _scale_ao, _dot_ao_ao
+from pyscf.dft.numint import _rks_gga_wv0, _uks_gga_wv0
 from pyscf.dft.libxc import xc_type
 
 from cc2cc.utils.env_var import CHECKPOINTS_PATH
@@ -47,7 +48,7 @@ class ModelDict:
             self.dtype = torch.float64
             self.model.double()
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
 
         if self.with_eval:
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -63,7 +64,7 @@ class ModelDict:
                 eta_min=1e-6,
             )
 
-        self.loss_multiplier = 1
+        self.loss_multiplier = 1e-3
         self.loss_ene = torch.nn.L1Loss(reduction="none")
         self.loss_ene_tot = torch.nn.L1Loss(reduction="sum")
 
@@ -142,7 +143,7 @@ class ModelDict:
         """
         Calculate the total loss.
         """
-        return loss_ene + self.loss_multiplier * loss_ene_tot
+        return self.loss_multiplier * loss_ene + loss_ene_tot
 
     def save_model(self, epoch):
         """
@@ -202,28 +203,6 @@ class ModelDict:
 
         return np.array(loss_ene_l), np.array(loss_ene_tot_l)
 
-    def get_e(
-        self,
-        ks: pyscf.dft.rks.RKS,
-        grids: Grid,
-        dms: np.ndarray = None,
-    ):
-        """
-        Obtain the energy density.
-        Input: dft instance and grids instance.
-        Output: the potential (ngrids).
-        """
-        if dms is None:
-            dms = ks.make_rdm1()
-
-        rho_cube = grids.gen_cube_rho(ks.mol, dms)
-        input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
-        with torch.no_grad():
-            output_mat = self.model(input_mat)
-        exc_cc_grids = output_mat.detach().cpu().numpy()[:, 0]
-
-        return np.sum(exc_cc_grids * grids.weights)
-
     def get_nev(
         self,
         ni,
@@ -239,7 +218,21 @@ class ModelDict:
         Input: dft instance and grids instance.
         Output: the potential (ngrids).
         """
+        ao = ni.eval_ao(ks.mol, grids.coords, deriv=1)
+        if ks.mol.spin == 0:
+            rho = ni.eval_rho(ks.mol, ao, dms, xctype=xc_type(xc_code))
+        else:
+            rho = [
+                ni.eval_rho(ks.mol, ao, dms[0], xctype=xc_type(xc_code)),
+                ni.eval_rho(ks.mol, ao, dms[1], xctype=xc_type(xc_code)),
+            ]
+
         rho_cube = grids.gen_cube_rho(ks.mol, dms, reset=True)
+        # mask_cube = np.zeros((1, 4, 3, 3, 3))
+        # mask_cube[:, :, 1, 1, 1] = 1.0
+        # print(rho_cube[:10])
+        # rho_cube = rho_cube * mask_cube
+        # print(rho_cube[:10])
         input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
         input_mat.requires_grad = True
         output_mat = self.model(input_mat)[:, 0]
@@ -250,56 +243,61 @@ class ModelDict:
             create_graph=True,
         )[0]
         middle_mat = grids.get_center_density(middle_cube).detach().cpu().numpy()
-        excsum = (output_mat.detach().cpu().numpy() * grids.weights).sum()
+        energy_den = output_mat.detach().cpu().numpy()
+
+        # hyb_coeff = [0.0, 0.0, 0.0, 0.0]
+
+        hyb_coeff = [0.08, 0.19, 0.72, 0.81]
+
+        # if ks.mol.spin == 0:
+        #     middle_mat = np.zeros((rho[0].shape[0], 4))
+        #     energy_den = np.zeros(rho[0].shape[0])
+        # else:
+        #     middle_mat = np.zeros((rho[0][0].shape[0], 4))
+        #     energy_den = np.zeros(rho[0][0].shape[0])
 
         if ks.mol.spin == 0:
-            vrho = (middle_mat[:, 0] + middle_mat[:, 1]) / 2
-        else:
-            vrho = np.array((middle_mat[:, 0], middle_mat[:, 1]))
-
-        ao = ni.eval_ao(ks.mol, grids.coords, deriv=1)
-        rho = ni.eval_rho(ks.mol, ao, dms, xctype=xc_type(xc_code))
-        if ks.mol.spin == 0:
-            lda_grids = pyscf.dft.libxc.eval_xc("LDA,", rho[0], 0)
-            vwn_grids = pyscf.dft.libxc.eval_xc(",VWN3", rho[0], 0)
+            rho_lda = rho[0]
+            lda_grids = pyscf.dft.libxc.eval_xc("LDA,", rho_lda, 0)
+            vwn_grids = pyscf.dft.libxc.eval_xc(",VWN3", rho_lda, 0)
             b88_grids = pyscf.dft.libxc.eval_xc("B88,", rho, 0)
             lyp_grids = pyscf.dft.libxc.eval_xc(",LYP", rho, 0)
+            vrho = (hyb_coeff[0] + middle_mat[:, 0]) * lda_grids[1][0]
+            vrho += (hyb_coeff[1] + middle_mat[:, 1]) * vwn_grids[1][0]
+            vrho += (hyb_coeff[2] + middle_mat[:, 2]) * b88_grids[1][0]
+            vrho += (hyb_coeff[3] + middle_mat[:, 3]) * lyp_grids[1][0]
+            vsigma = (hyb_coeff[2] + middle_mat[:, 2]) * b88_grids[1][1]
+            vsigma += (hyb_coeff[3] + middle_mat[:, 3]) * lyp_grids[1][1]
         else:
-            lda_grids = pyscf.dft.libxc.eval_xc("LDA,", rho[0], 1)
-            vwn_grids = pyscf.dft.libxc.eval_xc(",VWN3", rho[0], 1)
+            rho_lda = [rho[0][0], rho[1][0]]
+            lda_grids = pyscf.dft.libxc.eval_xc("LDA,", rho_lda, 1)
+            vwn_grids = pyscf.dft.libxc.eval_xc(",VWN3", rho_lda, 1)
             b88_grids = pyscf.dft.libxc.eval_xc("B88,", rho, 1)
             lyp_grids = pyscf.dft.libxc.eval_xc(",LYP", rho, 1)
+            vrho = (hyb_coeff[0] + middle_mat[:, 0]).reshape(-1, 1) * lda_grids[1][0]
+            vrho += (hyb_coeff[1] + middle_mat[:, 1]).reshape(-1, 1) * vwn_grids[1][0]
+            vrho += (hyb_coeff[2] + middle_mat[:, 2]).reshape(-1, 1) * b88_grids[1][0]
+            vrho += (hyb_coeff[3] + middle_mat[:, 3]).reshape(-1, 1) * lyp_grids[1][0]
+            vsigma = (hyb_coeff[2] + middle_mat[:, 2]).reshape(-1, 1) * b88_grids[1][1]
+            vsigma += (hyb_coeff[3] + middle_mat[:, 3]).reshape(-1, 1) * lyp_grids[1][1]
 
-        # hyb_coeff = [0.08, 0.19, 0.72, 0.81]
-        hyb_coeff = [0.0, 0.0, 0.0, 0.0]
         exc_b3lyp = (
             hyb_coeff[0] * lda_grids[0]
             + hyb_coeff[1] * vwn_grids[0]
             + hyb_coeff[2] * b88_grids[0]
             + hyb_coeff[3] * lyp_grids[0]
         )
-        vrho = hyb_coeff[0] * lda_grids[1][0] + hyb_coeff[1] * vwn_grids[1][0]
-        vrho += (hyb_coeff[2] + middle_mat[:, 2]) * b88_grids[1][0]
-        vrho += (hyb_coeff[3] + middle_mat[:, 3]) * lyp_grids[1][0]
-        vsigma = (hyb_coeff[2] + middle_mat[:, 2]) * b88_grids[1][1]
-        vsigma += (hyb_coeff[3] + middle_mat[:, 3]) * lyp_grids[1][1]
-
-        evxc_real = pyscf.dft.libxc.eval_xc("b3lyp", rho, 0)
-        print(evxc_real[1][0] - vrho)
-        print(evxc_real[1][1] - vsigma)
-        print(rho[0] * evxc_real[0] * grids.weights - excsum * grids.weights)
 
         vxc = (vrho, vsigma, None, None)
-
-        vmat = np.zeros((ks.mol.nao, ks.mol.nao))
         aow = None
+        ao = ni.eval_ao(ks.mol, grids.coords, deriv=1)
+        aow = np.ndarray(ao[0].shape, order="F", buffer=aow)
 
         if ks.mol.spin == 0:
-            ao = ni.eval_ao(ks.mol, grids.coords, deriv=2)
-            aow = np.ndarray(ao[0].shape, order="F", buffer=aow)
-
+            vmat = np.zeros((ks.mol.nao, ks.mol.nao))
             den = rho[0] * grids.weights
             nelec = den.sum()
+            excsum = (energy_den * grids.weights).sum()
             excsum += np.dot(den, exc_b3lyp)
 
             wv = _rks_gga_wv0(rho, vxc, grids.weights)
@@ -307,13 +305,29 @@ class ModelDict:
             aow = _scale_ao(ao[:4], wv, out=aow)
             vmat += _dot_ao_ao(ks.mol, ao[0], aow, None, None, None)
 
-            # # FIXME: .5 * .5   First 0.5 for v+v.T symmetrization.
-            # # Second 0.5 is due to the Libxc convention tau = 1/2 \nabla\phi\dot\nabla\phi
-            # wv = (0.5 * 0.5 * grids.weights * vtau).reshape(-1, 1)
-            # vmat += _dot_ao_ao(ks.mol, ao[1], wv * ao[1], None, None, None)
-            # vmat += _dot_ao_ao(ks.mol, ao[2], wv * ao[2], None, None, None)
-            # vmat += _dot_ao_ao(ks.mol, ao[3], wv * ao[3], None, None, None)
+            rho = vxc = vrho = vsigma = wv = None
 
-            rho = exc = vxc = vrho = vsigma = wv = None
+            vmat = vmat + vmat.T
+        else:
+            vmat = np.zeros((2, ks.mol.nao, ks.mol.nao))
+            den = [
+                rho[0][0] * grids.weights,
+                rho[1][0] * grids.weights,
+            ]
+            nelec = [den[0].sum(), den[1].sum()]
+            excsum = (energy_den * grids.weights).sum()
+            excsum += np.dot(den[0], exc_b3lyp) + np.dot(den[1], exc_b3lyp)
 
-        return nelec, excsum, vmat + vmat.T
+            wva, wvb = _uks_gga_wv0((rho[0], rho[1]), vxc, grids.weights)
+            # :aow = numpy.einsum('npi,np->pi', ao, wva, out=aow)
+            aow = _scale_ao(ao, wva, out=aow)
+            vmat[0] += _dot_ao_ao(ks.mol, ao[0], aow, None, None, None)
+            #:aow = numpy.einsum('npi,np->pi', ao, wvb, out=aow)
+            aow = _scale_ao(ao, wvb, out=aow)
+            vmat[1] += _dot_ao_ao(ks.mol, ao[0], aow, None, None, None)
+
+            rho = vxc = wva = wvb = None
+            vmat[0] = vmat[0] + vmat[0].T
+            vmat[1] = vmat[1] + vmat[1].T
+
+        return nelec, excsum, vmat

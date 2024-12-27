@@ -43,6 +43,7 @@ for item in Path(main_dir).glob("*"):
 
 LIST_OF_GPU = itertools.cycle([0, 1])
 GPU_NODE_POOL = itertools.cycle(["gpu03"])
+JOBID = itertools.count(1)
 
 for mol, basis_set, (range_list, extend_atom) in itertools.product(
     [
@@ -50,19 +51,21 @@ for mol, basis_set, (range_list, extend_atom) in itertools.product(
     ],
     ["cc-pVDZ"],
     [
-        ((0, 0, 1), "0"),
-        # ((-0.5, 0.5, 2), "0-1"),
-        # ((-0.5, 0.5, 2), "1-2"),
+        # ((0, 0, 1), "0"),
+        ((-0.5, 0.5, 2), "0-1"),
+        ((-0.5, 0.5, 2), "1-2"),
     ],
 ):
     number_of_gpu = next(LIST_OF_GPU)
     gpu_node = next(GPU_NODE_POOL)
+    jobid = next(JOBID)
     cmd = f"""cp {template_bash} {work_bash}"""
     cmd += "&&" + f"""sed -i "s/MOL/{mol}/g" {work_bash}"""
     cmd += "&&" + f"""sed -i "s/BASIS/{basis_set}/g" {work_bash}"""
     cmd += "&&" + f"""sed -i "s/NUMBER_OF_GPU/{number_of_gpu}/g" {work_bash}"""
     cmd += "&&" + f"""sed -i "s/BASH_GPU_NODE/{gpu_node}/g" {work_bash}"""
     cmd += "&&" + f"""sed -i "s/EXTEND_ATOM/{extend_atom}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/JOBID/{jobid}/g" {work_bash}"""
 
     if isinstance(range_list, float):
         start = range_list
@@ -71,7 +74,7 @@ for mol, basis_set, (range_list, extend_atom) in itertools.product(
         cmd += "&&" + f"""sed -i "s/STEP//g" {work_bash}"""
         cmd += (
             "&&"
-            + f"""mv {work_bash} {work_dir / f"gen_data_{mol}_{basis_set}_{start}_{extend_atom}.bash"}"""
+            + f"""mv {work_bash} {work_dir / f"gen_data_{mol}_{jobid}_{basis_set}_{start}_{extend_atom}.bash"}"""
         )
     elif isinstance(range_list, tuple):
         start = range_list[0]
@@ -82,7 +85,7 @@ for mol, basis_set, (range_list, extend_atom) in itertools.product(
         cmd += "&&" + f"""sed -i "s/STEP/{step}/g" {work_bash}"""
         cmd += (
             "&&"
-            + f"""mv {work_bash} {work_dir / f"gen_data_{mol}_{basis_set}_{start}_{end}_{step}_{extend_atom}.bash"}"""
+            + f"""mv {work_bash} {work_dir / f"gen_data_{mol}_{jobid}_{basis_set}_{start}_{end}_{step}_{extend_atom}.bash"}"""
         )
     with open(main_dir / "out_mkdir", "w", encoding="utf-8") as f:
         subprocess.call(cmd, shell=True, stdout=f)

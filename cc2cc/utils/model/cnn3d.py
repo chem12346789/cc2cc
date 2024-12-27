@@ -150,25 +150,18 @@ class Model(nn.Module):
         """
         Standard forward function, required for all nn.Module classes
         """
-        rho0 = x[:, [0], :, :, :]
-        rho1 = x[:, [1], :, :, :]
-        rho = rho0 + rho1
-        rho_center = rho[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-        rho_center = rho_center.reshape(-1, 1)
+        # x = x.reshape(-1, 4, 27)
+        # x = torch.permute(x, (0, 2, 1))
+        # x = self.predictor(x)
+        # x = torch.permute(x, (0, 2, 1))
 
-        rho_lda = (rho + ESP) ** (1 / 3)
-        rho_spin = (rho0 - rho1) / (rho + ESP)
-        xi = (1 + rho_spin + ESP) ** (4 / 3) + (1 - rho_spin + ESP) ** (4 / 3)
-        t = torch.cat([rho_lda, xi, x[:, [2], :, :, :], x[:, [3], :, :, :]], dim=1)
+        t = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] + ESP
+        x = x.reshape(-1, 4 * 27)
+        x = x / t
+        x = x.reshape(-1, 4, 3, 3, 3)
+        x = self.cnn(x)
 
-        # t = t.reshape(-1, 4, 27)
-        # t = torch.permute(t, (0, 2, 1))
-        # t = self.predictor(t)
-        # t = torch.permute(t, (0, 2, 1))
-
-        t = self.cnn(t)
-
-        t = t.reshape(-1, 108)
-        t = self.fc(t)
-        t = t * rho_center
-        return t
+        x = x.reshape(-1, 108)
+        x = self.fc(x)
+        x = x * t
+        return x

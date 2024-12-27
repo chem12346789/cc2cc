@@ -59,7 +59,7 @@ def extend(
         extend_atom = int(extend_atom)
         molecular[extend_atom][extend_xyz] += distance
     print("extend mol", molecular)
-    rotate(molecular, rotation="r", verbose=True)
+    rotate(molecular)
     return list(molecular), name
 
 

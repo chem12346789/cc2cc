@@ -143,11 +143,14 @@ class DataBase:
 
         input_mat = data["rho_cube"]
         weight_mat = data["weights"]
-        output_mat = data["exc_dft_grids"]
+        output_mat = data["exc_cc_grids"]
 
         print(AU2KCALMOL * data["error_energy"])
         print(AU2KCALMOL * np.sum(output_mat * weight_mat))
-        print(f"{np.min(input_mat)}, {np.max(input_mat)}")
+        print(f"{np.min(input_mat[:, 0, :, :, :])}, {np.max(input_mat[:, 0, :, :, :])}")
+        print(f"{np.min(input_mat[:, 1, :, :, :])}, {np.max(input_mat[:, 1, :, :, :])}")
+        print(f"{np.min(input_mat[:, 2, :, :, :])}, {np.max(input_mat[:, 2, :, :, :])}")
+        print(f"{np.min(input_mat[:, 3, :, :, :])}, {np.max(input_mat[:, 3, :, :, :])}")
         print(f"{np.min(output_mat)}, {np.max(output_mat)}")
 
         input_ = {}

@@ -2,7 +2,6 @@ from timeit import default_timer as timer
 import types
 
 import numpy as np
-import torch
 
 import pyscf
 from pyscf import lib
@@ -41,7 +40,7 @@ def test_rks(
         ground_state = isinstance(dm, np.ndarray) and dm.ndim == 2
         ni = ks._numint
 
-        nelec, excsum, vmat = modeldict.get_nev(ni, ks, grids, dm, test_data.xc_code)
+        nelec, exc, vxc = modeldict.get_nev(ni, ks, grids, dm, test_data.xc_code)
 
         # rho_diff = ni.eval_rho(dft2cc.mol, dft2cc.ao_0, dm - dft2cc.dm1_cc)
         # v_p = pyscf.dft.numint.eval_mat(
@@ -61,7 +60,7 @@ def test_rks(
                 vj += vhf_last.vj
             else:
                 vj = ks.get_j(mol, dm, hermi)
-            vmat += vj
+            vxc += vj
         else:
             omega, alpha, hyb = ni.rsh_and_hybrid_coeff(ks.xc, spin=mol.spin)
             if (
@@ -85,10 +84,10 @@ def test_rks(
                     vklr = ks.get_k(mol, dm, hermi, omega=omega)
                     vklr *= alpha - hyb
                     vk += vklr
-            vmat += vj - vk * 0.5
+            vxc += vj - vk * 0.5
 
             if ground_state:
-                excsum -= np.einsum("ij,ji", dm, vk).real * 0.5 * 0.5
+                exc -= np.einsum("ij,ji", dm, vk).real * 0.5 * 0.5
 
         if ground_state:
             ecoul = np.einsum("ij,ji", dm, vj).real * 0.5
@@ -96,9 +95,9 @@ def test_rks(
             ecoul = None
 
         vxc = lib.tag_array(
-            vmat,
+            vxc,
             ecoul=ecoul,
-            exc=excsum,
+            exc=exc,
             vj=vj,
             vk=vk,
         )
@@ -107,33 +106,38 @@ def test_rks(
 
     mdft.get_veff = types.MethodType(get_veff_modified, mdft)
     mdft.conv_tol = 1e-6
-    mdft.max_cycle = -1
-    mdft.kernel(dm0=test_data.dm1_dft)
 
-    scf_dipole = pyscf.scf.hf.dip_moment(
-        mol=mol,
-        dm=mdft.make_rdm1(),
-        unit="A.U.",
-    )
+    mdft.kernel()
+    dm1_scf = mdft.make_rdm1()
 
-    # e_scf = modeldict.get_e(mdft, grids, test_data.dm1_cc)
-    # print(AU2KCALMOL * (test_data.e_cc - mdft.energy_tot(test_data.dm1_cc)))
-    # print(AU2KCALMOL * e_scf)
-    # e_scf += mdft.energy_tot(test_data.dm1_cc)
-    # scf_dipole = test_data.dft_dipole
+    # mdft.max_cycle = -1
+    # mdft.kernel(dm0=test_data.dm1_cc)
+    # dm1_scf = test_data.dm1_dft.copy()
+
+    scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
 
     time_ai = timer() - time_ai_start
 
-    error_dft_ene = AU2KCALMOL * (test_data.e_dft - test_data.e_cc)
-    error_scf_ene = AU2KCALMOL * (mdft.e_tot - test_data.e_cc)
-    error_dft_dip = np.linalg.norm(test_data.dft_dipole - test_data.cc_dipole)
-    error_scf_dip = np.linalg.norm(scf_dipole - test_data.cc_dipole)
+    error_dft_ene = AU2KCALMOL * (test_data.e_cc - test_data.e_dft)
+    error_scf_ene = AU2KCALMOL * (test_data.e_cc - mdft.e_tot)
+    error_dft_dip = np.linalg.norm(test_data.cc_dipole - test_data.dft_dipole)
+    error_scf_dip = np.linalg.norm(test_data.cc_dipole - scf_dipole)
+
+    grids = Grid(mol)
+    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=0)
+    rho_scf = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_scf, xctype="LDA")
+    rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, test_data.dm1_cc, xctype="LDA")
+    rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, test_data.dm1_dft, xctype="LDA")
+    error_scf_ele = np.sum(np.abs(rho_cc - rho_scf) * grids.weights)
+    error_dft_ele = np.sum(np.abs(rho_cc - rho_dft) * grids.weights)
 
     data_record.add_data(
         name,
         {
             "error_scf_ene": error_scf_ene,
             "error_dft_ene": error_dft_ene,
+            "error_scf_ele": error_scf_ele,
+            "error_dft_ele": error_dft_ele,
             "error_scf_dip": error_scf_dip,
             "error_dft_dip": error_dft_dip,
             "time_cc": test_data.time_cc,

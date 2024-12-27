@@ -22,12 +22,12 @@ TRAIN_STR_DICT = [
     "CH4",
 ]
 EVAL_STR_DICT = [
-    "SiH4",
     "C2H6",
-    "NaCl",
     "CH3CN",
     "C2H3",
     "C3H9C",
+    "NaCl",
+    "SiH4",
 ]
 
 if __name__ == "__main__":

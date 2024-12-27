@@ -63,5 +63,5 @@ if __name__ == "__main__":
 
         if mol.spin == 0:
             test_rks(mol, name, modeldict, data_record)
-        # else:
-        #     test_uks(mol, name, modeldict, data_record)
+        else:
+            test_uks(mol, name, modeldict, data_record)

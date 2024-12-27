@@ -6,6 +6,7 @@ AIDFT_MAIN_PATH: the main path of the project.
 from pathlib import Path
 import os
 
+
 STRUCTURE = os.environ.get("DFT2CC_STRUCTURE")
 if STRUCTURE is None:
     STRUCTURE = "cnn3d"

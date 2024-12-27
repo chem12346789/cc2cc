@@ -25,7 +25,7 @@ export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=c
 
 # nohup bash -c '~/anaconda3/envs/pyscf/bin/python train.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --eval_step 10 --batch_size 100000 --epoch 50000 --with_eval False --precision float32' >log/train0.log 2>&1 &
 #
-nohup bash -c '~/anaconda3/envs/pyscf/bin/python train.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0 --extend_xyz 0 --eval_step 10 --batch_size 1000000 --epoch 50000 --with_eval False --precision float32' >log/train1.log 2>&1 &
+nohup bash -c '~/anaconda3/envs/pyscf/bin/python train.py -dl 0 0 1 --basis cc-pVDZ --extend_atom 0 --extend_xyz 0 --eval_step 10 --batch_size 1000000 --epoch 50000 --with_eval False --precision float32' >log/train1.log 2>&1 &
 #
 # nohup bash -c '~/anaconda3/envs/pyscf/bin/python train.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --eval_step 10 --batch_size 100000 --epoch 50000 --with_eval False --precision float32' >log/train1.log 2>&1 &
 #

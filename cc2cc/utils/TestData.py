@@ -1,12 +1,13 @@
 from timeit import default_timer as timer
 
+import numpy as np
+
 import pyscf
 from pyscf.grad import ccsd as ccsd_grad
 from pyscf.grad import uccsd as uccsd_grad
 
 
 class TestData:
-
     def __init__(
         self,
         mol,
@@ -87,7 +88,7 @@ class TestData:
             mycc.async_io = False
             mycc.direct = True
             mycc.kernel()
-            self.dm1_cc = mycc.make_rdm1(ao_repr=True)
+            self.dm1_cc = np.array(mycc.make_rdm1(ao_repr=True))
             self.e_cc = mycc.e_tot
             self.cc_dipole = pyscf.scf.uhf.dip_moment(
                 mol=self.mol,

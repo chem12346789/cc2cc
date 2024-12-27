@@ -99,15 +99,26 @@ def gen_input(rho, spin, xc_type):
     """
     Generate the input for the model.
     """
-    b88_grids = pyscf.dft.libxc.eval_xc("B88,", rho[:4], spin)[0]
-    lyp_grids = pyscf.dft.libxc.eval_xc(",LYP", rho[:4], spin)[0]
     if spin == 0:
         rho0 = rho[0]
-        rho01 = rho02 = rho0 / 2
+        rho_lda = rho[0]
     else:
-        rho01 = rho[0][0]
-        rho02 = rho[1][0]
-    rho_out = np.array([rho01, rho02, b88_grids, lyp_grids])
+        rho0 = rho[0][0] + rho[1][0]
+        rho_lda = [rho[0][0], rho[1][0]]
+
+    lda_grids = pyscf.dft.libxc.eval_xc("LDA,", rho_lda, spin)[0]
+    vwn_grids = pyscf.dft.libxc.eval_xc(",VWN3", rho_lda, spin)[0]
+    b88_grids = pyscf.dft.libxc.eval_xc("B88,", rho, spin)[0]
+    lyp_grids = pyscf.dft.libxc.eval_xc(",LYP", rho, spin)[0]
+
+    rho_out = np.array(
+        [
+            lda_grids * rho0,
+            vwn_grids * rho0,
+            b88_grids * rho0,
+            lyp_grids * rho0,
+        ]
+    )
 
     # if spin != 0:
     #     rho01, dx1, dy1, dz1 = rho[0][:4]
@@ -229,10 +240,6 @@ class Grid(dft.gen_grid.Grids):
             mol: An instance of :class:`Mole'.
             dm1_input: Density matrix, 2D array with shape (nao, nao). The orientation of the cube is determined by the eigenvectors of the Hessian matrix(secondary derivation of the density).
         """
-        if self.coor_cube is not None:
-            print("Error: self.coor_cube is initialized!")
-            return
-
         ao_value = pyscf.dft.numint.eval_ao(mol, self.coords, deriv=2)
 
         # Hessian matrix
@@ -315,24 +322,27 @@ class Grid(dft.gen_grid.Grids):
             print("Warning: coor_cube is not initialized!")
             self.gen_cube(mol, dm1_input)
         elif reset:
+            print("Warning: regenerate coor_cube!")
             self.gen_cube(mol, dm1_input)
+        else:
+            print("Warning: Use the existing coor_cube!")
 
         def gen_cube_rho_p(p):
             ao_cube = pyscf.dft.numint.eval_ao(
-                mol, self.coor_cube[p].reshape(-1, 3), deriv=2
+                mol, self.coor_cube[p].reshape(-1, 3), deriv=1
             )
             if mol.spin == 0:
                 rho_cube_p = pyscf.dft.numint.eval_rho(
-                    mol, ao_cube, dm1_input, xctype=xc_type, with_lapl=False
+                    mol, ao_cube, dm1_input, xctype=xc_type
                 )
                 rho_cube_p_norm = gen_input(rho_cube_p, 0, xc_type)
             else:
                 rho_cube_p = [
                     pyscf.dft.numint.eval_rho(
-                        mol, ao_cube, dm1_input[0], xctype=xc_type, with_lapl=False
+                        mol, ao_cube, dm1_input[0], xctype=xc_type
                     ),
                     pyscf.dft.numint.eval_rho(
-                        mol, ao_cube, dm1_input[1], xctype=xc_type, with_lapl=False
+                        mol, ao_cube, dm1_input[1], xctype=xc_type
                     ),
                 ]
                 rho_cube_p_norm = gen_input(rho_cube_p, 1, xc_type)

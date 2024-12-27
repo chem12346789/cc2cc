@@ -58,7 +58,7 @@ x_fit = {}
 # hashtable = append(np.linspace(-1, 0, 11)[:-1], center_piont, np.linspace(0, 1, 11)[1:])
 hashtable = np.linspace(-1e10, 1e10, 2)
 print(hashtable)
-shape_matrix = (20, 194, 40)
+shape_matrix = (20, 302, 75)
 
 for key in keys_list:
     print(f"Key: {key}", flush=True)
@@ -267,11 +267,31 @@ for index_ in x_keys:
             print("\n end of print", flush=True)
 
             color_dict = {
-                "methane": "#004D40",
-                "ethane": "#1A237E",
-                "ethylene": "#212121",
-                "acetylene": "#7B1FA2",
-                "propane": "#FF6F00",
+                "H": "#7CB342",
+                "Li": "#FFD600",
+                "Be": "#FF6F00",
+                "B": "#FF1744",
+                "C": "#283593",
+                "N": "#1976D2",
+                "O": "#D32F2F",
+                "F": "#388E3C",
+                "Na": "#FFD600",
+                "Al": "#FF6F00",
+                "P": "#FF1744",
+                "S": "#1976D2",
+                "Cl": "#388E3C",
+                "Si": "#283593",
+                "H2": "#7CB342",
+                "CO": "#FF1744",
+                "NO": "#1976D2",
+                "NH3": "#388E3C",
+                "CH4": "#283593",
+                "C2H6": "#FF1744",
+                "CH3CN": "#1976D2",
+                "C2H3": "#388E3C",
+                "C3H9C": "#283593",
+                "NaCl": "#FFD600",
+                "SiH4": "#FF6F00",
             }
 
             plt.rcParams["figure.figsize"] = np.array([0.5, 0.5]) * 520 / 72
