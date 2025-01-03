@@ -5,14 +5,11 @@ Other parameter are from the argparse.
 
 import argparse
 from itertools import product
-
-import torch
+import os
 
 from cc2cc import add_args, test_rks, test_uks
 from cc2cc.utils import gen_mole
-
 from cc2cc.utils import ModelDict, DataRecord
-
 from cc2cc.utils import MAIN_PATH
 
 
@@ -27,6 +24,7 @@ if __name__ == "__main__":
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
+    print(os.getpid())
 
     # 1. Init the model
     modeldict = ModelDict(args)

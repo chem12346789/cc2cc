@@ -92,8 +92,8 @@ def train_model(train_str_dict, eval_str_dict):
                 f"Epoch: {epoch}, "
                 f"Ene loss tot: {experiment_dict['train_loss_ene_tot']:.2f}, "
                 f"Ene loss eval tot: {experiment_dict['eval_loss_ene_tot']:.2f}, "
-                f"Loss: {experiment_dict['train_loss_tot']:.2f}, "
-                f"Loss_eval: {experiment_dict['eval_loss_tot']:.2f}, "
+                f"Loss: {experiment_dict['train_loss_ene']:.2f}, "
+                f"Loss_eval: {experiment_dict['eval_loss_ene']:.2f}, "
                 f"lr: {experiment_dict['lr']:.2e}",
                 refresh=False,
             )

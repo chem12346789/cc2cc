@@ -1,7 +1,7 @@
 import argparse
-import copy
 from itertools import product
 from pathlib import Path
+import os
 
 from matplotlib import pyplot as plt
 
@@ -21,6 +21,7 @@ parser = argparse.ArgumentParser(
 )
 args = add_args(parser)
 
+print(os.getpid())
 print("gamma:", args.gamma)
 print("alpha:", args.alpha)
 print("kernel:", args.kernel, flush=True)

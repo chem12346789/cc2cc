@@ -48,14 +48,14 @@ class ModelDict:
             self.dtype = torch.float64
             self.model.double()
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
+        self.optimizer = optim.AdamW(self.model.parameters(), lr=1e-4)
 
         if self.with_eval:
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer,
                 mode="min",
                 factor=0.5,
-                patience=10,
+                patience=50,
             )
         else:
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
@@ -64,7 +64,7 @@ class ModelDict:
                 eta_min=1e-6,
             )
 
-        self.loss_multiplier = 1e-3
+        self.loss_multiplier = 0.1
         self.loss_ene = torch.nn.L1Loss(reduction="none")
         self.loss_ene_tot = torch.nn.L1Loss(reduction="sum")
 

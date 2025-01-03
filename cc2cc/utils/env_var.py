@@ -7,10 +7,6 @@ from pathlib import Path
 import os
 
 
-STRUCTURE = os.environ.get("DFT2CC_STRUCTURE")
-if STRUCTURE is None:
-    STRUCTURE = "cnn3d"
-
 LEVEL = 3
 PERIOD = 2
 
@@ -37,9 +33,12 @@ DATA_TEST_PATH = MAIN_PATH / "data" / "test"
 DATA_SCF_PATH = MAIN_PATH / "data" / "grids_scf"
 CHECKPOINTS_PATH = MAIN_PATH / "checkpoints"
 
+GENERATE_DATA = os.environ.get("DFT2CC_GENERATE_DATA")
+if GENERATE_DATA is None:
+    GENERATE_DATA = False
+
 if __name__ == "__main__":
     print(f"MAIN_PATH: {MAIN_PATH.resolve()}")
     print(f"DATA_PATH: {DATA_PATH.resolve()}")
     print(f"DATA_TEST_PATH: {DATA_TEST_PATH.resolve()}")
-    print(f"STRUCTURE: {STRUCTURE}")
     print(f"TEST: {TEST}")

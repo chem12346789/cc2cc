@@ -150,14 +150,15 @@ class Model(nn.Module):
         """
         Standard forward function, required for all nn.Module classes
         """
+        t = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] + ESP
+        x = x.reshape(-1, 4 * 27)
+        x = x / t
+
         # x = x.reshape(-1, 4, 27)
         # x = torch.permute(x, (0, 2, 1))
         # x = self.predictor(x)
         # x = torch.permute(x, (0, 2, 1))
 
-        t = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] + ESP
-        x = x.reshape(-1, 4 * 27)
-        x = x / t
         x = x.reshape(-1, 4, 3, 3, 3)
         x = self.cnn(x)
 

@@ -28,4 +28,4 @@ export DFT2CC_CUBE_USE=3
 # 
 nohup bash -c '~/anaconda3/envs/pyscf/bin/python krr_view.py --alpha 1e-8 --gamma 1000  --distance_list 0 0 1 --basis cc-pVDZ --extend_atom 0 --extend_xyz 0 --molecular_list H Li Be B C N O F Na Al P S Cl Si' >log/view2.out 2>&1 &
 # 
-echo $! >save_pid.txt
+echo $! >log/save_pid.txt
