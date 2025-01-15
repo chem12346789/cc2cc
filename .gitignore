@@ -8,6 +8,8 @@ log
 data
 checkpoint*/
 validate*/
+checkpoints
+validate
 *.zip
 *map
 submit*
