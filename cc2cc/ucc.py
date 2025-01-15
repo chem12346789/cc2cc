@@ -15,9 +15,11 @@ def ucc(mol, name):
 
     print(f"Generate data for {name}, spin {mol.spin}")
 
+    mf = pyscf.scf.UHF(mol)
+    mf.kernel()
     mdft = pyscf.scf.UKS(mol)
     mdft.xc = "b3lyp"
-    mdft.kernel()
+    mdft.kernel(mf.make_rdm1())
 
     grids = Grid(mol)
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
@@ -63,8 +65,6 @@ def ucc(mol, name):
             )
         )
     else:
-        mf = pyscf.scf.UHF(mol)
-        mf.kernel()
         mycc = pyscf.cc.UCCSD(mf)
         mycc.kernel()
         dm1_cc = mycc.make_rdm1(ao_repr=True)
@@ -82,6 +82,12 @@ def ucc(mol, name):
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
         ]
         rho_cube = grids.gen_cube_rho(mol, dm1_dft)
+        print(
+            np.sum(
+                np.abs(rho_cc[0] - rho_dft[0]) * grids.weights
+                + np.abs(rho_cc[1] - rho_dft[1]) * grids.weights
+            )
+        )
 
         dm12 = (
             0.5 * dm2_cc[0]
@@ -173,22 +179,6 @@ def ucc(mol, name):
                         * mol.atom_charges()[i_atom]
                         / distance
                     )
-
-        nuc = mol.intor("int1e_nuc")
-        error_nuc = np.einsum("pq,pq", nuc, dm1_cc[0] + dm1_cc[1]) - np.einsum(
-            "pq,pq", nuc, dm1_dft[0] + dm1_dft[1]
-        )
-        kin = mol.intor("int1e_kin")
-        error_kin = np.einsum("pq,pq", kin, dm1_cc[0] + dm1_cc[1]) - np.einsum(
-            "pq,pq", kin, dm1_dft[0] + dm1_dft[1]
-        )
-        eri = mol.intor("int2e")
-        error_eris = 0.5 * (
-            np.einsum("pqrs,pq,rs", eri, dm1_cc[0] + dm1_cc[1], dm1_cc[0] + dm1_cc[1])
-            - np.einsum(
-                "pqrs,pq,rs", eri, dm1_dft[0] + dm1_dft[1], dm1_dft[0] + dm1_dft[1]
-            )
-        )
 
         error_energy = e_cc - e_dft
         error = np.sum(exc_cc_grids * grids.weights) - error_energy

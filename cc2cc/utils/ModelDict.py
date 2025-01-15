@@ -6,6 +6,7 @@ from pathlib import Path
 import datetime
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.optim as optim
 
@@ -35,20 +36,30 @@ class ModelDict:
         self.load = args.load
         self.with_eval = args.with_eval
         self.load_epoch = args.load_epoch
+        self.save_dir = args.save_dir
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.dtype = torch.float32
 
-        self.dir_checkpoint = Path(
-            CHECKPOINTS_PATH
-            / f"checkpoint-ccdft_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
-        ).resolve()
+        if self.save_dir is not None:
+            self.dir_checkpoint = (
+                CHECKPOINTS_PATH / f"checkpoint-ccdft_{self.save_dir}"
+            ).resolve()
+        else:
+            self.dir_checkpoint = (
+                CHECKPOINTS_PATH
+                / f"checkpoint-ccdft_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
+            ).resolve()
+
+        if not self.dir_checkpoint.exists():
+            print(f"Directory {self.dir_checkpoint} not found. Created!")
+            (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
 
         self.model: torch.nn.Module = Model().to(self.device)
         if args.precision == "float64":
             self.dtype = torch.float64
             self.model.double()
 
-        self.optimizer = optim.AdamW(self.model.parameters(), lr=1e-4)
+        self.optimizer = optim.AdamW(self.model.parameters(), lr=1e-3)
 
         if self.with_eval:
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -64,7 +75,7 @@ class ModelDict:
                 eta_min=1e-6,
             )
 
-        self.loss_multiplier = 0.1
+        self.loss_multiplier = args.loss_multiplier
         self.loss_ene = torch.nn.L1Loss(reduction="none")
         self.loss_ene_tot = torch.nn.L1Loss(reduction="sum")
 
@@ -78,12 +89,26 @@ class ModelDict:
         list_of_path = list(load_checkpoint.glob("*.pth"))
         if len(list_of_path) == 0:
             print("No model found, use random initialization.")
-            if not load_checkpoint.exists():
-                print(f"Directory {load_checkpoint} not found. Created!")
-                (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
         else:
-            if self.load_epoch == -1:
-                load_path = max(list_of_path, key=lambda p: p.stat().st_ctime)
+            if self.load_epoch < 0:
+                min_loss = 10000
+                if (load_checkpoint / "loss").exists():
+                    for path in list((load_checkpoint / "loss").glob("train-loss-*")):
+                        load_epoch = path.stem.split("-")[-1]
+                        if abs(int(load_epoch)) < abs(self.load_epoch):
+                            continue
+                        data_loss = pd.read_csv(path)
+                        mean_loss = np.mean(data_loss["train_loss_ene_tot"])
+                        data_loss = pd.read_csv(
+                            load_checkpoint / "loss" / f"eval-loss-{load_epoch}"
+                        )
+                        mean_loss += np.mean(data_loss["train_loss_ene_tot"])
+                        print(mean_loss)
+                        if mean_loss < min_loss:
+                            min_loss = mean_loss
+                            load_path = load_checkpoint / f"{load_epoch}.pth"
+                else:
+                    load_path = max(list_of_path, key=lambda p: p.stat().st_ctime)
             else:
                 load_path = load_checkpoint / f"{self.load_epoch}.pth"
             state_dict = torch.load(

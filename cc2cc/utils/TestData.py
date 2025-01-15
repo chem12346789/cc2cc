@@ -27,25 +27,9 @@ class TestData:
 
         if self.mol.spin == 0:
             time_start = timer()
-            mdft = pyscf.scf.RKS(self.mol)
-            mdft.xc = self.xc_code
-            mdft.max_cycle = 250
-            mdft.kernel()
-            self.dm1_dft = mdft.make_rdm1(ao_repr=True)
-            self.e_dft = mdft.e_tot
-            self.dft_dipole = pyscf.scf.hf.dip_moment(
-                mol=self.mol,
-                dm=self.dm1_dft,
-                unit="A.U.",
-            )
-            if if_grad:
-                g = mdft.nuc_grad_method()
-                self.grad_dft = g.kernel()
-            self.time_dft = timer() - time_start
-
-            time_start = timer()
             mf = pyscf.scf.RHF(self.mol)
             mf.kernel()
+            self.mf_dm1 = mf.make_rdm1()
             mycc = pyscf.cc.CCSD(mf)
             mycc.incore_complete = True
             mycc.async_io = False
@@ -62,12 +46,12 @@ class TestData:
                 g = ccsd_grad.Gradients(mycc)
                 self.grad_ccsd = g.kernel()
             self.time_cc = timer() - time_start
-        else:
+
             time_start = timer()
-            mdft = pyscf.scf.UKS(self.mol)
+            mdft = pyscf.scf.RKS(self.mol)
             mdft.xc = self.xc_code
             mdft.max_cycle = 250
-            mdft.kernel()
+            mdft.kernel(dm0=self.mf_dm1)
             self.dm1_dft = mdft.make_rdm1(ao_repr=True)
             self.e_dft = mdft.e_tot
             self.dft_dipole = pyscf.scf.hf.dip_moment(
@@ -79,10 +63,11 @@ class TestData:
                 g = mdft.nuc_grad_method()
                 self.grad_dft = g.kernel()
             self.time_dft = timer() - time_start
-
+        else:
             time_start = timer()
             mf = pyscf.scf.UHF(self.mol)
             mf.kernel()
+            self.mf_dm1 = mf.make_rdm1()
             mycc = pyscf.cc.UCCSD(mf)
             mycc.incore_complete = True
             mycc.async_io = False
@@ -99,3 +84,20 @@ class TestData:
                 g = uccsd_grad.Gradients(mycc)
                 self.grad_ccsd = g.kernel()
             self.time_cc = timer() - time_start
+
+            time_start = timer()
+            mdft = pyscf.scf.UKS(self.mol)
+            mdft.xc = self.xc_code
+            mdft.max_cycle = 250
+            mdft.kernel(dm0=self.mf_dm1)
+            self.dm1_dft = mdft.make_rdm1(ao_repr=True)
+            self.e_dft = mdft.e_tot
+            self.dft_dipole = pyscf.scf.hf.dip_moment(
+                mol=self.mol,
+                dm=self.dm1_dft,
+                unit="A.U.",
+            )
+            if if_grad:
+                g = mdft.nuc_grad_method()
+                self.grad_dft = g.kernel()
+            self.time_dft = timer() - time_start

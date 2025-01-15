@@ -32,7 +32,10 @@ if __name__ == "__main__":
     modeldict.eval()
 
     # 2. Test loop
-    data_record = DataRecord(MAIN_PATH / f"validate/ccdft_{args.load}.csv")
+    data_record = DataRecord(
+        MAIN_PATH / f"validate/ccdft_{args.load}_{args.dataset}.csv",
+        if_continue=args.if_continue,
+    )
 
     for (
         name_mol,
@@ -59,7 +62,15 @@ if __name__ == "__main__":
             print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
             continue
 
+        if name in data_record.df_dict["name"]:
+            print(f"SKIP: {name}")
+            continue
+
         if mol.spin == 0:
-            test_rks(mol, name, modeldict, data_record)
+            test_rks(
+                mol, name, modeldict, data_record, lambda_=args.density_restriction
+            )
         else:
-            test_uks(mol, name, modeldict, data_record)
+            test_uks(
+                mol, name, modeldict, data_record, lambda_=args.density_restriction
+            )

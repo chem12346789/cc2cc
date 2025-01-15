@@ -16,6 +16,7 @@ def test_rks(
     name,
     modeldict,
     data_record,
+    lambda_=20,
 ):
     """
     Test the model. Restrict Khon-Sham (no spin).
@@ -28,7 +29,6 @@ def test_rks(
     mdft.xc = test_data.xc_code
     mdft.grids = grids
 
-    grids = Grid(mol)
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
     ao_0 = ao_value[0]
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
@@ -49,9 +49,12 @@ def test_rks(
 
         nelec, exc, vxc = modeldict.get_nev(ni, ks, grids, dm, test_data.xc_code)
 
-        rho_diff = ni.eval_rho(mol, ao_0, dm - test_data.dm1_cc)
-        v_p = pyscf.dft.numint.eval_mat(mol, ao_0, grids.weights, rho_diff, rho_diff)
-        vxc += 10 * v_p
+        if GENERATE_DATA:
+            rho_diff = ni.eval_rho(mol, ao_0, dm - test_data.dm1_cc)
+            v_p = pyscf.dft.numint.eval_mat(
+                mol, ao_0, grids.weights, rho_diff, rho_diff
+            )
+            vxc += lambda_ * v_p
 
         if not ni.libxc.is_hybrid_xc(ks.xc):
             vk = None
@@ -112,7 +115,7 @@ def test_rks(
     mdft.get_veff = types.MethodType(get_veff_modified, mdft)
     mdft.conv_tol = 1e-6
 
-    mdft.kernel()
+    mdft.kernel(dm0=test_data.mf_dm1)
     dm1_scf = mdft.make_rdm1()
 
     # mdft.max_cycle = -1

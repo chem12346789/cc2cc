@@ -4,6 +4,7 @@
 
 import argparse
 from itertools import product
+import os
 
 from cc2cc import add_args, cc, ucc
 from cc2cc.utils import gen_mole
@@ -14,6 +15,7 @@ if __name__ == "__main__":
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
+    print(os.getpid())
 
     for (
         name_mol,

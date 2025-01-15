@@ -16,6 +16,7 @@ def test_uks(
     name,
     modeldict,
     data_record,
+    lambda_=20,
 ):
     """
     Test the model. Restrict Khon-Sham (no spin).
@@ -28,7 +29,6 @@ def test_uks(
     mdft.xc = test_data.xc_code
     mdft.grids = grids
 
-    grids = Grid(mol)
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
     ao_0 = ao_value[0]
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
@@ -49,15 +49,16 @@ def test_uks(
 
         nelec, exc, vxc = modeldict.get_nev(ni, ks, grids, dm, test_data.xc_code)
 
-        rho_a_diff = ni.eval_rho(mol, ao_0, dm[0] - test_data.dm1_cc[0])
-        rho_b_diff = ni.eval_rho(mol, ao_0, dm[1] - test_data.dm1_cc[1])
-        v_p_a = pyscf.dft.numint.eval_mat(
-            mol, ao_0, grids.weights, rho_a_diff, rho_a_diff
-        )
-        v_p_b = pyscf.dft.numint.eval_mat(
-            mol, ao_0, grids.weights, rho_b_diff, rho_b_diff
-        )
-        vxc += 10 * np.array([v_p_a, v_p_b])
+        if GENERATE_DATA:
+            rho_a_diff = ni.eval_rho(mol, ao_0, dm[0] - test_data.dm1_cc[0])
+            rho_b_diff = ni.eval_rho(mol, ao_0, dm[1] - test_data.dm1_cc[1])
+            v_p_a = pyscf.dft.numint.eval_mat(
+                mol, ao_0, grids.weights, rho_a_diff, rho_a_diff
+            )
+            v_p_b = pyscf.dft.numint.eval_mat(
+                mol, ao_0, grids.weights, rho_b_diff, rho_b_diff
+            )
+            vxc += lambda_ * np.array([v_p_a, v_p_b])
 
         if not ni.libxc.is_hybrid_xc(ks.xc):
             vk = None
@@ -114,7 +115,7 @@ def test_uks(
     mdft.get_veff = types.MethodType(get_veff_modified, mdft)
     mdft.conv_tol = 1e-6
 
-    mdft.kernel()
+    mdft.kernel(dm0=test_data.mf_dm1)
     dm1_scf = mdft.make_rdm1()
 
     # mdft.max_cycle = -1

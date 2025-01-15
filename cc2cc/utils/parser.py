@@ -1,7 +1,7 @@
 """
 @package docstring
 Documentation for this module.
- 
+
 More details.
 """
 
@@ -113,6 +113,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--save_dir",
+        type=str,
+        default="",
+        help="Directory for saving the model. Default is empty.",
+    )
+
+    parser.add_argument(
         "--epoch",
         type=int,
         default=10000,
@@ -122,7 +129,7 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=64,
+        default=1000000,
         help="Batch size for training. Default is 64 (FCnet).",
     )
 
@@ -148,12 +155,33 @@ def add_args(parser: argparse.ArgumentParser):
         help="Step for evaluation. Default is 1.",
     )
 
+    parser.add_argument(
+        "--loss_multiplier",
+        type=float,
+        default=1.0,
+        help="Lambda for the loss function. Default is 1.0.",
+    )
+
     # for testing
     parser.add_argument(
         "--load_epoch",
         type=int,
         default=-1,
         help="Epoch for loading the model. Default is -1.",
+    )
+
+    parser.add_argument(
+        "--if_continue",
+        type=bool,
+        default=False,
+        help="Weather to continue the testing, will load the data. Default is False.",
+    )
+
+    parser.add_argument(
+        "--density_restriction",
+        type=float,
+        default=0.0,
+        help="Lambda for the density restriction. Default is 0.0.",
     )
 
     args = parser.parse_args()

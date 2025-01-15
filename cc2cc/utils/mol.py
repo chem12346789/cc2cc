@@ -44,6 +44,12 @@ def extend(
     print("original mol", molecular)
     name = f"{name_mol}_{basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
 
+    if len(molecular) == 1:
+        if abs(distance) < 1e-5:
+            return list(molecular), name
+        else:
+            raise ValueError("Distance is not allowed in single atom")
+
     if "-" in extend_atom:
         atom_list_1 = np.array(extend_atom.split("-")[0].split("."), dtype=int)
         atom_list_2 = np.array(extend_atom.split("-")[1].split("."), dtype=int)
