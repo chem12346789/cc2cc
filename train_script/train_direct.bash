@@ -25,23 +25,33 @@ export NVIDIA_VISIBLE_DEVICES=1
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')
 # export CUDA_VISIBLE_DEVICES=NUMBER_OF_GPU
 
+density_restriction="1"
+loss_multiplier="0.01"
+epoch="29100"
+load_epoch="-10000"
+cycle="{1..8}"
+dl_args="-0.5 0.5 3"
+
 mkdir -p log
 mkdir -p validate
+mkdir -p data/grids_dft
 
-nohup bash -c '\
-	for cycle in {1..8}; do \
-		prev_cycle=$((cycle-1)); \
-		load_args=""; \
-		if [ $cycle -gt 1 ]; then \
-			load_args="--load cycle${prev_cycle} --load_epoch -10000"; \
-			~/anaconda3/envs/pyscf/bin/python test.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 \
-				--precision float64 ${load_args} --density_restriction 1; \
-		else \
-			~/anaconda3/envs/pyscf/bin/python gen_data.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0; \
-		fi; \
-		~/anaconda3/envs/pyscf/bin/python train.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 \
-			--eval_step 10 --epoch 29100 --with_eval False --precision float32 --save_dir cycle${cycle} \
-			--loss_multiplier 0.01 ${load_args}; \
-	done' >log/train-$$.log 2>&1 &
+nohup bash <<'EOF' >log/train-$$.log 2>&1 &
+set -e  # Exit on any error
+for cycle in {$cycle}; do
+	prev_cycle=$((cycle-1))
+	load_args=""
+	if [ $cycle -gt 1 ]; then
+		load_args="--load cycle${prev_cycle} --load_epoch ${load_epoch}"
+		~/anaconda3/envs/pyscf/bin/python test.py -dl ${dl_args} --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 \
+			--precision float64 ${load_args} --density_restriction ${density_restriction} || exit 1
+	else
+		~/anaconda3/envs/pyscf/bin/python gen_data.py -dl ${dl_args} --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 || exit 1
+	fi
+	~/anaconda3/envs/pyscf/bin/python train.py -dl ${dl_args} --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 \
+		--eval_step 10 --epoch ${epoch} --with_eval False --precision float32 --save_dir cycle${cycle} \
+		--loss_multiplier ${loss_multiplier} ${load_args} || exit 1
+done
+EOF
 
 echo $! >>log/save_pid.txt 2>&1
