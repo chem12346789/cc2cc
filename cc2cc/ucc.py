@@ -67,8 +67,8 @@ def ucc(mol, name):
     else:
         mycc = pyscf.cc.UCCSD(mf)
         mycc.kernel()
-        dm1_cc = mycc.make_rdm1(ao_repr=True)
-        dm2_cc = mycc.make_rdm2(ao_repr=True)
+        dm1_cc = np.array(mycc.make_rdm1(ao_repr=True))
+        dm2_cc = np.array(mycc.make_rdm2(ao_repr=True))
         e_cc = mycc.e_tot
         dm1_dft = mdft.make_rdm1(ao_repr=True)
         e_dft = mdft.energy_tot(dm1_dft)
@@ -81,7 +81,7 @@ def ucc(mol, name):
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
         ]
-        rho_cube = grids.gen_cube_rho(mol, dm1_dft)
+        rho_cube = grids.gen_cube_rho(mol, dm1_cc)
         print(
             np.sum(
                 np.abs(rho_cc[0] - rho_dft[0]) * grids.weights

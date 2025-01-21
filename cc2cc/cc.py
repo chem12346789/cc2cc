@@ -68,7 +68,7 @@ def cc(mol, name):
 
         rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
         rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
-        rho_cube = grids.gen_cube_rho(mol, dm1_dft)
+        rho_cube = grids.gen_cube_rho(mol, dm1_cc)
         print(np.sum(np.abs(rho_cc - rho_dft) * grids.weights))
 
         expr_rinv_dm2_r = oe.contract_expression(

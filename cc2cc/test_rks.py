@@ -173,18 +173,18 @@ def test_rks(
         mf.kernel()
         mycc = pyscf.cc.CCSD(mf)
         mycc.kernel()
-        dm1_cc = mycc.make_rdm1(ao_repr=True)
-        dm2_cc = mycc.make_rdm2(ao_repr=True)
+        dm1_cc = np.array(mycc.make_rdm1(ao_repr=True))
+        dm2_cc = np.array(mycc.make_rdm2(ao_repr=True))
         e_cc = mycc.e_tot
         dm1_dft = mdft.make_rdm1(ao_repr=True)
 
         test_dft = pyscf.scf.RKS(mol)
         test_dft.xc = "b3lyp"
-        e_dft = test_dft.energy_tot(dm1_dft)
+        e_dft = test_dft.energy_tot(dm1_cc)
 
         rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
         rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
-        rho_cube = grids.gen_cube_rho(mol, dm1_dft)
+        rho_cube = grids.gen_cube_rho(mol, dm1_cc)
 
         expr_rinv_dm2_r = oe.contract_expression(
             "ijkl,i,j,kl->",
