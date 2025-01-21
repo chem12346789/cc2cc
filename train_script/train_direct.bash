@@ -33,12 +33,12 @@ for cycle in {9..20}; do
 	if [ $cycle -gt 1 ]; then
 		load_args="--load cycle${prev_cycle} --load_epoch -10000"
 		~/anaconda3/envs/pyscf/bin/python test.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 \
-			--precision float64 ${load_args} --density_restriction 1
+			--precision float64 ${load_args} --density_restriction 0.1
 	else
 		~/anaconda3/envs/pyscf/bin/python gen_data.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0
 	fi
 	~/anaconda3/envs/pyscf/bin/python train.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 \
-		--eval_step 10 --epoch 29100 --with_eval False --precision float32 --save_dir cycle${cycle} \
+		--eval_step 10 --epoch 50100 --with_eval False --precision float32 --save_dir cycle${cycle} \
 		--loss_multiplier 0.01 ${load_args}
 done
 EOF
