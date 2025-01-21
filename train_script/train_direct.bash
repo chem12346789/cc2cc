@@ -27,7 +27,7 @@ export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=c
 
 mkdir -p log
 nohup bash <<'EOF' >log/train-$$.log 2>&1 &
-for cycle in {5..8}; do
+for cycle in {9..20}; do
 	prev_cycle=$((cycle-1))
 	load_args=""
 	if [ $cycle -gt 1 ]; then
