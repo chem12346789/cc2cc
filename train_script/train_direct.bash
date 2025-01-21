@@ -25,8 +25,11 @@ export NVIDIA_VISIBLE_DEVICES=1
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')
 # export CUDA_VISIBLE_DEVICES=NUMBER_OF_GPU
 
+mkdir -p log
+mkdir -p validate
+
 nohup bash -c '\
-	for cycle in {5..8}; do \
+	for cycle in {1..8}; do \
 		prev_cycle=$((cycle-1)); \
 		load_args=""; \
 		if [ $cycle -gt 1 ]; then \
