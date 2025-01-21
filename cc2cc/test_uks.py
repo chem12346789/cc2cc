@@ -50,13 +50,25 @@ def test_uks(
         nelec, exc, vxc = modeldict.get_nev(ni, ks, grids, dm, test_data.xc_code)
 
         if GENERATE_DATA:
-            rho_a_diff = ni.eval_rho(mol, ao_0, dm[0] - test_data.dm1_cc[0])
-            rho_b_diff = ni.eval_rho(mol, ao_0, dm[1] - test_data.dm1_cc[1])
+            rho_a_dm = ni.eval_rho(mol, ao_0, dm[0])
+            rho_a_cc = ni.eval_rho(mol, ao_0, test_data.dm1_cc[0])
+            rho_b_dm = ni.eval_rho(mol, ao_0, dm[1])
+            rho_b_cc = ni.eval_rho(mol, ao_0, test_data.dm1_cc[1])
+            dip_a_diff = (
+                (rho_a_dm - rho_a_cc) * grids.coords[:, 0] ** 2
+                + (rho_a_dm - rho_a_cc) * grids.coords[:, 1] ** 2
+                + (rho_a_dm - rho_a_cc) * grids.coords[:, 2] ** 2
+            )
+            dip_b_diff = (
+                (rho_b_dm - rho_b_cc) * grids.coords[:, 0] ** 2
+                + (rho_b_dm - rho_b_cc) * grids.coords[:, 1] ** 2
+                + (rho_b_dm - rho_b_cc) * grids.coords[:, 2] ** 2
+            )
             v_p_a = pyscf.dft.numint.eval_mat(
-                mol, ao_0, grids.weights, rho_a_diff, rho_a_diff
+                mol, ao_0, grids.weights, dip_a_diff, dip_a_diff
             )
             v_p_b = pyscf.dft.numint.eval_mat(
-                mol, ao_0, grids.weights, rho_b_diff, rho_b_diff
+                mol, ao_0, grids.weights, dip_b_diff, dip_b_diff
             )
             vxc += lambda_ * np.array([v_p_a, v_p_b])
 

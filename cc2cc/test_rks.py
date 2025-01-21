@@ -50,9 +50,15 @@ def test_rks(
         nelec, exc, vxc = modeldict.get_nev(ni, ks, grids, dm, test_data.xc_code)
 
         if GENERATE_DATA:
-            rho_diff = ni.eval_rho(mol, ao_0, dm - test_data.dm1_cc)
+            rho_dm = ni.eval_rho(mol, ao_0, dm)
+            rho_cc = ni.eval_rho(mol, ao_0, test_data.dm1_cc)
+            dip_diff = (
+                (rho_dm - rho_cc) * grids.coords[:, 0] ** 2
+                + (rho_dm - rho_cc) * grids.coords[:, 1] ** 2
+                + (rho_dm - rho_cc) * grids.coords[:, 2] ** 2
+            )
             v_p = pyscf.dft.numint.eval_mat(
-                mol, ao_0, grids.weights, rho_diff, rho_diff
+                mol, ao_0, grids.weights, dip_diff, dip_diff
             )
             vxc += lambda_ * v_p
 
