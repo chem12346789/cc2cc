@@ -1,0 +1,10 @@
+basis_set_exchange
+numpy
+opt_einsum
+pandas
+pyscf
+scipy
+segmentation_models_pytorch
+tqdm
+wandb
+scikit-learn

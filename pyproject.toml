@@ -1,0 +1,26 @@
+[project]
+name = "cc2cc"
+version = "0.1.0"
+description = "cc2cc: AI for density functional theory"
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+    "basis_set_exchange",
+    "numpy",
+    "opt_einsum",
+    "pandas",
+    "pyscf",
+    "scipy",
+    "segmentation_models_pytorch",
+    "torch",
+    "tqdm",
+    "wandb",
+    "setuptools >= 40.6.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cc2cc"]
+exclude = []
+namespaces = false
