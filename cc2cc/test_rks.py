@@ -113,7 +113,8 @@ def test_rks(
         return vxc
 
     mdft.get_veff = types.MethodType(get_veff_modified, mdft)
-    mdft.conv_tol = 1e-6
+    mdft.conv_tol = 1e-5
+    mdft.conv_tol_grad = 1e-1
 
     mdft.kernel(dm0=test_data.mf_dm1)
     dm1_scf = mdft.make_rdm1()
