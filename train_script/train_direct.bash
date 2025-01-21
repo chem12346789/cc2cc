@@ -26,20 +26,25 @@ export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=c
 # export CUDA_VISIBLE_DEVICES=NUMBER_OF_GPU
 
 mkdir -p log
+mkdir -p validate
+mkdir -p data/grids_dft
+
 nohup bash <<'EOF' >log/train-$$.log 2>&1 &
+set -e  # Exit on any error
 for cycle in {9..20}; do
 	prev_cycle=$((cycle-1))
 	load_args=""
+	dl_args="-0.2 0.2 5"
 	if [ $cycle -gt 1 ]; then
-		load_args="--load cycle${prev_cycle} --load_epoch -10000"
-		~/anaconda3/envs/pyscf/bin/python test.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 \
-			--precision float64 ${load_args} --density_restriction 0.1
+		load_args="--load cycle${prev_cycle} --load_epoch -5000"
+		~/anaconda3/envs/pyscf/bin/python test.py -dl ${dl_args} --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 \
+			--precision float64 ${load_args} --density_restriction 1 || exit 1
 	else
-		~/anaconda3/envs/pyscf/bin/python gen_data.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0
+		~/anaconda3/envs/pyscf/bin/python gen_data.py -dl ${dl_args} --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 || exit 1
 	fi
-	~/anaconda3/envs/pyscf/bin/python train.py -dl -0.5 0.5 3 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 \
-		--eval_step 10 --epoch 50100 --with_eval False --precision float32 --save_dir cycle${cycle} \
-		--loss_multiplier 0.01 ${load_args}
+	~/anaconda3/envs/pyscf/bin/python train.py -dl ${dl_args} --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 \
+		--eval_step 10 --epoch 10100 --with_eval False --precision float32 --save_dir cycle${cycle} \
+		--loss_multiplier 0.01 ${load_args} || exit 1
 done
 EOF
 
