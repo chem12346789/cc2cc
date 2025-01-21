@@ -195,7 +195,7 @@ def test_uks(
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
         ]
-        rho_cube = grids.gen_cube_rho(mol, dm1_cc)
+        rho_cube = grids.gen_cube_rho(mol, dm1_dft)
 
         dm12 = (
             0.5 * dm2_cc[0]

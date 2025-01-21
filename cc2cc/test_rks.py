@@ -185,7 +185,7 @@ def test_rks(
 
         rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
         rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
-        rho_cube = grids.gen_cube_rho(mol, dm1_cc)
+        rho_cube = grids.gen_cube_rho(mol, dm1_dft)
 
         expr_rinv_dm2_r = oe.contract_expression(
             "ijkl,i,j,kl->",
