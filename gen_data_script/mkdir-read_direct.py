@@ -1,0 +1,98 @@
+import time
+import subprocess
+from pathlib import Path
+import itertools
+import arrow
+
+
+def clean_dir(pth):
+    """
+    clean the directory
+    """
+    pth = Path(pth)
+    for child in pth.glob("*"):
+        if child.is_file():
+            child.unlink()
+        else:
+            clean_dir(child)
+            child.rmdir()
+
+
+main_dir = Path(__file__).resolve().parents[0]
+template_bash = main_dir / "gen_data_direct.bash"
+time_stamp = time.strftime("%Y%m%d%H%M%S", time.localtime())
+
+# renew out_mkdir
+if (main_dir / "out_mkdir").exists():
+    (main_dir / "out_mkdir").unlink()
+(main_dir / "out_mkdir").touch()
+
+work_dir = main_dir / ("bash_submitted" + time_stamp)
+work_dir.mkdir()
+work_bash = work_dir / "gen_data_direct.bash"
+
+critical_time = arrow.now().shift(hours=-72)
+for item in Path(main_dir).glob("*"):
+    if not item.is_file():
+        ITEM_TIME = arrow.get(item.stat().st_mtime)
+        if ITEM_TIME < critical_time:
+            print(str(item.absolute()))
+            # remove it
+            clean_dir(item)
+            item.rmdir()
+
+LIST_OF_GPU = itertools.cycle([0, 1])
+GPU_NODE_POOL = itertools.cycle(["gpu03"])
+JOBID = itertools.count(1)
+
+for mol, basis_set, (range_list, extend_atom) in itertools.product(
+    [
+        "mol",
+    ],
+    ["cc-pVDZ"],
+    [
+        # ((0, 0, 1), "0"),
+        ((-0.5, 0.5, 2), "0-1"),
+        ((-0.5, 0.5, 2), "1-2"),
+    ],
+):
+    number_of_gpu = next(LIST_OF_GPU)
+    gpu_node = next(GPU_NODE_POOL)
+    jobid = next(JOBID)
+    cmd = f"""cp {template_bash} {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/MOL/{mol}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/BASIS/{basis_set}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/NUMBER_OF_GPU/{number_of_gpu}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/BASH_GPU_NODE/{gpu_node}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/EXTEND_ATOM/{extend_atom}/g" {work_bash}"""
+    cmd += "&&" + f"""sed -i "s/JOBID/{jobid}/g" {work_bash}"""
+
+    if isinstance(range_list, float):
+        start = range_list
+        cmd += "&&" + f"""sed -i "s/START/{start}/g" {work_bash}"""
+        cmd += "&&" + f"""sed -i "s/END//g" {work_bash}"""
+        cmd += "&&" + f"""sed -i "s/STEP//g" {work_bash}"""
+        cmd += (
+            "&&"
+            + f"""mv {work_bash} {work_dir / f"gen_data_{mol}_{jobid}_{basis_set}_{start}_{extend_atom}.bash"}"""
+        )
+    elif isinstance(range_list, tuple):
+        start = range_list[0]
+        end = range_list[1]
+        step = range_list[2]
+        cmd += "&&" + f"""sed -i "s/START/{start}/g" {work_bash}"""
+        cmd += "&&" + f"""sed -i "s/END/{end}/g" {work_bash}"""
+        cmd += "&&" + f"""sed -i "s/STEP/{step}/g" {work_bash}"""
+        cmd += (
+            "&&"
+            + f"""mv {work_bash} {work_dir / f"gen_data_{mol}_{jobid}_{basis_set}_{start}_{end}_{step}_{extend_atom}.bash"}"""
+        )
+    with open(main_dir / "out_mkdir", "w", encoding="utf-8") as f:
+        subprocess.call(cmd, shell=True, stdout=f)
+
+for child in (work_dir).glob("*.bash"):
+    if child.is_file():
+        cmd = f"""bash < {child}"""
+        with open(main_dir / "out_mkdir", "a", encoding="utf-8") as f:
+            subprocess.call(cmd, shell=True, stdout=f)
+        time.sleep(0.1)
