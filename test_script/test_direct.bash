@@ -24,7 +24,12 @@ export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=c
 # basis_args="Def2-TZVPD"
 # nohup bash -c "~/anaconda3/envs/pyscf/bin/python test.py -dl 0 0 1 --basis ${basis_args} --extend_atom 0 --extend_xyz 0 --precision float64 --load cycle1 --load_epoch 15000 --dataset g2" >log/test-${basis_args}.log 2>&1 &
 
+mkdir -p log
+mkdir -p validate
+mkdir -p data/grids_dft
+
 basis_args="cc-pVDZ"
+
 nohup bash -c "~/anaconda3/envs/pyscf/bin/python test.py -dl 0 0 1 --basis ${basis_args} --extend_atom 0 --extend_xyz 0 --precision float64 --load cycle1 --load_epoch 15000 --dataset g2" >log/test-${basis_args}.log 2>&1 &
 
 echo $! >>log/save_pid.txt 2>&1
