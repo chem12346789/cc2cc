@@ -25,7 +25,7 @@ export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=c
 
 # nohup bash -c '~/anaconda3/envs/pyscf/bin/python test.py -dl 0 0 1 --basis cc-pVDZ --extend_atom 0 --extend_xyz 0 --precision float64 --load 2024-12-19-23-05-55 --load_epoch 49000 --dataset g2' >log/test0.log 2>&1 &
 #
-nohup bash -c '~/anaconda3/envs/pyscf/bin/python test.py -dl 0 0 1 --basis cc-pVDZ --extend_atom 0 --extend_xyz 0 --precision float64 --load cycle4 --load_epoch -10000 --dataset g2' >log/test1.log 2>&1 &
+nohup bash -c '~/anaconda3/envs/pyscf/bin/python test.py -dl 0 0 1 --basis cc-pVDZ --extend_atom 0 --extend_xyz 0 --precision float64 --load cycle1 --load_epoch -10000 --dataset g2' >log/test1.log 2>&1 &
 #
 # nohup bash -c '~/anaconda3/envs/pyscf/bin/python test.py -dl 0 0 1 --basis cc-pVDZ --extend_atom 0 --extend_xyz 0 --precision float64 --load 2024-12-31-17-03-22 --load_epoch 29000' >log/test1.log 2>&1 &
 #

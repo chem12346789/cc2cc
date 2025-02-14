@@ -26,7 +26,7 @@ export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=c
 # export CUDA_VISIBLE_DEVICES=NUMBER_OF_GPU
 
 nohup bash -c '\
-	for cycle in {5..8}; do \
+	for cycle in {1..1}; do \
 		prev_cycle=$((cycle-1)); \
 		load_args=""; \
 		if [ $cycle -gt 1 ]; then \
