@@ -5,7 +5,7 @@ export OMP_NUM_THREADS=12
 export MKL_NUM_THREADS=12
 export OPENBLAS_NUM_THREADS=12
 
-export PYSCF_MAX_MEMORY=80000
+export PYSCF_MAX_MEMORY=40000
 export PYTHONPATH=~/python:$PYTHONPATH
 export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
 
@@ -32,10 +32,10 @@ else
     export mol_args="--distance_list ${dl_args} --basis ${basis_args} --n_rad ${n_rad_args} --n_ang ${n_ang_args} --extend_atom 0 --extend_xyz 0"
 fi
 
-cat <<EOF | nohup bash >log/test-${basis_args}-${load_pid_args}.log 2>&1 &
-echo Starting test.py at $(date)
+nohup bash <<EOF >log/test-${basis_args}-${load_pid_args}.log 2>&1 &
+echo Starting test_model.py at $(date)
 echo "${mol_args}"
-~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 --load cycle1-${load_pid_args} --load_epoch 10000 --dataset g2
+~/anaconda3/envs/pyscf/bin/python test_model.py ${mol_args} --precision float64 --load cycle1-${load_pid_args} --load_epoch 100000 --dataset g2
 echo DONE
 EOF
 
