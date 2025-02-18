@@ -171,25 +171,6 @@ def gen_atomic_grids(
 
             rad_weight = 4 * np.pi * rad**2 * dr
 
-    def __init__(
-        self,
-        mol,
-        level=LEVEL,
-        period=PERIOD,
-        n_rad=None,
-        n_ang=None,
-    ):
-        super().__init__(mol)
-
-        if n_rad is not None and n_ang is not None:
-            self.n_rad = n_rad
-            self.n_ang = n_ang
-        else:
-            self.n_rad, self.n_ang = (
-                RAD_GRIDS[level, period],
-                LEBEDEV_ORDER[ANG_ORDER[level, period]],
-            )
-
             angs = [n_ang] * n_rad
             angs = np.array(angs)
             coords = []
@@ -205,7 +186,6 @@ def gen_atomic_grids(
                 )
                 vol.append(np.einsum("i,j->ji", rad_weight[idx], grid[:, 3]).ravel())
             atom_grids_tab[symb] = (np.vstack(coords), np.hstack(vol))
-
     return atom_grids_tab
 
 

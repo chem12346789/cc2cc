@@ -61,7 +61,7 @@ def train_model(train_str_dict, eval_str_dict):
     print(f"Start training at {modeldict.dir_checkpoint}")
     pbar0 = trange(args.epoch + 1, mininterval=2, maxinterval=20)
     for epoch in pbar0:
-        modeldict.loss_multiplier = args.loss_multiplier * epoch / 2500
+        modeldict.loss_multiplier = min(1.0, args.loss_multiplier * epoch / 1000)
         train_loss_ene, train_loss_ene_tot = modeldict.train_model(database_train)
         if not modeldict.with_eval:
             modeldict.scheduler.step()

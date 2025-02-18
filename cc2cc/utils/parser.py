@@ -191,6 +191,13 @@ def add_args(parser: argparse.ArgumentParser):
         help="Lambda for the density restriction. Default is 0.0.",
     )
 
+    parser.add_argument(
+        "--if_continue",
+        type=str2bool,
+        default=False,
+        help="Weather to continue the data record. Default is False.",
+    )
+
     args = parser.parse_args()
     for i in range(len(args.extend_xyz)):
         args.extend_xyz[i] += 1

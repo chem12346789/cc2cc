@@ -15,7 +15,7 @@ if __name__ == "__main__":
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
-    print(os.getpid())
+    print(f"PID: {os.getpid()}")
 
     for (
         name_mol,
