@@ -47,13 +47,11 @@ def cc(mol, grids, name):
         dm1_cc = mycc.make_rdm1(ao_repr=True)
         dm2_cc = mycc.make_rdm2(ao_repr=True)
         e_cc = mycc.e_tot
-        dm1_dft = mdft.make_rdm1(ao_repr=True)
+        dm1_dft = np.array(dm1_cc).copy()
         e_dft = mdft.energy_tot(dm1_dft)
 
         rho_norm_matrix = grids.gen_grids_matrix(mol, dm1_dft, reset=True)
-        ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
-        ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
-        ao_value = ao_value[:4]
+        ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
         rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
         rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
         print(np.sum(np.abs(rho_cc - rho_dft) * grids.weights))
@@ -87,39 +85,6 @@ def cc(mol, grids, name):
                     rinv,
                     backend="torch",
                 )
-
-        dm1_cc_mo = mycc.make_rdm1(ao_repr=False)
-        eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo)
-        eigs_v_dm1 = mf.mo_coeff @ eigs_v_dm1
-        for i in range(np.shape(eigs_v_dm1)[1]):
-            part = oe.contract(
-                "pm,m,n,pn->p",
-                ao_value[0],
-                eigs_v_dm1[:, i],
-                eigs_v_dm1[:, i],
-                ao_2_diag,
-            )
-            exc_cc_grids -= part * eigs_e_dm1[i] / 2
-
-        for i in range(mol.nelec[0]):
-            part = oe.contract(
-                "pm,m,n,pn->p",
-                ao_value[0],
-                mdft.mo_coeff[:, i],
-                mdft.mo_coeff[:, i],
-                ao_2_diag,
-            )
-            exc_cc_grids += part
-
-        for i, coord in enumerate(grids.coords):
-            for i_atom in range(mol.natm):
-                distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
-                if distance > 1e-3:
-                    exc_cc_grids[i] -= (
-                        (rho_cc[0][i] - rho_dft[0][i])
-                        * mol.atom_charges()[i_atom]
-                        / distance
-                    )
 
         error_energy = e_cc - e_dft
         error = np.sum(exc_cc_grids * grids.weights) - error_energy
