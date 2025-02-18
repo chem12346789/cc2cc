@@ -8,11 +8,12 @@ import pyscf
 from pyscf import lib
 
 from cc2cc.utils import DATA_PATH, AU2KCALMOL, GENERATE_DATA
-from cc2cc.utils import Grid, TestData
+from cc2cc.utils import TestData
 
 
 def test_uks(
     mol,
+    grids,
     name,
     modeldict,
     data_record,
@@ -24,7 +25,6 @@ def test_uks(
     # 2.0 Prepare
     test_data = TestData(mol, name, xc_code="b3lyp")
     test_data.test_mol()
-    grids = Grid(test_data.mol)
     mdft = pyscf.dft.UKS(mol)
     mdft.xc = test_data.xc_code
     mdft.grids = grids

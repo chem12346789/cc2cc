@@ -83,6 +83,20 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--n_rad",
+        type=int,
+        default=None,
+        help="Number of radial points. Default is None.",
+    )
+
+    parser.add_argument(
+        "--n_ang",
+        type=int,
+        default=None,
+        help="Number of angular points. Default is None.",
+    )
+
+    parser.add_argument(
         "--if_basis_str",
         type=str2bool,
         default=True,
@@ -168,13 +182,6 @@ def add_args(parser: argparse.ArgumentParser):
         type=int,
         default=-1,
         help="Epoch for loading the model. Default is -1.",
-    )
-
-    parser.add_argument(
-        "--if_continue",
-        type=bool,
-        default=False,
-        help="Weather to continue the testing, will load the data. Default is False.",
     )
 
     parser.add_argument(

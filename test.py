@@ -66,11 +66,28 @@ if __name__ == "__main__":
             print(f"SKIP: {name}")
             continue
 
+        grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
+
+        if args.n_rad is not None and args.n_ang is not None:
+            name = f"{name}_{args.n_rad}_{args.n_ang}"
+        else:
+            name = f"{name}_default"
+
         if mol.spin == 0:
             test_rks(
-                mol, name, modeldict, data_record, lambda_=args.density_restriction
+                mol,
+                grids,
+                name,
+                modeldict,
+                data_record,
+                lambda_=args.density_restriction,
             )
         else:
             test_uks(
-                mol, name, modeldict, data_record, lambda_=args.density_restriction
+                mol,
+                grids,
+                name,
+                modeldict,
+                data_record,
+                lambda_=args.density_restriction,
             )

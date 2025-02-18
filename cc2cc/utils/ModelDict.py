@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.optim as optim
+from torch.amp import GradScaler
 
 import pyscf
 from pyscf.dft.numint import _scale_ao, _dot_ao_ao
@@ -37,29 +38,29 @@ class ModelDict:
         self.with_eval = args.with_eval
         self.load_epoch = args.load_epoch
         self.save_dir = args.save_dir
+        self.basis = args.basis
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.dtype = torch.float32
 
-        if self.save_dir is not None:
+        if self.save_dir is not None and self.save_dir != "":
             self.dir_checkpoint = (
-                CHECKPOINTS_PATH / f"checkpoint-ccdft_{self.save_dir}"
+                CHECKPOINTS_PATH / f"checkpoint-ccdft_{self.basis}_{self.save_dir}"
             ).resolve()
+            if not self.dir_checkpoint.exists():
+                print(f"Directory {self.dir_checkpoint} not found. Created!")
+                (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
         else:
             self.dir_checkpoint = (
                 CHECKPOINTS_PATH
-                / f"checkpoint-ccdft_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
+                / f"checkpoint-ccdft_{self.basis}_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
             ).resolve()
-
-        if not self.dir_checkpoint.exists():
-            print(f"Directory {self.dir_checkpoint} not found. Created!")
-            (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
 
         self.model: torch.nn.Module = Model().to(self.device)
         if args.precision == "float64":
             self.dtype = torch.float64
             self.model.double()
 
-        self.optimizer = optim.AdamW(self.model.parameters(), lr=1e-3)
+        self.optimizer = optim.AdamW(self.model.parameters(), lr=1e-4)
 
         if self.with_eval:
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -71,9 +72,11 @@ class ModelDict:
         else:
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
-                T_max=1000,
+                T_max=250,
                 eta_min=1e-6,
             )
+
+        self.scaler = GradScaler("cuda")
 
         self.loss_multiplier = args.loss_multiplier
         self.loss_ene = torch.nn.L1Loss(reduction="none")
@@ -84,14 +87,14 @@ class ModelDict:
         Load the model from the checkpoint.
         """
         load_checkpoint = Path(
-            CHECKPOINTS_PATH / f"checkpoint-ccdft_{self.load}/"
+            CHECKPOINTS_PATH / f"checkpoint-ccdft_{self.basis}_{self.load}/"
         ).resolve()
         list_of_path = list(load_checkpoint.glob("*.pth"))
         if len(list_of_path) == 0:
-            print("No model found, use random initialization.")
+            print(f"No model found in {load_checkpoint}, use random initialization.")
         else:
             if self.load_epoch < 0:
-                min_loss = 10000
+                min_loss = None
                 if (load_checkpoint / "loss").exists():
                     for path in list((load_checkpoint / "loss").glob("train-loss-*")):
                         load_epoch = path.stem.split("-")[-1]
@@ -104,7 +107,7 @@ class ModelDict:
                         )
                         mean_loss += np.mean(data_loss["train_loss_ene_tot"])
                         print(mean_loss)
-                        if mean_loss < min_loss:
+                        if min_loss is None or mean_loss < min_loss:
                             min_loss = mean_loss
                             load_path = load_checkpoint / f"{load_epoch}.pth"
                 else:
@@ -143,7 +146,7 @@ class ModelDict:
         """
         self.optimizer.step()
 
-    def loss(self, batch):
+    def loss(self, batch, **kwargs):
         """
         Calculate the loss.
         """
@@ -152,8 +155,8 @@ class ModelDict:
         output_mat_real = batch["output"]
         output_mat = self.model(input_mat)
         loss_ene_mat = self.loss_ene(
-            output_mat * weight,
             output_mat_real * weight,
+            output_mat * weight,
         )
         loss_ene = torch.sum(loss_ene_mat)
 
@@ -162,7 +165,13 @@ class ModelDict:
             torch.sum(output_mat * weight),
         )
 
-        return loss_ene, loss_ene_tot
+        if getattr(kwargs, "data_weight", None) is None:
+            return loss_ene, loss_ene_tot
+        else:
+            return (
+                kwargs.get("data_weight") * loss_ene,
+                kwargs.get("data_weight") * loss_ene_tot,
+            )
 
     def tot_loss(self, loss_ene, loss_ene_tot):
         """
@@ -192,9 +201,17 @@ class ModelDict:
 
             for batch in database_train.data_gpu[name]:
                 self.zero_grad()
-                loss_ene, loss_ene_tot = self.loss(batch)
-                self.tot_loss(loss_ene, loss_ene_tot).backward()
-                self.step()
+
+                with torch.autocast(device_type="cuda", dtype=self.dtype):
+                    loss_ene, loss_ene_tot = self.loss(
+                        batch,
+                        data_weight=database_train.data_weight[name],
+                    )
+
+                self.scaler.scale(self.tot_loss(loss_ene, loss_ene_tot)).backward()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+
                 number_batch_name += len(batch["weight"])
                 loss_ene_name += loss_ene.item() * len(batch["weight"])
                 loss_ene_tot_name += loss_ene_tot.item()
@@ -218,7 +235,10 @@ class ModelDict:
 
             for batch in database_eval.data_gpu[name]:
                 with torch.no_grad():
-                    loss_ene, loss_ene_tot = self.loss(batch)
+                    loss_ene, loss_ene_tot = self.loss(
+                        batch,
+                        data_weight=database_eval.data_weight[name],
+                    )
                 number_batch_name += len(batch["weight"])
                 loss_ene_name += loss_ene.item() * len(batch["weight"])
                 loss_ene_tot_name += loss_ene_tot.item()
