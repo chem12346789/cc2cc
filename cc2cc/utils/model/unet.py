@@ -20,11 +20,11 @@ class Model(nn.Module):
 
     def __init__(
         self,
-        input_channels=1,
+        input_channels=4,
         hidden_channels=32,
         output_channels=1,
-        num_layers=1,
-        residual=-1,
+        num_layers=3,
+        residual=0,
     ):
         super().__init__()
         self.input_channels = input_channels
@@ -109,7 +109,7 @@ class Model(nn.Module):
         if self.residual < 10:
             t = x[:, [0], :, :]
             # x = torch.sigmoid(x)
-            x = self.inc(t)
+            x = self.inc(x[:, :, :, :])
             x_down = []
             for down in self.down_layers:
                 x_down.append(x)

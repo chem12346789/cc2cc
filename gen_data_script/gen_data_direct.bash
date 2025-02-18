@@ -22,8 +22,11 @@ export NVIDIA_VISIBLE_DEVICES=1
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')
 # export CUDA_VISIBLE_DEVICES=NUMBER_OF_GPU
 
-# nohup bash -c '~/anaconda3/envs/pyscf/bin/python gen_data.py -dl -0.5 0.5 11 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --name_mol MOL --precision float64'  > log/gen_data_MOL.log 2>&1 &
-# 
-nohup bash -c '~/anaconda3/envs/pyscf/bin/python gen_data.py -dl START END STEP --basis BASIS --extend_atom EXTEND_ATOM --extend_xyz 0' >log/gen_data_MOL.log 2>&1 &
+mkdir -p log
+mkdir -p validate
+mkdir -p data/grids_dft
+
+nohup bash -c '~/anaconda3/envs/pyscf/bin/python gen_data.py -dl -0.5 0.5 5 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --name_mol g2 --precision float64' >log/gen_data_g2.log 2>&1 &
+# nohup bash -c '~/anaconda3/envs/pyscf/bin/python gen_data.py -dl -0.5 0.5 11 --basis cc-pVDZ --extend_atom 0-1 --extend_xyz 0 --name_mol g2 --precision float64'  > log/gen_data_MOL.log 2>&1 &
 
 echo $! >>log/save_pid.txt 2>&1

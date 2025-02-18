@@ -108,8 +108,7 @@ class DataBase:
 
         self.data = {}
         self.data_gpu = {}
-        self.ene = {}
-        self.shape = {}
+        self.data_weight = {}  # weight for each data, some atom may have more weight
 
         self.name_list = []
         self.rng = np.random.default_rng()
@@ -127,6 +126,11 @@ class DataBase:
         ):
             name = f"{name_mol}_{self.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
 
+            if args.n_rad is not None and args.n_ang is not None:
+                name = f"{name}_{args.n_rad}_{args.n_ang}"
+            else:
+                name = f"{name}_default"
+
             path_name_ = DATA_PATH / f"data_{name}.npz"
             if not (path_name_).exists():
                 print(f"No file: {path_name_.as_posix():>40}", flush=True)
@@ -134,6 +138,18 @@ class DataBase:
             print(f"Load: {name:>40}", flush=True)
             self.name_list.append(name)
             self.load_data(name)
+
+        self.data_weight_mol = {}
+        for name in self.name_list:
+            name_mol = name.split(f"_{self.basis}_")[0]
+            if name_mol not in self.data_weight:
+                self.data_weight_mol[name_mol] = 1
+            else:
+                self.data_weight_mol[name_mol] += 1
+        for name in self.name_list:
+            name_mol = name.split(f"_{self.basis}_")[0]
+            self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
+        del self.data_weight_mol
 
     def load_data(self, name):
         """

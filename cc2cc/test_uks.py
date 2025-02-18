@@ -13,6 +13,7 @@ from cc2cc.utils import Grid, TestData
 
 def test_uks(
     mol,
+    grids,
     name,
     modeldict,
     data_record,
@@ -24,7 +25,7 @@ def test_uks(
     # 2.0 Prepare
     test_data = TestData(mol, name, xc_code="b3lyp")
     test_data.test_mol()
-    grids = Grid(test_data.mol)
+
     mdft = pyscf.dft.UKS(mol)
     mdft.xc = test_data.xc_code
     mdft.grids = grids
@@ -113,8 +114,7 @@ def test_uks(
         return vxc
 
     mdft.get_veff = types.MethodType(get_veff_modified, mdft)
-    mdft.conv_tol = 1e-4
-    mdft.conv_tol_grad = 1e-1
+    mdft.conv_tol = 1e-5
 
     mdft.kernel(dm0=test_data.mf_dm1)
     dm1_scf = mdft.make_rdm1()

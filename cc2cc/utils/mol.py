@@ -65,7 +65,8 @@ def extend(
         extend_atom = int(extend_atom)
         molecular[extend_atom][extend_xyz] += distance
     print("extend mol", molecular)
-    rotate(molecular)
+    rotate(molecular, verbose=True)
+    # rotate(molecular, rotation="random")
     return list(molecular), name
 
 
@@ -91,8 +92,9 @@ def gen_mole(
             dataset_name,
         )
     except Exception as e:
+        print(dir(e))
         print(f"Error: {name_mol} {extend_atom} {extend_xyz} {distance}")
-        print(e)
+        print(f"Exception: {repr(e)}")
         return None, None
 
     mol = pyscf.M(

@@ -26,6 +26,6 @@ export basis_args="cc-pVDZ"
 export load_pid_args="2520597"
 export dl_args="0 0 1"
 
-nohup bash -c "~/anaconda3/envs/pyscf/bin/python test.py -dl ${dl_args} --basis ${basis_args} --extend_atom 0 --extend_xyz 0 --precision float64 --load cycle1-${load_pid_args} --load_epoch 10000 --dataset g2" >log/test-${basis_args}-${load_pid_args}.log 2>&1 &
+nohup bash -c "~/anaconda3/envs/pyscf/bin/python test_model.py -dl ${dl_args} --basis ${basis_args} --extend_atom 0-1 --extend_xyz 0 --precision float64 --load cycle1-${load_pid_args} --load_epoch 100000 --dataset g2; echo DONE" >log/test-${basis_args}-${load_pid_args}.log 2>&1 &
 
 echo $! >>log/save_pid.txt 2>&1

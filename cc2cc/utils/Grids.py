@@ -251,12 +251,25 @@ class Grid(dft.gen_grid.Grids):
     This class is modified from pyscf.dft.gen_grid.Grids. Some default parameters are changed.
     """
 
-    def __init__(self, mol, level=LEVEL, period=PERIOD):
+    def __init__(
+        self,
+        mol,
+        level=LEVEL,
+        period=PERIOD,
+        n_rad=None,
+        n_ang=None,
+    ):
         super().__init__(mol)
-        self.n_rad, self.n_ang = (
-            RAD_GRIDS[level, period],
-            LEBEDEV_ORDER[ANG_ORDER[level, period]],
-        )
+
+        if n_rad is not None and n_ang is not None:
+            self.n_rad = n_rad
+            self.n_ang = n_ang
+        else:
+            self.n_rad, self.n_ang = (
+                RAD_GRIDS[level, period],
+                LEBEDEV_ORDER[ANG_ORDER[level, period]],
+            )
+
         print(f"n_rad: {self.n_rad}, n_ang: {self.n_ang}")
         self.natm = mol.natm
         self.coord_list = []
@@ -355,10 +368,10 @@ class Grid(dft.gen_grid.Grids):
 
     def gen_grids_matrix(self, mol, dm1_input, reset=False, xc_type="GGA"):
         if self.index_2d is None:
-            print("Warning: regenerate coor_cube!")
+            print("Warning: generate index!")
             self.gen_grids(mol, dm1_input)
         elif reset:
-            print("Warning: regenerate coor_cube!")
+            print("Warning: regenerate index!")
             self.gen_grids(mol, dm1_input)
         else:
             print("Warning: Use the existing coor_cube!")

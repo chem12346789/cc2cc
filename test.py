@@ -9,7 +9,7 @@ import os
 
 from cc2cc import add_args, test_rks, test_uks
 from cc2cc.utils import gen_mole
-from cc2cc.utils import ModelDict, DataRecord
+from cc2cc.utils import Grid, ModelDict, DataRecord
 from cc2cc.utils import MAIN_PATH
 
 
@@ -24,7 +24,7 @@ if __name__ == "__main__":
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
-    print(os.getpid())
+    print(f"PID: {os.getpid()}")
 
     # 1. Init the model
     modeldict = ModelDict(args)
@@ -33,7 +33,8 @@ if __name__ == "__main__":
 
     # 2. Test loop
     data_record = DataRecord(
-        MAIN_PATH / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}.csv"
+        MAIN_PATH / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}.csv",
+        if_continue=args.if_continue,
     )
 
     for (
@@ -58,14 +59,31 @@ if __name__ == "__main__":
         )
 
         if mol is None:
-            print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+            print(f"SKIP: {name}")
             continue
+
+        grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
+
+        if args.n_rad is not None and args.n_ang is not None:
+            name = f"{name}_{args.n_rad}_{args.n_ang}"
+        else:
+            name = f"{name}_default"
 
         if mol.spin == 0:
             test_rks(
-                mol, name, modeldict, data_record, lambda_=args.density_restriction
+                mol,
+                grids,
+                name,
+                modeldict,
+                data_record,
+                lambda_=args.density_restriction,
             )
         else:
             test_uks(
-                mol, name, modeldict, data_record, lambda_=args.density_restriction
+                mol,
+                grids,
+                name,
+                modeldict,
+                data_record,
+                lambda_=args.density_restriction,
             )
