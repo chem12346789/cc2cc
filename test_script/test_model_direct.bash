@@ -20,12 +20,23 @@ mkdir -p log
 mkdir -p validate
 mkdir -p data/grids_dft
 
-# export basis_args="Def2-TZVPD"
-export basis_args="cc-pVDZ"
-
 export load_pid_args="2520597"
 export dl_args="0 0 1"
+# export basis_args="Def2-TZVPD"
+export basis_args="cc-pVDZ"
+export n_rad_args="302"
+export n_ang_args="302"
+if [ -z "$n_rad_args" ]; then
+    export mol_args="--distance_list ${dl_args} --basis ${basis_args} --extend_atom 0 --extend_xyz 0"
+else
+    export mol_args="--distance_list ${dl_args} --basis ${basis_args} --n_rad ${n_rad_args} --n_ang ${n_ang_args} --extend_atom 0 --extend_xyz 0"
+fi
 
-nohup bash -c "~/anaconda3/envs/pyscf/bin/python test_model.py -dl ${dl_args} --basis ${basis_args} --extend_atom 0-1 --extend_xyz 0 --precision float64 --load cycle1-${load_pid_args} --load_epoch 100000 --dataset g2; echo DONE" >log/test-${basis_args}-${load_pid_args}.log 2>&1 &
+nohup bash <<EOF >log/test-${basis_args}-${load_pid_args}.log 2>&1 &
+echo Starting test_model.py at $(date)
+echo "${mol_args}"
+~/anaconda3/envs/pyscf/bin/python test_model.py ${mol_args} --precision float64 --load cycle1-${load_pid_args} --load_epoch 100000 --dataset g2
+echo DONE
+EOF
 
 echo $! >>log/save_pid.txt 2>&1
