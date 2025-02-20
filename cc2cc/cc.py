@@ -50,7 +50,7 @@ def cc(mol, grids, name):
         dm1_dft = mdft.make_rdm1(ao_repr=True)
         e_dft = mdft.energy_tot(dm1_dft)
 
-        rho_norm_matrix = grids.gen_grids_matrix(mol, dm1_dft, reset=True)
+        rho_norm_matrix = grids.gen_grids_matrix(mol, dm1_cc, reset=True)
         ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
         ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
         ao_value = ao_value[:4]
