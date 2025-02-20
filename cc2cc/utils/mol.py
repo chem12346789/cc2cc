@@ -57,10 +57,7 @@ def extend(
         distance_1_2_array = (
             molecular[atom_list_2[0]][1:4] - molecular[atom_list_1[0]][1:4]
         )
-        distance_1_2 = np.linalg.norm(distance_1_2_array)
-        molecular[atom_list_2, 1:] = molecular[atom_list_2, 1:] + (
-            distance * distance_1_2_array / distance_1_2
-        )
+        molecular[atom_list_2, 1:] += distance * distance_1_2_array
     else:
         extend_atom = int(extend_atom)
         molecular[extend_atom][extend_xyz] += distance

@@ -21,8 +21,8 @@ mkdir -p log
 mkdir -p validate
 mkdir -p data/grids_dft
 
-# export dl_args="-0.25 0.25 3"
-export dl_args="0 0 1"
+export dl_args="-0.5 0.5 11"
+# export dl_args="0 0 1"
 # export basis_args="Def2-TZVPD"
 export basis_args="cc-pVDZ"
 export n_rad_args=""
@@ -43,7 +43,7 @@ for cycle in {1..1}; do
 		load_args="--load cycle${prev_cycle} --load_epoch -10000"
 		~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 ${load_args} --density_restriction 1 || exit 1
 	else
-		~/anaconda3/envs/pyscf/bin/python gen_data.py ${mol_args} || exit 1
+		~/anaconda3/envs/pyscf/bin/python gen_data.py ${mol_args} --dataset g2 || exit 1
 	fi
 	echo "Training cycle ${cycle}"
 	echo "${load_args}"
