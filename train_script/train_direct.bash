@@ -21,12 +21,12 @@ mkdir -p log
 mkdir -p validate
 mkdir -p data/grids_dft
 
-export dl_args="-0.5 0.5 11"
-# export dl_args="0 0 1"
+# export dl_args="-0.5 0.5 11"
+export dl_args="0 0 1"
 # export basis_args="Def2-TZVPD"
 export basis_args="cc-pVDZ"
-export n_rad_args="302"
-export n_ang_args="302"
+export n_rad_args="110"
+export n_ang_args="110"
 if [ -z "$n_rad_args" ]; then
 	export mol_args="--distance_list ${dl_args} --basis ${basis_args} --extend_atom 0-1 --extend_xyz 0"
 else
@@ -45,9 +45,9 @@ for cycle in {1..1}; do
 	else
 		~/anaconda3/envs/pyscf/bin/python gen_data.py ${mol_args} --dataset g2 || exit 1
 	fi
-	# echo "Training cycle ${cycle}"
-	# echo "${load_args}"
-	# ~/anaconda3/envs/pyscf/bin/python train.py ${mol_args} --eval_step 5 --epoch 100100 --with_eval False --precision float64 --save_dir cycle${cycle}-${PID_THIS_RUN} --loss_multiplier 0.01 || exit 1
+	echo "Training cycle ${cycle}"
+	echo "${load_args}"
+	~/anaconda3/envs/pyscf/bin/python train.py ${mol_args} --eval_step 5 --epoch 100100 --with_eval False --precision float64 --save_dir cycle${cycle}-${PID_THIS_RUN} --loss_multiplier 0.01 || exit 1
 done
 echo DONE
 EOF

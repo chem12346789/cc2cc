@@ -56,7 +56,7 @@ def cc(mol, grids, name):
         ao_value = ao_value[:4]
         rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
         rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
-        print(np.sum(np.abs(rho_cc - rho_dft) * grids.weights))
+        print(f"Difference between cc and dft: {np.sum(np.abs(rho_cc - rho_dft) * grids.weights):.6f}")
 
         expr_rinv_dm2_r = oe.contract_expression(
             "ijkl,i,j,kl->",
