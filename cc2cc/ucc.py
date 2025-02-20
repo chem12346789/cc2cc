@@ -4,11 +4,10 @@ import pyscf
 # from pyscf.grad import ccsd as ccsd_grad
 import opt_einsum as oe
 
-from cc2cc.utils import Grid
 from cc2cc.utils import DATA_PATH, AU2KCALMOL, TEST
 
 
-def ucc(mol, name):
+def ucc(mol, grids, name):
     """
     Generate data for the UCCSD method.
     """
@@ -21,7 +20,6 @@ def ucc(mol, name):
     mdft.xc = "b3lyp"
     mdft.kernel(mf.make_rdm1())
 
-    grids = Grid(mol)
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
     ao_value = ao_value[:4]

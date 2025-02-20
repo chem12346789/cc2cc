@@ -8,11 +8,12 @@ import pyscf
 from pyscf import lib
 
 from cc2cc.utils import DATA_PATH, AU2KCALMOL, GENERATE_DATA
-from cc2cc.utils import Grid, TestData
+from cc2cc.utils import TestData
 
 
 def test_rks(
     mol,
+    grids,
     name,
     modeldict,
     data_record,
@@ -24,7 +25,6 @@ def test_rks(
     # 2.0 Prepare
     test_data = TestData(mol, name, xc_code="b3lyp")
     test_data.test_mol()
-    grids = Grid(test_data.mol)
     mdft = pyscf.dft.RKS(mol)
     mdft.xc = test_data.xc_code
     mdft.grids = grids
@@ -113,15 +113,14 @@ def test_rks(
         return vxc
 
     mdft.get_veff = types.MethodType(get_veff_modified, mdft)
-    mdft.conv_tol = 1e-5
-    mdft.conv_tol_grad = 1e-1
+    mdft.conv_tol = 1e-6
 
-    mdft.kernel(dm0=test_data.mf_dm1)
-    dm1_scf = mdft.make_rdm1()
+    # mdft.kernel(dm0=test_data.mf_dm1)
+    # dm1_scf = mdft.make_rdm1()
 
-    # mdft.max_cycle = -1
-    # mdft.kernel(dm0=test_data.dm1_cc)
-    # dm1_scf = test_data.dm1_dft.copy()
+    mdft.max_cycle = -1
+    mdft.kernel(dm0=test_data.dm1_cc)
+    dm1_scf = test_data.dm1_dft.copy()
 
     scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
 
@@ -174,18 +173,18 @@ def test_rks(
         mf.kernel()
         mycc = pyscf.cc.CCSD(mf)
         mycc.kernel()
-        dm1_cc = np.array(mycc.make_rdm1(ao_repr=True))
-        dm2_cc = np.array(mycc.make_rdm2(ao_repr=True))
+        dm1_cc = mycc.make_rdm1(ao_repr=True)
+        dm2_cc = mycc.make_rdm2(ao_repr=True)
         e_cc = mycc.e_tot
         dm1_dft = mdft.make_rdm1(ao_repr=True)
 
         test_dft = pyscf.scf.RKS(mol)
         test_dft.xc = "b3lyp"
-        e_dft = test_dft.energy_tot(dm1_cc)
+        e_dft = test_dft.energy_tot(dm1_dft)
 
         rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
         rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
-        rho_cube = grids.gen_cube_rho(mol, dm1_cc)
+        rho_cube = grids.gen_cube_rho(mol, dm1_dft)
 
         expr_rinv_dm2_r = oe.contract_expression(
             "ijkl,i,j,kl->",

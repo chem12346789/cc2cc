@@ -83,6 +83,20 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--n_rad",
+        type=int,
+        default=None,
+        help="Number of radial points. Default is None.",
+    )
+
+    parser.add_argument(
+        "--n_ang",
+        type=int,
+        default=None,
+        help="Number of angular points. Default is None.",
+    )
+
+    parser.add_argument(
         "--if_basis_str",
         type=str2bool,
         default=True,
@@ -171,17 +185,17 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--if_continue",
-        type=bool,
-        default=False,
-        help="Weather to continue the testing, will load the data. Default is False.",
-    )
-
-    parser.add_argument(
         "--density_restriction",
         type=float,
         default=0.0,
         help="Lambda for the density restriction. Default is 0.0.",
+    )
+
+    parser.add_argument(
+        "--if_continue",
+        type=str2bool,
+        default=False,
+        help="Weather to continue the data record. Default is False.",
     )
 
     args = parser.parse_args()

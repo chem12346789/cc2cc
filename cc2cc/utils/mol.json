@@ -1,1139 +1,2205 @@
 {
+    "molecular1": [
+        "c",
+        "ch",
+        "ch2-sing",
+        "ch2-trip",
+        "ch3",
+        "ch4",
+        "h",
+        "h2"
+    ],
+    "molecular2": [
+        "c",
+        "c2",
+        "c2h2",
+        "c2h4",
+        "c2h6",
+        "cch",
+        "ch",
+        "ch2-sing",
+        "ch2-trip",
+        "ch2c",
+        "ch2ch",
+        "ch3",
+        "ch4",
+        "h",
+        "h2"
+    ],
     "molecular": [
-        "PH3",
-        "P2",
-        "H2COH",
-        "CS",
-        "HOCl",
-        "H2",
-        "SH2",
-        "C2H2",
-        "SiH2_s3B1d",
-        "CH3SH",
-        "CO",
-        "SiH4",
-        "HCO",
-        "LiF",
-        "Si",
-        "C2H6",
-        "CN",
-        "S",
-        "H3CNH2",
-        "F",
-        "NaCl",
-        "CH3Cl",
-        "CH3SiH3",
-        "C2H3",
-        "ClF",
-        "PH2",
-        "SiH3",
-        "NO",
-        "LiH",
-        "NH2",
-        "CH",
-        "C",
-        "H2CO",
-        "CH3S",
-        "SiH2_s1A1d",
-        "N2H4",
-        "OH",
-        "H2O",
-        "HCl",
-        "CH2_s1A1d",
-        "Cl",
-        "Be",
-        "Al",
-        "CH3O",
-        "CH3OH",
-        "Na",
-        "CH3",
-        "P",
-        "C2H4",
-        "S2",
-        "SiO",
-        "H",
-        "C2H5",
-        "HCN",
-        "B",
-        "ClO",
-        "HF",
-        "O2",
-        "SO",
-        "NH",
-        "CH2_s3B1d",
-        "NH3",
-        "Si2H6",
-        "O",
-        "CCH",
-        "N",
-        "Si2",
-        "Li2",
-        "F2",
-        "CH4",
-        "SH",
-        "Li",
-        "N2",
-        "Cl2",
-        "H2O2",
-        "Na2",
-        "BeH",
-        "cyclobutene"
+        "allene",
+        "c",
+        "c2",
+        "c2h2",
+        "c2h4",
+        "c2h6",
+        "cch",
+        "ch",
+        "ch2-sing",
+        "ch2-trip",
+        "ch2c",
+        "ch2ch",
+        "ch3",
+        "ch4",
+        "h",
+        "h2",
+        "propane",
+        "propene",
+        "propyne"
     ],
     "spin": {
-        "PH3": 0,
-        "P2": 0,
-        "H2COH": 1,
-        "CS": 0,
-        "HOCl": 0,
-        "H2": 0,
-        "SH2": 0,
-        "C2H2": 0,
-        "SiH2_s3B1d": 2,
-        "CH3SH": 0,
-        "CO": 0,
-        "SiH4": 0,
-        "HCO": 1,
-        "LiF": 0,
-        "Si": 2,
-        "C2H6": 0,
-        "CN": 1,
-        "S": 2,
-        "H3CNH2": 0,
-        "F": 1,
-        "NaCl": 0,
-        "CH3Cl": 0,
-        "CH3SiH3": 0,
-        "C2H3": 1,
-        "ClF": 0,
-        "PH2": 1,
-        "SiH3": 1,
-        "NO": 1,
-        "LiH": 0,
-        "NH2": 1,
-        "CH": 1,
-        "C": 2,
-        "H2CO": 0,
-        "CH3S": 1,
-        "SiH2_s1A1d": 0,
-        "N2H4": 0,
-        "OH": 1,
-        "H2O": 0,
-        "HCl": 0,
-        "CH2_s1A1d": 0,
-        "Cl": 1,
-        "Be": 0,
-        "Al": 1,
-        "CH3O": 1,
-        "CH3OH": 0,
-        "Na": 1,
-        "CH3": 1,
-        "P": 3,
-        "C2H4": 0,
-        "S2": 2,
-        "SiO": 0,
-        "H": 1,
-        "C2H5": 1,
-        "HCN": 0,
-        "B": 1,
-        "ClO": 1,
-        "HF": 0,
-        "O2": 2,
-        "SO": 2,
-        "NH": 2,
-        "CH2_s3B1d": 2,
-        "NH3": 0,
-        "Si2H6": 0,
-        "O": 2,
-        "CCH": 1,
-        "N": 3,
-        "Si2": 2,
-        "Li2": 0,
-        "F2": 0,
-        "CH4": 0,
-        "SH": 1,
-        "Li": 1,
-        "N2": 0,
-        "Cl2": 0,
-        "H2O2": 0,
-        "Na2": 0,
-        "BeH": 1,
-        "cyclobutene": 0
+        "acetaldehyde": 0,
+        "acetic": 0,
+        "al": 1,
+        "alcl": 0,
+        "alcl3": 0,
+        "alf": 0,
+        "alf3": 0,
+        "alh": 0,
+        "alh3": 0,
+        "allene": 0,
+        "b": 1,
+        "b2": 2,
+        "b2h6": 0,
+        "be": 0,
+        "be2": 0,
+        "becl2": 0,
+        "bef2": 0,
+        "bf": 0,
+        "bf3": 0,
+        "bh": 0,
+        "bh3": 0,
+        "bhf2": 0,
+        "bn": 0,
+        "bn3pi": 2,
+        "c": 2,
+        "c-hcoh": 0,
+        "c-hono": 0,
+        "c-hooo": 1,
+        "c-n2h2": 0,
+        "c2": 0,
+        "c2h2": 0,
+        "c2h3f": 0,
+        "c2h4": 0,
+        "c2h5f": 0,
+        "c2h6": 0,
+        "cch": 1,
+        "ccl2": 0,
+        "cf": 1,
+        "cf2": 0,
+        "cf4": 0,
+        "ch": 1,
+        "ch2-sing": 0,
+        "ch2-trip": 2,
+        "ch2c": 0,
+        "ch2ch": 1,
+        "ch2f2": 0,
+        "ch2nh": 0,
+        "ch2nh2": 1,
+        "ch3": 1,
+        "ch3f": 0,
+        "ch3nh": 1,
+        "ch3nh2": 0,
+        "ch4": 0,
+        "cl": 1,
+        "cl2": 0,
+        "cl2o": 0,
+        "clcn": 0,
+        "clf": 0,
+        "clo": 1,
+        "cloo": 1,
+        "cn": 1,
+        "co": 0,
+        "co2": 0,
+        "cs": 0,
+        "cs2": 0,
+        "dioxirane": 0,
+        "ethanol": 0,
+        "f": 1,
+        "f2": 0,
+        "f2co": 0,
+        "f2o": 0,
+        "fccf": 0,
+        "fo2": 1,
+        "foof": 0,
+        "formic": 0,
+        "glyoxal": 0,
+        "h": 1,
+        "h2": 0,
+        "h2cn": 1,
+        "h2co": 0,
+        "h2o": 0,
+        "h2s": 0,
+        "hccf": 0,
+        "hcl": 0,
+        "hcn": 0,
+        "hcnh": 1,
+        "hcno": 0,
+        "hco": 1,
+        "hcof": 0,
+        "hf": 0,
+        "hnc": 0,
+        "hnco": 0,
+        "hnnn": 0,
+        "hno": 0,
+        "hocl": 0,
+        "hocn": 0,
+        "hof": 0,
+        "honc": 0,
+        "hoo": 1,
+        "hooh": 0,
+        "hs": 1,
+        "ketene": 0,
+        "methanol": 0,
+        "n": 3,
+        "n2": 0,
+        "n2h": 1,
+        "n2h4": 0,
+        "n2o": 0,
+        "nccn": 0,
+        "nh": 2,
+        "nh2": 1,
+        "nh2cl": 0,
+        "nh3": 0,
+        "no": 1,
+        "no2": 1,
+        "o": 2,
+        "o2": 2,
+        "o3": 0,
+        "oclo": 1,
+        "ocs": 0,
+        "of": 1,
+        "oh": 1,
+        "oxirane": 0,
+        "oxirene": 0,
+        "p": 3,
+        "p2": 0,
+        "p4": 0,
+        "ph3": 0,
+        "propane": 0,
+        "propene": 0,
+        "propyne": 0,
+        "s": 2,
+        "s2": 2,
+        "s2o": 0,
+        "s3": 0,
+        "s4-c2v": 0,
+        "si": 2,
+        "si2h6": 0,
+        "sif": 1,
+        "sif4": 0,
+        "sih": 1,
+        "sih3f": 0,
+        "sih4": 0,
+        "sio": 0,
+        "so": 2,
+        "so2": 0,
+        "so3": 0,
+        "ssh": 1,
+        "t-hcoh": 0,
+        "t-hono": 0,
+        "t-hooo": 1,
+        "t-n2h2": 0
     },
     "charge": {
-        "PH3": 0,
-        "P2": 0,
-        "H2COH": 0,
-        "CS": 0,
-        "HOCl": 0,
-        "H2": 0,
-        "SH2": 0,
-        "C2H2": 0,
-        "SiH2_s3B1d": 0,
-        "CH3SH": 0,
-        "CO": 0,
-        "SiH4": 0,
-        "HCO": 0,
-        "LiF": 0,
-        "Si": 0,
-        "C2H6": 0,
-        "CN": 0,
-        "S": 0,
-        "H3CNH2": 0,
-        "F": 0,
-        "NaCl": 0,
-        "CH3Cl": 0,
-        "CH3SiH3": 0,
-        "C2H3": 0,
-        "ClF": 0,
-        "PH2": 0,
-        "SiH3": 0,
-        "NO": 0,
-        "LiH": 0,
-        "NH2": 0,
-        "CH": 0,
-        "C": 0,
-        "H2CO": 0,
-        "CH3S": 0,
-        "SiH2_s1A1d": 0,
-        "N2H4": 0,
-        "OH": 0,
-        "H2O": 0,
-        "HCl": 0,
-        "CH2_s1A1d": 0,
-        "Cl": 0,
-        "Be": 0,
-        "Al": 0,
-        "CH3O": 0,
-        "CH3OH": 0,
-        "Na": 0,
-        "CH3": 0,
-        "P": 0,
-        "C2H4": 0,
-        "S2": 0,
-        "SiO": 0,
-        "H": 0,
-        "C2H5": 0,
-        "HCN": 0,
-        "B": 0,
-        "ClO": 0,
-        "HF": 0,
-        "O2": 0,
-        "SO": 0,
-        "NH": 0,
-        "CH2_s3B1d": 0,
-        "NH3": 0,
-        "Si2H6": 0,
-        "O": 0,
-        "CCH": 0,
-        "N": 0,
-        "Si2": 0,
-        "Li2": 0,
-        "F2": 0,
-        "CH4": 0,
-        "SH": 0,
-        "Li": 0,
-        "N2": 0,
-        "Cl2": 0,
-        "H2O2": 0,
-        "Na2": 0,
-        "BeH": 0,
-        "cyclobutene": 0
+        "acetaldehyde": 0,
+        "acetic": 0,
+        "al": 0,
+        "alcl": 0,
+        "alcl3": 0,
+        "alf": 0,
+        "alf3": 0,
+        "alh": 0,
+        "alh3": 0,
+        "allene": 0,
+        "b": 0,
+        "b2": 0,
+        "b2h6": 0,
+        "be": 0,
+        "be2": 0,
+        "becl2": 0,
+        "bef2": 0,
+        "bf": 0,
+        "bf3": 0,
+        "bh": 0,
+        "bh3": 0,
+        "bhf2": 0,
+        "bn": 0,
+        "bn3pi": 0,
+        "c": 0,
+        "c-hcoh": 0,
+        "c-hono": 0,
+        "c-hooo": 0,
+        "c-n2h2": 0,
+        "c2": 0,
+        "c2h2": 0,
+        "c2h3f": 0,
+        "c2h4": 0,
+        "c2h5f": 0,
+        "c2h6": 0,
+        "cch": 0,
+        "ccl2": 0,
+        "cf": 0,
+        "cf2": 0,
+        "cf4": 0,
+        "ch": 0,
+        "ch2-sing": 0,
+        "ch2-trip": 0,
+        "ch2c": 0,
+        "ch2ch": 0,
+        "ch2f2": 0,
+        "ch2nh": 0,
+        "ch2nh2": 0,
+        "ch3": 0,
+        "ch3f": 0,
+        "ch3nh": 0,
+        "ch3nh2": 0,
+        "ch4": 0,
+        "cl": 0,
+        "cl2": 0,
+        "cl2o": 0,
+        "clcn": 0,
+        "clf": 0,
+        "clo": 0,
+        "cloo": 0,
+        "cn": 0,
+        "co": 0,
+        "co2": 0,
+        "cs": 0,
+        "cs2": 0,
+        "dioxirane": 0,
+        "ethanol": 0,
+        "f": 0,
+        "f2": 0,
+        "f2co": 0,
+        "f2o": 0,
+        "fccf": 0,
+        "fo2": 0,
+        "foof": 0,
+        "formic": 0,
+        "glyoxal": 0,
+        "h": 0,
+        "h2": 0,
+        "h2cn": 0,
+        "h2co": 0,
+        "h2o": 0,
+        "h2s": 0,
+        "hccf": 0,
+        "hcl": 0,
+        "hcn": 0,
+        "hcnh": 0,
+        "hcno": 0,
+        "hco": 0,
+        "hcof": 0,
+        "hf": 0,
+        "hnc": 0,
+        "hnco": 0,
+        "hnnn": 0,
+        "hno": 0,
+        "hocl": 0,
+        "hocn": 0,
+        "hof": 0,
+        "honc": 0,
+        "hoo": 0,
+        "hooh": 0,
+        "hs": 0,
+        "ketene": 0,
+        "methanol": 0,
+        "n": 0,
+        "n2": 0,
+        "n2h": 0,
+        "n2h4": 0,
+        "n2o": 0,
+        "nccn": 0,
+        "nh": 0,
+        "nh2": 0,
+        "nh2cl": 0,
+        "nh3": 0,
+        "no": 0,
+        "no2": 0,
+        "o": 0,
+        "o2": 0,
+        "o3": 0,
+        "oclo": 0,
+        "ocs": 0,
+        "of": 0,
+        "oh": 0,
+        "oxirane": 0,
+        "oxirene": 0,
+        "p": 0,
+        "p2": 0,
+        "p4": 0,
+        "ph3": 0,
+        "propane": 0,
+        "propene": 0,
+        "propyne": 0,
+        "s": 0,
+        "s2": 0,
+        "s2o": 0,
+        "s3": 0,
+        "s4-c2v": 0,
+        "si": 0,
+        "si2h6": 0,
+        "sif": 0,
+        "sif4": 0,
+        "sih": 0,
+        "sih3f": 0,
+        "sih4": 0,
+        "sio": 0,
+        "so": 0,
+        "so2": 0,
+        "so3": 0,
+        "ssh": 0,
+        "t-hcoh": 0,
+        "t-hono": 0,
+        "t-hooo": 0,
+        "t-n2h2": 0
     },
-    "PH3": [
-        [
-            "P",
-            0.0,
-            0.0,
-            0.124619
-        ],
-        [
-            "H",
-            0.0,
-            1.200647,
-            -0.623095
-        ],
-        [
-            "H",
-            1.039791,
-            -0.600323,
-            -0.623095
-        ],
-        [
-            "H",
-            -1.039791,
-            -0.600323,
-            -0.623095
-        ]
-    ],
-    "P2": [
-        [
-            "P",
-            0.0,
-            0.0,
-            0.966144
-        ],
-        [
-            "P",
-            0.0,
-            0.0,
-            -0.966144
-        ]
-    ],
-    "H2COH": [
+    "reaction-atomic-energy": {
+        "h2": {
+            "systems": [
+                "h2",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2
+            ]
+        },
+        "alh3": {
+            "systems": [
+                "alh3",
+                "al",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                3
+            ]
+        },
+        "alh": {
+            "systems": [
+                "alh",
+                "al",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "sih4": {
+            "systems": [
+                "sih4",
+                "si",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                4
+            ]
+        },
+        "bh3": {
+            "systems": [
+                "bh3",
+                "b",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                3
+            ]
+        },
+        "bh": {
+            "systems": [
+                "bh",
+                "b",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "ch2-trip": {
+            "systems": [
+                "ch2-trip",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "sih": {
+            "systems": [
+                "sih",
+                "si",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "si2h6": {
+            "systems": [
+                "si2h6",
+                "si",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                6
+            ]
+        },
+        "ch3": {
+            "systems": [
+                "ch3",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                3
+            ]
+        },
+        "ch4": {
+            "systems": [
+                "ch4",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                4
+            ]
+        },
+        "b2h6": {
+            "systems": [
+                "b2h6",
+                "b",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                6
+            ]
+        },
+        "sih3f": {
+            "systems": [
+                "sih3f",
+                "si",
+                "h",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                3,
+                1
+            ]
+        },
+        "ph3": {
+            "systems": [
+                "ph3",
+                "p",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                3
+            ]
+        },
+        "c2h6": {
+            "systems": [
+                "c2h6",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                6
+            ]
+        },
+        "propane": {
+            "systems": [
+                "propane",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                3,
+                8
+            ]
+        },
+        "ch2-sing": {
+            "systems": [
+                "ch2-sing",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "ch": {
+            "systems": [
+                "ch",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "h2s": {
+            "systems": [
+                "h2s",
+                "h",
+                "s"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1
+            ]
+        },
+        "hs": {
+            "systems": [
+                "hs",
+                "h",
+                "s"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "c2h5f": {
+            "systems": [
+                "c2h5f",
+                "c",
+                "h",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                5,
+                1
+            ]
+        },
+        "ch3nh2": {
+            "systems": [
+                "ch3nh2",
+                "c",
+                "n",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                5
+            ]
+        },
+        "ch3f": {
+            "systems": [
+                "ch3f",
+                "c",
+                "f",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                3
+            ]
+        },
+        "propene": {
+            "systems": [
+                "propene",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                3,
+                6
+            ]
+        },
+        "nh3": {
+            "systems": [
+                "nh3",
+                "n",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                3
+            ]
+        },
+        "ethanol": {
+            "systems": [
+                "ethanol",
+                "c",
+                "o",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1,
+                6
+            ]
+        },
+        "ch3nh": {
+            "systems": [
+                "ch3nh",
+                "c",
+                "n",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                4
+            ]
+        },
+        "c2h4": {
+            "systems": [
+                "c2h4",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                4
+            ]
+        },
+        "methanol": {
+            "systems": [
+                "methanol",
+                "c",
+                "o",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                4
+            ]
+        },
+        "hcl": {
+            "systems": [
+                "hcl",
+                "h",
+                "cl"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "nh2": {
+            "systems": [
+                "nh2",
+                "n",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "nh": {
+            "systems": [
+                "nh",
+                "n",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "ch2nh2": {
+            "systems": [
+                "ch2nh2",
+                "c",
+                "n",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                4
+            ]
+        },
+        "bhf2": {
+            "systems": [
+                "bhf2",
+                "b",
+                "h",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                2
+            ]
+        },
+        "h2o": {
+            "systems": [
+                "h2o",
+                "h",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1
+            ]
+        },
+        "hf": {
+            "systems": [
+                "hf",
+                "h",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "ch2ch": {
+            "systems": [
+                "ch2ch",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                3
+            ]
+        },
+        "oh": {
+            "systems": [
+                "oh",
+                "o",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "propyne": {
+            "systems": [
+                "propyne",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                3,
+                4
+            ]
+        },
+        "acetaldehyde": {
+            "systems": [
+                "acetaldehyde",
+                "c",
+                "o",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1,
+                4
+            ]
+        },
+        "allene": {
+            "systems": [
+                "allene",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                3,
+                4
+            ]
+        },
+        "sif4": {
+            "systems": [
+                "sif4",
+                "si",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                4
+            ]
+        },
+        "bf3": {
+            "systems": [
+                "bf3",
+                "b",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                3
+            ]
+        },
+        "c2h3f": {
+            "systems": [
+                "c2h3f",
+                "c",
+                "f",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1,
+                3
+            ]
+        },
+        "oxirane": {
+            "systems": [
+                "oxirane",
+                "c",
+                "o",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1,
+                4
+            ]
+        },
+        "ch2f2": {
+            "systems": [
+                "ch2f2",
+                "c",
+                "f",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2,
+                2
+            ]
+        },
+        "alf3": {
+            "systems": [
+                "alf3",
+                "al",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                3
+            ]
+        },
+        "bef2": {
+            "systems": [
+                "bef2",
+                "be",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "ch2c": {
+            "systems": [
+                "ch2c",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                2
+            ]
+        },
+        "n2h4": {
+            "systems": [
+                "n2h4",
+                "h",
+                "n"
+            ],
+            "stoichiometry": [
+                -1,
+                4,
+                2
+            ]
+        },
+        "ch2nh": {
+            "systems": [
+                "ch2nh",
+                "c",
+                "n",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                3
+            ]
+        },
+        "alf": {
+            "systems": [
+                "alf",
+                "al",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "acetic": {
+            "systems": [
+                "acetic",
+                "c",
+                "o",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                2,
+                4
+            ]
+        },
+        "c2h2": {
+            "systems": [
+                "c2h2",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                2
+            ]
+        },
+        "h2co": {
+            "systems": [
+                "h2co",
+                "h",
+                "c",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1,
+                1
+            ]
+        },
+        "h2cn": {
+            "systems": [
+                "h2cn",
+                "h",
+                "c",
+                "n"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1,
+                1
+            ]
+        },
+        "bf": {
+            "systems": [
+                "bf",
+                "b",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "becl2": {
+            "systems": [
+                "becl2",
+                "be",
+                "cl"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "t-hcoh": {
+            "systems": [
+                "t-hcoh",
+                "c",
+                "o",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                2
+            ]
+        },
+        "alcl3": {
+            "systems": [
+                "alcl3",
+                "al",
+                "cl"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                3
+            ]
+        },
+        "c-hcoh": {
+            "systems": [
+                "c-hcoh",
+                "c",
+                "o",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                2
+            ]
+        },
+        "alcl": {
+            "systems": [
+                "alcl",
+                "al",
+                "cl"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "ketene": {
+            "systems": [
+                "ketene",
+                "c",
+                "o",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1,
+                2
+            ]
+        },
+        "sif": {
+            "systems": [
+                "sif",
+                "si",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "formic": {
+            "systems": [
+                "formic",
+                "c",
+                "o",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2,
+                2
+            ]
+        },
+        "hcnh": {
+            "systems": [
+                "hcnh",
+                "c",
+                "n",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                2
+            ]
+        },
+        "glyoxal": {
+            "systems": [
+                "glyoxal",
+                "c",
+                "o",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                2,
+                2
+            ]
+        },
+        "hcof": {
+            "systems": [
+                "hcof",
+                "c",
+                "o",
+                "f",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                1,
+                1
+            ]
+        },
+        "nh2cl": {
+            "systems": [
+                "nh2cl",
+                "n",
+                "cl",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                2
+            ]
+        },
+        "cf4": {
+            "systems": [
+                "cf4",
+                "c",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                4
+            ]
+        },
+        "hccf": {
+            "systems": [
+                "hccf",
+                "c",
+                "f",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1,
+                1
+            ]
+        },
+        "hcn": {
+            "systems": [
+                "hcn",
+                "h",
+                "c",
+                "n"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                1
+            ]
+        },
+        "hnc": {
+            "systems": [
+                "hnc",
+                "h",
+                "c",
+                "n"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                1
+            ]
+        },
+        "cch": {
+            "systems": [
+                "cch",
+                "c",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1
+            ]
+        },
+        "hco": {
+            "systems": [
+                "hco",
+                "h",
+                "c",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                1
+            ]
+        },
+        "co": {
+            "systems": [
+                "co",
+                "c",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "oxirene": {
+            "systems": [
+                "oxirene",
+                "c",
+                "o",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1,
+                2
+            ]
+        },
+        "f2co": {
+            "systems": [
+                "f2co",
+                "c",
+                "o",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                2
+            ]
+        },
+        "hocn": {
+            "systems": [
+                "hocn",
+                "c",
+                "o",
+                "n",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                1,
+                1
+            ]
+        },
+        "hooh": {
+            "systems": [
+                "hooh",
+                "h",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                2
+            ]
+        },
+        "t-n2h2": {
+            "systems": [
+                "t-n2h2",
+                "h",
+                "n"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                2
+            ]
+        },
+        "hnco": {
+            "systems": [
+                "hnco",
+                "c",
+                "o",
+                "n",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                1,
+                1
+            ]
+        },
+        "c-n2h2": {
+            "systems": [
+                "c-n2h2",
+                "h",
+                "n"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                2
+            ]
+        },
+        "cf2": {
+            "systems": [
+                "cf2",
+                "c",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "co2": {
+            "systems": [
+                "co2",
+                "c",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "fccf": {
+            "systems": [
+                "fccf",
+                "c",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                2
+            ]
+        },
+        "dioxirane": {
+            "systems": [
+                "dioxirane",
+                "c",
+                "o",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2,
+                2
+            ]
+        },
+        "cf": {
+            "systems": [
+                "cf",
+                "c",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "ssh": {
+            "systems": [
+                "ssh",
+                "s",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1
+            ]
+        },
+        "hocl": {
+            "systems": [
+                "hocl",
+                "h",
+                "o",
+                "cl"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                1
+            ]
+        },
+        "nccn": {
+            "systems": [
+                "nccn",
+                "n",
+                "c"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                2
+            ]
+        },
+        "n2": {
+            "systems": [
+                "n2",
+                "n"
+            ],
+            "stoichiometry": [
+                -1,
+                2
+            ]
+        },
+        "n2h": {
+            "systems": [
+                "n2h",
+                "n",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1
+            ]
+        },
+        "ocs": {
+            "systems": [
+                "ocs",
+                "o",
+                "c",
+                "s"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                1
+            ]
+        },
+        "sio": {
+            "systems": [
+                "sio",
+                "si",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "clcn": {
+            "systems": [
+                "clcn",
+                "cl",
+                "c",
+                "n"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                1
+            ]
+        },
+        "hoo": {
+            "systems": [
+                "hoo",
+                "h",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "hcno": {
+            "systems": [
+                "hcno",
+                "c",
+                "o",
+                "n",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                1,
+                1
+            ]
+        },
+        "honc": {
+            "systems": [
+                "honc",
+                "c",
+                "o",
+                "n",
+                "h"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                1,
+                1
+            ]
+        },
+        "hno": {
+            "systems": [
+                "hno",
+                "h",
+                "n",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                1
+            ]
+        },
+        "hof": {
+            "systems": [
+                "hof",
+                "h",
+                "o",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                1
+            ]
+        },
+        "c-hono": {
+            "systems": [
+                "c-hono",
+                "h",
+                "n",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                2
+            ]
+        },
+        "t-hono": {
+            "systems": [
+                "t-hono",
+                "h",
+                "n",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1,
+                2
+            ]
+        },
+        "cs2": {
+            "systems": [
+                "cs2",
+                "c",
+                "s"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "hnnn": {
+            "systems": [
+                "hnnn",
+                "h",
+                "n"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                3
+            ]
+        },
+        "cs": {
+            "systems": [
+                "cs",
+                "c",
+                "s"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "cn": {
+            "systems": [
+                "cn",
+                "c",
+                "n"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "so3": {
+            "systems": [
+                "so3",
+                "s",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                3
+            ]
+        },
+        "ccl2": {
+            "systems": [
+                "ccl2",
+                "c",
+                "cl"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "bn3pi": {
+            "systems": [
+                "bn3pi",
+                "b",
+                "n"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "so2": {
+            "systems": [
+                "so2",
+                "s",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "no": {
+            "systems": [
+                "no",
+                "n",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "so": {
+            "systems": [
+                "so",
+                "s",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "n2o": {
+            "systems": [
+                "n2o",
+                "n",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1
+            ]
+        },
+        "c-hooo": {
+            "systems": [
+                "c-hooo",
+                "h",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                3
+            ]
+        },
+        "s2": {
+            "systems": [
+                "s2",
+                "s"
+            ],
+            "stoichiometry": [
+                -1,
+                2
+            ]
+        },
+        "p4": {
+            "systems": [
+                "p4",
+                "p"
+            ],
+            "stoichiometry": [
+                -1,
+                4
+            ]
+        },
+        "cl2": {
+            "systems": [
+                "cl2",
+                "cl"
+            ],
+            "stoichiometry": [
+                -1,
+                2
+            ]
+        },
+        "o2": {
+            "systems": [
+                "o2",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                2
+            ]
+        },
+        "f2": {
+            "systems": [
+                "f2",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                2
+            ]
+        },
+        "t-hooo": {
+            "systems": [
+                "t-hooo",
+                "h",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                3
+            ]
+        },
+        "s2o": {
+            "systems": [
+                "s2o",
+                "s",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1
+            ]
+        },
+        "p2": {
+            "systems": [
+                "p2",
+                "p"
+            ],
+            "stoichiometry": [
+                -1,
+                2
+            ]
+        },
+        "clf": {
+            "systems": [
+                "clf",
+                "cl",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "no2": {
+            "systems": [
+                "no2",
+                "n",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "clo": {
+            "systems": [
+                "clo",
+                "cl",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "s3": {
+            "systems": [
+                "s3",
+                "s"
+            ],
+            "stoichiometry": [
+                -1,
+                3
+            ]
+        },
+        "cl2o": {
+            "systems": [
+                "cl2o",
+                "cl",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1
+            ]
+        },
+        "s4-c2v": {
+            "systems": [
+                "s4-c2v",
+                "s"
+            ],
+            "stoichiometry": [
+                -1,
+                4
+            ]
+        },
+        "of": {
+            "systems": [
+                "of",
+                "o",
+                "f"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "c2": {
+            "systems": [
+                "c2",
+                "c"
+            ],
+            "stoichiometry": [
+                -1,
+                2
+            ]
+        },
+        "oclo": {
+            "systems": [
+                "oclo",
+                "o",
+                "cl"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1
+            ]
+        },
+        "f2o": {
+            "systems": [
+                "f2o",
+                "f",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                1
+            ]
+        },
+        "b2": {
+            "systems": [
+                "b2",
+                "b"
+            ],
+            "stoichiometry": [
+                -1,
+                2
+            ]
+        },
+        "fo2": {
+            "systems": [
+                "fo2",
+                "f",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "cloo": {
+            "systems": [
+                "cloo",
+                "cl",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                2
+            ]
+        },
+        "foof": {
+            "systems": [
+                "foof",
+                "f",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                2,
+                2
+            ]
+        },
+        "o3": {
+            "systems": [
+                "o3",
+                "o"
+            ],
+            "stoichiometry": [
+                -1,
+                3
+            ]
+        },
+        "bn": {
+            "systems": [
+                "bn",
+                "b",
+                "n"
+            ],
+            "stoichiometry": [
+                -1,
+                1,
+                1
+            ]
+        },
+        "be2": {
+            "systems": [
+                "be2",
+                "be"
+            ],
+            "stoichiometry": [
+                -1,
+                2
+            ]
+        }
+    },
+    "acetaldehyde": [
         [
             "C",
-            0.687448,
-            0.029626,
-            -0.082014
+            0.463403,
+            0.463403,
+            0.0
         ],
         [
             "O",
-            -0.672094,
-            -0.125648,
-            0.030405
-        ],
-        [
-            "H",
-            -1.09185,
-            0.740282,
-            -0.095167
-        ],
-        [
-            "H",
-            1.122783,
-            0.975263,
-            0.225993
-        ],
-        [
-            "H",
-            1.221131,
-            -0.888116,
-            0.118015
-        ]
-    ],
-    "CS": [
-        [
-            "C",
-            0.0,
-            0.0,
-            -1.123382
-        ],
-        [
-            "S",
-            0.0,
-            0.0,
-            0.421268
-        ]
-    ],
-    "HOCl": [
-        [
-            "O",
-            0.036702,
-            1.113517,
+            0.374658,
+            0.374658,
             0.0
         ],
         [
             "H",
-            -0.917548,
-            1.328879,
+            1.458495,
+            1.458495,
             0.0
-        ],
-        [
-            "Cl",
-            0.036702,
-            -0.602177,
-            0.0
-        ]
-    ],
-    "H2": [
-        [
-            "H",
-            0.0,
-            0.0,
-            0.368583
-        ],
-        [
-            "H",
-            0.0,
-            0.0,
-            -0.368583
-        ]
-    ],
-    "SH2": [
-        [
-            "S",
-            0.0,
-            0.0,
-            0.102135
-        ],
-        [
-            "H",
-            0.0,
-            0.974269,
-            -0.817083
-        ],
-        [
-            "H",
-            0.0,
-            -0.974269,
-            -0.817083
-        ]
-    ],
-    "C2H2": [
-        [
-            "C",
-            0.0,
-            0.0,
-            0.60808
         ],
         [
             "C",
-            0.0,
-            0.0,
-            -0.60808
+            -0.71183,
+            -0.71183,
+            0.0
         ],
         [
             "H",
-            0.0,
-            0.0,
-            -1.67399
+            -1.644095,
+            -1.644095,
+            0.0
         ],
         [
             "H",
-            0.0,
-            0.0,
-            1.67399
+            -0.660551,
+            -0.660551,
+            0.87844
+        ],
+        [
+            "H",
+            -0.660551,
+            -0.660551,
+            -0.87844
         ]
     ],
-    "SiH2_s3B1d": [
-        [
-            "Si",
-            0.0,
-            0.0,
-            0.094869
-        ],
-        [
-            "H",
-            0.0,
-            1.271862,
-            -0.664083
-        ],
-        [
-            "H",
-            0.0,
-            -1.271862,
-            -0.664083
-        ]
-    ],
-    "CH3SH": [
+    "acetic": [
         [
             "C",
-            -0.047953,
-            1.149519,
+            0.155074,
+            0.155074,
             0.0
-        ],
-        [
-            "S",
-            -0.047953,
-            -0.664856,
-            0.0
-        ],
-        [
-            "H",
-            1.283076,
-            -0.823249,
-            0.0
-        ],
-        [
-            "H",
-            -1.092601,
-            1.461428,
-            0.0
-        ],
-        [
-            "H",
-            0.432249,
-            1.551207,
-            0.892259
-        ],
-        [
-            "H",
-            0.432249,
-            1.551207,
-            -0.892259
-        ]
-    ],
-    "CO": [
-        [
-            "O",
-            0.0,
-            0.0,
-            0.493003
         ],
         [
             "C",
-            0.0,
-            0.0,
-            -0.657337
-        ]
-    ],
-    "SiH4": [
-        [
-            "Si",
-            0.0,
-            0.0,
-            0.0
-        ],
-        [
-            "H",
-            0.856135,
-            0.856135,
-            0.856135
-        ],
-        [
-            "H",
-            -0.856135,
-            -0.856135,
-            0.856135
-        ],
-        [
-            "H",
-            -0.856135,
-            0.856135,
-            -0.856135
-        ],
-        [
-            "H",
-            0.856135,
-            -0.856135,
-            -0.856135
-        ]
-    ],
-    "HCO": [
-        [
-            "C",
-            0.06256,
-            0.593926,
+            -0.90799,
+            -0.90799,
             0.0
         ],
         [
             "O",
-            0.06256,
-            -0.596914,
+            1.344716,
+            1.344716,
             0.0
-        ],
-        [
-            "H",
-            -0.875835,
-            1.211755,
-            0.0
-        ]
-    ],
-    "LiF": [
-        [
-            "Li",
-            0.0,
-            0.0,
-            -1.174965
-        ],
-        [
-            "F",
-            0.0,
-            0.0,
-            0.391655
-        ]
-    ],
-    "Si": [
-        [
-            "Si",
-            0.0,
-            0.0,
-            0.0
-        ]
-    ],
-    "C2H6": [
-        [
-            "C",
-            0.0,
-            0.0,
-            0.762209
-        ],
-        [
-            "C",
-            0.0,
-            0.0,
-            -0.762209
-        ],
-        [
-            "H",
-            0.0,
-            1.018957,
-            1.157229
-        ],
-        [
-            "H",
-            -0.882443,
-            -0.509479,
-            1.157229
-        ],
-        [
-            "H",
-            0.882443,
-            -0.509479,
-            1.157229
-        ],
-        [
-            "H",
-            0.0,
-            -1.018957,
-            -1.157229
-        ],
-        [
-            "H",
-            -0.882443,
-            0.509479,
-            -1.157229
-        ],
-        [
-            "H",
-            0.882443,
-            0.509479,
-            -1.157229
-        ]
-    ],
-    "CN": [
-        [
-            "C",
-            0.0,
-            0.0,
-            -0.611046
-        ],
-        [
-            "N",
-            0.0,
-            0.0,
-            0.523753
-        ]
-    ],
-    "S": [
-        [
-            "S",
-            0.0,
-            0.0,
-            0.0
-        ]
-    ],
-    "H3CNH2": [
-        [
-            "C",
-            0.051736,
-            0.704422,
-            0.0
-        ],
-        [
-            "N",
-            0.051736,
-            -0.759616,
-            0.0
-        ],
-        [
-            "H",
-            -0.941735,
-            1.176192,
-            0.0
-        ],
-        [
-            "H",
-            -0.458181,
-            -1.099433,
-            0.81237
-        ],
-        [
-            "H",
-            -0.458181,
-            -1.099433,
-            -0.81237
-        ],
-        [
-            "H",
-            0.592763,
-            1.056727,
-            0.88067
-        ],
-        [
-            "H",
-            0.592763,
-            1.056727,
-            -0.88067
-        ]
-    ],
-    "F": [
-        [
-            "F",
-            0.0,
-            0.0,
-            0.0
-        ]
-    ],
-    "NaCl": [
-        [
-            "Na",
-            0.0,
-            0.0,
-            -1.45166
-        ],
-        [
-            "Cl",
-            0.0,
-            0.0,
-            0.93931
-        ]
-    ],
-    "CH3Cl": [
-        [
-            "C",
-            0.0,
-            0.0,
-            -1.121389
-        ],
-        [
-            "Cl",
-            0.0,
-            0.0,
-            0.655951
-        ],
-        [
-            "H",
-            0.0,
-            1.029318,
-            -1.47428
-        ],
-        [
-            "H",
-            0.891415,
-            -0.514659,
-            -1.47428
-        ],
-        [
-            "H",
-            -0.891415,
-            -0.514659,
-            -1.47428
-        ]
-    ],
-    "CH3SiH3": [
-        [
-            "C",
-            0.0,
-            0.0,
-            -1.244466
-        ],
-        [
-            "Si",
-            0.0,
-            0.0,
-            0.635703
-        ],
-        [
-            "H",
-            0.0,
-            -1.019762,
-            -1.636363
-        ],
-        [
-            "H",
-            -0.88314,
-            0.509881,
-            -1.636363
-        ],
-        [
-            "H",
-            0.88314,
-            0.509881,
-            -1.636363
-        ],
-        [
-            "H",
-            0.0,
-            1.391234,
-            1.158682
-        ],
-        [
-            "H",
-            -1.204844,
-            -0.695617,
-            1.158682
-        ],
-        [
-            "H",
-            1.204844,
-            -0.695617,
-            1.158682
-        ]
-    ],
-    "C2H3": [
-        [
-            "C",
-            0.049798,
-            -0.576272,
-            0.0
-        ],
-        [
-            "C",
-            0.049798,
-            0.710988,
-            0.0
-        ],
-        [
-            "H",
-            -0.87675,
-            -1.151844,
-            0.0
-        ],
-        [
-            "H",
-            0.969183,
-            -1.154639,
-            0.0
-        ],
-        [
-            "H",
-            -0.690013,
-            1.498185,
-            0.0
-        ]
-    ],
-    "ClF": [
-        [
-            "F",
-            0.0,
-            0.0,
-            -1.084794
-        ],
-        [
-            "Cl",
-            0.0,
-            0.0,
-            0.574302
-        ]
-    ],
-    "PH2": [
-        [
-            "P",
-            0.0,
-            0.0,
-            0.115396
-        ],
-        [
-            "H",
-            0.0,
-            1.025642,
-            -0.865468
-        ],
-        [
-            "H",
-            0.0,
-            -1.025642,
-            -0.865468
-        ]
-    ],
-    "SiH3": [
-        [
-            "Si",
-            0.0,
-            0.0,
-            0.079299
-        ],
-        [
-            "H",
-            0.0,
-            1.41328,
-            -0.370061
-        ],
-        [
-            "H",
-            1.223937,
-            -0.70664,
-            -0.370061
-        ],
-        [
-            "H",
-            -1.223937,
-            -0.70664,
-            -0.370061
-        ]
-    ],
-    "NO": [
-        [
-            "N",
-            0.0,
-            0.0,
-            -0.609442
         ],
         [
             "O",
-            0.0,
-            0.0,
-            0.533261
-        ]
-    ],
-    "LiH": [
-        [
-            "Li",
-            0.0,
-            0.0,
-            0.41
-        ],
-        [
-            "H",
-            0.0,
-            0.0,
-            -1.23
-        ]
-    ],
-    "NH2": [
-        [
-            "N",
-            0.0,
-            0.0,
-            0.14169
-        ],
-        [
-            "H",
-            0.0,
-            0.806442,
-            -0.495913
-        ],
-        [
-            "H",
-            0.0,
-            -0.806442,
-            -0.495913
-        ]
-    ],
-    "CH": [
-        [
-            "C",
-            0.0,
-            0.0,
-            0.160074
-        ],
-        [
-            "H",
-            0.0,
-            0.0,
-            -0.960446
-        ]
-    ],
-    "C": [
-        [
-            "C",
-            0.0,
-            0.0,
-            0.0
-        ]
-    ],
-    "H2CO": [
-        [
-            "O",
-            0.0,
-            0.0,
-            0.683501
-        ],
-        [
-            "C",
-            0.0,
-            0.0,
-            -0.536614
-        ],
-        [
-            "H",
-            0.0,
-            0.93439,
-            -1.124164
-        ],
-        [
-            "H",
-            0.0,
-            -0.93439,
-            -1.124164
-        ]
-    ],
-    "CH3S": [
-        [
-            "C",
-            -0.003856,
-            1.106222,
-            0.0
-        ],
-        [
-            "S",
-            -0.003856,
-            -0.692579,
+            -0.384989,
+            -0.384989,
             0.0
         ],
         [
             "H",
-            1.043269,
-            1.427057,
+            0.361264,
+            0.361264,
             0.0
         ],
         [
             "H",
-            -0.479217,
-            1.508437,
-            0.895197
-        ],
-        [
-            "H",
-            -0.479217,
-            1.508437,
-            -0.895197
-        ]
-    ],
-    "SiH2_s1A1d": [
-        [
-            "Si",
-            0.0,
-            0.0,
-            0.131272
-        ],
-        [
-            "H",
-            0.0,
-            1.096938,
-            -0.918905
-        ],
-        [
-            "H",
-            0.0,
-            -1.096938,
-            -0.918905
-        ]
-    ],
-    "N2H4": [
-        [
-            "N",
-            0.0,
-            0.718959,
-            -0.077687
-        ],
-        [
-            "N",
-            0.0,
-            -0.718959,
-            -0.077687
-        ],
-        [
-            "H",
-            0.211082,
-            1.092752,
-            0.847887
-        ],
-        [
-            "H",
-            -0.948214,
-            1.005026,
-            -0.304078
-        ],
-        [
-            "H",
-            -0.211082,
-            -1.092752,
-            0.847887
-        ],
-        [
-            "H",
-            0.948214,
-            -1.005026,
-            -0.304078
-        ]
-    ],
-    "OH": [
-        [
-            "O",
-            0.0,
-            0.0,
-            0.108786
-        ],
-        [
-            "H",
-            0.0,
-            0.0,
-            -0.870284
-        ]
-    ],
-    "H2O": [
-        [
-            "O",
-            0.0,
-            0.0,
-            0.119262
-        ],
-        [
-            "H",
-            0.0,
-            0.763239,
-            -0.477047
-        ],
-        [
-            "H",
-            0.0,
-            -0.763239,
-            -0.477047
-        ]
-    ],
-    "HCl": [
-        [
-            "Cl",
-            0.0,
-            0.0,
-            0.07111
-        ],
-        [
-            "H",
-            0.0,
-            0.0,
-            -1.208868
-        ]
-    ],
-    "CH2_s1A1d": [
-        [
-            "C",
-            0.0,
-            0.0,
-            0.174343
-        ],
-        [
-            "H",
-            0.0,
-            0.862232,
-            -0.523029
-        ],
-        [
-            "H",
-            0.0,
-            -0.862232,
-            -0.523029
-        ]
-    ],
-    "Cl": [
-        [
-            "Cl",
-            0.0,
-            0.0,
+            -0.441543,
+            -0.441543,
             0.0
-        ]
-    ],
-    "Be": [
+        ],
         [
-            "Be",
-            0.0,
-            0.0,
-            0.0
+            "H",
+            -1.540021,
+            -1.540021,
+            0.879585
+        ],
+        [
+            "H",
+            -1.540021,
+            -1.540021,
+            -0.879585
         ]
     ],
-    "Al": [
+    "al": [
         [
             "Al",
             0.0,
@@ -1141,257 +2207,171 @@
             0.0
         ]
     ],
-    "CH3O": [
+    "alcl": [
         [
-            "C",
-            -0.008618,
-            -0.586475,
-            0.0
-        ],
-        [
-            "O",
-            -0.008618,
-            0.799541,
-            0.0
-        ],
-        [
-            "H",
-            1.055363,
-            -0.868756,
-            0.0
-        ],
-        [
-            "H",
-            -0.467358,
-            -1.004363,
-            0.903279
-        ],
-        [
-            "H",
-            -0.467358,
-            -1.004363,
-            -0.903279
-        ]
-    ],
-    "CH3OH": [
-        [
-            "C",
-            -0.047131,
-            0.664389,
-            0.0
-        ],
-        [
-            "O",
-            -0.047131,
-            -0.758551,
-            0.0
-        ],
-        [
-            "H",
-            -1.092995,
-            0.969785,
-            0.0
-        ],
-        [
-            "H",
-            0.878534,
-            -1.048458,
-            0.0
-        ],
-        [
-            "H",
-            0.437145,
-            1.080376,
-            0.891772
-        ],
-        [
-            "H",
-            0.437145,
-            1.080376,
-            -0.891772
-        ]
-    ],
-    "Na": [
-        [
-            "Na",
+            "Al",
             0.0,
             0.0,
+            -1.213241
+        ],
+        [
+            "Cl",
+            0.0,
+            0.0,
+            0.927773
+        ]
+    ],
+    "alcl3": [
+        [
+            "Al",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "Cl",
+            2.070971,
+            2.070971,
+            0.0
+        ],
+        [
+            "Cl",
+            -1.035485,
+            -1.035485,
+            0.0
+        ],
+        [
+            "Cl",
+            -1.035485,
+            -1.035485,
             0.0
         ]
     ],
-    "CH3": [
+    "alf": [
         [
-            "C",
+            "Al",
+            0.0,
+            0.0,
+            0.680339
+        ],
+        [
+            "F",
+            0.0,
+            0.0,
+            -0.982712
+        ]
+    ],
+    "alf3": [
+        [
+            "Al",
             0.0,
             0.0,
             0.0
         ],
         [
-            "H",
-            0.0,
-            1.07841,
+            "F",
+            1.631766,
+            1.631766,
             0.0
         ],
         [
-            "H",
-            0.93393,
-            -0.539205,
+            "F",
+            -0.815883,
+            -0.815883,
             0.0
         ],
         [
-            "H",
-            -0.93393,
-            -0.539205,
+            "F",
+            -0.815883,
+            -0.815883,
             0.0
         ]
     ],
-    "P": [
+    "alh": [
         [
-            "P",
+            "Al",
             0.0,
             0.0,
-            0.0
-        ]
-    ],
-    "C2H4": [
-        [
-            "C",
-            0.0,
-            0.0,
-            0.66748
-        ],
-        [
-            "C",
-            0.0,
-            0.0,
-            -0.66748
+            0.117855
         ],
         [
             "H",
             0.0,
-            0.922832,
-            1.237695
-        ],
-        [
-            "H",
             0.0,
-            -0.922832,
-            1.237695
-        ],
-        [
-            "H",
-            0.0,
-            0.922832,
-            -1.237695
-        ],
-        [
-            "H",
-            0.0,
-            -0.922832,
-            -1.237695
+            -1.532116
         ]
     ],
-    "S2": [
+    "alh3": [
         [
-            "S",
+            "Al",
             0.0,
             0.0,
-            0.960113
-        ],
-        [
-            "S",
-            0.0,
-            0.0,
-            -0.960113
-        ]
-    ],
-    "SiO": [
-        [
-            "Si",
-            0.0,
-            0.0,
-            0.560846
-        ],
-        [
-            "O",
-            0.0,
-            0.0,
-            -0.98148
-        ]
-    ],
-    "H": [
-        [
-            "H",
-            0.0,
-            0.0,
-            0.0
-        ]
-    ],
-    "C2H5": [
-        [
-            "C",
-            -0.014359,
-            -0.694617,
-            0.0
-        ],
-        [
-            "C",
-            -0.014359,
-            0.794473,
             0.0
         ],
         [
             "H",
-            1.006101,
-            -1.104042,
+            1.5805,
+            1.5805,
             0.0
         ],
         [
             "H",
-            -0.517037,
-            -1.093613,
-            0.884839
+            -0.79025,
+            -0.79025,
+            0.0
         ],
         [
             "H",
-            -0.517037,
-            -1.093613,
-            -0.884839
-        ],
-        [
-            "H",
-            0.100137,
-            1.346065,
-            0.923705
-        ],
-        [
-            "H",
-            0.100137,
-            1.346065,
-            -0.923705
+            -0.79025,
+            -0.79025,
+            0.0
         ]
     ],
-    "HCN": [
+    "allene": [
         [
             "C",
             0.0,
             0.0,
-            -0.511747
+            0.0
         ],
         [
-            "N",
+            "C",
             0.0,
             0.0,
-            0.664461
+            1.310515
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -1.310515
         ],
         [
             "H",
             0.0,
             0.0,
-            -1.580746
+            -1.86606
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -1.86606
+        ],
+        [
+            "H",
+            0.92902,
+            0.92902,
+            1.86606
+        ],
+        [
+            "H",
+            -0.92902,
+            -0.92902,
+            1.86606
         ]
     ],
-    "B": [
+    "b": [
         [
             "B",
             0.0,
@@ -1399,446 +2379,3316 @@
             0.0
         ]
     ],
-    "ClO": [
+    "b2": [
         [
-            "Cl",
+            "B",
             0.0,
             0.0,
-            0.514172
+            0.793777
         ],
         [
-            "O",
+            "B",
             0.0,
             0.0,
-            -1.092615
+            -0.793777
         ]
     ],
-    "HF": [
+    "b2h6": [
         [
-            "F",
-            0.0,
-            0.0,
-            0.093389
-        ],
-        [
-            "H",
-            0.0,
-            0.0,
-            -0.840502
-        ]
-    ],
-    "O2": [
-        [
-            "O",
-            0.0,
-            0.0,
-            0.622978
-        ],
-        [
-            "O",
-            0.0,
-            0.0,
-            -0.622978
-        ]
-    ],
-    "SO": [
-        [
-            "O",
-            0.0,
-            0.0,
-            -1.015992
-        ],
-        [
-            "S",
-            0.0,
-            0.0,
-            0.507996
-        ]
-    ],
-    "NH": [
-        [
-            "N",
-            0.0,
-            0.0,
-            0.129929
-        ],
-        [
-            "H",
-            0.0,
-            0.0,
-            -0.909501
-        ]
-    ],
-    "CH2_s3B1d": [
-        [
-            "C",
-            0.0,
-            0.0,
-            0.110381
-        ],
-        [
-            "H",
-            0.0,
-            0.982622,
-            -0.331142
-        ],
-        [
-            "H",
-            0.0,
-            -0.982622,
-            -0.331142
-        ]
-    ],
-    "NH3": [
-        [
-            "N",
-            0.0,
-            0.0,
-            0.116489
-        ],
-        [
-            "H",
-            0.0,
-            0.939731,
-            -0.271808
-        ],
-        [
-            "H",
-            0.813831,
-            -0.469865,
-            -0.271808
-        ],
-        [
-            "H",
-            -0.813831,
-            -0.469865,
-            -0.271808
-        ]
-    ],
-    "Si2H6": [
-        [
-            "Si",
-            0.0,
-            0.0,
-            1.167683
-        ],
-        [
-            "Si",
-            0.0,
-            0.0,
-            -1.167683
-        ],
-        [
-            "H",
-            0.0,
-            1.393286,
-            1.68602
-        ],
-        [
-            "H",
-            -1.206621,
-            -0.696643,
-            1.68602
-        ],
-        [
-            "H",
-            1.206621,
-            -0.696643,
-            1.68602
-        ],
-        [
-            "H",
-            0.0,
-            -1.393286,
-            -1.68602
-        ],
-        [
-            "H",
-            -1.206621,
-            0.696643,
-            -1.68602
-        ],
-        [
-            "H",
-            1.206621,
-            0.696643,
-            -1.68602
-        ]
-    ],
-    "O": [
-        [
-            "O",
+            "B",
             0.0,
             0.0,
             0.0
-        ]
-    ],
-    "CCH": [
-        [
-            "C",
-            0.0,
-            0.0,
-            -0.462628
         ],
         [
-            "C",
-            0.0,
-            0.0,
-            0.717162
-        ],
-        [
-            "H",
-            0.0,
-            0.0,
-            -1.527198
-        ]
-    ],
-    "N": [
-        [
-            "N",
-            0.0,
-            0.0,
-            0.0
-        ]
-    ],
-    "Si2": [
-        [
-            "Si",
-            0.0,
-            0.0,
-            1.130054
-        ],
-        [
-            "Si",
-            0.0,
-            0.0,
-            -1.130054
-        ]
-    ],
-    "Li2": [
-        [
-            "Li",
-            0.0,
-            0.0,
-            1.38653
-        ],
-        [
-            "Li",
-            0.0,
-            0.0,
-            -1.38653
-        ]
-    ],
-    "F2": [
-        [
-            "F",
-            0.0,
-            0.0,
-            0.710304
-        ],
-        [
-            "F",
-            0.0,
-            0.0,
-            -0.710304
-        ]
-    ],
-    "CH4": [
-        [
-            "C",
+            "B",
             0.0,
             0.0,
             0.0
         ],
         [
             "H",
-            0.629118,
-            0.629118,
-            0.629118
-        ],
-        [
-            "H",
-            -0.629118,
-            -0.629118,
-            0.629118
-        ],
-        [
-            "H",
-            0.629118,
-            -0.629118,
-            -0.629118
-        ],
-        [
-            "H",
-            -0.629118,
-            0.629118,
-            -0.629118
-        ]
-    ],
-    "SH": [
-        [
-            "S",
             0.0,
             0.0,
-            0.079083
+            0.975221
         ],
         [
             "H",
             0.0,
             0.0,
-            -1.26533
-        ]
-    ],
-    "Li": [
+            -0.975221
+        ],
         [
-            "Li",
-            0.0,
-            0.0,
+            "H",
+            1.039659,
+            1.039659,
+            0.0
+        ],
+        [
+            "H",
+            -1.039659,
+            -1.039659,
+            0.0
+        ],
+        [
+            "H",
+            -1.039659,
+            -1.039659,
+            0.0
+        ],
+        [
+            "H",
+            1.039659,
+            1.039659,
             0.0
         ]
     ],
-    "N2": [
-        [
-            "N",
-            0.0,
-            0.0,
-            0.56499
-        ],
-        [
-            "N",
-            0.0,
-            0.0,
-            -0.56499
-        ]
-    ],
-    "Cl2": [
-        [
-            "Cl",
-            0.0,
-            0.0,
-            1.007541
-        ],
-        [
-            "Cl",
-            0.0,
-            0.0,
-            -1.007541
-        ]
-    ],
-    "H2O2": [
-        [
-            "O",
-            0.0,
-            0.734058,
-            -0.05275
-        ],
-        [
-            "O",
-            0.0,
-            -0.734058,
-            -0.05275
-        ],
-        [
-            "H",
-            0.839547,
-            0.880752,
-            0.422001
-        ],
-        [
-            "H",
-            -0.839547,
-            -0.880752,
-            0.422001
-        ]
-    ],
-    "Na2": [
-        [
-            "Na",
-            0.0,
-            0.0,
-            1.576262
-        ],
-        [
-            "Na",
-            0.0,
-            0.0,
-            -1.576262
-        ]
-    ],
-    "BeH": [
+    "be": [
         [
             "Be",
             0.0,
             0.0,
-            0.269654
-        ],
-        [
-            "H",
-            0.0,
-            0.0,
-            -1.078616
+            0.0
         ]
     ],
-    "cyclobutene": [
+    "be2": [
+        [
+            "Be",
+            0.0,
+            0.0,
+            1.250659
+        ],
+        [
+            "Be",
+            0.0,
+            0.0,
+            -1.250659
+        ]
+    ],
+    "becl2": [
+        [
+            "Be",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "Cl",
+            0.0,
+            0.0,
+            1.79984
+        ],
+        [
+            "Cl",
+            0.0,
+            0.0,
+            -1.79984
+        ]
+    ],
+    "bef2": [
+        [
+            "Be",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "F",
+            0.0,
+            0.0,
+            1.37959
+        ],
+        [
+            "F",
+            0.0,
+            0.0,
+            -1.37959
+        ]
+    ],
+    "bf": [
+        [
+            "F",
+            0.0,
+            0.0,
+            0.452679
+        ],
+        [
+            "B",
+            0.0,
+            0.0,
+            -0.814821
+        ]
+    ],
+    "bf3": [
+        [
+            "B",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "F",
+            1.3103,
+            1.3103,
+            0.0
+        ],
+        [
+            "F",
+            -0.65515,
+            -0.65515,
+            0.0
+        ],
+        [
+            "F",
+            -0.65515,
+            -0.65515,
+            0.0
+        ]
+    ],
+    "bh": [
+        [
+            "B",
+            0.0,
+            0.0,
+            0.205543
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -1.027713
+        ]
+    ],
+    "bh3": [
+        [
+            "B",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            1.1899,
+            1.1899,
+            0.0
+        ],
+        [
+            "H",
+            -0.59495,
+            -0.59495,
+            0.0
+        ],
+        [
+            "H",
+            -0.59495,
+            -0.59495,
+            0.0
+        ]
+    ],
+    "bhf2": [
+        [
+            "B",
+            0.0,
+            0.0,
+            0.45695
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            1.642303
+        ],
+        [
+            "F",
+            1.126643,
+            1.126643,
+            -0.21817
+        ],
+        [
+            "F",
+            -1.126643,
+            -1.126643,
+            -0.21817
+        ]
+    ],
+    "bn": [
+        [
+            "B",
+            0.0,
+            0.0,
+            -0.748417
+        ],
+        [
+            "N",
+            0.0,
+            0.0,
+            0.534583
+        ]
+    ],
+    "bn3pi": [
+        [
+            "B",
+            0.0,
+            0.0,
+            -0.77595
+        ],
+        [
+            "N",
+            0.0,
+            0.0,
+            0.55425
+        ]
+    ],
+    "c": [
         [
             "C",
             0.0,
-            -0.672762,
-            0.811217
+            0.0,
+            0.0
+        ]
+    ],
+    "c-hcoh": [
+        [
+            "C",
+            0.743301,
+            0.743301,
+            0.0
+        ],
+        [
+            "H",
+            1.063696,
+            1.063696,
+            0.0
+        ],
+        [
+            "O",
+            -0.569682,
+            -0.569682,
+            0.0
+        ],
+        [
+            "H",
+            -0.966045,
+            -0.966045,
+            0.0
+        ]
+    ],
+    "c-hono": [
+        [
+            "O",
+            0.071129,
+            0.071129,
+            0.0
+        ],
+        [
+            "N",
+            0.549439,
+            0.549439,
+            0.0
+        ],
+        [
+            "O",
+            -0.39532,
+            -0.39532,
+            0.0
+        ],
+        [
+            "H",
+            -1.252549,
+            -1.252549,
+            0.0
+        ]
+    ],
+    "c-hooo": [
+        [
+            "O",
+            0.075354,
+            0.075354,
+            0.0
+        ],
+        [
+            "O",
+            0.576945,
+            0.576945,
+            0.0
+        ],
+        [
+            "O",
+            -0.493872,
+            -0.493872,
+            0.0
+        ],
+        [
+            "H",
+            -1.267419,
+            -1.267419,
+            0.0
+        ]
+    ],
+    "c-n2h2": [
+        [
+            "H",
+            1.00814,
+            1.00814,
+            0.840315
+        ],
+        [
+            "N",
+            0.624028,
+            0.624028,
+            -0.120045
+        ],
+        [
+            "N",
+            -0.624028,
+            -0.624028,
+            -0.120045
+        ],
+        [
+            "H",
+            -1.00814,
+            -1.00814,
+            0.840315
+        ]
+    ],
+    "c2": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.62
         ],
         [
             "C",
             0.0,
-            0.672762,
-            0.811217
+            0.0,
+            -0.62
+        ]
+    ],
+    "c2h2": [
+        [
+            "H",
+            0.0,
+            0.0,
+            1.66665
         ],
         [
             "C",
             0.0,
-            -0.78198,
-            -0.696648
+            0.0,
+            0.60325
         ],
         [
             "C",
             0.0,
-            0.78198,
-            -0.696648
+            0.0,
+            -0.60325
         ],
         [
             "H",
             0.0,
-            -1.422393,
-            1.597763
+            0.0,
+            -1.66665
+        ]
+    ],
+    "c2h3f": [
+        [
+            "C",
+            -0.155452,
+            -0.155452,
+            0.0
+        ],
+        [
+            "C",
+            0.435875,
+            0.435875,
+            0.0
+        ],
+        [
+            "H",
+            -1.231598,
+            -1.231598,
+            0.0
+        ],
+        [
+            "H",
+            0.456585,
+            0.456585,
+            0.0
+        ],
+        [
+            "H",
+            1.502406,
+            1.502406,
+            0.0
+        ],
+        [
+            "F",
+            -0.267771,
+            -0.267771,
+            0.0
+        ]
+    ],
+    "c2h4": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.6671
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.6671
+        ],
+        [
+            "H",
+            0.923404,
+            0.923404,
+            -1.231634
+        ],
+        [
+            "H",
+            -0.923404,
+            -0.923404,
+            -1.231634
+        ],
+        [
+            "H",
+            0.923404,
+            0.923404,
+            1.231634
+        ],
+        [
+            "H",
+            -0.923404,
+            -0.923404,
+            1.231634
+        ]
+    ],
+    "c2h5f": [
+        [
+            "F",
+            -0.10277,
+            -0.10277,
+            0.0
+        ],
+        [
+            "C",
+            0.558143,
+            0.558143,
+            0.0
+        ],
+        [
+            "C",
+            -0.450951,
+            -0.450951,
+            0.0
+        ],
+        [
+            "H",
+            0.065246,
+            0.065246,
+            0.0
+        ],
+        [
+            "H",
+            1.191265,
+            1.191265,
+            0.887974
+        ],
+        [
+            "H",
+            1.191265,
+            1.191265,
+            -0.887974
+        ],
+        [
+            "H",
+            -1.082997,
+            -1.082997,
+            0.885745
+        ],
+        [
+            "H",
+            -1.082997,
+            -1.082997,
+            -0.885745
+        ]
+    ],
+    "c2h6": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.763258
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.763258
+        ],
+        [
+            "H",
+            1.016928,
+            1.016928,
+            1.157843
+        ],
+        [
+            "H",
+            -0.508464,
+            -0.508464,
+            1.157843
+        ],
+        [
+            "H",
+            -0.508464,
+            -0.508464,
+            1.157843
+        ],
+        [
+            "H",
+            -1.016928,
+            -1.016928,
+            -1.157843
+        ],
+        [
+            "H",
+            0.508464,
+            0.508464,
+            -1.157843
+        ],
+        [
+            "H",
+            0.508464,
+            0.508464,
+            -1.157843
+        ]
+    ],
+    "cch": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.734134
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.477182
         ],
         [
             "H",
             0.0,
-            1.422393,
-            1.597763
+            0.0,
+            -1.54171
+        ]
+    ],
+    "ccl2": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.846282
+        ],
+        [
+            "Cl",
+            1.400407,
+            1.400407,
+            -0.149344
+        ],
+        [
+            "Cl",
+            -1.400407,
+            -1.400407,
+            -0.149344
+        ]
+    ],
+    "cf": [
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.764852
+        ],
+        [
+            "F",
+            0.0,
+            0.0,
+            0.509901
+        ]
+    ],
+    "cf2": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.593262
+        ],
+        [
+            "F",
+            1.02799,
+            1.02799,
+            -0.197754
+        ],
+        [
+            "F",
+            -1.02799,
+            -1.02799,
+            -0.197754
+        ]
+    ],
+    "cf4": [
+        [
+            "F",
+            0.760903,
+            0.760903,
+            0.760903
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "F",
+            -0.760903,
+            -0.760903,
+            0.760903
+        ],
+        [
+            "F",
+            0.760903,
+            0.760903,
+            -0.760903
+        ],
+        [
+            "F",
+            -0.760903,
+            -0.760903,
+            -0.760903
+        ]
+    ],
+    "ch": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.160038
         ],
         [
             "H",
-            -0.88931,
-            -1.239242,
-            -1.142591
+            0.0,
+            0.0,
+            -0.96023
+        ]
+    ],
+    "ch2-sing": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.174618
         ],
         [
             "H",
-            0.88931,
-            -1.239242,
-            -1.142591
+            0.860944,
+            0.860944,
+            -0.523853
         ],
         [
             "H",
-            0.88931,
-            1.239242,
-            -1.142591
+            -0.860944,
+            -0.860944,
+            -0.523853
+        ]
+    ],
+    "ch2-trip": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.106011
         ],
         [
             "H",
-            -0.88931,
-            1.239242,
-            -1.142591
+            0.990291,
+            0.990291,
+            -0.318032
+        ],
+        [
+            "H",
+            -0.990291,
+            -0.990291,
+            -0.318032
+        ]
+    ],
+    "ch2c": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.822002
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.480768
+        ],
+        [
+            "H",
+            0.940391,
+            0.940391,
+            -1.023703
+        ],
+        [
+            "H",
+            -0.940391,
+            -0.940391,
+            -1.023703
+        ]
+    ],
+    "ch2ch": [
+        [
+            "C",
+            0.724055,
+            0.724055,
+            0.0
+        ],
+        [
+            "H",
+            1.51322,
+            1.51322,
+            0.0
+        ],
+        [
+            "C",
+            -0.589606,
+            -0.589606,
+            0.0
+        ],
+        [
+            "H",
+            -1.164741,
+            -1.164741,
+            0.0
+        ],
+        [
+            "H",
+            -1.155172,
+            -1.155172,
+            0.0
+        ]
+    ],
+    "ch2f2": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.491517
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            1.12079
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            1.12079
+        ],
+        [
+            "F",
+            1.102928,
+            1.102928,
+            -0.288371
+        ],
+        [
+            "F",
+            -1.102928,
+            -1.102928,
+            -0.288371
+        ]
+    ],
+    "ch2nh": [
+        [
+            "C",
+            0.587652,
+            0.587652,
+            0.0
+        ],
+        [
+            "N",
+            -0.686508,
+            -0.686508,
+            0.0
+        ],
+        [
+            "H",
+            -1.034264,
+            -1.034264,
+            0.0
+        ],
+        [
+            "H",
+            1.204585,
+            1.204585,
+            0.0
+        ],
+        [
+            "H",
+            1.109323,
+            1.109323,
+            0.0
+        ]
+    ],
+    "ch2nh2": [
+        [
+            "C",
+            0.731842,
+            0.731842,
+            0.0
+        ],
+        [
+            "H",
+            1.212696,
+            1.212696,
+            0.928854
+        ],
+        [
+            "H",
+            1.212696,
+            1.212696,
+            -0.928854
+        ],
+        [
+            "N",
+            -0.66485,
+            -0.66485,
+            0.0
+        ],
+        [
+            "H",
+            -1.081246,
+            -1.081246,
+            -0.828686
+        ],
+        [
+            "H",
+            -1.081246,
+            -1.081246,
+            0.828686
+        ]
+    ],
+    "ch3": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            1.0777,
+            1.0777,
+            0.0
+        ],
+        [
+            "H",
+            -0.53885,
+            -0.53885,
+            0.0
+        ],
+        [
+            "H",
+            -0.53885,
+            -0.53885,
+            0.0
+        ]
+    ],
+    "ch3f": [
+        [
+            "F",
+            0.0,
+            0.0,
+            0.750386
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.629363
+        ],
+        [
+            "H",
+            1.026909,
+            1.026909,
+            -0.99243
+        ],
+        [
+            "H",
+            -0.513454,
+            -0.513454,
+            -0.99243
+        ],
+        [
+            "H",
+            -0.513454,
+            -0.513454,
+            -0.99243
+        ]
+    ],
+    "ch3nh": [
+        [
+            "C",
+            -0.627621,
+            -0.627621,
+            0.0
+        ],
+        [
+            "H",
+            -1.023321,
+            -1.023321,
+            0.878215
+        ],
+        [
+            "H",
+            -1.006662,
+            -1.006662,
+            0.0
+        ],
+        [
+            "H",
+            -1.023321,
+            -1.023321,
+            -0.878215
+        ],
+        [
+            "N",
+            0.816421,
+            0.816421,
+            0.0
+        ],
+        [
+            "H",
+            1.104082,
+            1.104082,
+            0.0
+        ]
+    ],
+    "ch3nh2": [
+        [
+            "C",
+            0.705304,
+            0.705304,
+            0.0
+        ],
+        [
+            "N",
+            -0.759906,
+            -0.759906,
+            0.0
+        ],
+        [
+            "H",
+            1.167319,
+            1.167319,
+            0.0
+        ],
+        [
+            "H",
+            1.061677,
+            1.061677,
+            0.87764
+        ],
+        [
+            "H",
+            1.061677,
+            1.061677,
+            -0.87764
+        ],
+        [
+            "H",
+            -1.101576,
+            -1.101576,
+            -0.807607
+        ],
+        [
+            "H",
+            -1.101576,
+            -1.101576,
+            0.807607
+        ]
+    ],
+    "ch4": [
+        [
+            "H",
+            0.628099,
+            0.628099,
+            0.628099
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.628099,
+            -0.628099,
+            0.628099
+        ],
+        [
+            "H",
+            0.628099,
+            0.628099,
+            -0.628099
+        ],
+        [
+            "H",
+            -0.628099,
+            -0.628099,
+            -0.628099
+        ]
+    ],
+    "cl": [
+        [
+            "Cl",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "cl2": [
+        [
+            "Cl",
+            0.0,
+            0.0,
+            0.998288
+        ],
+        [
+            "Cl",
+            0.0,
+            0.0,
+            -0.998288
+        ]
+    ],
+    "cl2o": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.780075
+        ],
+        [
+            "Cl",
+            1.401172,
+            1.401172,
+            -0.183547
+        ],
+        [
+            "Cl",
+            -1.401172,
+            -1.401172,
+            -0.183547
+        ]
+    ],
+    "clcn": [
+        [
+            "Cl",
+            0.0,
+            0.0,
+            0.979935
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.655771
+        ],
+        [
+            "N",
+            0.0,
+            0.0,
+            -1.817753
+        ]
+    ],
+    "clf": [
+        [
+            "Cl",
+            0.0,
+            0.0,
+            0.564862
+        ],
+        [
+            "F",
+            0.0,
+            0.0,
+            -1.066961
+        ]
+    ],
+    "clo": [
+        [
+            "Cl",
+            0.0,
+            0.0,
+            0.503953
+        ],
+        [
+            "O",
+            0.0,
+            0.0,
+            -1.070901
+        ]
+    ],
+    "cloo": [
+        [
+            "Cl",
+            -0.994637,
+            -0.994637,
+            0.0
+        ],
+        [
+            "O",
+            0.958712,
+            0.958712,
+            0.0
+        ],
+        [
+            "O",
+            1.154892,
+            1.154892,
+            0.0
+        ]
+    ],
+    "cn": [
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.63098
+        ],
+        [
+            "N",
+            0.0,
+            0.0,
+            0.54084
+        ]
+    ],
+    "co": [
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.646514
+        ],
+        [
+            "O",
+            0.0,
+            0.0,
+            0.484886
+        ]
+    ],
+    "co2": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "O",
+            0.0,
+            0.0,
+            1.1626
+        ],
+        [
+            "O",
+            0.0,
+            0.0,
+            -1.1626
+        ]
+    ],
+    "cs": [
+        [
+            "C",
+            0.0,
+            0.0,
+            -1.121115
+        ],
+        [
+            "S",
+            0.0,
+            0.0,
+            0.420418
+        ]
+    ],
+    "cs2": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "S",
+            0.0,
+            0.0,
+            1.557634
+        ],
+        [
+            "S",
+            0.0,
+            0.0,
+            -1.557634
+        ]
+    ],
+    "dioxirane": [
+        [
+            "C",
+            0.0,
+            0.0,
+            0.726733
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            1.296225
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            1.296225
+        ],
+        [
+            "O",
+            0.757104,
+            0.757104,
+            -0.434553
+        ],
+        [
+            "O",
+            -0.757104,
+            -0.757104,
+            -0.434553
+        ]
+    ],
+    "ethanol": [
+        [
+            "H",
+            0.377106,
+            0.377106,
+            0.0
+        ],
+        [
+            "O",
+            -0.221186,
+            -0.221186,
+            0.0
+        ],
+        [
+            "C",
+            0.556697,
+            0.556697,
+            0.0
+        ],
+        [
+            "C",
+            -0.402575,
+            -0.402575,
+            0.0
+        ],
+        [
+            "H",
+            1.20005,
+            1.20005,
+            0.885595
+        ],
+        [
+            "H",
+            1.20005,
+            1.20005,
+            -0.885595
+        ],
+        [
+            "H",
+            0.145753,
+            0.145753,
+            0.0
+        ],
+        [
+            "H",
+            -1.039101,
+            -1.039101,
+            -0.88413
+        ],
+        [
+            "H",
+            -1.039101,
+            -1.039101,
+            0.88413
+        ]
+    ],
+    "f": [
+        [
+            "F",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "f2": [
+        [
+            "F",
+            0.0,
+            0.0,
+            0.70645
+        ],
+        [
+            "F",
+            0.0,
+            0.0,
+            -0.70645
+        ]
+    ],
+    "f2co": [
+        [
+            "O",
+            0.0,
+            0.0,
+            1.312207
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.14077
+        ],
+        [
+            "F",
+            1.058663,
+            1.058663,
+            -0.630126
+        ],
+        [
+            "F",
+            -1.058663,
+            -1.058663,
+            -0.630126
+        ]
+    ],
+    "f2o": [
+        [
+            "F",
+            1.100771,
+            1.100771,
+            -0.268941
+        ],
+        [
+            "O",
+            0.0,
+            0.0,
+            0.605118
+        ],
+        [
+            "F",
+            -1.100771,
+            -1.100771,
+            -0.268941
+        ]
+    ],
+    "fccf": [
+        [
+            "F",
+            0.0,
+            0.0,
+            1.880463
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.59458
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.59458
+        ],
+        [
+            "F",
+            0.0,
+            0.0,
+            -1.880463
+        ]
+    ],
+    "fo2": [
+        [
+            "F",
+            -0.706276,
+            -0.706276,
+            0.0
+        ],
+        [
+            "O",
+            0.575215,
+            0.575215,
+            0.0
+        ],
+        [
+            "O",
+            0.219345,
+            0.219345,
+            0.0
+        ]
+    ],
+    "foof": [
+        [
+            "F",
+            1.384434,
+            1.384434,
+            -0.493986
+        ],
+        [
+            "O",
+            0.268181,
+            0.268181,
+            0.555734
+        ],
+        [
+            "O",
+            -0.268181,
+            -0.268181,
+            0.555734
+        ],
+        [
+            "F",
+            -1.384434,
+            -1.384434,
+            -0.493986
+        ]
+    ],
+    "formic": [
+        [
+            "C",
+            0.421944,
+            0.421944,
+            0.0
+        ],
+        [
+            "H",
+            1.449673,
+            1.449673,
+            0.0
+        ],
+        [
+            "O",
+            0.108822,
+            0.108822,
+            0.0
+        ],
+        [
+            "O",
+            -0.440495,
+            -0.440495,
+            0.0
+        ],
+        [
+            "H",
+            -1.32795,
+            -1.32795,
+            0.0
+        ]
+    ],
+    "glyoxal": [
+        [
+            "C",
+            0.684597,
+            0.684597,
+            0.0
+        ],
+        [
+            "C",
+            -0.684597,
+            -0.684597,
+            0.0
+        ],
+        [
+            "H",
+            0.674507,
+            0.674507,
+            0.0
+        ],
+        [
+            "H",
+            -0.674507,
+            -0.674507,
+            0.0
+        ],
+        [
+            "O",
+            1.696714,
+            1.696714,
+            0.0
+        ],
+        [
+            "O",
+            -1.696714,
+            -1.696714,
+            0.0
+        ]
+    ],
+    "h": [
+        [
+            "H",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "h2": [
+        [
+            "H",
+            0.0,
+            0.0,
+            0.370946
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.370946
+        ]
+    ],
+    "h2cn": [
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.507513
+        ],
+        [
+            "H",
+            0.936731,
+            0.936731,
+            -1.073924
+        ],
+        [
+            "H",
+            -0.936731,
+            -0.936731,
+            -1.073924
+        ],
+        [
+            "N",
+            0.0,
+            0.0,
+            0.741847
+        ]
+    ],
+    "h2co": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.67586
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.53074
+        ],
+        [
+            "H",
+            0.936954,
+            0.936954,
+            -1.111223
+        ],
+        [
+            "H",
+            -0.936954,
+            -0.936954,
+            -1.111223
+        ]
+    ],
+    "h2o": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.755453,
+            0.755453,
+            -0.471161
+        ],
+        [
+            "H",
+            -0.755453,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "h2s": [
+        [
+            "S",
+            0.0,
+            0.0,
+            0.102943
+        ],
+        [
+            "H",
+            0.964958,
+            0.964958,
+            -0.823542
+        ],
+        [
+            "H",
+            -0.964958,
+            -0.964958,
+            -0.823542
+        ]
+    ],
+    "hccf": [
+        [
+            "C",
+            0.0,
+            0.0,
+            -1.292877
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.093379
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -2.354022
+        ],
+        [
+            "F",
+            0.0,
+            0.0,
+            1.185729
+        ]
+    ],
+    "hcl": [
+        [
+            "Cl",
+            0.0,
+            0.0,
+            0.070867
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -1.204737
+        ]
+    ],
+    "hcn": [
+        [
+            "H",
+            0.0,
+            0.0,
+            -1.5688
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.502
+        ],
+        [
+            "N",
+            0.0,
+            0.0,
+            0.6544
+        ]
+    ],
+    "hcnh": [
+        [
+            "C",
+            0.650313,
+            0.650313,
+            0.0
+        ],
+        [
+            "H",
+            1.274311,
+            1.274311,
+            0.0
+        ],
+        [
+            "N",
+            -0.588278,
+            -0.588278,
+            0.0
+        ],
+        [
+            "H",
+            -1.058244,
+            -1.058244,
+            0.0
+        ]
+    ],
+    "hcno": [
+        [
+            "C",
+            0.0,
+            0.0,
+            -1.181861
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -2.242407
+        ],
+        [
+            "N",
+            0.0,
+            0.0,
+            -0.01983
+        ],
+        [
+            "O",
+            0.0,
+            0.0,
+            1.184048
+        ]
+    ],
+    "hco": [
+        [
+            "O",
+            -0.592186,
+            -0.592186,
+            0.0
+        ],
+        [
+            "C",
+            0.586301,
+            0.586301,
+            0.0
+        ],
+        [
+            "H",
+            1.219685,
+            1.219685,
+            0.0
+        ]
+    ],
+    "hcof": [
+        [
+            "C",
+            0.397532,
+            0.397532,
+            0.0
+        ],
+        [
+            "O",
+            0.120481,
+            0.120481,
+            0.0
+        ],
+        [
+            "H",
+            1.393761,
+            1.393761,
+            0.0
+        ],
+        [
+            "F",
+            -0.526978,
+            -0.526978,
+            0.0
+        ]
+    ],
+    "hf": [
+        [
+            "F",
+            0.0,
+            0.0,
+            0.091577
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.824192
+        ]
+    ],
+    "hnc": [
+        [
+            "H",
+            0.0,
+            0.0,
+            1.427314
+        ],
+        [
+            "N",
+            0.0,
+            0.0,
+            0.431142
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.740885
+        ]
+    ],
+    "hnco": [
+        [
+            "C",
+            0.050807,
+            0.050807,
+            0.0
+        ],
+        [
+            "O",
+            1.069462,
+            1.069462,
+            0.0
+        ],
+        [
+            "N",
+            -1.083005,
+            -1.083005,
+            0.0
+        ],
+        [
+            "H",
+            -1.2795,
+            -1.2795,
+            0.0
+        ]
+    ],
+    "hnnn": [
+        [
+            "H",
+            -1.38181,
+            -1.38181,
+            0.0
+        ],
+        [
+            "N",
+            -1.12988,
+            -1.12988,
+            0.0
+        ],
+        [
+            "N",
+            0.111098,
+            0.111098,
+            0.0
+        ],
+        [
+            "N",
+            1.216183,
+            1.216183,
+            0.0
+        ]
+    ],
+    "hno": [
+        [
+            "N",
+            0.584988,
+            0.584988,
+            0.0
+        ],
+        [
+            "H",
+            0.910719,
+            0.910719,
+            0.0
+        ],
+        [
+            "O",
+            -0.625704,
+            -0.625704,
+            0.0
+        ]
+    ],
+    "hocl": [
+        [
+            "O",
+            1.099619,
+            1.099619,
+            0.0
+        ],
+        [
+            "H",
+            1.310761,
+            1.310761,
+            0.0
+        ],
+        [
+            "Cl",
+            -0.594571,
+            -0.594571,
+            0.0
+        ]
+    ],
+    "hocn": [
+        [
+            "C",
+            0.179944,
+            0.179944,
+            0.0
+        ],
+        [
+            "N",
+            1.339387,
+            1.339387,
+            0.0
+        ],
+        [
+            "O",
+            -1.114886,
+            -1.114886,
+            0.0
+        ],
+        [
+            "H",
+            -1.536279,
+            -1.536279,
+            0.0
+        ]
+    ],
+    "hof": [
+        [
+            "H",
+            0.840938,
+            0.840938,
+            0.0
+        ],
+        [
+            "O",
+            0.710109,
+            0.710109,
+            0.0
+        ],
+        [
+            "F",
+            -0.724645,
+            -0.724645,
+            0.0
+        ]
+    ],
+    "honc": [
+        [
+            "H",
+            -1.340471,
+            -1.340471,
+            0.0
+        ],
+        [
+            "O",
+            -1.095226,
+            -1.095226,
+            0.0
+        ],
+        [
+            "N",
+            0.238268,
+            0.238268,
+            0.0
+        ],
+        [
+            "C",
+            1.405734,
+            1.405734,
+            0.0
+        ]
+    ],
+    "hoo": [
+        [
+            "O",
+            0.718293,
+            0.718293,
+            0.0
+        ],
+        [
+            "O",
+            -0.611983,
+            -0.611983,
+            0.0
+        ],
+        [
+            "H",
+            -0.850475,
+            -0.850475,
+            0.0
+        ]
+    ],
+    "hooh": [
+        [
+            "H",
+            0.891936,
+            0.891936,
+            0.468613
+        ],
+        [
+            "O",
+            0.726241,
+            0.726241,
+            -0.058577
+        ],
+        [
+            "O",
+            -0.726241,
+            -0.726241,
+            -0.058577
+        ],
+        [
+            "H",
+            -0.891936,
+            -0.891936,
+            0.468613
+        ]
+    ],
+    "hs": [
+        [
+            "S",
+            0.0,
+            0.0,
+            0.078975
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -1.263598
+        ]
+    ],
+    "ketene": [
+        [
+            "C",
+            0.0,
+            0.0,
+            -1.212911
+        ],
+        [
+            "H",
+            0.941658,
+            0.941658,
+            -1.736011
+        ],
+        [
+            "H",
+            -0.941658,
+            -0.941658,
+            -1.736011
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.103124
+        ],
+        [
+            "O",
+            0.0,
+            0.0,
+            1.266343
+        ]
+    ],
+    "methanol": [
+        [
+            "C",
+            0.662925,
+            0.662925,
+            0.0
+        ],
+        [
+            "H",
+            0.977315,
+            0.977315,
+            0.0
+        ],
+        [
+            "H",
+            1.073831,
+            1.073831,
+            0.889854
+        ],
+        [
+            "H",
+            1.073831,
+            1.073831,
+            -0.889854
+        ],
+        [
+            "O",
+            -0.756341,
+            -0.756341,
+            0.0
+        ],
+        [
+            "H",
+            -1.0518,
+            -1.0518,
+            0.0
+        ]
+    ],
+    "n": [
+        [
+            "N",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "n2": [
+        [
+            "N",
+            0.0,
+            0.0,
+            0.55015
+        ],
+        [
+            "N",
+            0.0,
+            0.0,
+            -0.55015
+        ]
+    ],
+    "n2h": [
+        [
+            "H",
+            -0.987844,
+            -0.987844,
+            0.0
+        ],
+        [
+            "N",
+            -0.519017,
+            -0.519017,
+            0.0
+        ],
+        [
+            "N",
+            0.660138,
+            0.660138,
+            0.0
+        ]
+    ],
+    "n2h4": [
+        [
+            "N",
+            0.719171,
+            0.719171,
+            -0.077583
+        ],
+        [
+            "N",
+            -0.719171,
+            -0.719171,
+            -0.077583
+        ],
+        [
+            "H",
+            1.085383,
+            1.085383,
+            0.842585
+        ],
+        [
+            "H",
+            1.009588,
+            1.009588,
+            -0.299501
+        ],
+        [
+            "H",
+            -1.085383,
+            -1.085383,
+            0.842585
+        ],
+        [
+            "H",
+            -1.009588,
+            -1.009588,
+            -0.299501
+        ]
+    ],
+    "n2o": [
+        [
+            "N",
+            0.0,
+            0.0,
+            -1.201477
+        ],
+        [
+            "N",
+            0.0,
+            0.0,
+            -0.072377
+        ],
+        [
+            "O",
+            0.0,
+            0.0,
+            1.114623
+        ]
+    ],
+    "nccn": [
+        [
+            "N",
+            0.0,
+            0.0,
+            1.855199
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.693922
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.693922
+        ],
+        [
+            "N",
+            0.0,
+            0.0,
+            -1.855199
+        ]
+    ],
+    "nh": [
+        [
+            "N",
+            0.0,
+            0.0,
+            0.129649
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.907543
+        ]
+    ],
+    "nh2": [
+        [
+            "N",
+            0.0,
+            0.0,
+            0.142235
+        ],
+        [
+            "H",
+            0.800646,
+            0.800646,
+            -0.497821
+        ],
+        [
+            "H",
+            -0.800646,
+            -0.800646,
+            -0.497821
+        ]
+    ],
+    "nh2cl": [
+        [
+            "N",
+            1.126132,
+            1.126132,
+            0.0
+        ],
+        [
+            "H",
+            1.365749,
+            1.365749,
+            0.808624
+        ],
+        [
+            "H",
+            1.365749,
+            1.365749,
+            -0.808624
+        ],
+        [
+            "Cl",
+            -0.624378,
+            -0.624378,
+            0.0
+        ]
+    ],
+    "nh3": [
+        [
+            "N",
+            0.0,
+            0.0,
+            0.116671
+        ],
+        [
+            "H",
+            0.934724,
+            0.934724,
+            -0.272232
+        ],
+        [
+            "H",
+            -0.467362,
+            -0.467362,
+            -0.272232
+        ],
+        [
+            "H",
+            -0.467362,
+            -0.467362,
+            -0.272232
+        ]
+    ],
+    "no": [
+        [
+            "N",
+            0.0,
+            0.0,
+            -0.614827
+        ],
+        [
+            "O",
+            0.0,
+            0.0,
+            0.537973
+        ]
+    ],
+    "no2": [
+        [
+            "N",
+            0.0,
+            0.0,
+            0.323967
+        ],
+        [
+            "O",
+            1.101234,
+            1.101234,
+            -0.141735
+        ],
+        [
+            "O",
+            -1.101234,
+            -1.101234,
+            -0.141735
+        ]
+    ],
+    "o": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "o2": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.6039
+        ],
+        [
+            "O",
+            0.0,
+            0.0,
+            -0.6039
+        ]
+    ],
+    "o3": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.441224
+        ],
+        [
+            "O",
+            1.082525,
+            1.082525,
+            -0.220612
+        ],
+        [
+            "O",
+            -1.082525,
+            -1.082525,
+            -0.220612
+        ]
+    ],
+    "oclo": [
+        [
+            "Cl",
+            0.0,
+            0.0,
+            0.37054
+        ],
+        [
+            "O",
+            1.259082,
+            1.259082,
+            -0.393699
+        ],
+        [
+            "O",
+            -1.259082,
+            -1.259082,
+            -0.393699
+        ]
+    ],
+    "ocs": [
+        [
+            "O",
+            0.0,
+            0.0,
+            -1.685171
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.526739
+        ],
+        [
+            "S",
+            0.0,
+            0.0,
+            1.040112
+        ]
+    ],
+    "of": [
+        [
+            "O",
+            0.0,
+            0.0,
+            -0.716295
+        ],
+        [
+            "F",
+            0.0,
+            0.0,
+            0.636707
+        ]
+    ],
+    "oh": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "oxirane": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.854408
+        ],
+        [
+            "C",
+            0.732294,
+            0.732294,
+            -0.37309
+        ],
+        [
+            "C",
+            -0.732294,
+            -0.732294,
+            -0.37309
+        ],
+        [
+            "H",
+            1.263085,
+            1.263085,
+            -0.589547
+        ],
+        [
+            "H",
+            1.263085,
+            1.263085,
+            -0.589547
+        ],
+        [
+            "H",
+            -1.263085,
+            -1.263085,
+            -0.589547
+        ],
+        [
+            "H",
+            -1.263085,
+            -1.263085,
+            -0.589547
+        ]
+    ],
+    "oxirene": [
+        [
+            "C",
+            0.635515,
+            0.635515,
+            -0.462952
+        ],
+        [
+            "C",
+            -0.635515,
+            -0.635515,
+            -0.462952
+        ],
+        [
+            "H",
+            -1.652256,
+            -1.652256,
+            -0.79374
+        ],
+        [
+            "H",
+            1.652256,
+            1.652256,
+            -0.79374
+        ],
+        [
+            "O",
+            0.0,
+            0.0,
+            0.892862
+        ]
+    ],
+    "p": [
+        [
+            "P",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "p2": [
+        [
+            "P",
+            0.0,
+            0.0,
+            0.950975
+        ],
+        [
+            "P",
+            0.0,
+            0.0,
+            -0.950975
+        ]
+    ],
+    "p4": [
+        [
+            "P",
+            0.777375,
+            0.777375,
+            0.777375
+        ],
+        [
+            "P",
+            -0.777375,
+            -0.777375,
+            0.777375
+        ],
+        [
+            "P",
+            0.777375,
+            0.777375,
+            -0.777375
+        ],
+        [
+            "P",
+            -0.777375,
+            -0.777375,
+            -0.777375
+        ]
+    ],
+    "ph3": [
+        [
+            "P",
+            0.0,
+            0.0,
+            0.127408
+        ],
+        [
+            "H",
+            1.190343,
+            1.190343,
+            -0.637041
+        ],
+        [
+            "H",
+            -0.595172,
+            -0.595172,
+            -0.637041
+        ],
+        [
+            "H",
+            -0.595172,
+            -0.595172,
+            -0.637041
+        ]
+    ],
+    "propane": [
+        [
+            "C",
+            1.26579,
+            1.26579,
+            -0.260971
+        ],
+        [
+            "H",
+            1.298774,
+            1.298774,
+            -0.905267
+        ],
+        [
+            "H",
+            1.298774,
+            1.298774,
+            -0.905267
+        ],
+        [
+            "H",
+            2.166499,
+            2.166499,
+            0.354619
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.591729
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            1.246553
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            1.246553
+        ],
+        [
+            "C",
+            -1.26579,
+            -1.26579,
+            -0.260971
+        ],
+        [
+            "H",
+            -1.298774,
+            -1.298774,
+            -0.905267
+        ],
+        [
+            "H",
+            -2.166499,
+            -2.166499,
+            0.354619
+        ],
+        [
+            "H",
+            -1.298774,
+            -1.298774,
+            -0.905267
+        ]
+    ],
+    "propene": [
+        [
+            "C",
+            -0.495907,
+            -0.495907,
+            0.0
+        ],
+        [
+            "C",
+            0.480324,
+            0.480324,
+            0.0
+        ],
+        [
+            "C",
+            0.136199,
+            0.136199,
+            0.0
+        ],
+        [
+            "H",
+            -0.904724,
+            -0.904724,
+            0.0
+        ],
+        [
+            "H",
+            0.882538,
+            0.882538,
+            0.0
+        ],
+        [
+            "H",
+            1.534391,
+            1.534391,
+            0.0
+        ],
+        [
+            "H",
+            -1.52297,
+            -1.52297,
+            0.0
+        ],
+        [
+            "H",
+            -0.356465,
+            -0.356465,
+            0.878203
+        ],
+        [
+            "H",
+            -0.356465,
+            -0.356465,
+            -0.878203
+        ]
+    ],
+    "propyne": [
+        [
+            "H",
+            2.489332,
+            2.489332,
+            0.0
+        ],
+        [
+            "H",
+            -1.628447,
+            -1.628447,
+            0.0
+        ],
+        [
+            "H",
+            -1.628426,
+            -1.628426,
+            0.883542
+        ],
+        [
+            "H",
+            -1.628426,
+            -1.628426,
+            -0.883542
+        ],
+        [
+            "C",
+            1.426421,
+            1.426421,
+            0.0
+        ],
+        [
+            "C",
+            0.218281,
+            0.218281,
+            0.0
+        ],
+        [
+            "C",
+            -1.245375,
+            -1.245375,
+            0.0
+        ]
+    ],
+    "s": [
+        [
+            "S",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "s2": [
+        [
+            "S",
+            0.0,
+            0.0,
+            0.948442
+        ],
+        [
+            "S",
+            0.0,
+            0.0,
+            -0.948442
+        ]
+    ],
+    "s2o": [
+        [
+            "S",
+            -1.075032,
+            -1.075032,
+            0.0
+        ],
+        [
+            "S",
+            0.671244,
+            0.671244,
+            0.0
+        ],
+        [
+            "O",
+            0.807576,
+            0.807576,
+            0.0
+        ]
+    ],
+    "s3": [
+        [
+            "S",
+            0.0,
+            0.0,
+            0.665312
+        ],
+        [
+            "S",
+            1.640064,
+            1.640064,
+            -0.332656
+        ],
+        [
+            "S",
+            -1.640064,
+            -1.640064,
+            -0.332656
+        ]
+    ],
+    "s4-c2v": [
+        [
+            "S",
+            1.552343,
+            1.552343,
+            0.921961
+        ],
+        [
+            "S",
+            1.068508,
+            1.068508,
+            -0.921961
+        ],
+        [
+            "S",
+            -1.068508,
+            -1.068508,
+            -0.921961
+        ],
+        [
+            "S",
+            -1.552343,
+            -1.552343,
+            0.921961
+        ]
+    ],
+    "si": [
+        [
+            "Si",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "si2h6": [
+        [
+            "Si",
+            1.170884,
+            1.170884,
+            0.0
+        ],
+        [
+            "H",
+            1.685125,
+            1.685125,
+            0.0
+        ],
+        [
+            "H",
+            1.683694,
+            1.683694,
+            1.204045
+        ],
+        [
+            "H",
+            1.683694,
+            1.683694,
+            -1.204045
+        ],
+        [
+            "Si",
+            -1.170884,
+            -1.170884,
+            0.0
+        ],
+        [
+            "H",
+            -1.685125,
+            -1.685125,
+            0.0
+        ],
+        [
+            "H",
+            -1.683694,
+            -1.683694,
+            1.204045
+        ],
+        [
+            "H",
+            -1.683694,
+            -1.683694,
+            -1.204045
+        ]
+    ],
+    "sif": [
+        [
+            "F",
+            0.0,
+            0.0,
+            -0.978618
+        ],
+        [
+            "Si",
+            0.0,
+            0.0,
+            0.629112
+        ]
+    ],
+    "sif4": [
+        [
+            "F",
+            0.900915,
+            0.900915,
+            0.900915
+        ],
+        [
+            "Si",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "F",
+            -0.900915,
+            -0.900915,
+            0.900915
+        ],
+        [
+            "F",
+            0.900915,
+            0.900915,
+            -0.900915
+        ],
+        [
+            "F",
+            -0.900915,
+            -0.900915,
+            -0.900915
+        ]
+    ],
+    "sih": [
+        [
+            "H",
+            0.0,
+            0.0,
+            -1.420666
+        ],
+        [
+            "Si",
+            0.0,
+            0.0,
+            0.101476
+        ]
+    ],
+    "sih3f": [
+        [
+            "F",
+            0.0,
+            0.0,
+            -1.099839
+        ],
+        [
+            "Si",
+            0.0,
+            0.0,
+            0.495525
+        ],
+        [
+            "H",
+            1.390293,
+            1.390293,
+            0.987068
+        ],
+        [
+            "H",
+            -0.695146,
+            -0.695146,
+            0.987068
+        ],
+        [
+            "H",
+            -0.695146,
+            -0.695146,
+            0.987068
+        ]
+    ],
+    "sih4": [
+        [
+            "H",
+            0.853686,
+            0.853686,
+            0.853686
+        ],
+        [
+            "Si",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.853686,
+            -0.853686,
+            0.853686
+        ],
+        [
+            "H",
+            0.853686,
+            0.853686,
+            -0.853686
+        ],
+        [
+            "H",
+            -0.853686,
+            -0.853686,
+            -0.853686
+        ]
+    ],
+    "sio": [
+        [
+            "Si",
+            0.0,
+            0.0,
+            0.551651
+        ],
+        [
+            "O",
+            0.0,
+            0.0,
+            -0.96539
+        ]
+    ],
+    "so": [
+        [
+            "S",
+            0.0,
+            0.0,
+            0.495405
+        ],
+        [
+            "O",
+            0.0,
+            0.0,
+            -0.99081
+        ]
+    ],
+    "so2": [
+        [
+            "S",
+            0.0,
+            0.0,
+            0.362207
+        ],
+        [
+            "O",
+            1.239318,
+            1.239318,
+            -0.362207
+        ],
+        [
+            "O",
+            -1.239318,
+            -1.239318,
+            -0.362207
+        ]
+    ],
+    "so3": [
+        [
+            "S",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "O",
+            1.42279,
+            1.42279,
+            0.0
+        ],
+        [
+            "O",
+            -0.711395,
+            -0.711395,
+            0.0
+        ],
+        [
+            "O",
+            -0.711395,
+            -0.711395,
+            0.0
+        ]
+    ],
+    "ssh": [
+        [
+            "S",
+            -0.950243,
+            -0.950243,
+            0.0
+        ],
+        [
+            "H",
+            -1.214398,
+            -1.214398,
+            0.0
+        ],
+        [
+            "S",
+            1.026143,
+            1.026143,
+            0.0
+        ]
+    ],
+    "t-hcoh": [
+        [
+            "C",
+            0.742943,
+            0.742943,
+            0.0
+        ],
+        [
+            "H",
+            0.977417,
+            0.977417,
+            0.0
+        ],
+        [
+            "O",
+            -0.571411,
+            -0.571411,
+            0.0
+        ],
+        [
+            "H",
+            -0.863789,
+            -0.863789,
+            0.0
+        ]
+    ],
+    "t-hono": [
+        [
+            "O",
+            0.152366,
+            0.152366,
+            0.0
+        ],
+        [
+            "N",
+            0.518688,
+            0.518688,
+            0.0
+        ],
+        [
+            "O",
+            -0.587415,
+            -0.587415,
+            0.0
+        ],
+        [
+            "H",
+            -0.150429,
+            -0.150429,
+            0.0
+        ]
+    ],
+    "t-hooo": [
+        [
+            "O",
+            0.194313,
+            0.194313,
+            0.0
+        ],
+        [
+            "O",
+            0.55318,
+            0.55318,
+            0.0
+        ],
+        [
+            "O",
+            -0.717715,
+            -0.717715,
+            0.0
+        ],
+        [
+            "H",
+            -0.238229,
+            -0.238229,
+            0.0
+        ]
+    ],
+    "t-n2h2": [
+        [
+            "H",
+            0.90948,
+            0.90948,
+            0.0
+        ],
+        [
+            "N",
+            0.62469,
+            0.62469,
+            0.0
+        ],
+        [
+            "N",
+            -0.62469,
+            -0.62469,
+            0.0
+        ],
+        [
+            "H",
+            -0.90948,
+            -0.90948,
+            0.0
         ]
     ]
 }

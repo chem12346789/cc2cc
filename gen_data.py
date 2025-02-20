@@ -7,7 +7,7 @@ from itertools import product
 import os
 
 from cc2cc import add_args, cc, ucc
-from cc2cc.utils import gen_mole
+from cc2cc.utils import Grid, gen_mole
 
 
 if __name__ == "__main__":
@@ -15,7 +15,7 @@ if __name__ == "__main__":
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
-    print(os.getpid())
+    print(f"PID: {os.getpid()}")
 
     for (
         name_mol,
@@ -42,9 +42,16 @@ if __name__ == "__main__":
             print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
             continue
 
-        if mol.spin == 0:
-            cc(mol, name)
+        if args.n_rad is not None and args.n_ang is not None:
+            name = f"{name}_{args.n_rad}_{args.n_ang}"
         else:
-            ucc(mol, name)
+            name = f"{name}_default"
+
+        grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
+
+        if mol.spin == 0:
+            cc(mol, grids, name)
+        else:
+            ucc(mol, grids, name)
 
         print()

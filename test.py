@@ -9,7 +9,7 @@ import os
 
 from cc2cc import add_args, test_rks, test_uks
 from cc2cc.utils import gen_mole
-from cc2cc.utils import ModelDict, DataRecord
+from cc2cc.utils import Grid, ModelDict, DataRecord
 from cc2cc.utils import MAIN_PATH
 
 
@@ -66,11 +66,28 @@ if __name__ == "__main__":
             print(f"SKIP: {name}")
             continue
 
+        grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
+
+        if args.n_rad is not None and args.n_ang is not None:
+            name = f"{name}_{args.n_rad}_{args.n_ang}"
+        else:
+            name = f"{name}_default"
+
         if mol.spin == 0:
             test_rks(
-                mol, name, modeldict, data_record, lambda_=args.density_restriction
+                mol,
+                grids,
+                name,
+                modeldict,
+                data_record,
+                lambda_=args.density_restriction,
             )
         else:
             test_uks(
-                mol, name, modeldict, data_record, lambda_=args.density_restriction
+                mol,
+                grids,
+                name,
+                modeldict,
+                data_record,
+                lambda_=args.density_restriction,
             )

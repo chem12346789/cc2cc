@@ -95,6 +95,9 @@ def rotate(molecular, rotation=None, degree=None, verbose=False):
     """
     Rotate the molecular to certain direction, center of mass is at the origin, and the (three) principal axis of charge is along the x, y, z axis.
     """
+    if rotation is not None:
+        verbose = True
+
     if verbose:
         print("Rotate the molecular to certain direction")
         print(f"before rotation {molecular}")
