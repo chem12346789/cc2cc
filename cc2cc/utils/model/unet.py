@@ -119,5 +119,4 @@ class Model(nn.Module):
             return self.outc(x) * t
         else:
             t = x[:, [0], :, :]
-            x = torch.sigmoid(t)
             return self.model(x) * t

@@ -74,6 +74,7 @@ def gen_mole(
     basis: str,
     if_basis_str: bool,
     dataset_name: str = "Mol",
+    verbose=4,
 ) -> pyscf.gto.Mole:
     """
     Function to generate the molecule
@@ -99,7 +100,7 @@ def gen_mole(
             basis,
             if_basis_str,
         ),
-        verbose=4,
+        verbose=verbose,
         spin=dataset[dataset_name]["spin"][name_mol],
         charge=dataset[dataset_name]["charge"][name_mol],
     )

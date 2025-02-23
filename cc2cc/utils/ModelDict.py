@@ -60,9 +60,8 @@ class ModelDict:
             self.dtype = torch.float64
             self.model.double()
 
-        self.optimizer = optim.AdamW(self.model.parameters(), lr=1e-4)
-
         if self.with_eval:
+            self.optimizer = optim.AdamW(self.model.parameters(), lr=1e-3)
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer,
                 mode="min",
@@ -70,6 +69,7 @@ class ModelDict:
                 patience=50,
             )
         else:
+            self.optimizer = optim.AdamW(self.model.parameters(), lr=1e-4)
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
                 T_max=250,

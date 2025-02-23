@@ -120,8 +120,8 @@ def test_rks(
     dm1_scf = mdft.make_rdm1()
 
     # mdft.max_cycle = -1
-    # mdft.kernel(dm0=test_data.dm1_dft)
-    # dm1_scf = test_data.dm1_dft.copy()
+    # mdft.kernel(dm0=test_data.dm1_cc)
+    # dm1_scf = test_data.dm1_cc.copy()
 
     scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
 

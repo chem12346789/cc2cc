@@ -20,12 +20,13 @@ mkdir -p log
 mkdir -p validate
 mkdir -p data/grids_dft
 
-export load_pid_args="2520597"
+export load_pid_args="2690293"
 export dl_args="0 0 1"
 # export basis_args="Def2-TZVPD"
-export basis_args="cc-pVDZ"
-export n_rad_args="302"
-export n_ang_args="302"
+# export basis_args="cc-pVDZ"
+export basis_args="cc-pVTZ"
+export n_rad_args="110"
+export n_ang_args="110"
 if [ -z "$n_rad_args" ]; then
     export mol_args="--distance_list ${dl_args} --basis ${basis_args} --extend_atom 0 --extend_xyz 0"
 else
@@ -35,7 +36,7 @@ fi
 cat <<EOF | nohup bash >log/test-${basis_args}-${load_pid_args}.log 2>&1 &
 echo Starting test.py at $(date)
 echo "${mol_args}"
-~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 --load cycle1-${load_pid_args} --load_epoch 10000 --dataset g2
+~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 --load cycle1-${load_pid_args} --load_epoch -1000 --dataset g2
 echo DONE
 EOF
 

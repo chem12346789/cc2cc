@@ -143,7 +143,7 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=1000000,
+        default=64,
         help="Batch size for training. Default is 64 (FCnet).",
     )
 

@@ -4,7 +4,6 @@ import argparse
 import os
 
 from tqdm import trange
-import torch
 
 import numpy as np
 import wandb
@@ -61,7 +60,7 @@ def train_model(train_str_dict, eval_str_dict):
     print(f"Start training at {modeldict.dir_checkpoint}")
     pbar0 = trange(args.epoch + 1, mininterval=2, maxinterval=20)
     for epoch in pbar0:
-        modeldict.loss_multiplier = args.loss_multiplier * min(10.0, epoch / 2500)
+        modeldict.loss_multiplier = args.loss_multiplier * min(10.0, epoch / 250)
         train_loss_ene, train_loss_ene_tot = modeldict.train_model(database_train)
         if not modeldict.with_eval:
             modeldict.scheduler.step()
