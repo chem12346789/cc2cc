@@ -12,6 +12,7 @@ export PYTHONPATH=~/python:$PYTHONPATH
 export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
 export DFT2CC_CUBE_USE=3
 export DFT2CC_GENERATE_DATA=1
+export PYSCF_TMPDIR=~/raid/tmp
 
 export NVIDIA_VISIBLE_DEVICES=1
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')

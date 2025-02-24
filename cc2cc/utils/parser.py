@@ -76,13 +76,6 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--basis",
-        type=str,
-        default="cc-pVDZ",
-        help="Basis set for the calculation.",
-    )
-
-    parser.add_argument(
         "--n_rad",
         type=int,
         default=None,
@@ -97,10 +90,17 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--basis",
+        type=str,
+        default="cc-pVDZ",
+        help="Basis set for the calculation.",
+    )
+
+    parser.add_argument(
         "--if_basis_str",
         type=str2bool,
         default=True,
-        help="Weather to use the basis set from basissetexchange. See https://www.basissetexchange.org. Default is False.",
+        help="Weather to use the basis set from basissetexchange. See https://www.basissetexchange.org. Default is True.",
     )
 
     parser.add_argument(
@@ -113,8 +113,15 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--cc_triple",
         type=str2bool,
-        default="False",
+        default=False,
         help="Weather to use the noniterative CCSD(T) in the coupled cluster method. Default is False.",
+    )
+
+    parser.add_argument(
+        "--if_grad",
+        type=str2bool,
+        default=False,
+        help="Weather to calculate the gradient. Default is False.",
     )
 
     # for machine learning

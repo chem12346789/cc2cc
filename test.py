@@ -76,7 +76,7 @@ if __name__ == "__main__":
                 name,
                 modeldict,
                 data_record,
-                lambda_=args.density_restriction,
+                args,
             )
         else:
             test_uks(
@@ -85,5 +85,5 @@ if __name__ == "__main__":
                 name,
                 modeldict,
                 data_record,
-                lambda_=args.density_restriction,
+                args,
             )

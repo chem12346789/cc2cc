@@ -4,12 +4,12 @@ channels:
   - pytorch
   - nvidia
 dependencies:
-  - python>=3.10
+  - python
   - anaconda
-  - numpy==1.26.4
-  - scipy==1.14.0
-  - pandas==2.2.2
-  - pyscf==2.8.0
+  - numpy
+  - scipy
+  - pandas
+  - pyscf==2.7.0
   - opt_einsum
   - scikit-learn
   - basis_set_exchange

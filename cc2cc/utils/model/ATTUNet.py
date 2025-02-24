@@ -121,6 +121,17 @@ class Attention_block(nn.Module):  # attention Gate
         return x * psi
 
 
+def pad_cat(xd, dim=1):
+    """
+    Padding the input feature map x to the same size as the output feature map d
+    """
+    x, d = xd
+    diffY = x.size()[2] - d.size()[2]
+    diffX = x.size()[3] - d.size()[3]
+    d = F.pad(d, (diffX // 2, diffX - diffX // 2, diffY // 2, diffY - diffY // 2))
+    return torch.cat((x, d), dim=dim)
+
+
 # ==================================================================
 class U_Net(nn.Module):
     def __init__(self, img_ch=3, output_ch=1):
@@ -166,23 +177,22 @@ class U_Net(nn.Module):
 
         # decoding + concat path
         d5 = self.Up5(x5)
-        d5 = torch.cat((x4, d5), dim=1)
+        d5 = pad_cat((x4, d5), dim=1)
         d5 = self.Up_conv5(d5)
 
         d4 = self.Up4(d5)
-        d4 = torch.cat((x3, d4), dim=1)
+        d4 = pad_cat((x3, d4), dim=1)
         d4 = self.Up_conv4(d4)
 
         d3 = self.Up3(d4)
-        d3 = torch.cat((x2, d3), dim=1)
+        d3 = pad_cat((x2, d3), dim=1)
         d3 = self.Up_conv3(d3)
 
         d2 = self.Up2(d3)
-        d2 = torch.cat((x1, d2), dim=1)
+        d2 = pad_cat((x1, d2), dim=1)
         d2 = self.Up_conv2(d2)
 
         d1 = self.Conv_1x1(d2)
-        d1 = F.softmax(d1, dim=1)  # mine
 
         return d1
 
@@ -237,23 +247,22 @@ class R2U_Net(nn.Module):
 
         # decoding + concat path
         d5 = self.Up5(x5)
-        d5 = torch.cat((x4, d5), dim=1)
+        d5 = pad_cat((x4, d5), dim=1)
         d5 = self.Up_RRCNN5(d5)
 
         d4 = self.Up4(d5)
-        d4 = torch.cat((x3, d4), dim=1)
+        d4 = pad_cat((x3, d4), dim=1)
         d4 = self.Up_RRCNN4(d4)
 
         d3 = self.Up3(d4)
-        d3 = torch.cat((x2, d3), dim=1)
+        d3 = pad_cat((x2, d3), dim=1)
         d3 = self.Up_RRCNN3(d3)
 
         d2 = self.Up2(d3)
-        d2 = torch.cat((x1, d2), dim=1)
+        d2 = pad_cat((x1, d2), dim=1)
         d2 = self.Up_RRCNN2(d2)
 
         d1 = self.Conv_1x1(d2)
-        d1 = F.softmax(d1, dim=1)
 
         return d1
 
@@ -308,22 +317,22 @@ class AttU_Net(nn.Module):
         # decoding + concat path
         d5 = self.Up5(x5)
         x4 = self.Att5(g=d5, x=x4)
-        d5 = torch.cat((x4, d5), dim=1)
+        d5 = pad_cat((x4, d5), dim=1)
         d5 = self.Up_conv5(d5)
 
         d4 = self.Up4(d5)
         x3 = self.Att4(g=d4, x=x3)
-        d4 = torch.cat((x3, d4), dim=1)
+        d4 = pad_cat((x3, d4), dim=1)
         d4 = self.Up_conv4(d4)
 
         d3 = self.Up3(d4)
         x2 = self.Att3(g=d3, x=x2)
-        d3 = torch.cat((x2, d3), dim=1)
+        d3 = pad_cat((x2, d3), dim=1)
         d3 = self.Up_conv3(d3)
 
         d2 = self.Up2(d3)
         x1 = self.Att2(g=d2, x=x1)
-        d2 = torch.cat((x1, d2), dim=1)
+        d2 = pad_cat((x1, d2), dim=1)
         d2 = self.Up_conv2(d2)
 
         d1 = self.Conv_1x1(d2)

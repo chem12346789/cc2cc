@@ -8,6 +8,7 @@ export OPENBLAS_NUM_THREADS=12
 export PYSCF_MAX_MEMORY=40000
 export PYTHONPATH=~/python:$PYTHONPATH
 export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
+export PYSCF_TMPDIR=~/raid/tmp
 
 export NVIDIA_VISIBLE_DEVICES=1
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')

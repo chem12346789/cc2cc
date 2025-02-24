@@ -128,6 +128,7 @@ def get_inertia_moment(
         ]
     )
 
+    print(f"inertia_electron: {inertia_electron}")
     eig_val, eig_vec = np.linalg.eigh(inertia_electron)
     for i in range(3):
         if eig_vec[:, i] @ dipole_electron < 0:

@@ -8,6 +8,7 @@ export OPENBLAS_NUM_THREADS=12
 export PYSCF_MAX_MEMORY=80000
 export PYTHONPATH=~/python:$PYTHONPATH
 export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
+export PYSCF_TMPDIR=~/raid/tmp
 
 export NVIDIA_VISIBLE_DEVICES=1
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')
@@ -23,8 +24,9 @@ mkdir -p data/grids_dft
 export load_pid_args="2690293"
 export dl_args="0 0 1"
 # export basis_args="Def2-TZVPD"
-# export basis_args="cc-pVDZ"
-export basis_args="cc-pVTZ"
+# export basis_args="def2svpd"
+export basis_args="cc-pVDZ"
+# export basis_args="cc-pVTZ"
 export n_rad_args="110"
 export n_ang_args="110"
 if [ -z "$n_rad_args" ]; then
@@ -36,7 +38,7 @@ fi
 cat <<EOF | nohup bash >log/test-${basis_args}-${load_pid_args}.log 2>&1 &
 echo Starting test.py at $(date)
 echo "${mol_args}"
-~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 --load cycle1-${load_pid_args} --load_epoch -1000 --dataset g2
+~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 --load cycle1-${load_pid_args} --load_epoch -1000 --dataset g2 --if_basis_str 0 --cc_triple 1 || exit 1
 echo DONE
 EOF
 

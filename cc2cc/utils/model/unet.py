@@ -8,6 +8,7 @@ import torch.nn.functional as F
 
 from cc2cc.utils.model.unet_parts import DoubleConv, Down, Up, OutConv
 from cc2cc.utils.model.transformer import PredictorSmall
+from cc2cc.utils.model.ATTUNet import U_Net, R2U_Net, AttU_Net
 
 ESP = torch.finfo(torch.float32).eps
 
@@ -24,7 +25,7 @@ class Model(nn.Module):
         hidden_channels=32,
         output_channels=1,
         num_layers=3,
-        residual=0,
+        residual=10,
     ):
         super().__init__()
         self.input_channels = input_channels
@@ -99,7 +100,7 @@ class Model(nn.Module):
             self.outc = OutConv(self.hidden_channels, self.output_channels)
         else:
             if self.residual == 10:
-                self.model = PredictorSmall()
+                self.model = U_Net()
 
     def forward(self, x):
         """
