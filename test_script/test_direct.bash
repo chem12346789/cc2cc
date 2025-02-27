@@ -14,31 +14,30 @@ export NVIDIA_VISIBLE_DEVICES=1
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')
 # export CUDA_VISIBLE_DEVICES=NUMBER_OF_GPU
 
-# basis_args="Def2-TZVPD"
-# nohup bash -c "~/anaconda3/envs/pyscf/bin/python test.py -dl 0 0 1 --basis ${basis_args} --extend_atom 0 --extend_xyz 0 --precision float64 --load cycle1 --load_epoch 15000 --dataset g2" >log/test-${basis_args}.log 2>&1 &
+export DFT2CC_TEST=1
 
 mkdir -p log
 mkdir -p validate
 mkdir -p data/grids_dft
 
-export load_pid_args="2690293"
+export load_args="atom-1-1071504"
 export dl_args="0 0 1"
 # export basis_args="Def2-TZVPD"
 # export basis_args="def2svpd"
 export basis_args="cc-pVDZ"
 # export basis_args="cc-pVTZ"
-export n_rad_args="110"
-export n_ang_args="110"
+export n_rad_args="302"
+export n_ang_args="302"
 if [ -z "$n_rad_args" ]; then
     export mol_args="--distance_list ${dl_args} --basis ${basis_args} --extend_atom 0 --extend_xyz 0"
 else
     export mol_args="--distance_list ${dl_args} --basis ${basis_args} --n_rad ${n_rad_args} --n_ang ${n_ang_args} --extend_atom 0 --extend_xyz 0"
 fi
 
-cat <<EOF | nohup bash >log/test-${basis_args}-${load_pid_args}.log 2>&1 &
+cat <<EOF | nohup bash >log/test-${basis_args}-${load_args}.log 2>&1 &
 echo Starting test.py at $(date)
 echo "${mol_args}"
-~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 --load cycle1-${load_pid_args} --load_epoch -1000 --dataset g2 --if_basis_str 0 --cc_triple 1 || exit 1
+~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 --load ${load_args} --load_epoch -1000 --dataset mol --if_basis_str 0 || exit 1
 echo DONE
 EOF
 

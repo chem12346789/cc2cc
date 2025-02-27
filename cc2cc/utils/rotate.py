@@ -91,13 +91,13 @@ def get_inertia_moment(molecular):
     return I
 
 
-def rotate(molecular, rotation=None, degree=None, verbose=False):
+def rotate(molecular, rotation=None, degree=None, verbose=4):
     """
     Rotate the molecular to certain direction, center of mass is at the origin, and the (three) principal axis of charge is along the x, y, z axis.
     """
     if rotation is not None:
-        verbose = True
-    if verbose:
+        verbose = 4
+    if verbose > 3:
         print("Rotate the molecular to certain direction")
         print(f"before rotation {molecular}")
     # Get the barycenter
@@ -165,7 +165,7 @@ def rotate(molecular, rotation=None, degree=None, verbose=False):
         mol[1] = x_array[0]
         mol[2] = x_array[1]
         mol[3] = x_array[2]
-    if verbose:
+    if verbose > 3:
         print(f"after rotation {molecular}")
 
     if rotation is not None:
@@ -196,7 +196,7 @@ def rotate(molecular, rotation=None, degree=None, verbose=False):
                 ]
             )
         else:
-            if verbose:
+            if verbose > 3:
                 print("random rotation")
             random_axis = np.random.uniform(-1, 1, 3)
             random_axis = random_axis / np.linalg.norm(random_axis)
@@ -208,7 +208,9 @@ def rotate(molecular, rotation=None, degree=None, verbose=False):
             mol[1] = x_array[0]
             mol[2] = x_array[1]
             mol[3] = x_array[2]
-        if verbose:
+        if verbose > 3:
             print(f"after test rotation {molecular}")
         return rotation
+    if verbose > 3:
+        print("No rotation applied, returning identity matrix.")
     return np.eye(3)

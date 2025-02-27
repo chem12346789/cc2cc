@@ -30,7 +30,7 @@ def train_model(train_str_dict, eval_str_dict):
         project="DFT2CC",
         resume="allow",
         name="dft2cc",
-        dir="/home/chenzihao/workdir/tmp",
+        dir="~/raid/tmp",
         allow_val_change=True,
     )
     wandb.define_metric("*", step_metric="global_step")
@@ -60,7 +60,9 @@ def train_model(train_str_dict, eval_str_dict):
     print(f"Start training at {modeldict.dir_checkpoint}")
     pbar0 = trange(args.epoch + 1, mininterval=2, maxinterval=20)
     for epoch in pbar0:
-        modeldict.loss_multiplier = args.loss_multiplier * min(10.0, epoch / 250)
+        modeldict.loss_multiplier = (
+            args.loss_multiplier * min(1.0, epoch / 5000) * np.cos(np.pi * epoch / 2500)
+        )
         train_loss_ene, train_loss_ene_tot = modeldict.train_model(database_train)
         if not modeldict.with_eval:
             modeldict.scheduler.step()

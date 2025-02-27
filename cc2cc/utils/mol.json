@@ -27,7 +27,6 @@
         "h2"
     ],
     "molecular": [
-        "allene",
         "c",
         "c2",
         "c2h2",
@@ -43,6 +42,7 @@
         "ch4",
         "h",
         "h2",
+        "allene",
         "propane",
         "propene",
         "propyne"

@@ -10,6 +10,64 @@ import numpy as np
 
 from cc2cc.utils.mol import dataset
 
+periodic_table = {
+    -1: "all",
+    1: "H",
+    2: "He",
+    3: "Li",
+    4: "Be",
+    5: "B",
+    6: "C",
+    7: "N",
+    8: "O",
+    9: "F",
+    10: "Ne",
+    11: "Na",
+    12: "Mg",
+    13: "Al",
+    14: "Si",
+    15: "P",
+    16: "S",
+    17: "Cl",
+    18: "Ar",
+    19: "K",
+    20: "Ca",
+    21: "Sc",
+    22: "Ti",
+    23: "V",
+    24: "Cr",
+    25: "Mn",
+    26: "Fe",
+    27: "Co",
+    28: "Ni",
+    29: "Cu",
+    30: "Zn",
+    31: "Ga",
+    32: "Ge",
+    33: "As",
+    34: "Se",
+    35: "Br",
+    36: "Kr",
+    37: "Rb",
+    38: "Sr",
+    39: "Y",
+    40: "Zr",
+    41: "Nb",
+    42: "Mo",
+    43: "Tc",
+    44: "Ru",
+    45: "Rh",
+    46: "Pd",
+    47: "Ag",
+    48: "Cd",
+    49: "In",
+    50: "Sn",
+    51: "Sb",
+    52: "Te",
+    53: "I",
+    54: "Xe",
+}
+
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -163,6 +221,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--lr",
+        type=float,
+        default=1e-4,
+        help="Learning rate for the training. Default is 1e-4.",
+    )
+
+    parser.add_argument(
         "--with_eval",
         type=str2bool,
         default=True,
@@ -181,6 +246,13 @@ def add_args(parser: argparse.ArgumentParser):
         type=float,
         default=1.0,
         help="Lambda for the loss function. Default is 1.0.",
+    )
+
+    parser.add_argument(
+        "--train_atom",
+        type=int,
+        default=1,
+        help="Atom for training. Default is 1 (1 for Hydrogen).",
     )
 
     # for testing
@@ -213,5 +285,12 @@ def add_args(parser: argparse.ArgumentParser):
 
     if len(args.name_mol) == 0:
         args.name_mol = dataset[args.dataset]["molecular"]
+
+    if args.train_atom not in periodic_table.keys():
+        raise ValueError(
+            f"Invalid train_atom value: {args.train_atom}. Please use a valid atomic number."
+        )
+    else:
+        args.train_atom = periodic_table[args.train_atom]
 
     return args

@@ -71,7 +71,6 @@ class TestData:
         mdft = pyscf.scf.RKS(self.mol)
         mdft.xc = self.xc_code
         mdft.max_cycle = 250
-        mdft.grids.level = 4
         mdft.kernel(dm0=self.mf_dm1)
         self.dm1_dft = mdft.make_rdm1(ao_repr=True)
         self.e_dft = mdft.e_tot
@@ -124,7 +123,6 @@ class TestData:
         mdft = pyscf.scf.UKS(self.mol)
         mdft.xc = self.xc_code
         mdft.max_cycle = 250
-        mdft.grids.level = 4
         mdft.kernel(dm0=self.mf_dm1)
         self.dm1_dft = mdft.make_rdm1(ao_repr=True)
         self.e_dft = mdft.e_tot

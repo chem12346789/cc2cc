@@ -16,11 +16,11 @@ from pyscf.dft.numint import _scale_ao, _dot_ao_ao
 from pyscf.dft.numint import _rks_gga_wv0, _uks_gga_wv0
 from pyscf.dft.libxc import xc_type
 
-from cc2cc.utils.env_var import CHECKPOINTS_PATH
+from cc2cc.utils.env_var import CHECKPOINTS_PATH, TEST
 from cc2cc.utils.mol import AU2KCALMOL, AU2DEBYE
 
 from cc2cc.utils.Grids import Grid
-from cc2cc.utils.model.unet import Model
+from cc2cc.utils.model.model import Model
 
 
 class ModelDict:
@@ -61,7 +61,7 @@ class ModelDict:
             self.model.double()
 
         if self.with_eval:
-            self.optimizer = optim.AdamW(self.model.parameters(), lr=1e-3)
+            self.optimizer = optim.AdamW(self.model.parameters(), lr=args.lr)
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer,
                 mode="min",
@@ -69,11 +69,11 @@ class ModelDict:
                 patience=50,
             )
         else:
-            self.optimizer = optim.AdamW(self.model.parameters(), lr=1e-4)
+            self.optimizer = optim.AdamW(self.model.parameters(), lr=args.lr)
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
                 T_max=250,
-                eta_min=1e-6,
+                eta_min=args.lr / 100,
             )
 
         self.scaler = GradScaler("cuda")
@@ -209,6 +209,8 @@ class ModelDict:
                     )
 
                 self.scaler.scale(self.tot_loss(loss_ene, loss_ene_tot)).backward()
+                self.scaler.unscale_(self.optimizer)
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.1)
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
 
@@ -282,18 +284,21 @@ class ModelDict:
         input_mat.requires_grad = True
         output_mat = self.model(input_mat)
 
-        middle_cube = torch.autograd.grad(
-            torch.sum(output_mat),
-            input_mat,
-            create_graph=True,
-        )[0]
+        middle_cube = (
+            torch.autograd.grad(
+                torch.sum(output_mat),
+                input_mat,
+                create_graph=True,
+            )[0]
+            .detach()
+            .cpu()
+            .numpy()
+        )
         middle_mat = np.transpose(
             np.array(
                 [
-                    grids.matrix_to_vector(
-                        middle_cube.detach().cpu().numpy()[:, i, :, :]
-                    )
-                    for i in range(4)
+                    grids.matrix_to_vector(middle_cube[:, i, :, :])
+                    for i in range(middle_cube.shape[1])
                 ]
             ),
             axes=(1, 0),
@@ -302,9 +307,10 @@ class ModelDict:
             (output_mat).detach().cpu().numpy()[:, 0, :, :]
         )
 
-        # hyb_coeff = [0.0, 0.0, 0.0, 0.0]
-
-        hyb_coeff = [0.08, 0.19, 0.72, 0.81]
+        if TEST:
+            hyb_coeff = [0.0, 0.0, 0.0, 0.0]
+        else:
+            hyb_coeff = [0.08, 0.19, 0.72, 0.81]
 
         # if ks.mol.spin == 0:
         #     middle_mat = np.zeros((rho[0].shape[0], 4))
@@ -323,6 +329,7 @@ class ModelDict:
             vrho += (hyb_coeff[1] + middle_mat[:, 1]) * vwn_grids[1][0]
             vrho += (hyb_coeff[2] + middle_mat[:, 2]) * b88_grids[1][0]
             vrho += (hyb_coeff[3] + middle_mat[:, 3]) * lyp_grids[1][0]
+            vrho += middle_mat[:, 4]
             vsigma = (hyb_coeff[2] + middle_mat[:, 2]) * b88_grids[1][1]
             vsigma += (hyb_coeff[3] + middle_mat[:, 3]) * lyp_grids[1][1]
         else:
@@ -335,6 +342,7 @@ class ModelDict:
             vrho += (hyb_coeff[1] + middle_mat[:, 1]).reshape(-1, 1) * vwn_grids[1][0]
             vrho += (hyb_coeff[2] + middle_mat[:, 2]).reshape(-1, 1) * b88_grids[1][0]
             vrho += (hyb_coeff[3] + middle_mat[:, 3]).reshape(-1, 1) * lyp_grids[1][0]
+            vrho += middle_mat[:, 4].reshape(-1, 1)
             vsigma = (hyb_coeff[2] + middle_mat[:, 2]).reshape(-1, 1) * b88_grids[1][1]
             vsigma += (hyb_coeff[3] + middle_mat[:, 3]).reshape(-1, 1) * lyp_grids[1][1]
 

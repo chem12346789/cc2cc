@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 
 class DoubleConv(nn.Module):
-    """(convolution => [BN] => GELU) * 2"""
+    """(convolution => [BN] => ReLU) * 2"""
 
     def __init__(
         self,

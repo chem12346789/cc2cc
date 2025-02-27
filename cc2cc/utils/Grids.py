@@ -5,23 +5,12 @@ More details.
 """
 
 import ctypes
-from itertools import product
-import os
 
 import numpy as np
-from joblib import Parallel, parallel_config, delayed
 import pyscf
 from pyscf import dft, gto, lib
-from pyscf.dft.numint import _dot_ao_dm, _contract_rho
 
-from cc2cc.utils.env_var import (
-    CUBE_SIZE,
-    CUBE_LEN,
-    CUBE_MIDDLE,
-    LEVEL,
-    PERIOD,
-)
-from cc2cc.utils.rotate import rotation_matrix_from_vectors
+from cc2cc.utils.env_var import LEVEL, PERIOD
 
 libdft = lib.load_library("libdft")
 AU2ANG = 0.52917721067
@@ -128,7 +117,7 @@ def get_inertia_moment(
         ]
     )
 
-    print(f"inertia_electron: {inertia_electron}")
+    # print(f"inertia_electron: {inertia_electron}")
     eig_val, eig_vec = np.linalg.eigh(inertia_electron)
     for i in range(3):
         if eig_vec[:, i] @ dipole_electron < 0:
@@ -161,31 +150,9 @@ def gen_input(rho, spin, xc_type):
             vwn_grids * rho0,
             b88_grids * rho0,
             lyp_grids * rho0,
+            rho0,
         ]
     )
-
-    # if spin != 0:
-    #     rho01, dx1, dy1, dz1 = rho[0][:4]
-    #     rho02, dx2, dy2, dz2 = rho[1][:4]
-    #     gamma1 = dx1**2 + dy1**2 + dz1**2
-    #     gamma2 = dx2**2 + dy2**2 + dz2**2
-    #     gamma12 = dx1 * dx2 + dy1 * dy2 + dz1 * dz2
-    # else:
-    #     rho0, dx, dy, dz = rho[:4]
-    #     gamma1 = gamma2 = gamma12 = (dx**2 + dy**2 + dz**2) / 4
-    #     rho01 = rho02 = rho0 / 2
-
-    # if xc_type == "GGA":
-    #     rho0 = np.array([rho01, rho02, gamma1, gamma12, gamma2])
-    # elif xc_type == "MGGA":
-    #     if spin != 0:
-    #         tau1 = rho[0][4]
-    #         tau2 = rho[1][4]
-    #     else:
-    #         tau = rho[4]
-    #         tau1 = tau * 0.5
-    #         tau2 = tau * 0.5
-    #     rho_out = np.array([rho01, rho02, gamma1, gamma12, gamma2, tau1, tau2])
 
     return rho_out
 
@@ -211,6 +178,8 @@ def gen_atomic_grids(
             chg = gto.charge(symb)
             if symb in atom_grid:
                 n_rad, n_ang = atom_grid[symb]
+            else:
+                raise ValueError(f"Atom {symb} not found in atom_grid")
             rad, dr = radi_method(n_rad, chg, ia, **kwargs)
 
             rad_weight = 4 * np.pi * rad**2 * dr
@@ -368,6 +337,9 @@ class Grid(dft.gen_grid.Grids):
                 )
 
     def gen_grids_matrix(self, mol, dm1_input, reset=False, xc_type="GGA"):
+        """
+        Generate the cube coordinates for the given molecule.
+        """
         if self.index_2d is None:
             print("Warning: generate index!")
             self.gen_grids(mol, dm1_input)
