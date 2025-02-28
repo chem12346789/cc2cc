@@ -16,8 +16,8 @@ from pyscf.dft.numint import _scale_ao, _dot_ao_ao
 from pyscf.dft.numint import _rks_gga_wv0, _uks_gga_wv0
 from pyscf.dft.libxc import xc_type
 
-from cc2cc.utils.env_var import CHECKPOINTS_PATH
-from cc2cc.utils.mol import AU2KCALMOL, AU2DEBYE
+from cc2cc.utils.env_var import CHECKPOINTS_PATH, TEST
+from cc2cc.utils.mol import AU2KCALMOL
 
 from cc2cc.utils.Grids import Grid
 from cc2cc.utils.model.cnn3d import Model
@@ -60,9 +60,8 @@ class ModelDict:
             self.dtype = torch.float64
             self.model.double()
 
-        self.optimizer = optim.AdamW(self.model.parameters(), lr=1e-4)
-
         if self.with_eval:
+            self.optimizer = optim.AdamW(self.model.parameters(), lr=args.lr)
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer,
                 mode="min",
@@ -70,10 +69,11 @@ class ModelDict:
                 patience=50,
             )
         else:
+            self.optimizer = optim.AdamW(self.model.parameters(), lr=args.lr)
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
                 T_max=250,
-                eta_min=1e-6,
+                eta_min=args.lr / 100,
             )
 
         self.scaler = GradScaler("cuda")
@@ -209,6 +209,8 @@ class ModelDict:
                     )
 
                 self.scaler.scale(self.tot_loss(loss_ene, loss_ene_tot)).backward()
+                self.scaler.unscale_(self.optimizer)
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.1)
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
 
@@ -290,16 +292,7 @@ class ModelDict:
         middle_mat = grids.get_center_density(middle_cube).detach().cpu().numpy()
         energy_den = output_mat.detach().cpu().numpy()
 
-        # hyb_coeff = [0.0, 0.0, 0.0, 0.0]
-
         hyb_coeff = [0.08, 0.19, 0.72, 0.81]
-
-        # if ks.mol.spin == 0:
-        #     middle_mat = np.zeros((rho[0].shape[0], 4))
-        #     energy_den = np.zeros(rho[0].shape[0])
-        # else:
-        #     middle_mat = np.zeros((rho[0][0].shape[0], 4))
-        #     energy_den = np.zeros(rho[0][0].shape[0])
 
         if ks.mol.spin == 0:
             rho_lda = rho[0]

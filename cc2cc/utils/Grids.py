@@ -117,31 +117,9 @@ def gen_input(rho, spin, xc_type):
             vwn_grids * rho0,
             b88_grids * rho0,
             lyp_grids * rho0,
+            # rho0,
         ]
     )
-
-    # if spin != 0:
-    #     rho01, dx1, dy1, dz1 = rho[0][:4]
-    #     rho02, dx2, dy2, dz2 = rho[1][:4]
-    #     gamma1 = dx1**2 + dy1**2 + dz1**2
-    #     gamma2 = dx2**2 + dy2**2 + dz2**2
-    #     gamma12 = dx1 * dx2 + dy1 * dy2 + dz1 * dz2
-    # else:
-    #     rho0, dx, dy, dz = rho[:4]
-    #     gamma1 = gamma2 = gamma12 = (dx**2 + dy**2 + dz**2) / 4
-    #     rho01 = rho02 = rho0 / 2
-
-    # if xc_type == "GGA":
-    #     rho0 = np.array([rho01, rho02, gamma1, gamma12, gamma2])
-    # elif xc_type == "MGGA":
-    #     if spin != 0:
-    #         tau1 = rho[0][4]
-    #         tau2 = rho[1][4]
-    #     else:
-    #         tau = rho[4]
-    #         tau1 = tau * 0.5
-    #         tau2 = tau * 0.5
-    #     rho_out = np.array([rho01, rho02, gamma1, gamma12, gamma2, tau1, tau2])
 
     return rho_out
 
@@ -371,12 +349,6 @@ class Grid(dft.gen_grid.Grids):
             )
 
         return np.array(rho_cube)
-
-    def get_center_rho(self, rho_cube):
-        return (
-            rho_cube[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + rho_cube[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-        )
 
     def get_center_density(self, den_cube):
         return den_cube[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]

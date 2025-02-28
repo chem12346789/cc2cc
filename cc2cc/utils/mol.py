@@ -34,14 +34,16 @@ def extend(
     distance: float,
     basis: str,
     dataset_name: str = "Mol",
+    verbose=4,
 ) -> tuple:
     """
     Function to extend the molecular
     """
     molecular = np.array(copy.deepcopy(dataset[dataset_name][name_mol]), dtype=object)
-    print(f"Generate {name_mol}_{distance:.4f}")
-    print(f"Extend {extend_atom} {extend_xyz} {distance:.4f}")
-    print("original mol", molecular)
+    if verbose > 3:
+        print(f"Generate {name_mol}_{distance:.4f}")
+        print(f"Extend {extend_atom} {extend_xyz} {distance:.4f}")
+        print("original mol", molecular)
     name = f"{name_mol}_{basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
 
     if len(molecular) == 1:
@@ -61,8 +63,10 @@ def extend(
     else:
         extend_atom = int(extend_atom)
         molecular[extend_atom][extend_xyz] += distance
-    print("extend mol", molecular)
-    rotate(molecular)
+    if verbose > 3:
+        print("extend mol", molecular)
+    rotate(molecular, verbose=verbose)
+    rotate(molecular, rotation="random")
     return list(molecular), name
 
 
@@ -74,6 +78,7 @@ def gen_mole(
     basis: str,
     if_basis_str: bool,
     dataset_name: str = "Mol",
+    verbose=4,
 ) -> pyscf.gto.Mole:
     """
     Function to generate the molecule
@@ -86,6 +91,7 @@ def gen_mole(
             distance,
             basis,
             dataset_name,
+            verbose=verbose,
         )
     except Exception as e:
         print(f"Error: {name_mol} {extend_atom} {extend_xyz} {distance}")
@@ -99,7 +105,7 @@ def gen_mole(
             basis,
             if_basis_str,
         ),
-        verbose=4,
+        verbose=verbose,
         spin=dataset[dataset_name]["spin"][name_mol],
         charge=dataset[dataset_name]["charge"][name_mol],
     )

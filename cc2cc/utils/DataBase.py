@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from cc2cc.utils.env_var import DATA_PATH, CUBE_MIDDLE
-from cc2cc.utils.mol import AU2KCALMOL
+from cc2cc.utils.mol import gen_mole, AU2KCALMOL
 
 
 def process(data, dtype):
@@ -31,9 +31,8 @@ class BasicDataset:
     Documentation for a class.
     """
 
-    def __init__(self, dict_batch, batch_size, dtype, dict_const=None):
+    def __init__(self, dict_batch, batch_size, dtype):
         self.dict_batch = dict_batch
-        self.dict_const = dict_const
         self.ids = list(dict_batch["input"].keys())
         self.batch_size = batch_size
         self.dtype = dtype
@@ -64,15 +63,7 @@ class BasicDataset:
             batch_gpu = {}
             for key, val in batch.items():
                 batch_gpu[key] = process(val, self.dtype)
-            if self.dict_const is not None:
-                for key, val in self.dict_const.items():
-                    batch_gpu[key] = torch.tensor(val, dtype=self.dtype).to(
-                        device="cuda"
-                    )
             dataloader_gpu.append(batch_gpu)
-            if self.dict_const is not None:
-                if len(dataloader_gpu) > 1:
-                    raise ValueError("Only one batch is allowed.")
         return dataloader_gpu
 
 
@@ -94,6 +85,7 @@ class DataBase:
 
     def __init__(self, molecular_list, args):
         self.molecular_list = molecular_list
+        self.train_atom = args.train_atom
         self.extend_atom = args.extend_atom
         self.extend_xyz = args.extend_xyz
         self.distance_list = args.distance_list
@@ -109,6 +101,7 @@ class DataBase:
         self.data = {}
         self.data_gpu = {}
         self.data_weight = {}  # weight for each data, some atom may have more weight
+        self.data_weight_mol = {}
 
         self.name_list = []
         self.rng = np.random.default_rng()
@@ -124,7 +117,20 @@ class DataBase:
             self.extend_xyz,
             self.distance_list,
         ):
-            name = f"{name_mol}_{self.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
+            mol, name = gen_mole(
+                name_mol,
+                extend_atom,
+                extend_xyz,
+                distance,
+                args.basis,
+                args.if_basis_str,
+                args.dataset,
+                verbose=-1,
+            )
+
+            if mol is None:
+                print(f"SKIP: {name}")
+                continue
 
             if args.n_rad is not None and args.n_ang is not None:
                 name = f"{name}_{args.n_rad}_{args.n_ang}"
@@ -136,22 +142,22 @@ class DataBase:
                 print(f"No file: {path_name_.as_posix():>40}", flush=True)
                 continue
             print(f"Load: {name:>40}", flush=True)
-            self.name_list.append(name)
-            self.load_data(name)
+            num_data_used = self.load_data(mol, name)
+            if num_data_used != 0:
+                self.name_list.append(name)
 
-        self.data_weight_mol = {}
-        for name in self.name_list:
-            name_mol = name.split(f"_{self.basis}_")[0]
             if name_mol not in self.data_weight:
-                self.data_weight_mol[name_mol] = 1
+                self.data_weight_mol[name_mol] = num_data_used
             else:
-                self.data_weight_mol[name_mol] += 1
+                self.data_weight_mol[name_mol] += num_data_used
+
         for name in self.name_list:
             name_mol = name.split(f"_{self.basis}_")[0]
             self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
         del self.data_weight_mol
+        print(self.data_weight)
 
-    def load_data(self, name):
+    def load_data(self, mol, name):
         """
         Load the data.
         """
@@ -161,22 +167,37 @@ class DataBase:
         weight_mat = data["weights"]
         output_mat = data["exc_cc_grids"]
 
-        print(AU2KCALMOL * data["error_energy"])
-        print(AU2KCALMOL * np.sum(output_mat * weight_mat))
-        print(f"{np.min(input_mat[:, 0, :, :, :])}, {np.max(input_mat[:, 0, :, :, :])}")
-        print(f"{np.min(input_mat[:, 1, :, :, :])}, {np.max(input_mat[:, 1, :, :, :])}")
-        print(f"{np.min(input_mat[:, 2, :, :, :])}, {np.max(input_mat[:, 2, :, :, :])}")
-        print(f"{np.min(input_mat[:, 3, :, :, :])}, {np.max(input_mat[:, 3, :, :, :])}")
-        print(f"{np.min(output_mat)}, {np.max(output_mat)}")
-
         input_ = {}
         weight_ = {}
         output_ = {}
 
-        for i_coord in range(len(input_mat)):
-            input_[i_coord] = input_mat[i_coord, :, :, :, :]
-            weight_[i_coord] = weight_mat[[i_coord]]
-            output_[i_coord] = output_mat[[i_coord]]
+        num_data_used = 0
+        total_ene_used = 0
+        data_length = len(input_mat) // mol.natm
+        for i_atom in range(mol.natm):
+            if self.train_atom not in ["all", "All", "ALL"]:
+                if mol.atom_pure_symbol(i_atom) != self.train_atom:
+                    print(
+                        f"SKIP: {name:>40} {mol.atom_pure_symbol(i_atom):>3}",
+                        flush=True,
+                    )
+                    continue
+            print(f"Load: {name:>40} {mol.atom_pure_symbol(i_atom):>3}", flush=True)
+            for i_coord in range(data_length * i_atom, data_length * (i_atom + 1)):
+                input_[num_data_used] = input_mat[i_coord, :, :, :, :]
+                weight_[num_data_used] = weight_mat[[i_coord]]
+                output_[num_data_used] = output_mat[[i_coord]]
+
+                num_data_used += 1
+                total_ene_used += np.sum(output_mat[i_coord] * weight_mat[i_coord])
+
+        if num_data_used == 0:
+            return 0
+
+        print(f"Total energy real: {AU2KCALMOL * data['error_energy']}")
+        print(f"Total energy: {AU2KCALMOL * np.sum(output_mat * weight_mat)}")
+        print(f"Total energy used: {AU2KCALMOL * total_ene_used}")
+        print(f"Total data used for {name}: {num_data_used}", flush=True)
 
         self.data_gpu[name] = BasicDataset(
             {
@@ -187,3 +208,5 @@ class DataBase:
             self.batch_size,
             self.dtype,
         ).load_to_gpu()
+
+        return num_data_used // data_length

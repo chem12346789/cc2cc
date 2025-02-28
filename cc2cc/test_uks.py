@@ -17,7 +17,7 @@ def test_uks(
     name,
     modeldict,
     data_record,
-    lambda_=20,
+    density_restriction=20,
 ):
     """
     Test the model. Restrict Khon-Sham (no spin).
@@ -58,7 +58,7 @@ def test_uks(
             v_p_b = pyscf.dft.numint.eval_mat(
                 mol, ao_0, grids.weights, rho_b_diff, rho_b_diff
             )
-            vxc += lambda_ * np.array([v_p_a, v_p_b])
+            vxc += density_restriction * np.array([v_p_a, v_p_b])
 
         if not ni.libxc.is_hybrid_xc(ks.xc):
             vk = None
@@ -113,14 +113,16 @@ def test_uks(
         return vxc
 
     mdft.get_veff = types.MethodType(get_veff_modified, mdft)
+
     mdft.conv_tol = 1e-6
+    mdft.max_cycle = 150
+    mdft.diis_space = 15
+    mdft.kernel(dm0=test_data.mf_dm1)
+    dm1_scf = mdft.make_rdm1()
 
-    # mdft.kernel(dm0=test_data.mf_dm1)
-    # dm1_scf = mdft.make_rdm1()
-
-    mdft.max_cycle = -1
-    mdft.kernel(dm0=test_data.dm1_cc)
-    dm1_scf = test_data.dm1_dft.copy()
+    # mdft.max_cycle = -1
+    # mdft.kernel(dm0=test_data.dm1_cc)
+    # dm1_scf = test_data.dm1_dft.copy()
 
     scf_dipole = pyscf.scf.hf.dip_moment(
         mol=mol,

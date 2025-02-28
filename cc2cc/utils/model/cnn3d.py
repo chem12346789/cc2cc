@@ -4,8 +4,6 @@ import torch.nn as nn
 
 from cc2cc.utils.env_var import CUBE_MIDDLE
 
-ESP = torch.finfo(torch.float32).eps
-
 
 class Attention(nn.Module):
     """
@@ -143,6 +141,10 @@ class Model(nn.Module):
             nn.GELU(),
             nn.Linear(108, 108),
             nn.GELU(),
+            nn.Linear(108, 108),
+            nn.GELU(),
+            nn.Linear(108, 108),
+            nn.GELU(),
             nn.Linear(108, 1),
         )
 
@@ -150,16 +152,8 @@ class Model(nn.Module):
         """
         Standard forward function, required for all nn.Module classes
         """
-        t = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] + ESP
-        x = x.reshape(-1, 4 * 27)
-        x = x / t
+        t = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 
-        # x = x.reshape(-1, 4, 27)
-        # x = torch.permute(x, (0, 2, 1))
-        # x = self.predictor(x)
-        # x = torch.permute(x, (0, 2, 1))
-
-        x = x.reshape(-1, 4, 3, 3, 3)
         x = self.cnn(x)
 
         x = x.reshape(-1, 108)
