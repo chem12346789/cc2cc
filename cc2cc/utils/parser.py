@@ -70,11 +70,14 @@ periodic_table = {
 
 
 def str2bool(v):
+    """
+    Function to convert string to boolean
+    """
     if isinstance(v, bool):
         return v
-    if v.lower() in ("yes", "true", "True" "t", "y", "1"):
+    if v.lower() in ("yes", "true", "True", "t", "y", "1"):
         return True
-    elif v.lower() in ("no", "false", "False" "f", "n", "0"):
+    elif v.lower() in ("no", "false", "False", "f", "n", "0"):
         return False
     else:
         raise argparse.ArgumentTypeError("Boolean value expected.")
@@ -93,6 +96,29 @@ def gen_logger(distance_list):
     return distance_l
 
 
+def gen_name_args(name_args, args):
+    """
+    Function to generate name args
+    """
+    if len(name_args) == 0:
+        name_mol_new = dataset[args.dataset]["molecule"]
+    else:
+        name_mol_new = []
+        for i in range(len(name_args)):
+            if name_args[i].startswith("molecule"):
+                if name_args[i] in dataset[args.dataset].keys():
+                    name_mol_new += dataset[args.dataset][name_args[i]]
+                else:
+                    raise ValueError(
+                        f"Invalid molecule name: {name_args[i]}. "
+                        f"Please use a valid molecule name in {dataset[args.dataset].keys()}"
+                    )
+            else:
+                name_mol_new.extend([name_args[i]])
+    print(f"Name of molecule: {name_mol_new}")
+    return name_mol_new
+
+
 def add_args(parser: argparse.ArgumentParser):
     """
     Documentation for a function.
@@ -105,7 +131,7 @@ def add_args(parser: argparse.ArgumentParser):
         nargs="+",
         type=str,
         default="",
-        help="Name of molecular. Default is empty (all the dataset).",
+        help="Name of molecule. Default is empty (all the dataset).",
     )
 
     parser.add_argument(
@@ -172,14 +198,15 @@ def add_args(parser: argparse.ArgumentParser):
         "--cc_triple",
         type=str2bool,
         default=False,
-        help="Weather to use the noniterative CCSD(T) in the coupled cluster method. Default is False.",
+        help="Whether to use the noniterative CCSD(T) in the coupled cluster method. "
+        "Default is False.",
     )
 
     parser.add_argument(
         "--if_grad",
         type=str2bool,
         default=False,
-        help="Weather to calculate the gradient. Default is False.",
+        help="Whether to calculate the gradient. Default is False.",
     )
 
     # for machine learning
@@ -188,7 +215,7 @@ def add_args(parser: argparse.ArgumentParser):
         "--load",
         type=str,
         default="",
-        help="Weather to load the saved check point. Default is empty.",
+        help="Whether to load the saved check point. Default is empty.",
     )
 
     parser.add_argument(
@@ -282,9 +309,7 @@ def add_args(parser: argparse.ArgumentParser):
         args.extend_xyz[i] += 1
 
     args.distance_list = gen_logger(args.distance_list)
-
-    if len(args.name_mol) == 0:
-        args.name_mol = dataset[args.dataset]["molecular"]
+    args.name_mol = gen_name_args(args.name_mol, args)
 
     if args.train_atom not in periodic_table.keys():
         raise ValueError(

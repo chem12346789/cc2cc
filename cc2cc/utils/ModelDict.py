@@ -20,7 +20,9 @@ from cc2cc.utils.env_var import CHECKPOINTS_PATH, TEST
 from cc2cc.utils.mol import AU2KCALMOL
 
 from cc2cc.utils.Grids import Grid
+
 from cc2cc.utils.model.cnn3d import Model
+# from cc2cc.utils.model.transformer import Model
 
 
 class ModelDict:
@@ -79,8 +81,12 @@ class ModelDict:
         self.scaler = GradScaler("cuda")
 
         self.loss_multiplier = args.loss_multiplier
-        self.loss_ene = torch.nn.L1Loss(reduction="none")
-        self.loss_ene_tot = torch.nn.L1Loss(reduction="sum")
+
+        self.loss_ene = torch.nn.L1Loss(reduction="sum")
+        # self.loss_ene = torch.nn.MSELoss(reduction="sum")
+
+        self.loss_ene_abs = torch.nn.L1Loss(reduction="sum")
+        # self.loss_ene_abs = torch.nn.MSELoss(reduction="sum")
 
     def load_model(self):
         """
@@ -101,11 +107,11 @@ class ModelDict:
                         if abs(int(load_epoch)) < abs(self.load_epoch):
                             continue
                         data_loss = pd.read_csv(path)
-                        mean_loss = np.mean(data_loss["train_loss_ene_tot"])
+                        mean_loss = np.mean(data_loss["train_loss_ene"])
                         data_loss = pd.read_csv(
                             load_checkpoint / "loss" / f"eval-loss-{load_epoch}"
                         )
-                        mean_loss += np.mean(data_loss["train_loss_ene_tot"])
+                        mean_loss += np.mean(data_loss["train_loss_ene"])
                         print(mean_loss)
                         if min_loss is None or mean_loss < min_loss:
                             min_loss = mean_loss
@@ -154,30 +160,30 @@ class ModelDict:
         weight = batch["weight"]
         output_mat_real = batch["output"]
         output_mat = self.model(input_mat)
-        loss_ene_mat = self.loss_ene(
-            output_mat_real * weight,
-            output_mat * weight,
-        )
-        loss_ene = torch.sum(loss_ene_mat)
 
-        loss_ene_tot = self.loss_ene_tot(
+        loss_ene = self.loss_ene(
             torch.sum(output_mat_real * weight),
             torch.sum(output_mat * weight),
         )
 
+        loss_ene_abs = self.loss_ene_abs(
+            output_mat_real * weight,
+            output_mat * weight,
+        )
+
         if getattr(kwargs, "data_weight", None) is None:
-            return loss_ene, loss_ene_tot
+            return loss_ene, loss_ene_abs
         else:
             return (
                 kwargs.get("data_weight") * loss_ene,
-                kwargs.get("data_weight") * loss_ene_tot,
+                kwargs.get("data_weight") * loss_ene_abs,
             )
 
-    def tot_loss(self, loss_ene, loss_ene_tot):
+    def tot_loss(self, loss_ene, loss_ene_abs):
         """
         Calculate the total loss.
         """
-        return self.loss_multiplier * loss_ene + loss_ene_tot
+        return loss_ene + self.loss_multiplier * loss_ene_abs
 
     def save_model(self, epoch):
         """
@@ -191,64 +197,88 @@ class ModelDict:
         Train the model, one epoch.
         """
         self.train()
-        loss_ene_l, loss_ene_tot_l = [], []
+        loss_ene_l, loss_ene_abs_l = [], []
         database_train.rng.shuffle(database_train.name_list)
 
         for name in database_train.name_list:
             loss_ene_name = 0.0
             number_batch_name = 0
-            loss_ene_tot_name = 0.0
+            loss_ene_abs_name = 0.0
 
             for batch in database_train.data_gpu[name]:
                 self.zero_grad()
 
                 with torch.autocast(device_type="cuda", dtype=self.dtype):
-                    loss_ene, loss_ene_tot = self.loss(
+                    loss_ene, loss_ene_abs = self.loss(
                         batch,
                         data_weight=database_train.data_weight[name],
                     )
 
-                self.scaler.scale(self.tot_loss(loss_ene, loss_ene_tot)).backward()
-                self.scaler.unscale_(self.optimizer)
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.1)
+                self.scaler.scale(self.tot_loss(loss_ene, loss_ene_abs)).backward()
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
 
                 number_batch_name += len(batch["weight"])
-                loss_ene_name += loss_ene.item() * len(batch["weight"])
-                loss_ene_tot_name += loss_ene_tot.item()
+                loss_ene_name += loss_ene.item()
+                loss_ene_abs_name += loss_ene_abs.item()
 
-            loss_ene_l.append(AU2KCALMOL * loss_ene_name / number_batch_name)
-            loss_ene_tot_l.append(AU2KCALMOL * np.abs(loss_ene_tot_name))
+            if isinstance(self.loss_ene, torch.nn.L1Loss):
+                loss_ene_l.append(AU2KCALMOL * loss_ene_name)
+            elif isinstance(self.loss_ene, torch.nn.MSELoss):
+                loss_ene_l.append(AU2KCALMOL * np.sqrt(loss_ene_name))
+            else:
+                raise ValueError("Unknown loss function")
 
-        return np.array(loss_ene_l), np.array(loss_ene_tot_l)
+            if isinstance(self.loss_ene_abs, torch.nn.L1Loss):
+                loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)
+            elif isinstance(self.loss_ene_abs, torch.nn.MSELoss):
+                loss_ene_abs_l.append(
+                    AU2KCALMOL * np.sqrt(loss_ene_abs_name * number_batch_name)
+                )
+            else:
+                raise ValueError("Unknown loss function")
+
+        return np.array(loss_ene_l), np.array(loss_ene_abs_l)
 
     def eval_model(self, database_eval):
         """
         Evaluate the model.
         """
         self.eval()
-        loss_ene_l, loss_ene_tot_l = [], []
+        loss_ene_l, loss_ene_abs_l = [], []
 
         for name in database_eval.name_list:
             loss_ene_name = 0.0
             number_batch_name = 0
-            loss_ene_tot_name = 0.0
+            loss_ene_abs_name = 0.0
 
             for batch in database_eval.data_gpu[name]:
                 with torch.no_grad():
-                    loss_ene, loss_ene_tot = self.loss(
+                    loss_ene, loss_ene_abs = self.loss(
                         batch,
                         data_weight=database_eval.data_weight[name],
                     )
                 number_batch_name += len(batch["weight"])
-                loss_ene_name += loss_ene.item() * len(batch["weight"])
-                loss_ene_tot_name += loss_ene_tot.item()
+                loss_ene_name += loss_ene.item()
+                loss_ene_abs_name += loss_ene_abs.item()
 
-            loss_ene_l.append(AU2KCALMOL * loss_ene_name / number_batch_name)
-            loss_ene_tot_l.append(AU2KCALMOL * np.abs(loss_ene_tot_name))
+            if isinstance(self.loss_ene, torch.nn.L1Loss):
+                loss_ene_l.append(AU2KCALMOL * loss_ene_name)
+            elif isinstance(self.loss_ene, torch.nn.MSELoss):
+                loss_ene_l.append(AU2KCALMOL * np.sqrt(loss_ene_name))
+            else:
+                raise ValueError("Unknown loss function")
 
-        return np.array(loss_ene_l), np.array(loss_ene_tot_l)
+            if isinstance(self.loss_ene_abs, torch.nn.L1Loss):
+                loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)
+            elif isinstance(self.loss_ene_abs, torch.nn.MSELoss):
+                loss_ene_abs_l.append(
+                    AU2KCALMOL * np.sqrt(loss_ene_abs_name * number_batch_name)
+                )
+            else:
+                raise ValueError("Unknown loss function")
+
+        return np.array(loss_ene_l), np.array(loss_ene_abs_l)
 
     def get_nev(
         self,
@@ -292,7 +322,10 @@ class ModelDict:
         middle_mat = grids.get_center_density(middle_cube).detach().cpu().numpy()
         energy_den = output_mat.detach().cpu().numpy()
 
-        hyb_coeff = [0.08, 0.19, 0.72, 0.81]
+        if TEST:
+            hyb_coeff = [0.0, 0.0, 0.0, 0.0]
+        else:
+            hyb_coeff = [0.08, 0.19, 0.72, 0.81]
 
         if ks.mol.spin == 0:
             rho_lda = rho[0]

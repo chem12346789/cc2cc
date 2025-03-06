@@ -1,5 +1,5 @@
 {
-    "molecular1": [
+    "molecule1": [
         "C",
         "H",
         "H2",
@@ -34,7 +34,7 @@
         "C6H6",
         "C5H8"
     ],
-    "molecular": [
+    "molecule": [
         "Si",
         "S",
         "F",

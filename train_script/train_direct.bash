@@ -22,9 +22,8 @@ mkdir -p log
 mkdir -p validate
 mkdir -p data/grids_dft
 
-# export dl_args="-0.5 0.5 11"
 export dl_args="0 0 1"
-# export basis_args="Def2-TZVPD"
+# export basis_args="Def2-SVP"
 export basis_args="cc-pVDZ"
 export n_rad_args=""
 export n_ang_args=""
@@ -39,13 +38,12 @@ for train_atom in -1; do
 	export train_atom=${train_atom}
 	nohup bash <<'EOF' >log/train-${PID_THIS_RUN}-${train_atom}.log 2>&1 &
 set -e  # Exit on any error
-# ~/anaconda3/envs/pyscf/bin/python gen_data.py ${mol_args} --dataset g2 || exit 1
-	# export load_args="--load atom-1-1025406"
-	export load_args=""
-	echo "${mol_args}"
-	echo "Training atom ${train_atom}"
-	echo "${load_args}"
-	~/anaconda3/envs/pyscf/bin/python train.py ${mol_args} --eval_step 5 --epoch 25100 --with_eval 0 --precision float32 ${load_args} --save_dir atom${train_atom}-${PID_THIS_RUN} --loss_multiplier 0.01 --lr 1e-3 --train_atom ${train_atom} || exit 1
+# ~/anaconda3/envs/pyscf/bin/python gen_data.py ${mol_args} --name_mol molecule0 molecule1 molecule2 molecule3 molecule4 molecule5 --dataset gmtkn || exit 1
+export load_args=""
+echo "${mol_args}"
+echo "Training atom ${train_atom}"
+echo "${load_args}"
+~/anaconda3/envs/pyscf/bin/python train.py ${mol_args} --eval_step 5 --epoch 25010 --with_eval 0 --precision float32 ${load_args} --save_dir atom${train_atom}-${PID_THIS_RUN} --loss_multiplier 1 --lr 1e-4 --train_atom ${train_atom} --dataset g2 || exit 1
 echo DONE
 EOF
 done

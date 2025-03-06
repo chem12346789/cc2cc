@@ -15,7 +15,7 @@ from cc2cc.utils import add_args
 from cc2cc.utils import Grid, ModelDict, DataRecord, DataBase
 from cc2cc.utils import MAIN_PATH, AU2KCALMOL
 
-from train import TRAIN_STR_LIST as train_str_list, EVAL_STR_LIST as eval_str_list
+from train import train_str_dict as train_str_list, eval_str_dict as eval_str_list
 
 # from cadft.utils.ModelDict_xy import ModelDict
 # from cadft.utils import ModelDict_xy1 as ModelDict
@@ -61,13 +61,13 @@ if __name__ == "__main__":
                 loss_ene_abs = torch.sum(torch.abs(loss_ene_mat))
             number_batch_name += len(batch["weight"])
             loss_ene_name += loss_ene.item()
-            loss_ene_abs_name += loss_ene_abs.item() * len(batch["weight"])
+            loss_ene_abs_name += loss_ene_abs.item()
             print(
                 f"Name: {name}, loss_ene: {AU2KCALMOL * loss_ene.item()}, loss_ene_abs: {AU2KCALMOL * loss_ene_abs.item()}"
             )
 
-        loss_ene_l.append(AU2KCALMOL * loss_ene_name / number_batch_name)
-        loss_ene_abs_l.append(AU2KCALMOL * np.abs(loss_ene_abs_name))
+        loss_ene_l.append(AU2KCALMOL * loss_ene_name)
+        loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)
 
         data_record.add_data(
             name,

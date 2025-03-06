@@ -18,6 +18,7 @@ def ucc(mol, grids, name):
     mf.kernel()
     mdft = pyscf.scf.UKS(mol)
     mdft.xc = "b3lyp"
+    mdft.max_cycle = 200
     mdft.kernel(mf.make_rdm1())
 
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)

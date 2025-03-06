@@ -17,22 +17,25 @@ def test_rks(
     name,
     modeldict,
     data_record,
-    density_restriction=0,
+    args,
 ):
     """
     Test the model. Restrict Khon-Sham (no spin).
     """
+    density_restriction = getattr(args, "density_restriction", 0)
+    if_grad = getattr(args, "if_grad", False)
+    cc_triple = getattr(args, "cc_triple", False)
+
     # 2.0 Prepare
     test_data = TestData(mol, name, xc_code="b3lyp")
-    test_data.test_mol()
+    test_data.test_mol_rks(if_grad=if_grad, cc_triple=cc_triple)
+
     mdft = pyscf.dft.RKS(mol)
     mdft.xc = test_data.xc_code
     mdft.grids = grids
 
-    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
     ao_0 = ao_value[0]
-    ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
-    ao_value = ao_value[:4]
 
     time_ai_start = timer()
 
@@ -122,7 +125,7 @@ def test_rks(
 
     # mdft.max_cycle = -1
     # mdft.kernel(dm0=test_data.dm1_cc)
-    # dm1_scf = test_data.dm1_dft.copy()
+    # dm1_scf = test_data.dm1_cc.copy()
 
     scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
 
@@ -184,9 +187,13 @@ def test_rks(
         test_dft.xc = "b3lyp"
         e_dft = test_dft.energy_tot(dm1_dft)
 
+        rho_cube = grids.gen_cube_rho(mol, dm1_cc)
+        ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+        ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
+        ao_value = ao_value[:4]
+
         rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
         rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
-        rho_cube = grids.gen_cube_rho(mol, dm1_dft)
 
         expr_rinv_dm2_r = oe.contract_expression(
             "ijkl,i,j,kl->",

@@ -1,4 +1,4 @@
-"""Molecular dict"""
+"""molecule dict"""
 
 import copy
 import json
@@ -37,18 +37,18 @@ def extend(
     verbose=4,
 ) -> tuple:
     """
-    Function to extend the molecular
+    Function to extend the molecule
     """
-    molecular = np.array(copy.deepcopy(dataset[dataset_name][name_mol]), dtype=object)
+    molecule = np.array(copy.deepcopy(dataset[dataset_name][name_mol]), dtype=object)
     if verbose > 3:
         print(f"Generate {name_mol}_{distance:.4f}")
         print(f"Extend {extend_atom} {extend_xyz} {distance:.4f}")
-        print("original mol", molecular)
+        print("original mol", molecule)
     name = f"{name_mol}_{basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
 
-    if len(molecular) == 1:
+    if len(molecule) == 1:
         if abs(distance) < 1e-5:
-            return list(molecular), name
+            return list(molecule), name
         else:
             raise ValueError("Distance is not allowed in single atom")
 
@@ -57,17 +57,17 @@ def extend(
         atom_list_2 = np.array(extend_atom.split("-")[1].split("."), dtype=int)
 
         distance_1_2_array = (
-            molecular[atom_list_2[0]][1:4] - molecular[atom_list_1[0]][1:4]
+            molecule[atom_list_2[0]][1:4] - molecule[atom_list_1[0]][1:4]
         )
-        molecular[atom_list_2, 1:] += distance * distance_1_2_array
+        molecule[atom_list_2, 1:] += distance * distance_1_2_array
     else:
         extend_atom = int(extend_atom)
-        molecular[extend_atom][extend_xyz] += distance
+        molecule[extend_atom][extend_xyz] += distance
     if verbose > 3:
-        print("extend mol", molecular)
-    rotate(molecular, verbose=verbose)
-    rotate(molecular, rotation="random")
-    return list(molecular), name
+        print("extend mol", molecule)
+    rotate(molecule, verbose=verbose)
+    rotate(molecule, rotation="random")
+    return list(molecule), name
 
 
 def gen_mole(
@@ -84,7 +84,7 @@ def gen_mole(
     Function to generate the molecule
     """
     try:
-        molecular, name = extend(
+        molecule, name = extend(
             name_mol,
             extend_atom,
             extend_xyz,
@@ -99,9 +99,9 @@ def gen_mole(
         return None, None
 
     mol = pyscf.M(
-        atom=molecular,
+        atom=molecule,
         basis=gen_basis(
-            molecular,
+            molecule,
             basis,
             if_basis_str,
         ),

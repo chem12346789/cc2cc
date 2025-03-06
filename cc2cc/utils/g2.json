@@ -1,5 +1,5 @@
 {
-    "molecular0": [
+    "molecule0": [
         "al",
         "b",
         "be",
@@ -13,7 +13,7 @@
         "s",
         "si"
     ],
-    "molecular1": [
+    "molecule1": [
         "alh",
         "alh3",
         "bh",
@@ -37,7 +37,7 @@
         "sih",
         "sih4"
     ],
-    "molecular2": [
+    "molecule2": [
         "alcl",
         "alf",
         "b2",
@@ -98,7 +98,7 @@
         "t-hcoh",
         "t-n2h2"
     ],
-    "molecular3": [
+    "molecule3": [
         "acetaldehyde",
         "allene",
         "becl2",
@@ -145,7 +145,7 @@
         "t-hono",
         "t-hooo"
     ],
-    "molecular4": [
+    "molecule4": [
         "acetic",
         "alcl3",
         "alf3",
@@ -159,11 +159,11 @@
         "s4-c2v",
         "so3"
     ],
-    "molecular5": [
+    "molecule5": [
         "cf4",
         "sif4"
     ],
-    "molecular": [
+    "molecule": [
         "al",
         "b",
         "be",

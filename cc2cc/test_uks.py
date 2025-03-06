@@ -17,22 +17,25 @@ def test_uks(
     name,
     modeldict,
     data_record,
-    density_restriction=20,
+    args,
 ):
     """
     Test the model. Restrict Khon-Sham (no spin).
     """
+    density_restriction = getattr(args, "density_restriction", 0)
+    if_grad = getattr(args, "if_grad", False)
+    cc_triple = getattr(args, "cc_triple", False)
+
     # 2.0 Prepare
     test_data = TestData(mol, name, xc_code="b3lyp")
-    test_data.test_mol()
+    test_data.test_mol_uks(if_grad=if_grad, cc_triple=cc_triple)
+
     mdft = pyscf.dft.UKS(mol)
     mdft.xc = test_data.xc_code
     mdft.grids = grids
 
-    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
     ao_0 = ao_value[0]
-    ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
-    ao_value = ao_value[:4]
 
     time_ai_start = timer()
 
@@ -120,15 +123,10 @@ def test_uks(
     mdft.kernel(dm0=test_data.mf_dm1)
     dm1_scf = mdft.make_rdm1()
 
-    # mdft.max_cycle = -1
     # mdft.kernel(dm0=test_data.dm1_cc)
-    # dm1_scf = test_data.dm1_dft.copy()
+    # dm1_scf = test_data.dm1_cc.copy()
 
-    scf_dipole = pyscf.scf.hf.dip_moment(
-        mol=mol,
-        dm=dm1_scf,
-        unit="A.U.",
-    )
+    scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
 
     time_ai = timer() - time_ai_start
 
@@ -179,14 +177,19 @@ def test_uks(
         mf.kernel()
         mycc = pyscf.cc.UCCSD(mf)
         mycc.kernel()
-        dm1_cc = mycc.make_rdm1(ao_repr=True)
-        dm2_cc = mycc.make_rdm2(ao_repr=True)
+        dm1_cc = np.array(mycc.make_rdm1(ao_repr=True))
+        dm2_cc = np.array(mycc.make_rdm2(ao_repr=True))
         e_cc = mycc.e_tot
         dm1_dft = mdft.make_rdm1(ao_repr=True)
 
         test_dft = pyscf.scf.UKS(mol)
         test_dft.xc = "b3lyp"
         e_dft = test_dft.energy_tot(dm1_dft)
+
+        rho_cube = grids.gen_cube_rho(mol, dm1_dft)
+        ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+        ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
+        ao_value = ao_value[:4]
 
         rho_dft = [
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft[0], xctype="GGA"),
@@ -196,7 +199,6 @@ def test_uks(
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
         ]
-        rho_cube = grids.gen_cube_rho(mol, dm1_dft)
 
         dm12 = (
             0.5 * dm2_cc[0]

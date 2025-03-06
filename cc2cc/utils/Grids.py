@@ -209,7 +209,7 @@ class Grid(dft.gen_grid.Grids):
         self.natm = mol.natm
         self.coord_list = []
         self.atom_grid = {}
-        for i_atom in mol.atom:
+        for i_atom in mol._atom:
             self.coord_list.append(i_atom[1:])
             self.atom_grid[i_atom[0]] = (self.n_rad, self.n_ang)
         self.coord_list = np.array(self.coord_list)

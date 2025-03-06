@@ -24,7 +24,7 @@ if __name__ == "__main__":
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
-    print(os.getpid())
+    print(f"PID: {os.getpid()}")
 
     # 1. Init the model
     modeldict = ModelDict(args)
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     # 2. Test loop
     data_record = DataRecord(
-        MAIN_PATH / f"validate/ccdft_{args.load}_{args.dataset}.csv",
+        MAIN_PATH / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}.csv",
         if_continue=args.if_continue,
     )
 
@@ -59,10 +59,6 @@ if __name__ == "__main__":
         )
 
         if mol is None:
-            print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
-            continue
-
-        if name in data_record.df_dict["name"]:
             print(f"SKIP: {name}")
             continue
 
@@ -80,7 +76,7 @@ if __name__ == "__main__":
                 name,
                 modeldict,
                 data_record,
-                density_restriction=args.density_restriction,
+                args,
             )
         else:
             test_uks(
@@ -89,5 +85,5 @@ if __name__ == "__main__":
                 name,
                 modeldict,
                 data_record,
-                density_restriction=args.density_restriction,
+                args,
             )

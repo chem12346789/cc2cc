@@ -83,8 +83,8 @@ def gen_logger(distance_list):
 class DataBase:
     """Documentation for a class."""
 
-    def __init__(self, molecular_list, args):
-        self.molecular_list = molecular_list
+    def __init__(self, molecule_list, args):
+        self.molecule_list = molecule_list
         self.train_atom = args.train_atom
         self.extend_atom = args.extend_atom
         self.extend_xyz = args.extend_xyz
@@ -112,7 +112,7 @@ class DataBase:
             extend_xyz,
             distance,
         ) in product(
-            self.molecular_list,
+            self.molecule_list,
             self.extend_atom,
             self.extend_xyz,
             self.distance_list,
@@ -141,10 +141,14 @@ class DataBase:
             if not (path_name_).exists():
                 print(f"No file: {path_name_.as_posix():>40}", flush=True)
                 continue
-            print(f"Load: {name:>40}", flush=True)
+
             num_data_used = self.load_data(mol, name)
             if num_data_used != 0:
                 self.name_list.append(name)
+            print(
+                f"Load: {name:>40}, with {len(self.data_gpu[name])} batches",
+                flush=True,
+            )
 
             if name_mol not in self.data_weight:
                 self.data_weight_mol[name_mol] = num_data_used
@@ -153,7 +157,10 @@ class DataBase:
 
         for name in self.name_list:
             name_mol = name.split(f"_{self.basis}_")[0]
-            self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
+            if self.data_weight_mol[name_mol] == 1:
+                self.data_weight[name] = 10
+            else:
+                self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
         del self.data_weight_mol
         print(self.data_weight)
 
