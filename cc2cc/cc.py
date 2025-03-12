@@ -15,11 +15,15 @@ def cc(mol, grids, name):
     print(f"Generate data for {name}")
 
     mf = pyscf.scf.RHF(mol)
+    mf.max_cycle = 200
     mf.kernel()
+    if mf.converged is False:
+        raise ValueError("RHF not converged.")
     mdft = pyscf.scf.RKS(mol)
     mdft.xc = "b3lyp"
-    mdft.max_cycle = 200
     mdft.kernel(mf.make_rdm1())
+    if mdft.converged is False:
+        raise ValueError("RKS not converged.")
 
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
@@ -59,6 +63,8 @@ def cc(mol, grids, name):
     else:
         mycc = pyscf.cc.CCSD(mf)
         mycc.kernel()
+        if mycc.converged is False:
+            raise ValueError("CCSD not converged.")
         dm1_cc = mycc.make_rdm1(ao_repr=True)
         dm2_cc = mycc.make_rdm2(ao_repr=True)
         e_cc = mycc.e_tot

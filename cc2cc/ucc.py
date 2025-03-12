@@ -15,11 +15,15 @@ def ucc(mol, grids, name):
     print(f"Generate data for {name}, spin {mol.spin}")
 
     mf = pyscf.scf.UHF(mol)
+    mf.max_cycle = 200
     mf.kernel()
+    if mf.converged is False:
+        raise ValueError("UHF not converged.")
     mdft = pyscf.scf.UKS(mol)
     mdft.xc = "b3lyp"
-    mdft.max_cycle = 200
     mdft.kernel(mf.make_rdm1())
+    if mdft.converged is False:
+        raise ValueError("UKS not converged.")
 
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
@@ -66,6 +70,8 @@ def ucc(mol, grids, name):
     else:
         mycc = pyscf.cc.UCCSD(mf)
         mycc.kernel()
+        if mycc.converged is False:
+            raise ValueError("UCCSD not converged")
         dm1_cc = np.array(mycc.make_rdm1(ao_repr=True))
         dm2_cc = np.array(mycc.make_rdm2(ao_repr=True))
         e_cc = mycc.e_tot

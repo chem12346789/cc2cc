@@ -17,11 +17,11 @@ eval_str_dict = [
 ]
 
 if __name__ == "__main__":
+    print(f"PID: {os.getpid()}")
     parser = argparse.ArgumentParser(
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
-    print(f"PID: {os.getpid()}")
 
     train_str_dict = gen_name_args(train_str_dict, args)
     eval_str_dict = gen_name_args(eval_str_dict, args)

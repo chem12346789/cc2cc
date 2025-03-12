@@ -66,7 +66,7 @@ def extend(
     if verbose > 3:
         print("extend mol", molecule)
     rotate(molecule, verbose=verbose)
-    rotate(molecule, rotation="random")
+    # rotate(molecule, rotation="random")
     return list(molecule), name
 
 

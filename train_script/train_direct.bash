@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Parameters for train.py
+export dl_args="-0.5 0.5 3"
+# export basis_args="Def2-SVP"
+export basis_args="cc-pVDZ"
+export n_rad_args=""
+export n_ang_args=""
+export MODEL="--model densenet"
+# export MODEL="--model transformer"
+
 ## user's own commands below
 export OMP_NUM_THREADS=12
 export MKL_NUM_THREADS=12
@@ -22,11 +31,6 @@ mkdir -p log
 mkdir -p validate
 mkdir -p data/grids_dft
 
-export dl_args="0 0 1"
-# export basis_args="Def2-SVP"
-export basis_args="cc-pVDZ"
-export n_rad_args=""
-export n_ang_args=""
 if [ -z "$n_rad_args" ]; then
 	export mol_args="--distance_list ${dl_args} --basis ${basis_args} --extend_atom 0-1 --extend_xyz 0"
 else
@@ -39,11 +43,13 @@ for train_atom in -1; do
 	nohup bash <<'EOF' >log/train-${PID_THIS_RUN}-${train_atom}.log 2>&1 &
 set -e  # Exit on any error
 # ~/anaconda3/envs/pyscf/bin/python gen_data.py ${mol_args} --name_mol molecule0 molecule1 molecule2 molecule3 molecule4 molecule5 --dataset gmtkn || exit 1
-export load_args=""
+export load_args="${MODEL}"
+# export load_args="--load atom-1-3148360 --load_epoch -24000 ${MODEL}"
 echo "${mol_args}"
 echo "Training atom ${train_atom}"
 echo "${load_args}"
-~/anaconda3/envs/pyscf/bin/python train.py ${mol_args} --eval_step 5 --epoch 25010 --with_eval 0 --precision float32 ${load_args} --save_dir atom${train_atom}-${PID_THIS_RUN} --loss_multiplier 1 --lr 1e-4 --train_atom ${train_atom} --dataset g2 || exit 1
+~/anaconda3/envs/pyscf/bin/python train.py ${mol_args} --eval_step 5 --epoch 25010 --with_eval 0 --precision float64 ${load_args} --save_dir atom${train_atom}-${PID_THIS_RUN} --loss_multiplier 0.02 --lr 1e-4 --train_atom ${train_atom} --dataset g2 || exit 1
+echo "Model: ${MODEL}"
 echo DONE
 EOF
 done

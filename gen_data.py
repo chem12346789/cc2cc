@@ -16,6 +16,7 @@ if __name__ == "__main__":
     )
     args = add_args(parser)
     print(f"PID: {os.getpid()}")
+    error_molecule = []
 
     for (
         name_mol,
@@ -49,9 +50,17 @@ if __name__ == "__main__":
 
         grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
 
-        if mol.spin == 0:
-            cc(mol, grids, name)
-        else:
-            ucc(mol, grids, name)
-
+        try:
+            if mol.spin == 0:
+                cc(mol, grids, name)
+            else:
+                ucc(mol, grids, name)
+        except ValueError as e:
+            print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
+            print(e)
+            error_molecule.append(name)
+        finally:
+            print(f"Processed: {name_mol} {extend_atom} {extend_xyz} {distance}")
         print()
+
+    print(f"Erro molecule: {error_molecule}")

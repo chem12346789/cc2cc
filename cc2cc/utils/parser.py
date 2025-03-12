@@ -210,6 +210,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     # for machine learning
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="densenet",
+        choices=["densenet", "transformer"],
+        help="Model for the training. Default is densenet.",
+    )
 
     parser.add_argument(
         "--load",

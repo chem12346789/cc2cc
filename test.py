@@ -20,11 +20,11 @@ from cc2cc.utils import MAIN_PATH
 # class ModelDict_data()
 if __name__ == "__main__":
     # 0. Prepare the args
+    print(f"PID: {os.getpid()}")
     parser = argparse.ArgumentParser(
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
-    print(f"PID: {os.getpid()}")
 
     # 1. Init the model
     modeldict = ModelDict(args)

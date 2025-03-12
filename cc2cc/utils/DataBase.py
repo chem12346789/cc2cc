@@ -54,7 +54,7 @@ class BasicDataset:
             self,
             shuffle=False,
             batch_size=self.batch_size,
-            num_workers=1,
+            num_workers=8,
             pin_memory=True,
         )
 
@@ -155,12 +155,13 @@ class DataBase:
             else:
                 self.data_weight_mol[name_mol] += num_data_used
 
+        names_to_append = []
         for name in self.name_list:
             name_mol = name.split(f"_{self.basis}_")[0]
             if self.data_weight_mol[name_mol] == 1:
-                self.data_weight[name] = 10
-            else:
-                self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
+                names_to_append.extend([name] * 9)
+            self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
+        self.name_list.extend(names_to_append)
         del self.data_weight_mol
         print(self.data_weight)
 

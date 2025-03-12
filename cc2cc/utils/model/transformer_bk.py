@@ -2,25 +2,16 @@
 Generate list of model.
 """
 
-import importlib.resources
-import os
-from pathlib import Path
-
 import torch
 from torch import nn
 
 from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
 
-ANG = 302
-RAD = 75
-
-D_MODEL = RAD
-SEQ_LEN = 4 * CUBE_SIZE**3
-DEPTH = 5
-DENSE_DEPTH = 2
-
-QKV_BIAS = False
+D_MODEL = CUBE_SIZE**3
+SEQ_LEN = 4
 NUM_HEADS = 1
+QKV_BIAS = False
+DEPTH = 5
 DROP_RATE = 0
 
 
@@ -145,8 +136,10 @@ class Extractor(nn.Module):
 
         self.dropout1 = nn.Dropout(self.drop_rate)
         self.layer_blocks = nn.ModuleList([ABlock(**kwargs) for _ in range(self.depth)])
-        self.dense2 = nn.Linear(self.d_model, self.d_model)
-        self.head = nn.Linear(self.d_model, self.d_model)
+        self.dense2 = nn.Linear(
+            self.seq_len * self.d_model, self.seq_len * self.d_model
+        )
+        self.head = nn.Linear(self.seq_len * self.d_model, 1, bias=False)
 
     def forward(self, inputs):
         """
@@ -162,47 +155,13 @@ class Extractor(nn.Module):
         for i in range(self.depth):
             results = self.layer_blocks[i](results)
         # results.shape = (batch, seq_len, d_model)
+        results = results.reshape(-1, self.seq_len * self.d_model)
+        # results.shape = (batch, seq_len * d_model)
         results = self.dense2(results)
         results = self.gelu(results)
         results = self.head(results)
-        # results.shape = (batch, seq_len, d_model)
+        # results.shape = (batch, 1)
         return results
-
-
-class DenseNet(nn.Module):
-    """
-    DenseNet module.
-    """
-
-    def __init__(self, **kwargs):
-        super(DenseNet, self).__init__()
-        self.d_model = kwargs.get("seq_len", SEQ_LEN)
-        self.depth = kwargs.get("depth", DENSE_DEPTH) - 1
-
-        sizes = [self.d_model] + [self.d_model] * self.depth + [1]
-
-        self.layers = nn.ModuleList(
-            [
-                nn.Linear(input_size, output_size)
-                for input_size, output_size in zip(sizes, sizes[1:])
-            ]
-        )
-        self.actv_fn = nn.ReLU()
-        self.norm = nn.ModuleList(
-            [nn.LayerNorm(self.d_model) for _ in range(self.depth)]
-        )
-
-    def forward(self, x):
-        """
-        Standard forward function, required for all nn.Module classes
-        """
-        for i, layer in enumerate(self.layers):
-            if i < len(self.layers) - 1:
-                x = self.norm[i](x)
-            x = layer(x)
-            if i < len(self.layers) - 1:
-                x = self.actv_fn(x)
-        return x
 
 
 class Model(nn.Module):
@@ -212,41 +171,14 @@ class Model(nn.Module):
 
     def __init__(self, **kwargs):
         super().__init__()
-
-        # print all contain in this file, for debugging and logging
-        with importlib.resources.files("cc2cc").joinpath(
-            "utils/model"
-        ) as resource_path:
-            file_path = Path(os.fspath(resource_path)) / "transformer.py"
-            with open(file_path, "r", encoding="utf-8") as finput:
-                print(f"#INFO: **** input file is {file_path} ****\n")
-                print(finput.read())
-                print("#INFO: ****************** input file end ******************\n")
-                print("\n")
-                print("\n")
-
         self.predictor = Extractor(**kwargs)
-        self.densenet = DenseNet(**kwargs)
 
     def forward(self, x):
         """
         Standard forward function, required for all nn.Module classes
         """
         t = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-        # x.shape = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-        x = torch.permute(
-            x.reshape(-1, ANG, RAD, 4 * CUBE_SIZE**3),
-            (0, 2, 1, 3),
-        )
-        # x.shape = (N_ATOM, ANG, RAD, 4 * CUBE_SIZE**3)
-        x = torch.permute(x.reshape(-1, RAD, 4 * CUBE_SIZE**3), (0, 2, 1))
-        # x.shape = (N_ATOM * ANG, 4 * CUBE_SIZE**3, RAD)
-
+        x = x.reshape(-1, 4, CUBE_SIZE**3)
         x = self.predictor(x)
-        # x.shape = (N_ATOM * ANG, 4 * CUBE_SIZE**3, RAD)
-        x = torch.permute(x, (0, 2, 1)).reshape(-1, 4 * CUBE_SIZE**3)
-        # x.shape = (N_ATOM * ANG * RAD, 4 * CUBE_SIZE**3)
-        x = self.densenet(x)
-        # x.shape = (N_ATOM * ANG * RAD, 1)
         x = x * t
         return x

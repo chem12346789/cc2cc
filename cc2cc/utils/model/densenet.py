@@ -1,4 +1,4 @@
-""" 
+"""
 An 3d cnn model
 """
 
@@ -10,6 +10,9 @@ import torch.nn as nn
 
 from cc2cc.utils.env_var import CUBE_MIDDLE
 
+D_MODEL = 108
+DENSE_DEPTH = 3
+
 
 class Model(nn.Module):
     """
@@ -18,12 +21,14 @@ class Model(nn.Module):
 
     def __init__(self, **kwargs):
         super().__init__()
+        self.d_model = kwargs.get("d_model", D_MODEL)
+        self.depth = kwargs.get("depth", DENSE_DEPTH) - 1
 
         # print all contain in this file, for debugging and logging
         with importlib.resources.files("cc2cc").joinpath(
             "utils/model"
         ) as resource_path:
-            file_path = Path(os.fspath(resource_path)) / "cnn3d.py"
+            file_path = Path(os.fspath(resource_path)) / "densenet.py"
             with open(file_path, "r", encoding="utf-8") as finput:
                 print(f"#INFO: **** input file is {file_path} ****\n")
                 print(finput.read())
@@ -31,7 +36,7 @@ class Model(nn.Module):
                 print("\n")
                 print("\n")
 
-        sizes = [108] + [108] * 4 + [1]
+        sizes = [self.d_model] + [self.d_model] * self.depth + [1]
 
         self.layers = nn.ModuleList(
             [
@@ -39,11 +44,10 @@ class Model(nn.Module):
                 for input_size, output_size in zip(sizes, sizes[1:])
             ]
         )
-        self.actv_fn = nn.GELU()
+        self.actv_fn = nn.ReLU()
         self.norm = nn.ModuleList(
-            [nn.LayerNorm(108) for _ in range(len(self.layers) - 1)]
+            [nn.LayerNorm(self.d_model) for _ in range(self.depth)]
         )
-        self.dropout = nn.ModuleList([nn.Dropout(0.1) for _ in range(len(self.layers))])
 
     def forward(self, x):
         """
@@ -51,7 +55,7 @@ class Model(nn.Module):
         """
         t = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 
-        x = x.reshape(-1, 108)
+        x = x.reshape(-1, self.d_model)
 
         for i, layer in enumerate(self.layers):
             # skip = x
@@ -60,6 +64,5 @@ class Model(nn.Module):
             x = layer(x)
             if i < len(self.layers) - 1:
                 x = self.actv_fn(x)
-            x = self.dropout[i](x)
         x = x * t
         return x

@@ -18,11 +18,9 @@ from pyscf.dft.libxc import xc_type
 
 from cc2cc.utils.env_var import CHECKPOINTS_PATH, TEST
 from cc2cc.utils.mol import AU2KCALMOL
-
 from cc2cc.utils.Grids import Grid
-
-from cc2cc.utils.model.cnn3d import Model
-# from cc2cc.utils.model.transformer import Model
+from cc2cc.utils.model.densenet import Model as ModelDensenet
+from cc2cc.utils.model.transformer import Model as ModelTransformer
 
 
 class ModelDict:
@@ -36,6 +34,15 @@ class ModelDict:
         output:
             model_dict: dictionary of models
         """
+        if args.model == "densenet":
+            Model = ModelDensenet
+            print("Model: Densenet")
+        elif args.model == "transformer":
+            Model = ModelTransformer
+            print("Model: Transformer")
+        else:
+            raise ValueError("Unknown model")
+
         self.load = args.load
         self.with_eval = args.with_eval
         self.load_epoch = args.load_epoch
@@ -81,10 +88,8 @@ class ModelDict:
         self.scaler = GradScaler("cuda")
 
         self.loss_multiplier = args.loss_multiplier
-
         self.loss_ene = torch.nn.L1Loss(reduction="sum")
         # self.loss_ene = torch.nn.MSELoss(reduction="sum")
-
         self.loss_ene_abs = torch.nn.L1Loss(reduction="sum")
         # self.loss_ene_abs = torch.nn.MSELoss(reduction="sum")
 
@@ -152,6 +157,21 @@ class ModelDict:
         """
         self.optimizer.step()
 
+    def update(self, idx, max_norm=-1, step=-1):
+        """
+        Update the model.
+        """
+        if max_norm != -1:
+            self.scaler.unscale_(self.optimizer)
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm)
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
+        if step == -1:
+            self.zero_grad()
+        else:
+            if (idx + 1) % step == 0:
+                self.zero_grad()
+
     def loss(self, batch, **kwargs):
         """
         Calculate the loss.
@@ -171,13 +191,11 @@ class ModelDict:
             output_mat * weight,
         )
 
-        if getattr(kwargs, "data_weight", None) is None:
+        data_weight = kwargs.get("data_weight", None)
+        if data_weight is None:
             return loss_ene, loss_ene_abs
         else:
-            return (
-                kwargs.get("data_weight") * loss_ene,
-                kwargs.get("data_weight") * loss_ene_abs,
-            )
+            return (data_weight * loss_ene, data_weight * loss_ene_abs)
 
     def tot_loss(self, loss_ene, loss_ene_abs):
         """
@@ -205,8 +223,7 @@ class ModelDict:
             number_batch_name = 0
             loss_ene_abs_name = 0.0
 
-            for batch in database_train.data_gpu[name]:
-                self.zero_grad()
+            for idx, batch in enumerate(database_train.data_gpu[name]):
 
                 with torch.autocast(device_type="cuda", dtype=self.dtype):
                     loss_ene, loss_ene_abs = self.loss(
@@ -214,9 +231,10 @@ class ModelDict:
                         data_weight=database_train.data_weight[name],
                     )
 
-                self.scaler.scale(self.tot_loss(loss_ene, loss_ene_abs)).backward()
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
+                tot_loss = self.tot_loss(loss_ene, loss_ene_abs)
+                self.scaler.scale(tot_loss).backward()
+
+                self.update(idx, 0.5, 25)
 
                 number_batch_name += len(batch["weight"])
                 loss_ene_name += loss_ene.item()
