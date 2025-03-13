@@ -40,8 +40,8 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     experiment_dict = {
         "batch_size": args.batch_size,
-        "n_train": len(database_train.name_list),
-        "n_eval": len(database_eval.name_list),
+        "n_train": len(database_train.data_gpu),
+        "n_eval": len(database_eval.data_gpu),
         "precision": args.precision,
         "basis": args.basis,
         "with_eval": args.with_eval,
@@ -70,12 +70,16 @@ def train_model(train_str_dict, eval_str_dict, args):
         # modeldict.loss_multiplier = args.loss_multiplier * max(
         #     min(1.0, 3 * epoch / args.epoch - 1), 0
         # )
-        train_loss_ene, train_loss_ene_abs = modeldict.train_model(database_train)
+        train_name_list, train_loss_ene, train_loss_ene_abs = modeldict.train_model(
+            database_train
+        )
         if not modeldict.with_eval:
             modeldict.scheduler.step()
 
         if epoch % args.eval_step == 0:
-            eval_loss_ene, eval_loss_ene_abs = modeldict.eval_model(database_eval)
+            eval_name_list, eval_loss_ene, eval_loss_ene_abs = modeldict.eval_model(
+                database_eval
+            )
             if modeldict.with_eval:
                 modeldict.scheduler.step(
                     np.mean(modeldict.tot_loss(eval_loss_ene, eval_loss_ene_abs))
@@ -115,7 +119,7 @@ def train_model(train_str_dict, eval_str_dict, args):
                 modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}"
             )
             data_record_train.add_data(
-                database_train.name_list,
+                train_name_list,
                 {
                     "train_loss_ene": train_loss_ene,
                     "train_loss_ene_abs": train_loss_ene_abs,
@@ -127,7 +131,7 @@ def train_model(train_str_dict, eval_str_dict, args):
                 modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}"
             )
             data_record_eval.add_data(
-                database_eval.name_list,
+                eval_name_list,
                 {
                     "train_loss_ene": eval_loss_ene,
                     "train_loss_ene_abs": eval_loss_ene_abs,

@@ -50019,6 +50019,21 @@
         "g2-ase-methylenecyclopropane",
         "g2-ase-trans-butane"
     ],
+    "molecule4_in_w411": [
+        "W4_11-nccn",
+        "W4_11-alcl3",
+        "W4_11-f2co",
+        "W4_11-acetic",
+        "W4_11-bf3",
+        "W4_11-foof",
+        "W4_11-so3",
+        "W4_11-s4-c2v",
+        "W4_11-fccf",
+        "W4_11-glyoxal",
+        "W4_11-p4",
+        "W4_11-alf3",
+        "DC13-be4"
+    ],
     "BHPERI-Cyclobutene": [
         [
             "H",
@@ -66874,6 +66889,12 @@
         "g2-ase-SiCl4",
         "g2-ase-SiF4"
     ],
+    "molecule5_in_w411":[
+        "W4_11-cf4",
+        "W4_11-sif4",
+        "DC13-o3_c2h4_add",
+        "DC13-o3_c2h2_add",
+        "DC13-13dip"],
     "BHPERI-1,3-Pentadiene": [
         [
             "C",

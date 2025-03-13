@@ -7,14 +7,25 @@ from cc2cc.utils.parser import gen_name_args
 
 train_str_dict = [
     "molecule0",
-    "molecule1",
-    "molecule2",
-    "molecule3_in_w411",
+    # "molecule1",
+    # "molecule2",
+    # "molecule3",
 ]
 eval_str_dict = [
-    "molecule4",
+    # "molecule4",
     "molecule5",
 ]
+
+# train_str_dict = [
+#     "molecule0",
+#     "molecule1",
+#     "molecule2",
+#     "molecule3_in_w411",
+# ]
+# eval_str_dict = [
+#     "molecule4_in_w411",
+#     "molecule5_in_w411",
+# ]
 
 if __name__ == "__main__":
     print(f"PID: {os.getpid()}")

@@ -180,9 +180,9 @@ class ModelDict:
         """
         Calculate the loss.
         """
-        input_mat = batch["input"]
-        weight = batch["weight"]
-        output_mat_real = batch["output"]
+        input_mat = batch["input"][0]
+        weight = batch["weight"][0]
+        output_mat_real = batch["output"][0]
         output_mat = self.model(input_mat)
 
         loss_ene = self.loss_ene(
@@ -219,33 +219,26 @@ class ModelDict:
         Train the model, one epoch.
         """
         self.train()
-        loss_ene_l, loss_ene_abs_l = [], []
-        database_train.rng.shuffle(database_train.name_list)
+        name_l, loss_ene_l, loss_ene_abs_l = [], [], []
 
-        for name in database_train.name_list:
-            loss_ene_name = 0.0
-            number_batch_name = 0
-            loss_ene_abs_name = 0.0
+        for idx, batch in enumerate(database_train.data_gpu):
+            with torch.autocast(device_type="cuda", dtype=self.dtype):
+                loss_ene, loss_ene_abs = self.loss(
+                    batch,
+                    data_weight=database_train.data_weight[batch["name"][0]],
+                )
+                tot_loss = self.tot_loss(
+                    loss_ene, loss_ene_abs, self.iters_to_accumulate
+                )
 
-            for idx, batch in enumerate(database_train.data_gpu[name]):
+            self.scaler.scale(tot_loss).backward()
+            self.update(idx, self.max_norm, self.iters_to_accumulate)
 
-                with torch.autocast(device_type="cuda", dtype=self.dtype):
-                    loss_ene, loss_ene_abs = self.loss(
-                        batch,
-                        data_weight=database_train.data_weight[name],
-                    )
-                    tot_loss = self.tot_loss(
-                        loss_ene, loss_ene_abs, self.iters_to_accumulate
-                    )
+            number_batch_name = len(batch["weight"][0])
+            loss_ene_name = loss_ene.item()
+            loss_ene_abs_name = loss_ene_abs.item()
 
-                self.scaler.scale(tot_loss).backward()
-
-                self.update(idx, self.max_norm, self.iters_to_accumulate)
-
-                number_batch_name += len(batch["weight"])
-                loss_ene_name += loss_ene.item()
-                loss_ene_abs_name += loss_ene_abs.item()
-
+            name_l.append(batch["name"][0])
             if isinstance(self.loss_ene, torch.nn.L1Loss):
                 loss_ene_l.append(AU2KCALMOL * loss_ene_name)
             elif isinstance(self.loss_ene, torch.nn.MSELoss):
@@ -262,30 +255,26 @@ class ModelDict:
             else:
                 raise ValueError("Unknown loss function")
 
-        return np.array(loss_ene_l), np.array(loss_ene_abs_l)
+        return name_l, np.array(loss_ene_l), np.array(loss_ene_abs_l)
 
     def eval_model(self, database_eval):
         """
         Evaluate the model.
         """
         self.eval()
-        loss_ene_l, loss_ene_abs_l = [], []
+        name_l, loss_ene_l, loss_ene_abs_l = [], [], []
 
-        for name in database_eval.name_list:
-            loss_ene_name = 0.0
-            number_batch_name = 0
-            loss_ene_abs_name = 0.0
+        for batch in database_eval.data_gpu:
+            with torch.no_grad():
+                loss_ene, loss_ene_abs = self.loss(
+                    batch,
+                    data_weight=database_eval.data_weight[batch["name"][0]],
+                )
+            number_batch_name = len(batch["weight"][0])
+            loss_ene_name = loss_ene.item()
+            loss_ene_abs_name = loss_ene_abs.item()
 
-            for batch in database_eval.data_gpu[name]:
-                with torch.no_grad():
-                    loss_ene, loss_ene_abs = self.loss(
-                        batch,
-                        data_weight=database_eval.data_weight[name],
-                    )
-                number_batch_name += len(batch["weight"])
-                loss_ene_name += loss_ene.item()
-                loss_ene_abs_name += loss_ene_abs.item()
-
+            name_l.append(batch["name"][0])
             if isinstance(self.loss_ene, torch.nn.L1Loss):
                 loss_ene_l.append(AU2KCALMOL * loss_ene_name)
             elif isinstance(self.loss_ene, torch.nn.MSELoss):
@@ -302,7 +291,7 @@ class ModelDict:
             else:
                 raise ValueError("Unknown loss function")
 
-        return np.array(loss_ene_l), np.array(loss_ene_abs_l)
+        return name_l, np.array(loss_ene_l), np.array(loss_ene_abs_l)
 
     def get_nev(
         self,

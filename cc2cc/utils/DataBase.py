@@ -15,42 +15,33 @@ def seed_worker(worker_id):
     random.seed(worker_seed)
 
 
-def process(data, dtype):
-    """
-    Load the whole data to the gpu.
-    """
-    if len(data.shape) == 4:
-        return data.to(
-            device="cuda",
-            dtype=dtype,
-            memory_format=torch.channels_last,
-        )
-    else:
-        return data.to(
-            device="cuda",
-            dtype=dtype,
-        )
-
-
 class BasicDataset:
     """
     Documentation for a class.
     """
 
-    def __init__(self, dict_batch, batch_size, dtype):
-        self.dict_batch = dict_batch
-        self.ids = list(dict_batch["input"].keys())
-        self.batch_size = batch_size
+    def __init__(self, data, dtype):
+        self.data = data
         self.dtype = dtype
 
     def __len__(self):
-        return len(self.ids)
+        return len(self.data)
 
     def __getitem__(self, idx):
-        dict_out = {}
-        for key, val in self.dict_batch.items():
-            dict_out[key] = val[idx]
-        return dict_out
+        return self.data[idx]
+
+    def process(self, data):
+        """
+        Load the data to the GPU.
+        """
+        if len(data.shape) == 4:
+            return data.to(
+                device="cuda",
+                dtype=self.dtype,
+                memory_format=torch.channels_last,
+            )
+        else:
+            return data.to(device="cuda", dtype=self.dtype)
 
     def load_to_gpu(self):
         """
@@ -62,7 +53,7 @@ class BasicDataset:
         dataloader = DataLoader(
             self,
             shuffle=False,
-            batch_size=self.batch_size,
+            batch_size=1,
             num_workers=8,
             worker_init_fn=seed_worker,
             generator=seed_generator,
@@ -73,7 +64,10 @@ class BasicDataset:
         for batch in dataloader:
             batch_gpu = {}
             for key, val in batch.items():
-                batch_gpu[key] = process(val, self.dtype)
+                if key in ["input", "weight", "output"]:
+                    batch_gpu[key] = self.process(val)
+                elif key in ["name"]:
+                    batch_gpu[key] = val
             dataloader_gpu.append(batch_gpu)
         return dataloader_gpu
 
@@ -101,21 +95,19 @@ class DataBase:
         self.extend_xyz = args.extend_xyz
         self.distance_list = args.distance_list
         self.basis = args.basis
-        self.batch_size = args.batch_size
         self.device = torch.device("cuda")
+        self.if_load_to_gpu_once = args.if_load_to_gpu_once
 
         if args.precision == "float64":
             self.dtype = torch.float64
         else:
             self.dtype = torch.float32
 
-        self.data = {}
-        self.data_gpu = {}
+        self.data = []
         self.data_weight = {}  # weight for each data, some atom may have more weight
         self.data_weight_mol = {}
 
         self.name_list = []
-        self.rng = np.random.default_rng()
 
         for (
             name_mol,
@@ -156,12 +148,9 @@ class DataBase:
             num_data_used = self.load_data(mol, name)
             if num_data_used != 0:
                 self.name_list.append(name)
-            print(
-                f"Load: {name:>40}, with {len(self.data_gpu[name])} batches",
-                flush=True,
-            )
+            print(f"Load: {name:>40}", flush=True)
 
-            if name_mol not in self.data_weight:
+            if name_mol not in self.data_weight_mol:
                 self.data_weight_mol[name_mol] = num_data_used
             else:
                 self.data_weight_mol[name_mol] += num_data_used
@@ -170,11 +159,15 @@ class DataBase:
         for name in self.name_list:
             name_mol = name.split(f"_{self.basis}_")[0]
             if self.data_weight_mol[name_mol] == 1:
-                names_to_append.extend([name] * 9)
+                self.data.extend([d for d in self.data if d["name"] == name] * 9)
             self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
         self.name_list.extend(names_to_append)
         del self.data_weight_mol
         print(self.data_weight)
+
+        self.data_gpu = BasicDataset(self.data, self.dtype)
+        if self.if_load_to_gpu_once:
+            self.data_gpu = self.data_gpu.load_to_gpu()
 
     def load_data(self, mol, name):
         """
@@ -186,9 +179,9 @@ class DataBase:
         weight_mat = data["weights"]
         output_mat = data["exc_cc_grids"]
 
-        input_ = {}
-        weight_ = {}
-        output_ = {}
+        input_ = []
+        weight_ = []
+        output_ = []
 
         num_data_used = 0
         total_ene_used = 0
@@ -203,9 +196,9 @@ class DataBase:
                     continue
             print(f"Load: {name:>40} {mol.atom_pure_symbol(i_atom):>3}", flush=True)
             for i_coord in range(data_length * i_atom, data_length * (i_atom + 1)):
-                input_[num_data_used] = input_mat[i_coord, :, :, :, :]
-                weight_[num_data_used] = weight_mat[[i_coord]]
-                output_[num_data_used] = output_mat[[i_coord]]
+                input_.append(input_mat[i_coord, :, :, :, :])
+                weight_.append(weight_mat[[i_coord]])
+                output_.append(output_mat[[i_coord]])
 
                 num_data_used += 1
                 total_ene_used += np.sum(output_mat[i_coord] * weight_mat[i_coord])
@@ -217,15 +210,13 @@ class DataBase:
         print(f"Total energy: {AU2KCALMOL * np.sum(output_mat * weight_mat)}")
         print(f"Total energy used: {AU2KCALMOL * total_ene_used}")
         print(f"Total data used for {name}: {num_data_used}", flush=True)
-
-        self.data_gpu[name] = BasicDataset(
+        self.data.append(
             {
-                "input": input_,
-                "weight": weight_,
-                "output": output_,
-            },
-            self.batch_size,
-            self.dtype,
-        ).load_to_gpu()
+                "input": np.array(input_),
+                "weight": np.array(weight_),
+                "output": np.array(output_),
+                "name": name,
+            }
+        )
 
         return num_data_used // data_length

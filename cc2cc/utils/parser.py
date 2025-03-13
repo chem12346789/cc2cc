@@ -234,6 +234,14 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--if_load_to_gpu_once",
+        type=bool,
+        default=True,
+        help="Whether to load all the data to GPU once. Default is True. "
+        "This will use more memory, but faster.",
+    )
+
+    parser.add_argument(
         "--precision",
         type=str,
         default="float64",

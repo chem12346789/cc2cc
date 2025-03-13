@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Parameters for train.py
-export dl_args="-0.5 0.5 3"
+export dl_args="0 0 1"
 # export basis_args="Def2-SVP"
 export basis_args="cc-pVDZ"
 export n_rad_args=""
@@ -26,7 +26,10 @@ export DFT2CC_GENERATE_DATA=1
 export PYSCF_TMPDIR=~/raid/tmp
 
 export NVIDIA_VISIBLE_DEVICES=1
+# use less power GPU
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=power.draw,index --format=csv,nounits,noheader | sort -n | head -1 | awk '{ print $NF }')
+# use most free memory GPU
+# export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=memory.free,index --format=csv,nounits,noheader | sort -n | tail -1 | awk '{ print $NF }')
 # export CUDA_VISIBLE_DEVICES=NUMBER_OF_GPU
 
 mkdir -p log
