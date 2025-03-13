@@ -1,12 +1,18 @@
-from pathlib import Path
 from itertools import product
+import random
 
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from cc2cc.utils.env_var import DATA_PATH, CUBE_MIDDLE
+from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import gen_mole, AU2KCALMOL
+
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 
 def process(data, dtype):
@@ -50,11 +56,16 @@ class BasicDataset:
         """
         Load the whole data to the device.
         """
+        seed_generator = torch.Generator()
+        seed_generator.manual_seed(42)
+
         dataloader = DataLoader(
             self,
             shuffle=False,
             batch_size=self.batch_size,
             num_workers=8,
+            worker_init_fn=seed_worker,
+            generator=seed_generator,
             pin_memory=True,
         )
 

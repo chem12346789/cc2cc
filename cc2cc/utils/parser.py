@@ -184,7 +184,8 @@ def add_args(parser: argparse.ArgumentParser):
         "--if_basis_str",
         type=str2bool,
         default=True,
-        help="Weather to use the basis set from basissetexchange. See https://www.basissetexchange.org. Default is True.",
+        help="Whether to use the basis set from basissetexchange. "
+        "See https://www.basissetexchange.org. Default is True.",
     )
 
     parser.add_argument(
@@ -219,20 +220,6 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--load",
-        type=str,
-        default="",
-        help="Whether to load the saved check point. Default is empty.",
-    )
-
-    parser.add_argument(
-        "--save_dir",
-        type=str,
-        default="",
-        help="Directory for saving the model. Default is empty.",
-    )
-
-    parser.add_argument(
         "--epoch",
         type=int,
         default=10000,
@@ -262,10 +249,25 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--iters_to_accumulate",
+        type=int,
+        default=1,
+        help="Number of iterations to accumulate the gradient. Default is 1.",
+    )
+
+    parser.add_argument(
+        "--max_norm",
+        type=float,
+        default=1.0,
+        help="Max norm for the gradient. Default is 1.0.",
+    )
+
+    parser.add_argument(
         "--with_eval",
         type=str2bool,
         default=True,
-        help="Weather to use the reduce on plateau for the learning rate. Default is True. This will use the data from the eval set.",
+        help="Whether to use the reduce on plateau. Default is True. \n"
+        "This will use the data from the eval set.",
     )
 
     parser.add_argument(
@@ -287,6 +289,20 @@ def add_args(parser: argparse.ArgumentParser):
         type=int,
         default=1,
         help="Atom for training. Default is 1 (1 for Hydrogen).",
+    )
+
+    parser.add_argument(
+        "--load",
+        type=str,
+        default="",
+        help="Whether to load the saved check point. Default is empty.",
+    )
+
+    parser.add_argument(
+        "--save_dir",
+        type=str,
+        default="",
+        help="Directory for saving the model. Default is empty.",
     )
 
     # for testing

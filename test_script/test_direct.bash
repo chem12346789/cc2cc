@@ -32,16 +32,15 @@ else
     export mol_args="--distance_list ${dl_args} --basis ${basis_args} --n_rad ${n_rad_args} --n_ang ${n_ang_args} --extend_atom 0 --extend_xyz 0"
 fi
 
-
 cat <<EOF | nohup bash >log/test-${basis_args}-${load_args}.log 2>&1 &
 echo Starting test.py at $(date)
 echo "${mol_args}"
 if [ -z "$n_rad_args" ]; then
     echo "--load ${load_args}"
-    ~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 --load ${load_args} --load_epoch -24000 --dataset g2 
+    ~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 --load ${load_args} --load_epoch -24000 --dataset gmtkn
 else
     echo "Random initialization"
-    ~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 --dataset g2
+    ~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 --dataset gmtkn
 fi
 echo DONE
 EOF

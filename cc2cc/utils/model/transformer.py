@@ -213,6 +213,17 @@ class Model(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
 
+        print("#INFO: **** detail of model ****")
+        print(f"#INFO: **** ANG is {ANG} ****")
+        print(f"#INFO: **** RAD is {RAD} ****")
+        print(f"#INFO: **** D_MODEL is {D_MODEL} ****")
+        print(f"#INFO: **** SEQ_LEN is {SEQ_LEN} ****")
+        print(f"#INFO: **** DEPTH is {DEPTH} ****")
+        print(f"#INFO: **** DENSE_DEPTH is {DENSE_DEPTH} ****")
+        print(f"#INFO: **** QKV_BIAS is {QKV_BIAS} ****")
+        print(f"#INFO: **** NUM_HEADS is {NUM_HEADS} ****")
+        print(f"#INFO: **** DROP_RATE is {DROP_RATE} ****")
+
         # print all contain in this file, for debugging and logging
         with importlib.resources.files("cc2cc").joinpath(
             "utils/model"

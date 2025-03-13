@@ -10,6 +10,9 @@ import torch
 from cc2cc.utils import DataRecord
 from cc2cc.utils import DataBase, ModelDict
 
+torch.manual_seed(42)
+np.random.seed(42)
+
 
 def train_model(train_str_dict, eval_str_dict, args):
     """
@@ -55,12 +58,14 @@ def train_model(train_str_dict, eval_str_dict, args):
             if isinstance(modeldict.loss_ene_abs, torch.nn.L1Loss)
             else "MSELoss"
         ),
+        "iters_to_accumulate": modeldict.iters_to_accumulate,
+        "max_norm": modeldict.max_norm,
     }
     print(experiment_dict)
     experiment.config.update(experiment_dict)
 
     print(f"Start training at {modeldict.dir_checkpoint}")
-    pbar0 = trange(args.epoch + 1, mininterval=2, maxinterval=20)
+    pbar0 = trange(args.epoch + 1, mininterval=2, maxinterval=60)
     for epoch in pbar0:
         # modeldict.loss_multiplier = args.loss_multiplier * max(
         #     min(1.0, 3 * epoch / args.epoch - 1), 0
@@ -100,7 +105,7 @@ def train_model(train_str_dict, eval_str_dict, args):
                 f"Loss abs: {experiment_dict['train_loss_ene_abs']:.2f}, "
                 f"Eval abs: {experiment_dict['eval_loss_ene_abs']:.2f}, "
                 f"lr: {experiment_dict['lr']:.2e}",
-                refresh=False,
+                refresh=True,
             )
 
         if epoch % 250 == 0:

@@ -48,6 +48,8 @@ class ModelDict:
         self.load_epoch = args.load_epoch
         self.save_dir = args.save_dir
         self.basis = args.basis
+        self.iters_to_accumulate = args.iters_to_accumulate
+        self.max_norm = args.max_norm
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.dtype = torch.float32
 
@@ -163,6 +165,8 @@ class ModelDict:
         """
         if max_norm != -1:
             self.scaler.unscale_(self.optimizer)
+            if step != -1:
+                max_norm = max_norm * (step + 1)
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm)
         self.scaler.step(self.optimizer)
         self.scaler.update()
@@ -197,11 +201,11 @@ class ModelDict:
         else:
             return (data_weight * loss_ene, data_weight * loss_ene_abs)
 
-    def tot_loss(self, loss_ene, loss_ene_abs):
+    def tot_loss(self, loss_ene, loss_ene_abs, iters_to_accumulate=1):
         """
         Calculate the total loss.
         """
-        return loss_ene + self.loss_multiplier * loss_ene_abs
+        return (loss_ene + self.loss_multiplier * loss_ene_abs) / iters_to_accumulate
 
     def save_model(self, epoch):
         """
@@ -230,11 +234,13 @@ class ModelDict:
                         batch,
                         data_weight=database_train.data_weight[name],
                     )
+                    tot_loss = self.tot_loss(
+                        loss_ene, loss_ene_abs, self.iters_to_accumulate
+                    )
 
-                tot_loss = self.tot_loss(loss_ene, loss_ene_abs)
                 self.scaler.scale(tot_loss).backward()
 
-                self.update(idx, 0.5, 25)
+                self.update(idx, self.max_norm, self.iters_to_accumulate)
 
                 number_batch_name += len(batch["weight"])
                 loss_ene_name += loss_ene.item()

@@ -11,6 +11,7 @@ import torch.nn as nn
 from cc2cc.utils.env_var import CUBE_MIDDLE
 
 D_MODEL = 108
+MLP = 1
 DENSE_DEPTH = 3
 
 
@@ -22,7 +23,13 @@ class Model(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
         self.d_model = kwargs.get("d_model", D_MODEL)
+        self.mlp = kwargs.get("mlp", MLP)
         self.depth = kwargs.get("depth", DENSE_DEPTH) - 1
+
+        print("#INFO: **** detail of model ****")
+        print(f"#INFO: **** d_model is {self.d_model} ****")
+        print(f"#INFO: **** mlp is {self.mlp} ****")
+        print(f"#INFO: **** depth is {self.depth} ****")
 
         # print all contain in this file, for debugging and logging
         with importlib.resources.files("cc2cc").joinpath(
@@ -36,7 +43,7 @@ class Model(nn.Module):
                 print("\n")
                 print("\n")
 
-        sizes = [self.d_model] + [self.d_model] * self.depth + [1]
+        sizes = [self.d_model] + [self.d_model * self.mlp] * self.depth + [1]
 
         self.layers = nn.ModuleList(
             [
