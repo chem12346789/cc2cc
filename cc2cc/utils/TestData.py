@@ -41,6 +41,7 @@ class TestData:
 
         time_start = timer()
         mf = pyscf.scf.RHF(self.mol)
+        mf.max_cycle = 200
         mf.kernel()
         if mf.converged is False:
             raise ValueError("RHF not converged.")
@@ -95,6 +96,7 @@ class TestData:
 
         time_start = timer()
         mf = pyscf.scf.UHF(self.mol)
+        mf.max_cycle = 200
         mf.kernel()
         if mf.converged is False:
             raise ValueError("UHF not converged.")

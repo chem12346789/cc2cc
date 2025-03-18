@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# export MODEL="--model densenet --load atom-1-1916450 --load_epoch -24000"
-export MODEL="--model transformer"
+export MODEL="--model densenet --load atom-1-1916450 --load_epoch -24000"
+# export MODEL="--model transformer"
 
 export DATASET="--dataset g2"
 # export DATASET="--dataset gmtkn"
@@ -56,7 +56,7 @@ echo "Training atom ${train_atom}"
 echo "${load_args}"
 echo "Model: ${MODEL}"
 echo "CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}"
-~/anaconda3/envs/pyscf/bin/python train.py ${mol_args} --eval_step 5 --epoch 100010 --with_eval 0 --precision float64 ${load_args} --save_dir atom${train_atom}-${PID_THIS_RUN} --loss_multiplier 0.001 --lr 1e-4 --train_atom ${train_atom} ${DATASET} --iters_to_accumulate ${ITERS_TO_ACCUMULATE} --max_norm ${MAX_NORM} --if_load_to_gpu_once 1 --batch_size 1 || exit 1
+~/anaconda3/envs/pyscf/bin/python train.py ${mol_args} --eval_step 5 --epoch 100010 --with_eval 0 --precision float64 ${load_args} --save_dir atom${train_atom}-${PID_THIS_RUN} --loss_multiplier 1e-5 --lr 1e-4 --train_atom ${train_atom} ${DATASET} --iters_to_accumulate ${ITERS_TO_ACCUMULATE} --max_norm ${MAX_NORM} --if_load_to_gpu_once 1 --batch_size 1 || exit 1
 echo DONE
 EOF
 done

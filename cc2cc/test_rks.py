@@ -117,9 +117,9 @@ def test_rks(
 
     mdft.get_veff = types.MethodType(get_veff_modified, mdft)
 
-    mdft.conv_tol = 1e-6
     mdft.max_cycle = 150
-    mdft.diis_space = 15
+    mdft.conv_tol = 1e-6
+    mdft.diis_space = 10
     mdft.kernel(dm0=test_data.mf_dm1)
     dm1_scf = mdft.make_rdm1()
 

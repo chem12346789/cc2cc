@@ -237,6 +237,7 @@ class Model(nn.Module):
                 print(finput.read())
                 print("#INFO: ****************** input file end ******************\n")
                 print("\n")
+                print("\n")
 
         self.predictor = Extractor(**kwargs)
         self.densenet = DenseNet(**kwargs)
@@ -249,16 +250,24 @@ class Model(nn.Module):
         # x.shape = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
         if D_MODEL == RAD:
-            x = x.reshape(-1, 4, CUBE_SIZE**3)
-            # x.shape = (batch, 4, CUBE_SIZE**3)
+            x = x.reshape(-1, 4 * CUBE_SIZE**3)
+            # x.shape = (batch, 4 * CUBE_SIZE**3)
+            x = x.reshape(-1, ANG, RAD, 4 * CUBE_SIZE**3)
+            # x.shape = (N_ATOM, ANG, RAD, 4 * CUBE_SIZE**3)
+            x = x.reshape(-1, RAD, 4 * CUBE_SIZE**3)
+            # x.shape = (N_ATOM * ANG, RAD, 4 * CUBE_SIZE**3)
+            x = torch.permute(x, (0, 2, 1))
+            # x.shape = (N_ATOM * ANG, 4 * CUBE_SIZE**3, RAD)
 
         # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
         x = self.predictor(x)
         # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
 
-        # x.shape = (batch, 4, CUBE_SIZE**3)
+        # x.shape = (N_ATOM * ANG, 4 * CUBE_SIZE**3, RAD)
+        x = torch.permute(x, (0, 2, 1))
+        # x.shape = (N_ATOM * ANG, RAD, 4 * CUBE_SIZE**3)
         x = x.reshape(-1, 4 * CUBE_SIZE**3)
-        # x.shape = (batch, 4 * CUBE_SIZE**3)
+        # x.shape = (N_ATOM * ANG * RAD, 4 * CUBE_SIZE**3)
         x = self.densenet(x)
         # x.shape = (batch, 1)
         x = x * t

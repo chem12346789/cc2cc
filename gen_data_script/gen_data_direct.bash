@@ -40,7 +40,7 @@ fi
 
 nohup bash <<'EOF' >log/gen_data-${PID_THIS_RUN}.log 2>&1 &
 set -e  # Exit on any error
-~/anaconda3/envs/pyscf/bin/python gen_data.py ${mol_args} --dataset gmtkn || exit 1
+~/anaconda3/envs/pyscf/bin/python gen_data.py ${mol_args} --name_mol molecule3 molecule4 molecule5 --dataset gmtkn || exit 1
 echo DONE
 EOF
 

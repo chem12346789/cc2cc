@@ -159,56 +159,58 @@ class ModelDict:
         """
         self.optimizer.step()
 
-    def update(self, max_norm=-1, step=-1):
+    def update(self):
         """
         Update the model.
+
+        # See https://kozodoi.me/blog/20210219/gradient-accumulation and
+        # https://pytorch.org/docs/stable/notes/amp_examples.html#gradient-accumulation
         """
-        if max_norm != -1:
+        self.update_counter += 1
+
+        if self.update_counter % self.iters_to_accumulate != 0:
+            return
+
+        if self.max_norm != -1:
             self.scaler.unscale_(self.optimizer)
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm)
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_norm)
 
         self.scaler.step(self.optimizer)
         self.scaler.update()
+        self.zero_grad()
+        self.update_counter = 0
 
-        if step == -1:
-            self.zero_grad()
-        else:
-            self.update_counter += 1
-            if self.update_counter % step == 0:
-                self.zero_grad()
-                self.update_counter = 0
-
-    def loss(self, batch, **kwargs):
+    def loss(self, batch):
         """
         Calculate the loss.
         """
         input_mat = batch["input"]
         weight = batch["weight"]
-        output_mat_real = batch["output"]
+        output_mat_real = batch["output"] * weight
 
-        output_mat = self.model(input_mat)
+        output_mat = self.model(input_mat) * weight
 
         loss_ene = self.loss_ene(
-            torch.sum(output_mat_real * weight),
-            torch.sum(output_mat * weight),
+            torch.sum(output_mat_real),
+            torch.sum(output_mat),
         )
 
         loss_ene_abs = self.loss_ene_abs(
-            output_mat_real * weight,
-            output_mat * weight,
+            output_mat_real,
+            output_mat,
         )
 
-        data_weight = kwargs.get("data_weight", None)
-        if data_weight is None:
-            return loss_ene, loss_ene_abs
-        else:
-            return (data_weight * loss_ene, data_weight * loss_ene_abs)
+        return loss_ene, loss_ene_abs
 
-    def tot_loss(self, loss_ene, loss_ene_abs, iters_to_accumulate=1):
+    def tot_loss(self, loss_ene, loss_ene_abs):
         """
         Calculate the total loss.
         """
-        return (loss_ene + self.loss_multiplier * loss_ene_abs) / iters_to_accumulate
+        tot_loss = loss_ene + self.loss_multiplier * loss_ene_abs
+        tot_loss = tot_loss / self.iters_to_accumulate
+        # See https://kozodoi.me/blog/20210219/gradient-accumulation and
+        # https://pytorch.org/docs/stable/notes/amp_examples.html#gradient-accumulation
+        return tot_loss
 
     def save_model(self, epoch):
         """
@@ -231,16 +233,12 @@ class ModelDict:
                 batch = database_train.process_batch(batch)
 
             with torch.autocast(device_type="cuda", dtype=self.dtype):
-                loss_ene, loss_ene_abs = self.loss(
-                    batch,
-                    data_weight=database_train.data_weight[batch["name"]],
-                )
-                tot_loss = self.tot_loss(
-                    loss_ene, loss_ene_abs, self.iters_to_accumulate
-                )
+                loss_ene, loss_ene_abs = self.loss(batch)
+                data_weight = database_train.data_weight[batch["name"]]
+                tot_loss = self.tot_loss(loss_ene, loss_ene_abs)
 
-            self.scaler.scale(tot_loss).backward()
-            self.update(self.max_norm, self.iters_to_accumulate)
+            self.scaler.scale(tot_loss * data_weight).backward()
+            self.update()
 
             number_batch_name = len(batch["weight"])
             loss_ene_name = loss_ene.item()
@@ -279,10 +277,7 @@ class ModelDict:
                 batch = database_eval.process_batch(batch)
 
             with torch.no_grad():
-                loss_ene, loss_ene_abs = self.loss(
-                    batch,
-                    data_weight=database_eval.data_weight[batch["name"]],
-                )
+                loss_ene, loss_ene_abs = self.loss(batch)
             number_batch_name = len(batch["weight"])
             loss_ene_name = loss_ene.item()
             loss_ene_abs_name = loss_ene_abs.item()
