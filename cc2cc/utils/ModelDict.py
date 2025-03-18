@@ -52,6 +52,7 @@ class ModelDict:
         self.max_norm = args.max_norm
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.dtype = torch.float32
+        self.update_counter = 0
 
         if self.save_dir is not None and self.save_dir != "":
             self.dir_checkpoint = (
@@ -113,13 +114,12 @@ class ModelDict:
                         load_epoch = path.stem.split("-")[-1]
                         if abs(int(load_epoch)) < abs(self.load_epoch):
                             continue
-                        data_loss = pd.read_csv(path)
-                        mean_loss = np.mean(data_loss["train_loss_ene"])
-                        data_loss = pd.read_csv(
+                        data_loss_train = pd.read_csv(path)["train_loss_ene"]
+                        data_loss_eval = pd.read_csv(
                             load_checkpoint / "loss" / f"eval-loss-{load_epoch}"
-                        )
-                        mean_loss += np.mean(data_loss["train_loss_ene"])
-                        print(mean_loss)
+                        )["train_loss_ene"]
+                        mean_loss = np.mean(np.append(data_loss_train, data_loss_eval))
+                        print(f"Mean Loss: {mean_loss} of epoch {load_epoch}")
                         if min_loss is None or mean_loss < min_loss:
                             min_loss = mean_loss
                             load_path = load_checkpoint / f"{load_epoch}.pth"
@@ -159,30 +159,33 @@ class ModelDict:
         """
         self.optimizer.step()
 
-    def update(self, idx, max_norm=-1, step=-1):
+    def update(self, max_norm=-1, step=-1):
         """
         Update the model.
         """
         if max_norm != -1:
             self.scaler.unscale_(self.optimizer)
-            if step != -1:
-                max_norm = max_norm * (step + 1)
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm)
+
         self.scaler.step(self.optimizer)
         self.scaler.update()
+
         if step == -1:
             self.zero_grad()
         else:
-            if (idx + 1) % step == 0:
+            self.update_counter += 1
+            if self.update_counter % step == 0:
                 self.zero_grad()
+                self.update_counter = 0
 
     def loss(self, batch, **kwargs):
         """
         Calculate the loss.
         """
-        input_mat = batch["input"][0]
-        weight = batch["weight"][0]
-        output_mat_real = batch["output"][0]
+        input_mat = batch["input"]
+        weight = batch["weight"]
+        output_mat_real = batch["output"]
+
         output_mat = self.model(input_mat)
 
         loss_ene = self.loss_ene(
@@ -220,25 +223,30 @@ class ModelDict:
         """
         self.train()
         name_l, loss_ene_l, loss_ene_abs_l = [], [], []
+        if database_train.if_load_to_gpu_once:
+            database_train.shuffle()
 
-        for idx, batch in enumerate(database_train.data_gpu):
+        for batch in database_train.data_gpu:
+            if not database_train.if_load_to_gpu_once:
+                batch = database_train.process_batch(batch)
+
             with torch.autocast(device_type="cuda", dtype=self.dtype):
                 loss_ene, loss_ene_abs = self.loss(
                     batch,
-                    data_weight=database_train.data_weight[batch["name"][0]],
+                    data_weight=database_train.data_weight[batch["name"]],
                 )
                 tot_loss = self.tot_loss(
                     loss_ene, loss_ene_abs, self.iters_to_accumulate
                 )
 
             self.scaler.scale(tot_loss).backward()
-            self.update(idx, self.max_norm, self.iters_to_accumulate)
+            self.update(self.max_norm, self.iters_to_accumulate)
 
-            number_batch_name = len(batch["weight"][0])
+            number_batch_name = len(batch["weight"])
             loss_ene_name = loss_ene.item()
             loss_ene_abs_name = loss_ene_abs.item()
 
-            name_l.append(batch["name"][0])
+            name_l.append(batch["name"])
             if isinstance(self.loss_ene, torch.nn.L1Loss):
                 loss_ene_l.append(AU2KCALMOL * loss_ene_name)
             elif isinstance(self.loss_ene, torch.nn.MSELoss):
@@ -263,18 +271,23 @@ class ModelDict:
         """
         self.eval()
         name_l, loss_ene_l, loss_ene_abs_l = [], [], []
+        if database_eval.if_load_to_gpu_once:
+            database_eval.shuffle()
 
         for batch in database_eval.data_gpu:
+            if not database_eval.if_load_to_gpu_once:
+                batch = database_eval.process_batch(batch)
+
             with torch.no_grad():
                 loss_ene, loss_ene_abs = self.loss(
                     batch,
-                    data_weight=database_eval.data_weight[batch["name"][0]],
+                    data_weight=database_eval.data_weight[batch["name"]],
                 )
-            number_batch_name = len(batch["weight"][0])
+            number_batch_name = len(batch["weight"])
             loss_ene_name = loss_ene.item()
             loss_ene_abs_name = loss_ene_abs.item()
 
-            name_l.append(batch["name"][0])
+            name_l.append(batch["name"])
             if isinstance(self.loss_ene, torch.nn.L1Loss):
                 loss_ene_l.append(AU2KCALMOL * loss_ene_name)
             elif isinstance(self.loss_ene, torch.nn.MSELoss):

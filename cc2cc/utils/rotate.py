@@ -1,42 +1,42 @@
 import numpy as np
 
 MASS = {
-    "H": 1.00782503207,
-    "He": 4.00260325415,
-    "Li": 6.938,
-    "Be": 9.012183065,
-    "B": 10.806,
-    "C": 12.0096,
-    "N": 14.006855,
-    "O": 15.9994,
-    "F": 18.998403163,
-    "Ne": 20.1797,
-    "Na": 22.989769282,
-    "Mg": 24.304,
-    "Al": 26.9815385,
-    "Si": 28.085,
-    "P": 30.973761998,
-    "S": 32.0675,
-    "Cl": 35.4515,
-    "Ar": 39.948,
-    "K": 39.0983,
-    "Ca": 40.078,
-    "Sc": 44.9559085,
-    "Ti": 47.867,
-    "V": 50.9415,
-    "Cr": 51.9961,
-    "Mn": 54.938044,
-    "Fe": 55.845,
-    "Co": 58.933194,
-    "Ni": 58.6934,
-    "Cu": 63.546,
-    "Zn": 65.38,
-    "Ga": 69.723,
-    "Ge": 72.630,
-    "As": 74.921595,
-    "Se": 78.971,
-    "Br": 79.901,
-    "Kr": 83.798,
+    "h": 1.00782503207,
+    "he": 4.00260325415,
+    "li": 6.938,
+    "be": 9.012183065,
+    "b": 10.806,
+    "c": 12.0096,
+    "n": 14.006855,
+    "o": 15.9994,
+    "f": 18.998403163,
+    "ne": 20.1797,
+    "na": 22.989769282,
+    "mg": 24.304,
+    "al": 26.9815385,
+    "si": 28.085,
+    "p": 30.973761998,
+    "s": 32.0675,
+    "cl": 35.4515,
+    "ar": 39.948,
+    "k": 39.0983,
+    "ca": 40.078,
+    "sc": 44.9559085,
+    "ti": 47.867,
+    "v": 50.9415,
+    "cr": 51.9961,
+    "mn": 54.938044,
+    "fe": 55.845,
+    "co": 58.933194,
+    "ni": 58.6934,
+    "cu": 63.546,
+    "zn": 65.38,
+    "ga": 69.723,
+    "ge": 72.630,
+    "as": 74.921595,
+    "se": 78.971,
+    "br": 79.901,
+    "kr": 83.798,
 }
 
 
@@ -47,10 +47,10 @@ def get_barycenter(molecule):
     barycenter = np.array([0, 0, 0], dtype=np.float64)
     mass = 0.0
     for mol in molecule:
-        mass += MASS[mol[0]]
-        barycenter[0] += mol[1] * MASS[mol[0]]
-        barycenter[1] += mol[2] * MASS[mol[0]]
-        barycenter[2] += mol[3] * MASS[mol[0]]
+        mass += MASS[mol[0].lower()]
+        barycenter[0] += mol[1] * MASS[mol[0].lower()]
+        barycenter[1] += mol[2] * MASS[mol[0].lower()]
+        barycenter[2] += mol[3] * MASS[mol[0].lower()]
     return barycenter / mass
 
 
@@ -79,12 +79,12 @@ def get_inertia_moment(molecule):
     """
     I = np.zeros((3, 3), dtype=np.float64)
     for mol in molecule:
-        I[0, 0] += MASS[mol[0]] * (mol[2] ** 2 + mol[3] ** 2)
-        I[1, 1] += MASS[mol[0]] * (mol[1] ** 2 + mol[3] ** 2)
-        I[2, 2] += MASS[mol[0]] * (mol[1] ** 2 + mol[2] ** 2)
-        I[0, 1] -= MASS[mol[0]] * mol[1] * mol[2]
-        I[0, 2] -= MASS[mol[0]] * mol[1] * mol[3]
-        I[1, 2] -= MASS[mol[0]] * mol[2] * mol[3]
+        I[0, 0] += MASS[mol[0].lower()] * (mol[2] ** 2 + mol[3] ** 2)
+        I[1, 1] += MASS[mol[0].lower()] * (mol[1] ** 2 + mol[3] ** 2)
+        I[2, 2] += MASS[mol[0].lower()] * (mol[1] ** 2 + mol[2] ** 2)
+        I[0, 1] -= MASS[mol[0].lower()] * mol[1] * mol[2]
+        I[0, 2] -= MASS[mol[0].lower()] * mol[1] * mol[3]
+        I[1, 2] -= MASS[mol[0].lower()] * mol[2] * mol[3]
         I[1, 0] = I[0, 1]
         I[2, 0] = I[0, 2]
         I[2, 1] = I[1, 2]

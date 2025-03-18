@@ -36,6 +36,7 @@ if __name__ == "__main__":
         MAIN_PATH / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}.csv",
         if_continue=args.if_continue,
     )
+    error_molecule = []
 
     for (
         name_mol,
@@ -48,7 +49,8 @@ if __name__ == "__main__":
         args.extend_xyz,
         args.distance_list,
     ):
-        mol, name = gen_mole(
+        name = f"{name_mol}_{args.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
+        mol = gen_mole(
             name_mol,
             extend_atom,
             extend_xyz,
@@ -62,28 +64,44 @@ if __name__ == "__main__":
             print(f"SKIP: {name}")
             continue
 
-        grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
-
         if args.n_rad is not None and args.n_ang is not None:
             name = f"{name}_{args.n_rad}_{args.n_ang}"
         else:
             name = f"{name}_default"
 
-        if mol.spin == 0:
-            test_rks(
-                mol,
-                grids,
-                name,
-                modeldict,
-                data_record,
-                args,
-            )
-        else:
-            test_uks(
-                mol,
-                grids,
-                name,
-                modeldict,
-                data_record,
-                args,
-            )
+        if args.if_continue:
+            if name in data_record.df_dict["name"]:
+                print(f"SKIP: {name}")
+                continue
+
+        grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
+
+        try:
+            if mol.spin == 0:
+                test_rks(
+                    mol,
+                    grids,
+                    name,
+                    modeldict,
+                    data_record,
+                    args,
+                )
+            else:
+                test_uks(
+                    mol,
+                    grids,
+                    name,
+                    modeldict,
+                    data_record,
+                    args,
+                )
+        except ValueError as e:
+            print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
+            print(e)
+            error_molecule.append(name)
+            print(f"Error molecule: {error_molecule}")
+        finally:
+            print(f"Processed: {name_mol} {extend_atom} {extend_xyz} {distance}")
+        print()
+
+    print(f"Error molecule: {error_molecule}")

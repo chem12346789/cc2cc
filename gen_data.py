@@ -1,6 +1,4 @@
-"""
-
-"""
+""" """
 
 import argparse
 from itertools import product
@@ -29,28 +27,30 @@ if __name__ == "__main__":
         args.extend_xyz,
         args.distance_list,
     ):
-        mol, name = gen_mole(
-            name_mol,
-            extend_atom,
-            extend_xyz,
-            distance,
-            args.basis,
-            args.if_basis_str,
-            args.dataset,
-        )
-
-        if mol is None:
-            print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
-            continue
-
-        if args.n_rad is not None and args.n_ang is not None:
-            name = f"{name}_{args.n_rad}_{args.n_ang}"
-        else:
-            name = f"{name}_default"
-
-        grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
+        name = f"{name_mol}_{args.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
 
         try:
+            mol = gen_mole(
+                name_mol,
+                extend_atom,
+                extend_xyz,
+                distance,
+                args.basis,
+                args.if_basis_str,
+                args.dataset,
+            )
+
+            if mol is None:
+                print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+                continue
+
+            if args.n_rad is not None and args.n_ang is not None:
+                name = f"{name}_{args.n_rad}_{args.n_ang}"
+            else:
+                name = f"{name}_default"
+
+            grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
+
             if mol.spin == 0:
                 cc(mol, grids, name)
             else:
@@ -59,8 +59,9 @@ if __name__ == "__main__":
             print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
             print(e)
             error_molecule.append(name)
+            print(f"Error molecule: {error_molecule}")
         finally:
             print(f"Processed: {name_mol} {extend_atom} {extend_xyz} {distance}")
         print()
 
-    print(f"Erro molecule: {error_molecule}")
+    print(f"Error molecule: {error_molecule}")

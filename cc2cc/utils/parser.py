@@ -100,8 +100,10 @@ def gen_name_args(name_args, args):
     """
     Function to generate name args
     """
-    if len(name_args) == 0:
+    if name_args is None:
         name_mol_new = dataset[args.dataset]["molecule"]
+    elif len(name_args) == 0:
+        name_mol_new = []
     else:
         name_mol_new = []
         for i in range(len(name_args)):
@@ -130,8 +132,8 @@ def add_args(parser: argparse.ArgumentParser):
         "-m",
         nargs="+",
         type=str,
-        default="",
-        help="Name of molecule. Default is empty (all the dataset).",
+        default=None,
+        help="Name of molecule. Default is None (all the dataset).",
     )
 
     parser.add_argument(
@@ -229,13 +231,13 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=6400000,
-        help="Batch size for training. Default is 6400000 (FCnet).",
+        default=1,
+        help="Batch size for training. Default is 1 (molecule / batch).",
     )
 
     parser.add_argument(
         "--if_load_to_gpu_once",
-        type=bool,
+        type=str2bool,
         default=True,
         help="Whether to load all the data to GPU once. Default is True. "
         "This will use more memory, but faster.",

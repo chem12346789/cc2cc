@@ -16,7 +16,6 @@ from cc2cc.utils.rotate import rotate
 AU2KCALMOL = 627.5096080306
 AU2DEBYE = 2.541746
 dataset = {}
-
 with importlib.resources.path("cc2cc", "utils") as resource_path:
     for dataset_name in Path(os.fspath(resource_path)).rglob("*.json"):
         with open(
@@ -32,7 +31,6 @@ def extend(
     extend_atom: str,
     extend_xyz: int,
     distance: float,
-    basis: str,
     dataset_name: str = "Mol",
     verbose=4,
 ) -> tuple:
@@ -44,11 +42,10 @@ def extend(
         print(f"Generate {name_mol}_{distance:.4f}")
         print(f"Extend {extend_atom} {extend_xyz} {distance:.4f}")
         print("original mol", molecule)
-    name = f"{name_mol}_{basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
 
     if len(molecule) == 1:
         if abs(distance) < 1e-5:
-            return list(molecule), name
+            return list(molecule)
         else:
             raise ValueError("Distance is not allowed in single atom")
 
@@ -67,7 +64,7 @@ def extend(
         print("extend mol", molecule)
     rotate(molecule, verbose=verbose)
     # rotate(molecule, rotation="random")
-    return list(molecule), name
+    return list(molecule)
 
 
 def gen_mole(
@@ -83,20 +80,14 @@ def gen_mole(
     """
     Function to generate the molecule
     """
-    try:
-        molecule, name = extend(
-            name_mol,
-            extend_atom,
-            extend_xyz,
-            distance,
-            basis,
-            dataset_name,
-            verbose=verbose,
-        )
-    except Exception as e:
-        print(f"Error: {name_mol} {extend_atom} {extend_xyz} {distance}")
-        print(e)
-        return None, None
+    molecule = extend(
+        name_mol,
+        extend_atom,
+        extend_xyz,
+        distance,
+        dataset_name,
+        verbose=verbose,
+    )
 
     mol = pyscf.M(
         atom=molecule,
@@ -110,4 +101,4 @@ def gen_mole(
         charge=dataset[dataset_name]["charge"][name_mol],
     )
 
-    return mol, name
+    return mol

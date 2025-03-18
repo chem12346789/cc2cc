@@ -9,12 +9,6 @@ from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import gen_mole, AU2KCALMOL
 
 
-def seed_worker(worker_id):
-    worker_seed = torch.initial_seed() % 2**32
-    np.random.seed(worker_seed)
-    random.seed(worker_seed)
-
-
 class BasicDataset:
     """
     Documentation for a class.
@@ -29,47 +23,6 @@ class BasicDataset:
 
     def __getitem__(self, idx):
         return self.data[idx]
-
-    def process(self, data):
-        """
-        Load the data to the GPU.
-        """
-        if len(data.shape) == 4:
-            return data.to(
-                device="cuda",
-                dtype=self.dtype,
-                memory_format=torch.channels_last,
-            )
-        else:
-            return data.to(device="cuda", dtype=self.dtype)
-
-    def load_to_gpu(self):
-        """
-        Load the whole data to the device.
-        """
-        seed_generator = torch.Generator()
-        seed_generator.manual_seed(42)
-
-        dataloader = DataLoader(
-            self,
-            shuffle=False,
-            batch_size=1,
-            num_workers=8,
-            worker_init_fn=seed_worker,
-            generator=seed_generator,
-            pin_memory=True,
-        )
-
-        dataloader_gpu = []
-        for batch in dataloader:
-            batch_gpu = {}
-            for key, val in batch.items():
-                if key in ["input", "weight", "output"]:
-                    batch_gpu[key] = self.process(val)
-                elif key in ["name"]:
-                    batch_gpu[key] = val
-            dataloader_gpu.append(batch_gpu)
-        return dataloader_gpu
 
 
 def gen_logger(distance_list):
@@ -97,6 +50,7 @@ class DataBase:
         self.basis = args.basis
         self.device = torch.device("cuda")
         self.if_load_to_gpu_once = args.if_load_to_gpu_once
+        print(f"Load to GPU once: {self.if_load_to_gpu_once}")
 
         if args.precision == "float64":
             self.dtype = torch.float64
@@ -120,40 +74,48 @@ class DataBase:
             self.extend_xyz,
             self.distance_list,
         ):
-            mol, name = gen_mole(
-                name_mol,
-                extend_atom,
-                extend_xyz,
-                distance,
-                args.basis,
-                args.if_basis_str,
-                args.dataset,
-                verbose=-1,
-            )
+            name = f"{name_mol}_{args.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
 
-            if mol is None:
+            try:
+                mol = gen_mole(
+                    name_mol,
+                    extend_atom,
+                    extend_xyz,
+                    distance,
+                    args.basis,
+                    args.if_basis_str,
+                    args.dataset,
+                    verbose=-1,
+                )
+            except ValueError as e:
                 print(f"SKIP: {name}")
+                print(e)
                 continue
+            finally:
+                print(f"Processing: {name_mol} {extend_atom} {extend_xyz} {distance}")
 
-            if args.n_rad is not None and args.n_ang is not None:
-                name = f"{name}_{args.n_rad}_{args.n_ang}"
-            else:
-                name = f"{name}_default"
+                if args.n_rad is not None and args.n_ang is not None:
+                    name = f"{name}_{args.n_rad}_{args.n_ang}"
+                else:
+                    name = f"{name}_default"
 
-            path_name_ = DATA_PATH / f"data_{name}.npz"
-            if not (path_name_).exists():
-                print(f"No file: {path_name_.as_posix():>40}", flush=True)
-                continue
+                path_name_ = DATA_PATH / f"data_{name}.npz"
+                if not (path_name_).exists():
+                    print(f"No file: {path_name_.as_posix():>40}", flush=True)
+                    continue
 
-            num_data_used = self.load_data(mol, name)
-            if num_data_used != 0:
-                self.name_list.append(name)
-            print(f"Load: {name:>40}", flush=True)
+                num_data_used = self.load_data(mol, name)
+                if num_data_used != 0:
+                    self.name_list.append(name)
+                print(f"Load: {name:>40}", flush=True)
 
-            if name_mol not in self.data_weight_mol:
-                self.data_weight_mol[name_mol] = num_data_used
-            else:
-                self.data_weight_mol[name_mol] += num_data_used
+                if name_mol not in self.data_weight_mol:
+                    self.data_weight_mol[name_mol] = num_data_used
+                else:
+                    self.data_weight_mol[name_mol] = max(
+                        self.data_weight_mol[name_mol],
+                        num_data_used,
+                    )
 
         names_to_append = []
         for name in self.name_list:
@@ -166,8 +128,7 @@ class DataBase:
         print(self.data_weight)
 
         self.data_gpu = BasicDataset(self.data, self.dtype)
-        if self.if_load_to_gpu_once:
-            self.data_gpu = self.data_gpu.load_to_gpu()
+        self.data_gpu = self.load_to_gpu()
 
     def load_data(self, mol, name):
         """
@@ -194,13 +155,13 @@ class DataBase:
                         flush=True,
                     )
                     continue
+
             print(f"Load: {name:>40} {mol.atom_pure_symbol(i_atom):>3}", flush=True)
+            num_data_used += 1
             for i_coord in range(data_length * i_atom, data_length * (i_atom + 1)):
                 input_.append(input_mat[i_coord, :, :, :, :])
                 weight_.append(weight_mat[[i_coord]])
                 output_.append(output_mat[[i_coord]])
-
-                num_data_used += 1
                 total_ene_used += np.sum(output_mat[i_coord] * weight_mat[i_coord])
 
         if num_data_used == 0:
@@ -219,4 +180,55 @@ class DataBase:
             }
         )
 
-        return num_data_used // data_length
+        return num_data_used
+
+    def process(self, data):
+        """
+        Load the data to the GPU.
+        """
+        if len(data.shape) == 4:
+            return data.to(
+                device="cuda",
+                dtype=self.dtype,
+                memory_format=torch.channels_last,
+            )
+        else:
+            return data.to(device="cuda", dtype=self.dtype)
+
+    def process_batch(self, batch):
+        """
+        Load the batch data to the GPU.
+        """
+        batch_gpu = {}
+        for key, val in batch.items():
+            if key in ["input", "weight", "output"]:
+                batch_gpu[key] = self.process(val[0])
+            elif key in ["name"]:
+                batch_gpu[key] = val[0]
+        return batch_gpu
+
+    def load_to_gpu(self):
+        """
+        Load the whole data to the device.
+        """
+        dataloader = DataLoader(
+            self.data_gpu,
+            shuffle=True,
+            batch_size=1,
+            num_workers=8,
+            pin_memory=True,
+        )
+
+        if self.if_load_to_gpu_once:
+            dataloader_gpu = []
+            for batch in dataloader:
+                dataloader_gpu.append(self.process_batch(batch))
+        else:
+            dataloader_gpu = dataloader
+        return dataloader_gpu
+
+    def shuffle(self):
+        """
+        Shuffle the data.
+        """
+        random.shuffle(self.data_gpu)

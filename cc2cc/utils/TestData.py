@@ -42,6 +42,8 @@ class TestData:
         time_start = timer()
         mf = pyscf.scf.RHF(self.mol)
         mf.kernel()
+        if mf.converged is False:
+            raise ValueError("RHF not converged.")
         self.mf_dm1 = mf.make_rdm1()
         mycc = pyscf.cc.CCSD(mf)
         _, t1, t2 = mycc.kernel()
@@ -94,6 +96,8 @@ class TestData:
         time_start = timer()
         mf = pyscf.scf.UHF(self.mol)
         mf.kernel()
+        if mf.converged is False:
+            raise ValueError("UHF not converged.")
         self.mf_dm1 = mf.make_rdm1()
         mycc = pyscf.cc.UCCSD(mf)
         _, t1, t2 = mycc.kernel()

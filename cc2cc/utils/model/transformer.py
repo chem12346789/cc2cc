@@ -16,12 +16,12 @@ RAD = 75
 
 D_MODEL = RAD
 SEQ_LEN = 4 * CUBE_SIZE**3
-DEPTH = 5
-DENSE_DEPTH = 2
+NUM_LAYER_TRANSFORMER = 3
+NUM_LAYER_DENSE = 2
 
 QKV_BIAS = False
+DROP_RATE = 0.1
 NUM_HEADS = 1
-DROP_RATE = 0
 
 
 class Attention(nn.Module):
@@ -64,7 +64,7 @@ class Attention(nn.Module):
             results[:, 2, ...],
         )
         # shape = (batch, head, seq_len, d_model // head)
-        qk = torch.matmul(q, torch.transpose(k, 2, 3)) / self.sqrt_d
+        qk = torch.matmul(q, k.transpose(-1, -2)) / self.sqrt_d
         # qk.shape = (batch, head, seq_len, seq_len)
         attn = torch.softmax(qk, dim=-1)
         attn = self.dropout1(attn)
@@ -108,7 +108,8 @@ class ABlock(nn.Module):
         # inputs.shape = (batch, seq_len, d_model)
         skip = inputs
         results = self.layernorm1(inputs)
-        results = self.atten(results) + skip
+        results = self.atten(results)
+        results += skip
         results = self.dropout0(results)
         # results.shape = (batch, seq_len, d_model)
 
@@ -135,7 +136,7 @@ class Extractor(nn.Module):
         super(Extractor, self).__init__()
         self.d_model = kwargs.get("d_model", D_MODEL)
         self.seq_len = kwargs.get("seq_len", SEQ_LEN)
-        self.depth = kwargs.get("depth", DEPTH)
+        self.num_layer = kwargs.get("num_layer", NUM_LAYER_TRANSFORMER)
         self.qkv_bias = kwargs.get("qkv_bias", QKV_BIAS)
         self.num_heads = kwargs.get("num_heads", NUM_HEADS)
         self.drop_rate = kwargs.get("drop_rate", DROP_RATE)
@@ -144,7 +145,9 @@ class Extractor(nn.Module):
         self.dense1 = nn.Linear(self.d_model, self.d_model)
 
         self.dropout1 = nn.Dropout(self.drop_rate)
-        self.layer_blocks = nn.ModuleList([ABlock(**kwargs) for _ in range(self.depth)])
+        self.layer_blocks = nn.ModuleList(
+            [ABlock(**kwargs) for _ in range(self.num_layer)]
+        )
         self.dense2 = nn.Linear(self.d_model, self.d_model)
         self.head = nn.Linear(self.d_model, self.d_model)
 
@@ -159,7 +162,7 @@ class Extractor(nn.Module):
         results = self.dropout1(results)
         # results.shape = (batch, seq_len, d_model)
         # do attention only when the feature shape is small enough
-        for i in range(self.depth):
+        for i in range(self.num_layer):
             results = self.layer_blocks[i](results)
         # results.shape = (batch, seq_len, d_model)
         results = self.dense2(results)
@@ -177,9 +180,9 @@ class DenseNet(nn.Module):
     def __init__(self, **kwargs):
         super(DenseNet, self).__init__()
         self.d_model = kwargs.get("seq_len", SEQ_LEN)
-        self.depth = kwargs.get("depth", DENSE_DEPTH) - 1
+        self.num_layer_dense = kwargs.get("num_layer_dense", NUM_LAYER_DENSE) - 1
 
-        sizes = [self.d_model] + [self.d_model] * self.depth + [1]
+        sizes = [self.d_model] + [self.d_model] * self.num_layer_dense + [1]
 
         self.layers = nn.ModuleList(
             [
@@ -189,7 +192,7 @@ class DenseNet(nn.Module):
         )
         self.actv_fn = nn.ReLU()
         self.norm = nn.ModuleList(
-            [nn.LayerNorm(self.d_model) for _ in range(self.depth)]
+            [nn.LayerNorm(self.d_model) for _ in range(self.num_layer_dense)]
         )
 
     def forward(self, x):
@@ -218,8 +221,8 @@ class Model(nn.Module):
         print(f"#INFO: **** RAD is {RAD} ****")
         print(f"#INFO: **** D_MODEL is {D_MODEL} ****")
         print(f"#INFO: **** SEQ_LEN is {SEQ_LEN} ****")
-        print(f"#INFO: **** DEPTH is {DEPTH} ****")
-        print(f"#INFO: **** DENSE_DEPTH is {DENSE_DEPTH} ****")
+        print(f"#INFO: **** DEPTH is {NUM_LAYER_TRANSFORMER} ****")
+        print(f"#INFO: **** NUM_LAYER_DENSE is {NUM_LAYER_DENSE} ****")
         print(f"#INFO: **** QKV_BIAS is {QKV_BIAS} ****")
         print(f"#INFO: **** NUM_HEADS is {NUM_HEADS} ****")
         print(f"#INFO: **** DROP_RATE is {DROP_RATE} ****")
@@ -245,17 +248,25 @@ class Model(nn.Module):
         """
         t = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         # x.shape = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-        x = torch.permute(
-            x.reshape(-1, ANG, RAD, 4 * CUBE_SIZE**3),
-            (0, 2, 1, 3),
-        )
-        # x.shape = (N_ATOM, ANG, RAD, 4 * CUBE_SIZE**3)
-        x = torch.permute(x.reshape(-1, RAD, 4 * CUBE_SIZE**3), (0, 2, 1))
-        # x.shape = (N_ATOM * ANG, 4 * CUBE_SIZE**3, RAD)
 
+        if D_MODEL == RAD:
+            x = x.reshape(-1, 4 * CUBE_SIZE**3)
+            # x.shape = (batch, 4 * CUBE_SIZE**3)
+            x = x.reshape(-1, ANG, RAD, 4 * CUBE_SIZE**3)
+            # x.shape = (N_ATOM, ANG, RAD, 4 * CUBE_SIZE**3)
+            x = x.reshape(-1, RAD, 4 * CUBE_SIZE**3)
+            # x.shape = (N_ATOM * ANG, RAD, 4 * CUBE_SIZE**3)
+            x = torch.permute(x, (0, 2, 1))
+            # x.shape = (N_ATOM * ANG, 4 * CUBE_SIZE**3, RAD)
+
+        # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
         x = self.predictor(x)
+        # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
+
         # x.shape = (N_ATOM * ANG, 4 * CUBE_SIZE**3, RAD)
-        x = torch.permute(x, (0, 2, 1)).reshape(-1, 4 * CUBE_SIZE**3)
+        x = torch.permute(x, (0, 2, 1))
+        # x.shape = (N_ATOM * ANG, RAD, 4 * CUBE_SIZE**3)
+        x = x.reshape(-1, 4 * CUBE_SIZE**3)
         # x.shape = (N_ATOM * ANG * RAD, 4 * CUBE_SIZE**3)
         x = self.densenet(x)
         # x.shape = (N_ATOM * ANG * RAD, 1)
