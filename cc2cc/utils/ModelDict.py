@@ -68,6 +68,8 @@ class ModelDict:
             ).resolve()
 
         self.model: torch.nn.Module = Model().to(self.device)
+        self.load_model()
+
         if args.precision == "float64":
             self.dtype = torch.float64
             self.model.double()

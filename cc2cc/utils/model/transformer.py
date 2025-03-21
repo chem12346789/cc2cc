@@ -14,14 +14,19 @@ from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
 ANG = 302
 RAD = 75
 
-D_MODEL = RAD
-SEQ_LEN = 4 * CUBE_SIZE**3
+D_MODEL = CUBE_SIZE**3
+SEQ_LEN = 4
 NUM_LAYER_TRANSFORMER = 3
-NUM_LAYER_DENSE = 2
+NUM_LAYER_DENSE = 3
 
 QKV_BIAS = False
-DROP_RATE = 0.1
+DROP_RATE = 0
 NUM_HEADS = 1
+
+# ATTE_ACTV = "gelu"
+ATTE_ACTV = "relu"
+
+DENSE_ACTV = "relu"
 
 
 class Attention(nn.Module):
@@ -92,7 +97,10 @@ class ABlock(nn.Module):
 
         self.dense1 = nn.Linear(self.d_model, self.d_model * self.mlp_ratio)
         self.dense2 = nn.Linear(self.d_model * self.mlp_ratio, self.d_model)
-        self.gelu = nn.GELU()
+        if ATTE_ACTV == "relu":
+            self.actv_fn = nn.ReLU()
+        elif ATTE_ACTV == "gelu":
+            self.actv_fn = nn.GELU()
         self.atten = Attention(**kwargs)
 
         self.dropout0 = nn.Dropout(self.drop_rate)
@@ -101,30 +109,26 @@ class ABlock(nn.Module):
         self.layernorm1 = nn.LayerNorm(self.d_model)
         self.layernorm2 = nn.LayerNorm(self.d_model)
 
-    def forward(self, inputs):
+    def forward(self, x_inp):
         """
         Standard forward function, required for all nn.Module classes
         """
         # inputs.shape = (batch, seq_len, d_model)
-        skip = inputs
-        results = self.layernorm1(inputs)
-        results = self.atten(results)
-        results += skip
-        results = self.dropout0(results)
+        x_attn = self.layernorm1(x_inp)
+        x_attn = self.atten(x_attn)
+        x_attn = self.dropout0(x_attn)
+        x_attn += x_inp
         # results.shape = (batch, seq_len, d_model)
 
-        skip = results
-        results = self.layernorm2(results)
-        results = self.dense1(results)
-        results = self.gelu(results)
-        results = self.dropout1(results)
-        results += skip
-        skip = results
-        results = self.dense2(results)
-        results = self.dropout2(results)
-        results += skip
+        x_mlp = self.layernorm2(x_attn)
+        x_mlp = self.dense1(x_mlp)
+        x_mlp = self.actv_fn(x_mlp)
+        x_mlp = self.dropout1(x_mlp)
+        x_mlp = self.dense2(x_mlp)
+        x_mlp = self.dropout2(x_mlp)
+        x_mlp += x_attn
         # results.shape = (batch, seq_len, d_model)
-        return results
+        return x_mlp
 
 
 class Extractor(nn.Module):
@@ -141,7 +145,10 @@ class Extractor(nn.Module):
         self.num_heads = kwargs.get("num_heads", NUM_HEADS)
         self.drop_rate = kwargs.get("drop_rate", DROP_RATE)
 
-        self.gelu = nn.GELU()
+        if ATTE_ACTV == "relu":
+            self.actv_fn = nn.ReLU()
+        elif ATTE_ACTV == "gelu":
+            self.actv_fn = nn.GELU()
         self.dense1 = nn.Linear(self.d_model, self.d_model)
 
         self.dropout1 = nn.Dropout(self.drop_rate)
@@ -155,10 +162,9 @@ class Extractor(nn.Module):
         """
         Standard forward function, required for all nn.Module classes
         """
-        # batch = inputs.shape[0]
         # inputs.shape = (batch, seq_len, d_model)
         results = self.dense1(inputs)
-        results = self.gelu(results)
+        results = self.actv_fn(results)
         results = self.dropout1(results)
         # results.shape = (batch, seq_len, d_model)
         # do attention only when the feature shape is small enough
@@ -166,7 +172,7 @@ class Extractor(nn.Module):
             results = self.layer_blocks[i](results)
         # results.shape = (batch, seq_len, d_model)
         results = self.dense2(results)
-        results = self.gelu(results)
+        results = self.actv_fn(results)
         results = self.head(results)
         # results.shape = (batch, seq_len, d_model)
         return results
@@ -179,7 +185,7 @@ class DenseNet(nn.Module):
 
     def __init__(self, **kwargs):
         super(DenseNet, self).__init__()
-        self.d_model = kwargs.get("seq_len", SEQ_LEN)
+        self.d_model = kwargs.get("seq_len", SEQ_LEN * D_MODEL)
         self.num_layer_dense = kwargs.get("num_layer_dense", NUM_LAYER_DENSE) - 1
 
         sizes = [self.d_model] + [self.d_model] * self.num_layer_dense + [1]
@@ -190,7 +196,10 @@ class DenseNet(nn.Module):
                 for input_size, output_size in zip(sizes, sizes[1:])
             ]
         )
-        self.actv_fn = nn.ReLU()
+        if DENSE_ACTV == "relu":
+            self.actv_fn = nn.ReLU()
+        elif DENSE_ACTV == "gelu":
+            self.actv_fn = nn.GELU()
         self.norm = nn.ModuleList(
             [nn.LayerNorm(self.d_model) for _ in range(self.num_layer_dense)]
         )
@@ -248,9 +257,13 @@ class Model(nn.Module):
         t = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         # x.shape = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
-        if D_MODEL == RAD:
+        if D_MODEL == CUBE_SIZE**3 and SEQ_LEN == 4:
             x = x.reshape(-1, 4, CUBE_SIZE**3)
             # x.shape = (batch, 4, CUBE_SIZE**3)
+        else:
+            raise ValueError(
+                f"Error: D_MODEL is {D_MODEL} and SEQ_LEN is {SEQ_LEN}, but CUBE_SIZE is {CUBE_SIZE}"
+            )
 
         # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
         x = self.predictor(x)

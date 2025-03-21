@@ -4,10 +4,17 @@ import pyscf
 # from pyscf.grad import ccsd as ccsd_grad
 import opt_einsum as oe
 
+from pyscf.cc import uccsd_t_lambda
+from pyscf.cc import uccsd_t_rdm
+from pyscf.cc import uccsd_t
+from pyscf.cc import uccsd_rdm
+from pyscf.cc.uccsd_t_rdm import _gamma1_intermediates as u_gamma1_intermediates
+from pyscf.cc.uccsd_t_rdm import _gamma2_intermediates as u_gamma2_intermediates
+
 from cc2cc.utils import DATA_PATH, AU2KCALMOL, TEST
 
 
-def ucc(mol, grids, name):
+def ucc(mol, grids, name, cc_triple=False):
     """
     Generate data for the UCCSD method.
     """
@@ -20,6 +27,7 @@ def ucc(mol, grids, name):
     if mf.converged is False:
         raise ValueError("UHF not converged.")
     mdft = pyscf.scf.UKS(mol)
+    mdft.max_cycle = 200
     mdft.xc = "b3lyp"
     mdft.kernel(mf.make_rdm1())
     if mdft.converged is False:
@@ -69,12 +77,26 @@ def ucc(mol, grids, name):
         )
     else:
         mycc = pyscf.cc.UCCSD(mf)
-        mycc.kernel()
-        if mycc.converged is False:
-            raise ValueError("UCCSD not converged")
-        dm1_cc = np.array(mycc.make_rdm1(ao_repr=True))
-        dm2_cc = np.array(mycc.make_rdm2(ao_repr=True))
-        e_cc = mycc.e_tot
+        _, t1, t2 = mycc.kernel()
+        if cc_triple:
+            eris = mycc.ao2mo()
+            e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
+            l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
+            dm1_cc = uccsd_t_rdm.make_rdm1(
+                mycc, t1, t2, l1, l2, eris=eris, ao_repr=True
+            )
+            d1 = u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
+            d2 = u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
+            dm2_cc = uccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
+            del d1, d2
+            e_cc = mycc.e_tot + e3ref
+        else:
+            dm1_cc = mycc.make_rdm1(ao_repr=True)
+            dm2_cc = mycc.make_rdm2(ao_repr=True)
+            e_cc = mycc.e_tot
+        dm1_cc = np.array(dm1_cc)
+        dm2_cc = np.array(dm2_cc)
+
         dm1_dft = mdft.make_rdm1(ao_repr=True)
         e_dft = mdft.energy_tot(dm1_dft)
 

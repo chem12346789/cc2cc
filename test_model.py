@@ -17,10 +17,6 @@ from cc2cc.utils import MAIN_PATH, AU2KCALMOL
 
 from train import train_str_dict as train_str_list, eval_str_dict as eval_str_list
 
-# from cadft.utils.ModelDict_xy import ModelDict
-# from cadft.utils import ModelDict_xy1 as ModelDict
-# from cadft.utils.ModelDict_xy2 import ModelDict
-
 if __name__ == "__main__":
     # 0. Prepare the args
     parser = argparse.ArgumentParser(
@@ -31,7 +27,6 @@ if __name__ == "__main__":
 
     # 1. Init the model
     modeldict = ModelDict(args)
-    modeldict.load_model()
     modeldict.eval()
 
     # 2. Test loop

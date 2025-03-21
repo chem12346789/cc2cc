@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Parameters for train.py
-export dl_args="-0.5 0.5 2"
+export dl_args="-0.5 0.5 3"
 # export basis_args="Def2-SVP"
 export basis_args="cc-pVDZ"
 export n_rad_args=""
@@ -40,7 +40,7 @@ fi
 
 nohup bash <<'EOF' >log/gen_data-${PID_THIS_RUN}.log 2>&1 &
 set -e  # Exit on any error
-~/anaconda3/envs/pyscf/bin/python gen_data.py ${mol_args} --name_mol molecule3 molecule4 molecule5 --dataset gmtkn || exit 1
+~/anaconda3/envs/pyscf/bin/python gen_data.py ${mol_args} --name_mol molecule0 molecule1 molecule2 molecule3 molecule4 molecule5 --dataset g2-ase || exit 1
 echo DONE
 EOF
 

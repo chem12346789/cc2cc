@@ -55,7 +55,7 @@ if __name__ == "__main__":
                 cc(mol, grids, name)
             else:
                 ucc(mol, grids, name)
-        except ValueError as e:
+        except (ValueError, RuntimeError) as e:
             print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
             print(e)
             error_molecule.append(name)

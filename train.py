@@ -10,9 +10,9 @@ train_str_dict = [
     "molecule1",
     "molecule2",
     "molecule3",
+    "molecule4",
 ]
 eval_str_dict = [
-    "molecule4",
     "molecule5",
 ]
 

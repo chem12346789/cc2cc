@@ -186,14 +186,7 @@ class DataBase:
         """
         Load the data to the GPU.
         """
-        if len(data.shape) == 4:
-            return data.to(
-                device="cuda",
-                dtype=self.dtype,
-                memory_format=torch.channels_last,
-            )
-        else:
-            return data.to(device="cuda", dtype=self.dtype)
+        return data.to(device="cuda", dtype=self.dtype)
 
     def process_batch(self, batch):
         """
@@ -215,7 +208,7 @@ class DataBase:
             self.data_gpu,
             shuffle=True,
             batch_size=1,
-            num_workers=8,
+            num_workers=16,
             pin_memory=True,
         )
 

@@ -6,7 +6,6 @@ AIDFT_MAIN_PATH: the main path of the project.
 from pathlib import Path
 import os
 
-
 LEVEL = 3
 PERIOD = 2
 

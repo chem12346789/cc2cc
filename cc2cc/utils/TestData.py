@@ -9,30 +9,82 @@ from pyscf.grad import uccsd as uccsd_grad
 from pyscf.cc import ccsd_t_lambda_slow as ccsd_t_lambda
 from pyscf.cc import ccsd_t_rdm_slow as ccsd_t_rdm
 from pyscf.cc import ccsd_t_slow as ccsd_t
-from pyscf.cc import ccsd_rdm
-from pyscf.cc.ccsd_t_rdm_slow import _gamma1_intermediates
-from pyscf.cc.ccsd_t_rdm_slow import _gamma2_intermediates
 
-from pyscf.cc import uccsd_t_lambda as uccsd_t_lambda
-from pyscf.cc import uccsd_t_rdm as uccsd_t_rdm
-from pyscf.cc import uccsd_t as uccsd_t
-from pyscf.cc import uccsd_rdm
-from pyscf.cc.uccsd_t_rdm import _gamma1_intermediates as u_gamma1_intermediates
-from pyscf.cc.uccsd_t_rdm import _gamma2_intermediates as u_gamma2_intermediates
+from pyscf.cc import uccsd_t_lambda
+from pyscf.cc import uccsd_t_rdm
+from pyscf.cc import uccsd_t
+
+from cc2cc.utils.env_var import DATA_TEST_PATH
 
 
 class TestData:
+
     def __init__(
         self,
         mol,
-        name="methane",
+        name,
         xc_code="b3lyp",
+        if_grad=False,
+        cc_triple=False,
     ):
         self.name = name
         self.mol = mol
         self.xc_code = xc_code
 
-    # pylint: disable=W0201
+        if (DATA_TEST_PATH / f"{name}_cc.npz").exists():
+            data_frame = np.load(DATA_TEST_PATH / f"{name}_cc.npz", allow_pickle=True)
+            mol_corr = data_frame["mol_corr"]
+
+            if np.linalg.norm(mol.atom_coords() - mol_corr, ord=1) > 1e-6:
+                print("Molecule coordinates are different.")
+                print("With nothing to do, skip the test.")
+                raise ValueError("Molecule coordinates are different.")
+
+            self.mf_dm1 = data_frame["mf_dm1"]
+
+            self.dm1_cc = data_frame["dm1_cc"]
+            self.e_cc = data_frame["e_cc"].item()
+            self.cc_dipole = data_frame["cc_dipole"]
+            self.time_cc = data_frame["time_cc"].item()
+            if if_grad:
+                if "grad_ccsd" not in data_frame:
+                    raise ValueError("No gradient data.")
+                self.grad_ccsd = data_frame["grad_ccsd"]
+
+            self.dm1_dft = data_frame["dm1_dft"]
+            self.e_dft = data_frame["e_dft"].item()
+            self.dft_dipole = data_frame["dft_dipole"]
+            self.time_dft = data_frame["time_dft"].item()
+            if if_grad:
+                if "grad_dft" not in data_frame:
+                    raise ValueError("No DFT gradient data.")
+                self.grad_dft = data_frame["grad_dft"]
+        else:
+            self.mf_dm1 = None
+            self.dm1_cc = None
+            self.e_cc = None
+            self.cc_dipole = None
+            if mol.spin == 0:
+                self.test_mol_rks(if_grad=if_grad, cc_triple=cc_triple)
+            else:
+                self.test_mol_uks(if_grad=if_grad, cc_triple=cc_triple)
+
+            np.savez_compressed(
+                DATA_TEST_PATH / f"{name}_cc.npz",
+                mol_corr=mol.atom_coords(),
+                mf_dm1=self.mf_dm1,
+                dm1_cc=self.dm1_cc,
+                e_cc=self.e_cc,
+                cc_dipole=self.cc_dipole,
+                time_cc=self.time_cc,
+                grad_ccsd=self.grad_ccsd if if_grad else None,
+                dm1_dft=self.dm1_dft,
+                e_dft=self.e_dft,
+                dft_dipole=self.dft_dipole,
+                time_dft=self.time_dft,
+                grad_dft=self.grad_dft if if_grad else None,
+            )
+
     def test_mol_rks(self, if_grad=False, cc_triple=False):
         """
         Generate 1-RDM, energy, dipole, and gradient for the molecule.
@@ -42,12 +94,13 @@ class TestData:
         time_start = timer()
         mf = pyscf.scf.RHF(self.mol)
         mf.max_cycle = 200
+        mf.diis_space = 12
         mf.kernel()
-        if mf.converged is False:
-            raise ValueError("RHF not converged.")
         self.mf_dm1 = mf.make_rdm1()
         mycc = pyscf.cc.CCSD(mf)
         _, t1, t2 = mycc.kernel()
+        if mycc.converged is False:
+            raise ValueError("CCSD not converged.")
         if cc_triple:
             eris = mycc.ao2mo()
             e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
@@ -75,6 +128,8 @@ class TestData:
         mdft.xc = self.xc_code
         mdft.max_cycle = 250
         mdft.kernel(dm0=self.mf_dm1)
+        if mdft.converged is False:
+            raise ValueError("RKS not converged.")
         self.dm1_dft = mdft.make_rdm1(ao_repr=True)
         self.e_dft = mdft.e_tot
         self.dft_dipole = pyscf.scf.hf.dip_moment(
@@ -87,7 +142,6 @@ class TestData:
             self.grad_dft = g.kernel()
         self.time_dft = timer() - time_start
 
-    # pylint: disable=W0201
     def test_mol_uks(self, if_grad=False, cc_triple=False):
         """
         Generate 1-RDM, energy, dipole, and gradient for the molecule.
@@ -97,12 +151,13 @@ class TestData:
         time_start = timer()
         mf = pyscf.scf.UHF(self.mol)
         mf.max_cycle = 200
+        mf.diis_space = 12
         mf.kernel()
-        if mf.converged is False:
-            raise ValueError("UHF not converged.")
         self.mf_dm1 = mf.make_rdm1()
         mycc = pyscf.cc.UCCSD(mf)
         _, t1, t2 = mycc.kernel()
+        if mycc.converged is False:
+            raise ValueError("UCCSD not converged.")
         if cc_triple:
             eris = mycc.ao2mo()
             e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
@@ -130,6 +185,8 @@ class TestData:
         mdft.xc = self.xc_code
         mdft.max_cycle = 250
         mdft.kernel(dm0=self.mf_dm1)
+        if mdft.converged is False:
+            raise ValueError("UKS not converged.")
         self.dm1_dft = mdft.make_rdm1(ao_repr=True)
         self.e_dft = mdft.e_tot
         self.dft_dipole = pyscf.scf.hf.dip_moment(

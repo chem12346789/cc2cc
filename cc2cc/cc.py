@@ -4,10 +4,17 @@ import pyscf
 # from pyscf.grad import ccsd as ccsd_grad
 import opt_einsum as oe
 
+from pyscf.cc import ccsd_t_lambda_slow as ccsd_t_lambda
+from pyscf.cc import ccsd_t_rdm_slow as ccsd_t_rdm
+from pyscf.cc import ccsd_t_slow as ccsd_t
+from pyscf.cc import ccsd_rdm
+from pyscf.cc.ccsd_t_rdm_slow import _gamma1_intermediates
+from pyscf.cc.ccsd_t_rdm_slow import _gamma2_intermediates
+
 from cc2cc.utils import DATA_PATH, AU2KCALMOL, TEST
 
 
-def cc(mol, grids, name):
+def cc(mol, grids, name, cc_triple=False):
     """
     Generate data for the CCSD method. (Restrict scenario to spin 0).
     """
@@ -20,6 +27,7 @@ def cc(mol, grids, name):
     if mf.converged is False:
         raise ValueError("RHF not converged.")
     mdft = pyscf.scf.RKS(mol)
+    mdft.max_cycle = 200
     mdft.xc = "b3lyp"
     mdft.kernel(mf.make_rdm1())
     if mdft.converged is False:
@@ -62,12 +70,20 @@ def cc(mol, grids, name):
         )
     else:
         mycc = pyscf.cc.CCSD(mf)
-        mycc.kernel()
-        if mycc.converged is False:
-            raise ValueError("CCSD not converged.")
-        dm1_cc = mycc.make_rdm1(ao_repr=True)
-        dm2_cc = mycc.make_rdm2(ao_repr=True)
-        e_cc = mycc.e_tot
+        _, t1, t2 = mycc.kernel()
+        if cc_triple:
+            eris = mycc.ao2mo()
+            e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
+            l1, l2 = ccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
+            dm1_cc = ccsd_t_rdm.make_rdm1(mycc, t1, t2, l1, l2, eris=eris, ao_repr=True)
+            d1 = _gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
+            d2 = _gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
+            dm2_cc = ccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
+            e_cc = mycc.e_tot + e3ref
+        else:
+            dm1_cc = mycc.make_rdm1(ao_repr=True)
+            dm2_cc = mycc.make_rdm2(ao_repr=True)
+            e_cc = mycc.e_tot
         dm1_dft = mdft.make_rdm1(ao_repr=True)
         e_dft = mdft.energy_tot(dm1_dft)
 

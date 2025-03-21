@@ -41,7 +41,6 @@ def train_model(train_str_dict, eval_str_dict, args):
     wandb.define_metric("*", step_metric="global_step")
 
     modeldict = ModelDict(args)
-    modeldict.load_model()
 
     database_train = DataBase(train_str_dict, args)
     database_eval = DataBase(eval_str_dict, args)
