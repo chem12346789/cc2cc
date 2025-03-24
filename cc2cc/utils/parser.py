@@ -217,7 +217,7 @@ def add_args(parser: argparse.ArgumentParser):
         "--model",
         type=str,
         default="densenet",
-        choices=["densenet", "transformer"],
+        choices=["densenet", "transformer", "transformer_4_ang"],
         help="Model for the training. Default is densenet.",
     )
 

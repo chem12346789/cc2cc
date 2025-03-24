@@ -13,7 +13,6 @@ if __name__ == "__main__":
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
-    print(f"PID: {os.getpid()}")
     error_molecule = []
 
     for (

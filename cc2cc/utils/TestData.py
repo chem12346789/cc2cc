@@ -59,6 +59,10 @@ class TestData:
                 if "grad_dft" not in data_frame:
                     raise ValueError("No DFT gradient data.")
                 self.grad_dft = data_frame["grad_dft"]
+
+            print(f"Data for {name} loaded.")
+            print(f"CCSD energy: {self.e_cc}")
+            print(f"DFT energy: {self.e_dft}")
         else:
             self.mf_dm1 = None
             self.dm1_cc = None

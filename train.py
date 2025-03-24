@@ -17,7 +17,6 @@ eval_str_dict = [
 ]
 
 if __name__ == "__main__":
-    print(f"PID: {os.getpid()}")
     parser = argparse.ArgumentParser(
         description="Generate the inversed potential and energy."
     )

@@ -6,6 +6,19 @@ AIDFT_MAIN_PATH: the main path of the project.
 from pathlib import Path
 import os
 
+import torch
+
+# print the information of the process
+print(f"PID: {os.getpid()}")
+# print the gpu information
+print(f"Is Available: {torch.cuda.is_available()}")
+print(f"GPU: {torch.cuda.get_device_name()}")
+print(f"GPU number: {os.environ.get('CUDA_VISIBLE_DEVICES')}")
+print(f"Current Device: {torch.cuda.current_device()}")
+print(f"Number of Devices: {torch.cuda.device_count()}")
+
+# set the environment variable
+
 LEVEL = 3
 PERIOD = 2
 

@@ -21,6 +21,7 @@ from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.Grids import Grid
 from cc2cc.utils.model.densenet import Model as ModelDensenet
 from cc2cc.utils.model.transformer import Model as ModelTransformer
+from cc2cc.utils.model.transformer_4_ang import Model as ModelTransformer_4_Ang
 
 
 class ModelDict:
@@ -40,6 +41,9 @@ class ModelDict:
         elif args.model == "transformer":
             Model = ModelTransformer
             print("Model: Transformer")
+        elif args.model == "transformer_4_ang":
+            Model = ModelTransformer_4_Ang
+            print("Model: Transformer_4_Ang")
         else:
             raise ValueError("Unknown model")
 
@@ -208,11 +212,7 @@ class ModelDict:
         """
         Calculate the total loss.
         """
-        tot_loss = loss_ene + self.loss_multiplier * loss_ene_abs
-        tot_loss = tot_loss / self.iters_to_accumulate
-        # See https://kozodoi.me/blog/20210219/gradient-accumulation and
-        # https://pytorch.org/docs/stable/notes/amp_examples.html#gradient-accumulation
-        return tot_loss
+        return loss_ene + self.loss_multiplier * loss_ene_abs
 
     def save_model(self, epoch):
         """
@@ -224,6 +224,9 @@ class ModelDict:
     def train_model(self, database_train):
         """
         Train the model, one epoch.
+        1 / self.iters_to_accumulate is the effective batch size.
+        See https://kozodoi.me/blog/20210219/gradient-accumulation and
+        https://pytorch.org/docs/stable/notes/amp_examples.html#gradient-accumulation
         """
         self.train()
         name_l, loss_ene_l, loss_ene_abs_l = [], [], []
@@ -237,7 +240,9 @@ class ModelDict:
             with torch.autocast(device_type="cuda", dtype=self.dtype):
                 loss_ene, loss_ene_abs = self.loss(batch)
                 data_weight = database_train.data_weight[batch["name"]]
-                tot_loss = self.tot_loss(loss_ene, loss_ene_abs)
+                tot_loss = (
+                    self.tot_loss(loss_ene, loss_ene_abs) / self.iters_to_accumulate
+                )
 
             self.scaler.scale(tot_loss * data_weight).backward()
             self.update()

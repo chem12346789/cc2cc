@@ -5,7 +5,6 @@ Other parameter are from the argparse.
 
 import argparse
 from itertools import product
-import os
 
 from cc2cc import add_args, test_rks, test_uks
 from cc2cc.utils import gen_mole
@@ -14,7 +13,6 @@ from cc2cc.utils import MAIN_PATH
 
 if __name__ == "__main__":
     # 0. Prepare the args
-    print(f"PID: {os.getpid()}")
     parser = argparse.ArgumentParser(
         description="Generate the inversed potential and energy."
     )

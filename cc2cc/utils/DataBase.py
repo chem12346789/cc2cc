@@ -208,7 +208,7 @@ class DataBase:
             self.data_gpu,
             shuffle=True,
             batch_size=1,
-            num_workers=16,
+            num_workers=4,
             pin_memory=True,
         )
 
