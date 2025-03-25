@@ -7,13 +7,13 @@ from cc2cc.utils.parser import gen_name_args
 
 train_str_dict = [
     "molecule0",
-    "W4_11-molecule1",
-    "W4_11-molecule2",
-    "W4_11-molecule3",
-    "W4_11-molecule4",
+    # "molecule1-W4_11",
+    # "molecule2-W4_11",
+    # "molecule3-W4_11",
+    # "molecule4-W4_11",
 ]
 eval_str_dict = [
-    "W4_11-molecule5",
+    "molecule5-W4_11",
 ]
 
 if __name__ == "__main__":
