@@ -20,8 +20,10 @@ from cc2cc.utils.env_var import CHECKPOINTS_PATH, TEST
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.Grids import Grid
 from cc2cc.utils.model.densenet import Model as ModelDensenet
+from cc2cc.utils.model.densenet_4 import Model as ModelDensenet_4
 from cc2cc.utils.model.transformer import Model as ModelTransformer
 from cc2cc.utils.model.transformer_4_ang import Model as ModelTransformer_4_Ang
+from cc2cc.utils.model.transformer_4 import Model as ModelTransformer_4
 
 
 class ModelDict:
@@ -38,12 +40,18 @@ class ModelDict:
         if args.model == "densenet":
             Model = ModelDensenet
             print("Model: Densenet")
+        elif args.model == "densenet_4":
+            Model = ModelDensenet_4
+            print("Model: Densenet_4")
         elif args.model == "transformer":
             Model = ModelTransformer
             print("Model: Transformer")
         elif args.model == "transformer_4_ang":
             Model = ModelTransformer_4_Ang
             print("Model: Transformer_4_Ang")
+        elif args.model == "transformer_4":
+            Model = ModelTransformer_4
+            print("Model: Transformer_4")
         else:
             raise ValueError("Unknown model")
 

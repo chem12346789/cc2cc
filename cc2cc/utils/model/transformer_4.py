@@ -14,11 +14,10 @@ from cc2cc.utils.env_var import CUBE_MIDDLE
 ANG = 302
 RAD = 75
 
-D_MODEL = RAD
+CUBE_SIZE = 1
+D_MODEL = CUBE_SIZE**3
 SEQ_LEN = 4
 NUM_LAYER_TRANSFORMER = 3
-
-L_DENSE = 108
 NUM_LAYER_DENSE = 3
 
 QKV_BIAS = False
@@ -187,10 +186,10 @@ class DenseNet(nn.Module):
 
     def __init__(self, **kwargs):
         super(DenseNet, self).__init__()
-        self.d_model = kwargs.get("seq_len", L_DENSE)
+        self.d_model = kwargs.get("seq_len", SEQ_LEN * D_MODEL)
         self.num_layer_dense = kwargs.get("num_layer_dense", NUM_LAYER_DENSE) - 1
 
-        sizes = [4] + [self.d_model] * self.num_layer_dense + [1]
+        sizes = [self.d_model] + [self.d_model] * self.num_layer_dense + [1]
 
         self.layers = nn.ModuleList(
             [
@@ -203,7 +202,7 @@ class DenseNet(nn.Module):
         elif DENSE_ACTV == "gelu":
             self.actv_fn = nn.GELU()
         self.norm = nn.ModuleList(
-            [nn.LayerNorm(input_size) for input_size in sizes[:-1]]
+            [nn.LayerNorm(self.d_model) for _ in range(self.num_layer_dense)]
         )
 
     def forward(self, x):
@@ -258,24 +257,23 @@ class Model(nn.Module):
         """
         t = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         x = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        # x.shape = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
 
-        if D_MODEL == RAD:
-            x = x.reshape(-1, 4)
-            # x.shape = (batch, 4)
-            x = x.reshape(-1, ANG, RAD, 4)
-            # x.shape = (N_ATOM, ANG, RAD, 4)
-            x = x.reshape(-1, RAD, 4)
-            # x.shape = (N_ATOM * ANG, RAD, 4)
-            x = torch.permute(x, (0, 2, 1))
-            # x.shape = (N_ATOM * ANG, 4, RAD)
+        if D_MODEL == CUBE_SIZE**3 and SEQ_LEN == 4:
+            x = x.reshape(-1, 4, CUBE_SIZE**3)
+            # x.shape = (batch, 4, CUBE_SIZE**3)
+        else:
+            raise ValueError(
+                f"Error: D_MODEL is {D_MODEL} and SEQ_LEN is {SEQ_LEN}, but CUBE_SIZE is {CUBE_SIZE}"
+            )
 
         # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
         x = self.predictor(x)
         # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
 
-        # x.shape = (batch, 4)
-        x = x.reshape(-1, 4)
-        # x.shape = (batch, 4)
+        # x.shape = (batch, 4, CUBE_SIZE**3)
+        x = x.reshape(-1, 4 * CUBE_SIZE**3)
+        # x.shape = (batch, 4 * CUBE_SIZE**3)
         x = self.densenet(x)
         # x.shape = (batch, 1)
         x = x * t

@@ -2,10 +2,16 @@
 
 # export MODEL="--model densenet --load atom-1-1916450 --load_epoch -24000"
 # export MODEL="--model transformer --load atom-1-4049491 --load_epoch -24000"
-export MODEL="--model transformer_4_ang"
+export MODEL="--model transformer_4_ang --load atom-1-89984 --load_epoch -3000"
 
-export DATASET="--dataset g2"
-# export DATASET="--dataset gmtkn"
+# export MODEL="--model densenet"
+# export MODEL="--model transformer"
+# export MODEL="--model transformer_4_ang"
+# export MODEL="--model transformer_4"
+# export MODEL="--model densenet_4"
+
+# export DATASET="--dataset g2"
+export DATASET="--dataset gmtkn"
 
 export dl_args="0 0 1"
 # export basis_args="Def2-SVP"
@@ -63,7 +69,7 @@ echo "${load_args}"
 echo "Model: ${MODEL}"
 echo "CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}"
 if [ "$DATASET" = "--dataset gmtkn" ]; then
-	export if_load_to_gpu_once=0
+	export if_load_to_gpu_once=1
 else
 	export if_load_to_gpu_once=1
 fi
