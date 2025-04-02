@@ -1,14 +1,11 @@
 #!/bin/bash
 
-# export MODEL="--model densenet --load atom-1-1916450 --load_epoch -24000"
-# export MODEL="--model transformer --load atom-1-4049491 --load_epoch -24000"
-export MODEL="--model transformer_4_ang --load atom-1-89984 --load_epoch -3000"
+# export MODEL="--model densenet --load atom-1-2272051 --load_epoch -22000"
+# export MODEL="--model transformer_4_ang --load atom-1-3928342 --load_epoch -4000"
 
-# export MODEL="--model densenet"
+export MODEL="--model densenet"
 # export MODEL="--model transformer"
 # export MODEL="--model transformer_4_ang"
-# export MODEL="--model transformer_4"
-# export MODEL="--model densenet_4"
 
 # export DATASET="--dataset g2"
 export DATASET="--dataset gmtkn"
@@ -18,8 +15,8 @@ export dl_args="0 0 1"
 export basis_args="cc-pVDZ"
 export n_rad_args=""
 export n_ang_args=""
-export ITERS_TO_ACCUMULATE=5
-export MAX_NORM=2.5
+export ITERS_TO_ACCUMULATE=1
+export MAX_NORM=1
 
 export NUMBER_OF_GPU=1
 export NUMBER_OF_THREADS=4
@@ -68,11 +65,7 @@ echo "Training atom ${train_atom}"
 echo "${load_args}"
 echo "Model: ${MODEL}"
 echo "CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}"
-if [ "$DATASET" = "--dataset gmtkn" ]; then
-	export if_load_to_gpu_once=1
-else
-	export if_load_to_gpu_once=1
-fi
+export if_load_to_gpu_once=1
 ~/anaconda3/envs/pyscf/bin/python train.py ${mol_args} --eval_step 5 --epoch 100010 --with_eval 0 --precision float64 ${load_args} --save_dir atom${train_atom}-${PID_THIS_RUN} --loss_multiplier 1e-2 --lr 1e-4 --train_atom ${train_atom} --iters_to_accumulate ${ITERS_TO_ACCUMULATE} --max_norm ${MAX_NORM} --if_load_to_gpu_once ${if_load_to_gpu_once} --batch_size 1 || exit 1
 echo DONE
 EOF

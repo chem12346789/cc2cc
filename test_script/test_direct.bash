@@ -1,14 +1,13 @@
 #!/bin/bash
-export load_args_list="atom-1-89498"
+export MODEL="densenet"
+export load_args_list="atom-1-2272051"
 
-# export MODEL="densenet"
-# export MODEL="transformer"
 # export MODEL="transformer_4_ang"
-# export MODEL="transformer_4"
-export MODEL="densenet_4"
+# export load_args_list="atom-1-3928342"
 
-export DATASET="g2"
-# export DATASET="gmtkn"
+# export DATASET="g2"
+export DATASET="gmtkn"
+# export DATASET="gmtkn-cc-pVDZ"
 
 export if_continue_args="0"
 
@@ -51,7 +50,7 @@ for load_args in ${load_args_list}; do
 echo Starting test.py at $(date)
 echo "Testing mol: ${mol_args}"
 echo "Load model: ${MODEL} ${load_args}"
-~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 ${load_model_args} --load_epoch -3000 --load ${load_args} --model ${MODEL} --dataset ${DATASET} --if_continue ${if_continue_args}
+~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 ${load_model_args} --load_epoch -3000 --load ${load_args} --model ${MODEL} --dataset ${DATASET} --name_mol molecule_W4_11 molecule_DC13 molecule_G21EA molecule_BH76 --if_continue ${if_continue_args}
 echo "Test completed successfully."
 echo DONE
 EOF

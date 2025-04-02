@@ -8,14 +8,31 @@ import os
 
 import torch
 
-# print the information of the process
-print(f"PID: {os.getpid()}")
-# print the gpu information
-print(f"Is Available: {torch.cuda.is_available()}")
-print(f"GPU: {torch.cuda.get_device_name()}")
-print(f"GPU number: {os.environ.get('CUDA_VISIBLE_DEVICES')}")
-print(f"Current Device: {torch.cuda.current_device()}")
-print(f"Number of Devices: {torch.cuda.device_count()}")
+
+def print_gpu_info():
+    """
+    Print information about the GPU and CUDA environment.
+
+    This function prints:
+    - Current process ID
+    - CUDA availability
+    - GPU device name
+    - CUDA visible devices from environment
+    - Current CUDA device
+    - Number of available CUDA devices
+
+    If PyTorch is not installed, it will display a message instead.
+    """
+    # print the information of the process
+    print(f"PID: {os.getpid()}")
+
+    # print the gpu information
+    print(f"Is Available: {torch.cuda.is_available()}")
+    print(f"GPU: {torch.cuda.get_device_name()}")
+    print(f"GPU number: {os.environ.get('CUDA_VISIBLE_DEVICES')}")
+    print(f"Current Device: {torch.cuda.current_device()}")
+    print(f"Number of Devices: {torch.cuda.device_count()}")
+
 
 # set the environment variable
 

@@ -102,6 +102,7 @@ class TestData:
         mf.kernel()
         self.mf_dm1 = mf.make_rdm1()
         mycc = pyscf.cc.CCSD(mf)
+        mycc.max_cycle = 200
         _, t1, t2 = mycc.kernel()
         if mycc.converged is False:
             raise ValueError("CCSD not converged.")
@@ -159,6 +160,7 @@ class TestData:
         mf.kernel()
         self.mf_dm1 = mf.make_rdm1()
         mycc = pyscf.cc.UCCSD(mf)
+        mycc.max_cycle = 200
         _, t1, t2 = mycc.kernel()
         if mycc.converged is False:
             raise ValueError("UCCSD not converged.")

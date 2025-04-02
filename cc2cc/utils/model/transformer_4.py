@@ -17,8 +17,11 @@ RAD = 75
 CUBE_SIZE = 1
 D_MODEL = CUBE_SIZE**3
 SEQ_LEN = 4
-NUM_LAYER_TRANSFORMER = 3
+NUM_LAYER_TRANSFORMER = 7
+
 NUM_LAYER_DENSE = 3
+D_MODEL_DENSE = 108
+MLP = 2
 
 QKV_BIAS = False
 DROP_RATE = 0
@@ -186,7 +189,7 @@ class DenseNet(nn.Module):
 
     def __init__(self, **kwargs):
         super(DenseNet, self).__init__()
-        self.d_model = kwargs.get("seq_len", SEQ_LEN * D_MODEL)
+        self.d_model = kwargs.get("seq_len", D_MODEL_DENSE * MLP)
         self.num_layer_dense = kwargs.get("num_layer_dense", NUM_LAYER_DENSE) - 1
 
         sizes = [self.d_model] + [self.d_model] * self.num_layer_dense + [1]

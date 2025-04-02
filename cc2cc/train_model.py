@@ -3,15 +3,17 @@
 import os
 import random
 
-from tqdm import trange
+from tqdm import tqdm
 import numpy as np
-import wandb
 import torch
+from torchinfo import summary
+
+import wandb
 
 from cc2cc.utils import DataRecord
-from cc2cc.utils import DataBase, ModelDict
+from cc2cc.utils import DataBase, ModelDict, DataBase_4
 
-seed= 42
+seed = 42
 random.seed(seed)
 os.environ["PYTHONHASHSEED"] = str(seed)
 np.random.seed(seed)
@@ -21,6 +23,7 @@ torch.cuda.manual_seed_all(seed)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.enabled = False
+
 
 def train_model(train_str_dict, eval_str_dict, args):
     """
@@ -42,8 +45,36 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     modeldict = ModelDict(args)
 
-    database_train = DataBase(train_str_dict, args)
-    database_eval = DataBase(eval_str_dict, args)
+    if args.model == "transformer_4_ang":
+        print("Using transformer_4_ang")
+        print(
+            summary(
+                modeldict.model,
+                input_size=(302 * 75 * 5, 4),
+                depth=10,
+                dtypes=(
+                    [torch.float32] if args.precision == "float32" else [torch.float64]
+                ),
+                mode="train",
+            )
+        )
+        database_train = DataBase_4(train_str_dict, args)
+        database_eval = DataBase_4(eval_str_dict, args)
+    else:
+        print("Using transformer_4_ang")
+        print(
+            summary(
+                modeldict.model,
+                input_size=(302 * 75 * 5, 4, 3, 3, 3),
+                depth=10,
+                dtypes=(
+                    [torch.float32] if args.precision == "float32" else [torch.float64]
+                ),
+                mode="train",
+            )
+        )
+        database_train = DataBase(train_str_dict, args)
+        database_eval = DataBase(eval_str_dict, args)
 
     experiment_dict = {
         "batch_size": args.batch_size,
@@ -72,11 +103,8 @@ def train_model(train_str_dict, eval_str_dict, args):
     experiment.config.update(experiment_dict)
 
     print(f"Start training at {modeldict.dir_checkpoint}")
-    pbar0 = trange(args.epoch + 1, mininterval=2, maxinterval=60)
+    pbar0 = tqdm(args.epoch + 1)
     for epoch in pbar0:
-        # modeldict.loss_multiplier = args.loss_multiplier * max(
-        #     min(1.0, 3 * epoch / args.epoch - 1), 0
-        # )
         train_name_list, train_loss_ene, train_loss_ene_abs = modeldict.train_model(
             database_train
         )
@@ -92,57 +120,66 @@ def train_model(train_str_dict, eval_str_dict, args):
                     np.mean(modeldict.tot_loss(eval_loss_ene, eval_loss_ene_abs))
                 )
 
-            experiment_dict = {
-                "epoch": epoch,
-                "global_step": epoch,
-                "train_loss_ene": np.mean(train_loss_ene),
-                "train_loss_ene_abs": np.mean(train_loss_ene_abs),
-                "train_loss_tot": np.mean(
-                    modeldict.tot_loss(train_loss_ene, train_loss_ene_abs)
-                ),
-                "eval_loss_ene": np.mean(eval_loss_ene),
-                "eval_loss_ene_abs": np.mean(eval_loss_ene_abs),
-                "eval_loss_tot": np.mean(
-                    modeldict.tot_loss(eval_loss_ene, eval_loss_ene_abs)
-                ),
-                "lr": modeldict.optimizer.param_groups[0]["lr"],
-            }
-            experiment.log(experiment_dict)
+            if epoch % (args.eval_step * 50) == 0:
+                modeldict.save_model(epoch)
 
-            pbar0.set_description(
-                f"Epoch: {epoch}, "
-                f"Loss: {experiment_dict['train_loss_ene']:.2f}, "
-                f"Eval: {experiment_dict['eval_loss_ene']:.2f}, "
-                f"Loss abs: {experiment_dict['train_loss_ene_abs']:.2f}, "
-                f"Eval abs: {experiment_dict['eval_loss_ene_abs']:.2f}, "
-                f"lr: {experiment_dict['lr']:.2e}",
-                refresh=True,
-            )
+                data_record_train = DataRecord(
+                    modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}"
+                )
+                data_record_train.add_data(
+                    train_name_list,
+                    {
+                        "train_loss_ene": train_loss_ene,
+                        "train_loss_ene_abs": train_loss_ene_abs,
+                    },
+                )
+                data_record_train.save_csv()
 
-        if epoch % 250 == 0:
-            modeldict.save_model(epoch)
+                data_record_eval = DataRecord(
+                    modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}"
+                )
+                data_record_eval.add_data(
+                    eval_name_list,
+                    {
+                        "train_loss_ene": eval_loss_ene,
+                        "train_loss_ene_abs": eval_loss_ene_abs,
+                    },
+                )
+                data_record_eval.save_csv()
 
-            data_record_train = DataRecord(
-                modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}"
-            )
-            data_record_train.add_data(
-                train_name_list,
-                {
-                    "train_loss_ene": train_loss_ene,
-                    "train_loss_ene_abs": train_loss_ene_abs,
-                },
-            )
-            data_record_train.save_csv()
+                experiment_dict = {
+                    "epoch_eval": epoch,
+                    "train_loss_ene_epoch_eval": np.mean(train_loss_ene),
+                    "eval_loss_ene_epoch_eval": np.mean(eval_loss_ene),
+                    "lr": modeldict.optimizer.param_groups[0]["lr"],
+                }
+                experiment.log(experiment_dict)
 
-            data_record_eval = DataRecord(
-                modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}"
-            )
-            data_record_eval.add_data(
-                eval_name_list,
-                {
-                    "train_loss_ene": eval_loss_ene,
-                    "train_loss_ene_abs": eval_loss_ene_abs,
-                },
-            )
-            data_record_eval.save_csv()
+        experiment_dict = {
+            "epoch": epoch,
+            "global_step": epoch,
+            "train_loss_ene": np.mean(train_loss_ene),
+            "train_loss_ene_abs": np.mean(train_loss_ene_abs),
+            "train_loss_tot": np.mean(
+                modeldict.tot_loss(train_loss_ene, train_loss_ene_abs)
+            ),
+            "eval_loss_ene": np.mean(eval_loss_ene),
+            "eval_loss_ene_abs": np.mean(eval_loss_ene_abs),
+            "eval_loss_tot": np.mean(
+                modeldict.tot_loss(eval_loss_ene, eval_loss_ene_abs)
+            ),
+            "lr": modeldict.optimizer.param_groups[0]["lr"],
+        }
+        experiment.log(experiment_dict)
+
+        pbar0.set_description(
+            f"Epoch: {epoch}, "
+            f"Loss: {np.mean(train_loss_ene):.2f}, "
+            f"Eval: {np.mean(eval_loss_ene):.2f}, "
+            f"Loss abs: {np.mean(train_loss_ene_abs):.2f}, "
+            f"Eval abs: {np.mean(eval_loss_ene_abs):.2f}, "
+            f"lr: {experiment_dict['lr']:.2e}",
+            refresh=True,
+        )
+
     pbar0.close()

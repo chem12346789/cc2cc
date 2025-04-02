@@ -1,6 +1,6 @@
 """@package docstring
 Documentation for this module.
- 
+
 More details.
 """
 
@@ -299,12 +299,6 @@ class Grid(dft.gen_grid.Grids):
             )
         self.coor_cube = np.array(self.coor_cube)
 
-    def gen_cube_mask(self):
-        for p_coor_cube in self.coor_cube:
-            for i_coor_cube in p_coor_cube:
-                mask = np.where(np.linspace.norm(i_coor_cube - self.coords) < 1e-10)
-                print(mask)
-
     def gen_cube_rho(self, mol, dm1_input, reset=False, xc_type="GGA"):
         """
         Generate the cube density for the given molecule.
@@ -351,4 +345,24 @@ class Grid(dft.gen_grid.Grids):
         return np.array(rho_cube)
 
     def get_center_density(self, den_cube):
+        """
+        Get the center density of the cube.
+        """
         return den_cube[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+
+    def gen_4(self, mol, dm1_input, reset=False, xc_type="GGA"):
+        """
+        Generate the 4-point density for the given molecule.
+        """
+        ao = pyscf.dft.numint.eval_ao(mol, self.coords, deriv=1)
+        if mol.spin == 0:
+            rho_p = pyscf.dft.numint.eval_rho(mol, ao, dm1_input, xctype=xc_type)
+            rho = gen_input(rho_p, 0)
+        else:
+            rho_p = [
+                pyscf.dft.numint.eval_rho(mol, ao, dm1_input[0], xctype=xc_type),
+                pyscf.dft.numint.eval_rho(mol, ao, dm1_input[1], xctype=xc_type),
+            ]
+            rho = gen_input(rho_p, 1)
+
+        return np.array(rho).transpose(1, 0)

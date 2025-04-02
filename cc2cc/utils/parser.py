@@ -100,24 +100,35 @@ def gen_name_args(name_args, args):
     """
     Function to generate name args
     """
+    dataset_dict = dataset[args.dataset]
+
     if name_args is None:
-        name_mol_new = dataset[args.dataset]["molecule"]
+        name_mol_new = dataset_dict["molecule"]
     elif len(name_args) == 0:
         name_mol_new = []
     else:
-        name_mol_new = []
+        name_mol_new = set()
         for i in range(len(name_args)):
             if name_args[i].startswith("molecule"):
-                if name_args[i] in dataset[args.dataset].keys():
-                    name_mol_new += dataset[args.dataset][name_args[i]]
+                if name_args[i] in dataset_dict.keys():
+                    for extend_mol in dataset_dict[name_args[i]]:
+                        if isinstance(dataset_dict[extend_mol], str):
+                            name_mol_new.add(dataset_dict[extend_mol])
+                        else:
+                            name_mol_new.add(extend_mol)
                 else:
                     raise ValueError(
                         f"Invalid molecule name: {name_args[i]}. "
-                        f"Please use a valid molecule name in {dataset[args.dataset].keys()}"
+                        f"Please use a valid molecule name in {dataset_dict.keys()}"
                     )
             else:
-                name_mol_new.extend([name_args[i]])
-    print(f"Name of molecule: {name_mol_new}")
+                if isinstance(dataset_dict[name_args[i]], str):
+                    name_mol_new.add(dataset_dict[name_args[i]])
+                else:
+                    name_mol_new.add(name_args[i])
+        name_mol_new = list(name_mol_new)
+    print(f"Name of molecule: {name_mol_new[:100]}")
+    name_mol_new = sorted(name_mol_new, key=lambda x: len(dataset_dict[x]))
     return name_mol_new
 
 
@@ -351,7 +362,7 @@ def add_args(parser: argparse.ArgumentParser):
         args.train_atom = periodic_table[args.train_atom]
 
     print("Arguments:")
-    print(f"Name of molecule: {args.name_mol}")
+    print(f"Name of molecule: {args.name_mol[:100]}")
     print(f"Distance list: {args.distance_list}")
     print(f"Extend atom: {args.extend_atom}")
     print(f"Extend xyz: {args.extend_xyz}")

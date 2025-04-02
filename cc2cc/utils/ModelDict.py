@@ -37,6 +37,8 @@ class ModelDict:
         output:
             model_dict: dictionary of models
         """
+        self.model_name = args.model
+
         if args.model == "densenet":
             Model = ModelDensenet
             print("Model: Densenet")
@@ -98,7 +100,7 @@ class ModelDict:
             self.optimizer = optim.AdamW(self.model.parameters(), lr=args.lr)
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
-                T_max=250,
+                T_max=args.eval_step * 50,
                 eta_min=args.lr / 100,
             )
 
@@ -166,12 +168,6 @@ class ModelDict:
         """
         self.model.eval()
         self.optimizer.zero_grad(set_to_none=True)
-
-    def step(self):
-        """
-        Step the optimizer.
-        """
-        self.optimizer.step()
 
     def update(self):
         """
@@ -244,15 +240,17 @@ class ModelDict:
         for batch in database_train.data_gpu:
             if not database_train.if_load_to_gpu_once:
                 batch = database_train.process_batch(batch)
+            data_weight = database_train.data_weight[batch["name"]]
 
             with torch.autocast(device_type="cuda", dtype=self.dtype):
                 loss_ene, loss_ene_abs = self.loss(batch)
-                data_weight = database_train.data_weight[batch["name"]]
                 tot_loss = (
-                    self.tot_loss(loss_ene, loss_ene_abs) / self.iters_to_accumulate
+                    self.tot_loss(loss_ene, loss_ene_abs)
+                    * data_weight
+                    / self.iters_to_accumulate
                 )
 
-            self.scaler.scale(tot_loss * data_weight).backward()
+            self.scaler.scale(tot_loss).backward()
             self.update()
 
             number_batch_name = len(batch["weight"])
@@ -316,15 +314,50 @@ class ModelDict:
 
         return name_l, np.array(loss_ene_l), np.array(loss_ene_abs_l)
 
-    def get_nev(
+    def get_nev_4(
         self,
         ni,
         ks: pyscf.dft.rks.RKS,
         grids: Grid,
         dms,
         xc_code="b3lyp",
-        hermi=1,
-        max_memory=2000,
+    ):
+        """
+        Obtain the energy density.
+        Input: dft instance and grids instance.
+        Output: the potential (ngrids).
+        """
+        ao = ni.eval_ao(ks.mol, grids.coords, deriv=1)
+        if ks.mol.spin == 0:
+            rho = ni.eval_rho(ks.mol, ao, dms, xctype=xc_type(xc_code))
+        else:
+            rho = [
+                ni.eval_rho(ks.mol, ao, dms[0], xctype=xc_type(xc_code)),
+                ni.eval_rho(ks.mol, ao, dms[1], xctype=xc_type(xc_code)),
+            ]
+
+        rho_cube = grids.gen_4(ks.mol, dms, reset=True)
+        input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
+        input_mat.requires_grad = True
+        output_mat = self.model(input_mat)[:, 0]
+
+        middle_cube = torch.autograd.grad(
+            torch.sum(output_mat),
+            input_mat,
+            create_graph=True,
+        )[0]
+        middle_mat = middle_cube.detach().cpu().numpy()
+        energy_den = output_mat.detach().cpu().numpy()
+
+        return rho, energy_den, middle_mat
+
+    def get_nev_cube(
+        self,
+        ni,
+        ks: pyscf.dft.rks.RKS,
+        grids: Grid,
+        dms,
+        xc_code="b3lyp",
     ):
         """
         Obtain the energy density.
@@ -341,12 +374,11 @@ class ModelDict:
             ]
 
         rho_cube = grids.gen_cube_rho(ks.mol, dms, reset=True)
-        # mask_cube = np.zeros((1, 4, 3, 3, 3))
-        # mask_cube[:, :, 1, 1, 1] = 1.0
-        # print(rho_cube[:10])
-        # rho_cube = rho_cube * mask_cube
-        # print(rho_cube[:10])
-        input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
+        input_mat = torch.tensor(
+            rho_cube,
+            dtype=self.dtype,
+            device=self.device,
+        )
         input_mat.requires_grad = True
         output_mat = self.model(input_mat)[:, 0]
 
@@ -357,6 +389,26 @@ class ModelDict:
         )[0]
         middle_mat = grids.get_center_density(middle_cube).detach().cpu().numpy()
         energy_den = output_mat.detach().cpu().numpy()
+
+        return rho, energy_den, middle_mat
+
+    def get_nev(
+        self,
+        ni,
+        ks: pyscf.dft.rks.RKS,
+        grids: Grid,
+        dms,
+        xc_code="b3lyp",
+        hermi=1,
+        max_memory=2000,
+    ):
+        """
+        Obtain the nelec, excsum, and vmat.
+        """
+        if self.model_name == "transformer_4_ang":
+            rho, energy_den, middle_mat = self.get_nev_4(ni, ks, grids, dms, xc_code)
+        else:
+            rho, energy_den, middle_mat = self.get_nev_cube(ni, ks, grids, dms, xc_code)
 
         if TEST:
             hyb_coeff = [0.0, 0.0, 0.0, 0.0]
