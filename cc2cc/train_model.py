@@ -104,7 +104,7 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     print(f"Start training at {modeldict.dir_checkpoint}")
     pbar0 = tqdm(args.epoch + 1)
-    for epoch in pbar0:
+    for epoch in range(args.epoch + 1):
         train_name_list, train_loss_ene, train_loss_ene_abs = modeldict.train_model(
             database_train
         )

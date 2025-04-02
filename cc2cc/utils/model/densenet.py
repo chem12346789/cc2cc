@@ -71,7 +71,7 @@ class Model(nn.Module):
 
         for i, layer in enumerate(self.layers):
             if IF_SKIP_CONNECTION:
-                skip = x.clone()
+                skip = x
             if i < len(self.layers) - 1:
                 x = self.norm[i](x)
             x = layer(x)
@@ -79,7 +79,7 @@ class Model(nn.Module):
                 x = self.actv_fn(x)
                 x = self.dropout(x)
             if IF_SKIP_CONNECTION:
-                if self.sizes[i] == self.sizes[i + 1]:
-                    x = x + skip
+                if 1 < i < len(self.layers) - 1:
+                    x = x + 0.1 * skip
         x = x * t
         return x

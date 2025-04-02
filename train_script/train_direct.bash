@@ -3,9 +3,9 @@
 # export MODEL="--model densenet --load atom-1-2272051 --load_epoch -22000"
 # export MODEL="--model transformer_4_ang --load atom-1-3928342 --load_epoch -4000"
 
-export MODEL="--model densenet"
+# export MODEL="--model densenet"
 # export MODEL="--model transformer"
-# export MODEL="--model transformer_4_ang"
+export MODEL="--model transformer_4_ang"
 
 # export DATASET="--dataset g2"
 export DATASET="--dataset gmtkn"

@@ -1,6 +1,6 @@
 #!/bin/bash
 export MODEL="densenet"
-export load_args_list="atom-1-2272051"
+export load_args_list="atom-1-1464870"
 
 # export MODEL="transformer_4_ang"
 # export load_args_list="atom-1-3928342"
@@ -50,9 +50,20 @@ for load_args in ${load_args_list}; do
 echo Starting test.py at $(date)
 echo "Testing mol: ${mol_args}"
 echo "Load model: ${MODEL} ${load_args}"
-~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 ${load_model_args} --load_epoch -3000 --load ${load_args} --model ${MODEL} --dataset ${DATASET} --name_mol molecule_W4_11 molecule_DC13 molecule_G21EA molecule_BH76 --if_continue ${if_continue_args}
+~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 ${load_model_args} --load_epoch -21000 --load ${load_args} --model ${MODEL} --dataset ${DATASET} --name_mol molecule_W4_11 molecule_G21EA molecule_G21IP molecule_DIPCS10 molecule_PA26 molecule_SIE4x4 molecule_ALKBDE10 molecule_YBDE18 molecule_AL2X6 molecule_HEAVYSB11 molecule_NBPRC molecule_ALK8 molecule_RC21 molecule_G2RC molecule_BH76 molecule_FH51 molecule_TAUT15 molecule_DC13 --if_continue ${if_continue_args}
 echo "Test completed successfully."
 echo DONE
 EOF
     echo $! >>log/save_pid.txt 2>&1
 done
+
+# # Basic properties and reaction energies for small systems
+# molecule_W4_11 molecule_G21EA molecule_G21IP molecule_DIPCS10 molecule_PA26 molecule_SIE4x4 molecule_ALKBDE10 molecule_YBDE18 molecule_AL2X6 molecule_HEAVYSB11 molecule_NBPRC molecule_ALK8 molecule_RC21 molecule_G2RC molecule_BH76 molecule_FH51 molecule_TAUT15 molecule_DC13
+# # Reaction energies for large systems and isomerisation reactions
+# molecule-MB16-43 molecule-DARC molecule-RSE43 molecule-BSR36 molecule-CDIE20 molecule-ISO34 molecule-ISOL24 molecule-C60ISO molecule-PArel
+# # Reaction barrier heights
+# molecule-BHPERI molecule-BHDIV10 molecule-INV24 molecule-BHROT27 molecule-PX13 molecule-WCPT18
+# # Intermolecular noncovalent interactions
+# molecule-RG18 molecule-ADIM6 molecule-S22 molecule-S66 molecule-HEAVY28 molecule-WATER27 molecule-CARBHB12 molecule-PNICO23 molecule-HAL59 molecule-AHB21 molecule-CHB6 molecule-IL16
+# # Intramolecular noncovalent interactions
+# molecule-IDISP molecule-ICONF molecule-ACONF molecule-AMINO20x4 molecule-PCONF21 molecule-MCONF molecule-SCONF molecule-UPU23 molecule-BUT14DIOL

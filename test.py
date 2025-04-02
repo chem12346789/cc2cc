@@ -7,12 +7,13 @@ import argparse
 from itertools import product
 
 from cc2cc import add_args, test_rks, test_uks
-from cc2cc.utils import gen_mole
+from cc2cc.utils import gen_mole, print_gpu_info
 from cc2cc.utils import Grid, ModelDict, DataRecord
 from cc2cc.utils import MAIN_PATH
 
 if __name__ == "__main__":
     # 0. Prepare the args
+    print_gpu_info()
     parser = argparse.ArgumentParser(
         description="Generate the inversed potential and energy."
     )
