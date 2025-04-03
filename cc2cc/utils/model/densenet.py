@@ -13,9 +13,14 @@ from cc2cc.utils.env_var import CUBE_MIDDLE
 D_MODEL = 108
 MLP = 1
 DENSE_DEPTH = 3
-IF_SKIP_CONNECTION = 1
+IF_SKIP_CONNECTION = 0
 
 DROP_RATE = 0
+
+DENSE_ACTV = "relu"
+# DENSE_ACTV = "gelu"
+DENSE_NORMAL = "layer"
+# DENSE_NORMAL = "rms"
 
 
 class Model(nn.Module):
@@ -57,9 +62,21 @@ class Model(nn.Module):
             ]
         )
 
-        self.actv_fn = nn.ReLU()
+        if DENSE_ACTV == "relu":
+            self.actv_fn = nn.ReLU()
+        elif DENSE_ACTV == "gelu":
+            self.actv_fn = nn.GELU()
+
+        if DENSE_NORMAL == "layer":
+            self.norm = nn.ModuleList(
+                [nn.LayerNorm(i_size) for i_size in self.sizes[:-2]]
+            )
+        elif DENSE_NORMAL == "rms":
+            self.norm = nn.ModuleList(
+                [nn.RMSNorm(i_size) for i_size in self.sizes[:-2]]
+            )
+
         self.dropout = nn.Dropout(self.drop_rate)
-        self.norm = nn.ModuleList([nn.LayerNorm(i_size) for i_size in self.sizes[:-2]])
 
     def forward(self, x):
         """

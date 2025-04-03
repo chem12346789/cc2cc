@@ -232,6 +232,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--device",
+        type=str,
+        default="cuda",
+        help="Device for the training. Default is cuda.",
+    )
+
+    parser.add_argument(
         "--epoch",
         type=int,
         default=10000,

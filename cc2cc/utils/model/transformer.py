@@ -23,10 +23,15 @@ QKV_BIAS = False
 DROP_RATE = 0
 NUM_HEADS = 1
 
-# ATTE_ACTV = "gelu"
-ATTE_ACTV = "relu"
+# ATTE_ACTV = "relu"
+ATTE_ACTV = "gelu"
+# ATTE_NORMAL = "layer"
+ATTE_NORMAL = "rms"
 
-DENSE_ACTV = "relu"
+# DENSE_ACTV = "relu"
+DENSE_ACTV = "gelu"
+# DENSE_NORMAL = "layer"
+DENSE_NORMAL = "rms"
 
 
 class Attention(nn.Module):
@@ -106,8 +111,13 @@ class ABlock(nn.Module):
         self.dropout0 = nn.Dropout(self.drop_rate)
         self.dropout1 = nn.Dropout(self.drop_rate)
         self.dropout2 = nn.Dropout(self.drop_rate)
-        self.layernorm1 = nn.LayerNorm(self.d_model)
-        self.layernorm2 = nn.LayerNorm(self.d_model)
+
+        if ATTE_NORMAL == "layer":
+            self.layernorm1 = nn.LayerNorm(self.d_model)
+            self.layernorm2 = nn.LayerNorm(self.d_model)
+        elif ATTE_NORMAL == "rms":
+            self.layernorm1 = nn.RMSNorm(self.d_model)
+            self.layernorm2 = nn.RMSNorm(self.d_model)
 
     def forward(self, x_inp):
         """
@@ -200,9 +210,15 @@ class DenseNet(nn.Module):
             self.actv_fn = nn.ReLU()
         elif DENSE_ACTV == "gelu":
             self.actv_fn = nn.GELU()
-        self.norm = nn.ModuleList(
-            [nn.LayerNorm(self.d_model) for _ in range(self.num_layer_dense)]
-        )
+
+        if DENSE_NORMAL == "layer":
+            self.norm = nn.ModuleList(
+                [nn.LayerNorm(self.d_model) for _ in range(self.num_layer_dense)]
+            )
+        elif DENSE_NORMAL == "rms":
+            self.norm = nn.ModuleList(
+                [nn.RMSNorm(self.d_model) for _ in range(self.num_layer_dense)]
+            )
 
     def forward(self, x):
         """

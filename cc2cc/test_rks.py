@@ -35,14 +35,28 @@ def test_rks(
         cc_triple=cc_triple,
     )
 
+    time_dft_start = timer()
+    mdft_dft = pyscf.dft.RKS(mol)
+    mdft_dft.xc = test_data.xc_code
+    # mdft_dft.grids.atom_grid = {
+    #     "C": (75, 302),
+    #     "O": (75, 302),
+    #     "N": (75, 302),
+    #     "H": (75, 302),
+    # }
+    mdft_dft.kernel(dm0=test_data.mf_dm1)
+    test_data.e_dft = mdft_dft.e_tot
+    test_data.dm1_dft = mdft_dft.make_rdm1()
+    test_data.time_dft = timer() - time_dft_start
+
+    time_ai_start = timer()
+
     mdft = pyscf.dft.RKS(mol)
     mdft.xc = test_data.xc_code
     mdft.grids = grids
 
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=1)
     ao_0 = ao_value[0]
-
-    time_ai_start = timer()
 
     def get_veff_modified(ks, mol=None, dm=None, dm_last=0, vhf_last=0, hermi=1):
         # print("Using modified get_veff", flush=True)
@@ -55,7 +69,7 @@ def test_rks(
         ground_state = isinstance(dm, np.ndarray) and dm.ndim == 2
         ni = ks._numint
 
-        nelec, exc, vxc = modeldict.get_nev(ni, ks, grids, dm, test_data.xc_code)
+        nelec, exc, vxc = modeldict.nr_rks(ni, mol, grids, dm, test_data.xc_code)
 
         if not ni.libxc.is_hybrid_xc(ks.xc):
             vk = None

@@ -7,7 +7,7 @@ More details.
 import ctypes
 from itertools import product
 import os
-
+import time
 import numpy as np
 from joblib import Parallel, parallel_config, delayed
 import pyscf
@@ -95,7 +95,7 @@ RAD_GRIDS = np.array(
 # fmt: on
 
 
-def gen_input(rho, spin, xc_type):
+def gen_input(rho, spin):
     """
     Generate the input for the model.
     """
@@ -303,6 +303,8 @@ class Grid(dft.gen_grid.Grids):
         """
         Generate the cube density for the given molecule.
         """
+        start_time = time.time()
+
         if self.coor_cube is None:
             print("Warning: coor_cube is not initialized!")
             self.gen_cube(mol, dm1_input)
@@ -312,6 +314,9 @@ class Grid(dft.gen_grid.Grids):
         else:
             print("Warning: Use the existing coor_cube!")
 
+        gen_cube_time = time.time()
+        print(f"        Time for gen_cube: {gen_cube_time - start_time} seconds")
+
         def gen_cube_rho_p(p):
             ao_cube = pyscf.dft.numint.eval_ao(
                 mol, self.coor_cube[p].reshape(-1, 3), deriv=1
@@ -320,7 +325,7 @@ class Grid(dft.gen_grid.Grids):
                 rho_cube_p = pyscf.dft.numint.eval_rho(
                     mol, ao_cube, dm1_input, xctype=xc_type
                 )
-                rho_cube_p_norm = gen_input(rho_cube_p, 0, xc_type)
+                rho_cube_p_norm = gen_input(rho_cube_p, 0)
             else:
                 rho_cube_p = [
                     pyscf.dft.numint.eval_rho(
@@ -330,7 +335,7 @@ class Grid(dft.gen_grid.Grids):
                         mol, ao_cube, dm1_input[1], xctype=xc_type
                     ),
                 ]
-                rho_cube_p_norm = gen_input(rho_cube_p, 1, xc_type)
+                rho_cube_p_norm = gen_input(rho_cube_p, 1)
             return np.reshape(rho_cube_p_norm, (-1, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
 
         with parallel_config(
@@ -341,6 +346,11 @@ class Grid(dft.gen_grid.Grids):
             rho_cube = Parallel()(
                 delayed(gen_cube_rho_p)(p) for p in range(len(self.coords))
             )
+
+        gen_cube_rho_time = time.time()
+        print(
+            f"        Time for gen_cube_rho: {gen_cube_rho_time - gen_cube_time} seconds"
+        )
 
         return np.array(rho_cube)
 

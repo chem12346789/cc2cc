@@ -9,7 +9,7 @@ export load_args_list="atom-1-1464870"
 export DATASET="gmtkn"
 # export DATASET="gmtkn-cc-pVDZ"
 
-export if_continue_args="0"
+export if_continue_args="1"
 
 export dl_args="0 0 1"
 # export basis_args="Def2-TZVPD"
@@ -26,6 +26,7 @@ export NUMEXPR_NUM_THREADS=12
 export PYSCF_MAX_MEMORY=80000
 export PYTHONPATH=~/python:$PYTHONPATH
 export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
+export PYSCF_TMPDIR=~/raid/tmp
 
 export NVIDIA_VISIBLE_DEVICES=1
 # use less power GPU
@@ -50,7 +51,7 @@ for load_args in ${load_args_list}; do
 echo Starting test.py at $(date)
 echo "Testing mol: ${mol_args}"
 echo "Load model: ${MODEL} ${load_args}"
-~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 ${load_model_args} --load_epoch -21000 --load ${load_args} --model ${MODEL} --dataset ${DATASET} --name_mol molecule_W4_11 molecule_G21EA molecule_G21IP molecule_DIPCS10 molecule_PA26 molecule_SIE4x4 molecule_ALKBDE10 molecule_YBDE18 molecule_AL2X6 molecule_HEAVYSB11 molecule_NBPRC molecule_ALK8 molecule_RC21 molecule_G2RC molecule_BH76 molecule_FH51 molecule_TAUT15 molecule_DC13 --if_continue ${if_continue_args}
+~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 ${load_model_args} --load_epoch -21000 --load ${load_args} --model ${MODEL} --dataset ${DATASET} --device cpu --name_mol TAUT15-3c --if_continue ${if_continue_args}
 echo "Test completed successfully."
 echo DONE
 EOF

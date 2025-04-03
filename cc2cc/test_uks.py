@@ -55,7 +55,7 @@ def test_uks(
         ground_state = dm.ndim == 3 and dm.shape[0] == 2
         ni = ks._numint
 
-        nelec, exc, vxc = modeldict.get_nev(ni, ks, grids, dm, test_data.xc_code)
+        nelec, exc, vxc = modeldict.nr_rks(ni, ks, grids, dm, test_data.xc_code)
 
         if not ni.libxc.is_hybrid_xc(ks.xc):
             vk = None

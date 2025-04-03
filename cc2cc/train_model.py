@@ -2,8 +2,7 @@
 
 import os
 import random
-
-from tqdm import tqdm
+import time
 import numpy as np
 import torch
 from torchinfo import summary
@@ -103,7 +102,8 @@ def train_model(train_str_dict, eval_str_dict, args):
     experiment.config.update(experiment_dict)
 
     print(f"Start training at {modeldict.dir_checkpoint}")
-    pbar0 = tqdm(args.epoch + 1)
+    time_start = time.time()
+
     for epoch in range(args.epoch + 1):
         train_name_list, train_loss_ene, train_loss_ene_abs = modeldict.train_model(
             database_train
@@ -172,14 +172,15 @@ def train_model(train_str_dict, eval_str_dict, args):
         }
         experiment.log(experiment_dict)
 
-        pbar0.set_description(
+        time_end = time.time()
+        time_elapsed = time_end - time_start
+        print(
             f"Epoch: {epoch}, "
-            f"Loss: {np.mean(train_loss_ene):.2f}, "
-            f"Eval: {np.mean(eval_loss_ene):.2f}, "
-            f"Loss abs: {np.mean(train_loss_ene_abs):.2f}, "
-            f"Eval abs: {np.mean(eval_loss_ene_abs):.2f}, "
-            f"lr: {experiment_dict['lr']:.2e}",
-            refresh=True,
+            f"Loss: {np.mean(train_loss_ene):>5.2f}, "
+            f"Eval: {np.mean(eval_loss_ene):>5.2f}, "
+            f"Loss abs: {np.mean(train_loss_ene_abs):>5.2f}, "
+            f"Eval abs: {np.mean(eval_loss_ene_abs):>5.2f}, "
+            f"lr: {experiment_dict['lr']:>5.2e}, "
+            f"Speed: {time_elapsed / (epoch + 1):>5.2f}s/epoch",
+            flush=True,
         )
-
-    pbar0.close()

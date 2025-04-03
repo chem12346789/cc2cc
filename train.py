@@ -6,7 +6,7 @@ from cc2cc.utils.parser import gen_name_args
 
 train_str_dict = [
     "molecule0",
-    "molecule1-W4_11",
+    "molecule1",
     "molecule2-W4_11",
     "molecule3-W4_11",
     "molecule4-W4_11",
