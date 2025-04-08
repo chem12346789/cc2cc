@@ -12,7 +12,7 @@ import torch
 
 from cc2cc import add_args
 from cc2cc.utils import add_args
-from cc2cc.utils import Grid, ModelDict, DataRecord, DataBase
+from cc2cc.utils import Grid, ModelClass, DataRecord, DataBase
 from cc2cc.utils import MAIN_PATH, AU2KCALMOL
 
 from train import train_str_dict as train_str_list, eval_str_dict as eval_str_list
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     args = add_args(parser)
 
     # 1. Init the model
-    modeldict = ModelDict(args)
+    modeldict = ModelClass(args)
     modeldict.eval()
 
     # 2. Test loop

@@ -10,7 +10,7 @@ from torchinfo import summary
 import wandb
 
 from cc2cc.utils import DataRecord
-from cc2cc.utils import DataBase, ModelDict, DataBase_4
+from cc2cc.utils import DataBase, ModelClass, DataBase_4
 
 seed = 42
 random.seed(seed)
@@ -42,7 +42,7 @@ def train_model(train_str_dict, eval_str_dict, args):
     )
     wandb.define_metric("*", step_metric="global_step")
 
-    modeldict = ModelDict(args)
+    modeldict = ModelClass(args)
 
     if args.model == "transformer_4_ang":
         print("Using transformer_4_ang")
@@ -57,8 +57,8 @@ def train_model(train_str_dict, eval_str_dict, args):
                 mode="train",
             )
         )
-        database_train = DataBase_4(train_str_dict, args)
         database_eval = DataBase_4(eval_str_dict, args)
+        database_train = DataBase_4(train_str_dict, args)
     else:
         print("Using transformer_4_ang")
         print(
@@ -72,8 +72,8 @@ def train_model(train_str_dict, eval_str_dict, args):
                 mode="train",
             )
         )
-        database_train = DataBase(train_str_dict, args)
         database_eval = DataBase(eval_str_dict, args)
+        database_train = DataBase(train_str_dict, args)
 
     experiment_dict = {
         "batch_size": args.batch_size,

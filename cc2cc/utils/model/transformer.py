@@ -16,21 +16,26 @@ RAD = 75
 
 D_MODEL = CUBE_SIZE**3
 SEQ_LEN = 4
-NUM_LAYER_TRANSFORMER = 3
-NUM_LAYER_DENSE = 3
-
+DEPTH_TRANSFORMER = 3
 QKV_BIAS = False
 DROP_RATE = 0
 NUM_HEADS = 1
 
+MLP_DENSE = 108
+DEPTH_DENSE = 5
+IF_SKIP_CONNECTION_DENSE = 1
+
+
 # ATTE_ACTV = "relu"
-ATTE_ACTV = "gelu"
 # ATTE_NORMAL = "layer"
+
+ATTE_ACTV = "gelu"
 ATTE_NORMAL = "rms"
 
 # DENSE_ACTV = "relu"
-DENSE_ACTV = "gelu"
 # DENSE_NORMAL = "layer"
+
+DENSE_ACTV = "gelu"
 DENSE_NORMAL = "rms"
 
 
@@ -150,7 +155,7 @@ class Extractor(nn.Module):
         super(Extractor, self).__init__()
         self.d_model = kwargs.get("d_model", D_MODEL)
         self.seq_len = kwargs.get("seq_len", SEQ_LEN)
-        self.num_layer = kwargs.get("num_layer", NUM_LAYER_TRANSFORMER)
+        self.num_layer = kwargs.get("num_layer", DEPTH_TRANSFORMER)
         self.qkv_bias = kwargs.get("qkv_bias", QKV_BIAS)
         self.num_heads = kwargs.get("num_heads", NUM_HEADS)
         self.drop_rate = kwargs.get("drop_rate", DROP_RATE)
@@ -196,16 +201,19 @@ class DenseNet(nn.Module):
     def __init__(self, **kwargs):
         super(DenseNet, self).__init__()
         self.d_model = kwargs.get("seq_len", SEQ_LEN * D_MODEL)
-        self.num_layer_dense = kwargs.get("num_layer_dense", NUM_LAYER_DENSE) - 1
+        self.mlp = kwargs.get("mlp", MLP_DENSE)
+        self.depth = kwargs.get("depth_dense", DEPTH_DENSE)
+        self.drop_rate = kwargs.get("drop_rate", DROP_RATE)
 
-        sizes = [self.d_model] + [self.d_model] * self.num_layer_dense + [1]
+        self.sizes = [self.d_model] + [self.mlp] * (self.depth - 1) + [1]
 
         self.layers = nn.ModuleList(
             [
                 nn.Linear(input_size, output_size)
-                for input_size, output_size in zip(sizes, sizes[1:])
+                for input_size, output_size in zip(self.sizes, self.sizes[1:])
             ]
         )
+
         if DENSE_ACTV == "relu":
             self.actv_fn = nn.ReLU()
         elif DENSE_ACTV == "gelu":
@@ -213,23 +221,31 @@ class DenseNet(nn.Module):
 
         if DENSE_NORMAL == "layer":
             self.norm = nn.ModuleList(
-                [nn.LayerNorm(self.d_model) for _ in range(self.num_layer_dense)]
+                [nn.LayerNorm(i_size) for i_size in self.sizes[:-2]]
             )
         elif DENSE_NORMAL == "rms":
             self.norm = nn.ModuleList(
-                [nn.RMSNorm(self.d_model) for _ in range(self.num_layer_dense)]
+                [nn.RMSNorm(i_size) for i_size in self.sizes[:-2]]
             )
+
+        self.dropout = nn.Dropout(self.drop_rate)
 
     def forward(self, x):
         """
         Standard forward function, required for all nn.Module classes
         """
         for i, layer in enumerate(self.layers):
+            if IF_SKIP_CONNECTION_DENSE:
+                skip = x
             if i < len(self.layers) - 1:
                 x = self.norm[i](x)
             x = layer(x)
             if i < len(self.layers) - 1:
                 x = self.actv_fn(x)
+                x = self.dropout(x)
+            if IF_SKIP_CONNECTION_DENSE:
+                if 1 < i < len(self.layers) - 1:
+                    x = x + skip
         return x
 
 
@@ -240,17 +256,6 @@ class Model(nn.Module):
 
     def __init__(self, **kwargs):
         super().__init__()
-
-        print("#INFO: **** detail of model ****")
-        print(f"#INFO: **** ANG is {ANG} ****")
-        print(f"#INFO: **** RAD is {RAD} ****")
-        print(f"#INFO: **** D_MODEL is {D_MODEL} ****")
-        print(f"#INFO: **** SEQ_LEN is {SEQ_LEN} ****")
-        print(f"#INFO: **** DEPTH is {NUM_LAYER_TRANSFORMER} ****")
-        print(f"#INFO: **** NUM_LAYER_DENSE is {NUM_LAYER_DENSE} ****")
-        print(f"#INFO: **** QKV_BIAS is {QKV_BIAS} ****")
-        print(f"#INFO: **** NUM_HEADS is {NUM_HEADS} ****")
-        print(f"#INFO: **** DROP_RATE is {DROP_RATE} ****")
 
         # print all contain in this file, for debugging and logging
         with importlib.resources.files("cc2cc").joinpath(
@@ -270,17 +275,16 @@ class Model(nn.Module):
         """
         Standard forward function, required for all nn.Module classes
         """
-        t = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        # Extract the central values for each channel
+        b3lyp_ene = (
+            0.72 * x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.81 * x[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.08 * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.19 * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        )
+
         # x.shape = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-
-        if D_MODEL == CUBE_SIZE**3 and SEQ_LEN == 4:
-            x = x.reshape(-1, 4, CUBE_SIZE**3)
-            # x.shape = (batch, 4, CUBE_SIZE**3)
-        else:
-            raise ValueError(
-                f"Error: D_MODEL is {D_MODEL} and SEQ_LEN is {SEQ_LEN}, but CUBE_SIZE is {CUBE_SIZE}"
-            )
-
+        x = x.reshape(-1, 4, CUBE_SIZE**3)
         # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
         x = self.predictor(x)
         # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
@@ -290,5 +294,5 @@ class Model(nn.Module):
         # x.shape = (batch, 4 * CUBE_SIZE**3)
         x = self.densenet(x)
         # x.shape = (batch, 1)
-        x = x * t
+        x = x * b3lyp_ene
         return x

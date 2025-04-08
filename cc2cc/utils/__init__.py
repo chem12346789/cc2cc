@@ -4,7 +4,9 @@ from cc2cc.utils.mol import gen_mole
 from cc2cc.utils.Grids import Grid
 from cc2cc.utils.DataBase import DataBase
 from cc2cc.utils.DataBase_4 import DataBase as DataBase_4
-from cc2cc.utils.ModelDict import ModelDict
+from cc2cc.utils.ModelClass import ModelClass
+from cc2cc.utils.modelscf_rks import get_veff_modified as get_veff_modified_rks
+from cc2cc.utils.modelscf_uks import get_veff_modified as get_veff_modified_uks
 from cc2cc.utils.rotate import rotate
 from cc2cc.utils.DataRecord import DataRecord
 from cc2cc.utils.TestData import TestData
@@ -30,7 +32,7 @@ __all__ = [
     "Grid",
     "DataBase",
     "DataBase_4",
-    "ModelDict",
+    "ModelClass",
     "rotate",
     "print_gpu_info",
     "DataRecord",

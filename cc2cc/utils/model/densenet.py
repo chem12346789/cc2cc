@@ -11,16 +11,17 @@ import torch.nn as nn
 from cc2cc.utils.env_var import CUBE_MIDDLE
 
 D_MODEL = 108
-MLP = 1
-DENSE_DEPTH = 3
-IF_SKIP_CONNECTION = 0
+MLP = 108
+DENSE_DEPTH = 5
+IF_SKIP_CONNECTION = 1
 
 DROP_RATE = 0
 
-DENSE_ACTV = "relu"
-# DENSE_ACTV = "gelu"
-DENSE_NORMAL = "layer"
-# DENSE_NORMAL = "rms"
+# DENSE_ACTV = "relu"
+# DENSE_NORMAL = "layer"
+
+DENSE_ACTV = "gelu"
+DENSE_NORMAL = "rms"
 
 
 class Model(nn.Module):
@@ -32,14 +33,8 @@ class Model(nn.Module):
         super().__init__()
         self.d_model = kwargs.get("d_model", D_MODEL)
         self.mlp = kwargs.get("mlp", MLP)
-        self.depth = kwargs.get("depth", DENSE_DEPTH) - 1
+        self.depth = kwargs.get("depth", DENSE_DEPTH)
         self.drop_rate = kwargs.get("drop_rate", DROP_RATE)
-
-        print("#INFO: **** detail of model ****")
-        print(f"#INFO: **** d_model is {self.d_model} ****")
-        print(f"#INFO: **** mlp is {self.mlp} ****")
-        print(f"#INFO: **** depth is {self.depth} ****")
-        print(f"#INFO: **** if_skip_connection is {IF_SKIP_CONNECTION} ****")
 
         # print all contain in this file, for debugging and logging
         with importlib.resources.files("cc2cc").joinpath(
@@ -53,7 +48,7 @@ class Model(nn.Module):
                 print("\n")
                 print("\n")
 
-        self.sizes = [self.d_model] + [self.d_model * self.mlp] * self.depth + [1]
+        self.sizes = [self.d_model] + [self.mlp] * (self.depth - 1) + [1]
 
         self.layers = nn.ModuleList(
             [
@@ -82,8 +77,16 @@ class Model(nn.Module):
         """
         Standard forward function, required for all nn.Module classes
         """
-        t = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        # Extract the central values for each channel
+        b3lyp_ene = (
+            0.72 * x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.81 * x[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.08 * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.19 * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        )
+        # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 
+        # Reshape the input for the linear layers
         x = x.reshape(-1, self.d_model)
 
         for i, layer in enumerate(self.layers):
@@ -97,6 +100,9 @@ class Model(nn.Module):
                 x = self.dropout(x)
             if IF_SKIP_CONNECTION:
                 if 1 < i < len(self.layers) - 1:
-                    x = x + 0.1 * skip
-        x = x * t
+                    x = x + skip
+
+        # Apply the weighted sum of the central values
+        x = x * b3lyp_ene
+
         return x

@@ -44,7 +44,7 @@ def ucc(mol, grids, name, cc_triple=False):
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
         ]
-        rho_cube = grids.gen_cube_rho(mol, dm1_cc)
+        rho_cube = grids.gen_cube_rho_uks(mol, dm1_cc, ni=mdft._numint)
 
         exc_cc_grids = pyscf.dft.libxc.eval_xc(
             "b3lyp", rho_dft, spin=1 if mol.spin else 0
@@ -108,7 +108,7 @@ def ucc(mol, grids, name, cc_triple=False):
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
         ]
-        rho_cube = grids.gen_cube_rho(mol, dm1_cc)
+        rho_cube = grids.gen_cube_rho_uks(mol, dm1_cc, ni=mdft._numint)
         print(
             np.sum(
                 np.abs(rho_cc[0] - rho_dft[0]) * grids.weights

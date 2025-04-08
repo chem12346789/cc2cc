@@ -13,6 +13,8 @@ train_str_dict = [
 ]
 eval_str_dict = [
     "molecule5-W4_11",
+    "molecule5-BH9",
+    "molecule5-BH76",
 ]
 
 if __name__ == "__main__":

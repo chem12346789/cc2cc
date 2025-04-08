@@ -5,18 +5,13 @@ More details.
 """
 
 import ctypes
+import time
 import numpy as np
-from numba import njit
+from numba import njit, prange
 
 import pyscf
 from pyscf import dft, gto, lib
-from pyscf.dft.numint import (
-    _dot_ao_dm,
-    _contract_rho,
-    _sparse_enough,
-    _empty_aligned,
-    _format_uks_dm,
-)
+from pyscf.dft.numint import _dot_ao_dm, _contract_rho, _sparse_enough, _empty_aligned
 from pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 from pyscf import __config__
 
@@ -192,7 +187,7 @@ def modified_build(grids, mol=None, **kwargs):
     )
 
 
-@njit(fastmath=True)
+@njit(parallel=True, fastmath=True, cache=True)
 def gen_cube_njit(
     rho_input_2,
     rho_input_1,
@@ -202,7 +197,7 @@ def gen_cube_njit(
     """
     Generate the cube coordinates for the given molecule.
     """
-    for p in range(len(coords)):
+    for p in prange(len(coords)):
         norm_2d = rho_input_2[:, :, p]
         eig_val, eig_vec = np.linalg.eigh(norm_2d)
         eig_val_sort = np.argsort(eig_val)
@@ -222,25 +217,6 @@ def gen_cube_njit(
                         + (j - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 1]
                         + (k - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 2]
                     )
-
-
-class GridCube:
-    """
-    Generate the Grids for the cube.
-    Note that the no center weights are 0.
-    The cutoff is the cutoff for the cube.
-    This class is used to hack the modified_block_loop as the duck typing.
-    """
-
-    def __init__(self, coords, weights, cutoff=None):
-        self.weights = np.zeros((coords.shape[0], CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
-        self.weights[:, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] = weights
-        self.coords = coords.reshape(
-            (weights.shape[0] * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE, 3)
-        )
-        self.non0tab = None
-        self.mol = None
-        self.cutoff = cutoff
 
 
 def modified_block_loop(
@@ -339,13 +315,7 @@ class Grid(dft.gen_grid.Grids):
         self.radi_method = dft.radi.gauss_chebyshev
         modified_build(self)
 
-    def gen_cube(
-        self,
-        mol,
-        dm1_input,
-        coords=None,
-        weights=None,
-    ):
+    def gen_cube(self, mol, dm1_input, coords=None):
         """
         Generate the cube coordinates for the given molecule.
 
@@ -396,15 +366,13 @@ class Grid(dft.gen_grid.Grids):
         coor_cube = np.zeros((len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
         gen_cube_njit(rho_input_2, rho_input_1, coords, coor_cube)
 
-        return GridCube(coor_cube, weights, cutoff=self.cutoff)
+        return coor_cube
 
-    def gen_cube_rho_rks(
+    def gen_cube_rho(
         self,
         mol,
         dms,
         ni=None,
-        coords=None,
-        weights=None,
         xc_type="GGA",
         hermi=1,
         max_memory=2000,
@@ -412,116 +380,51 @@ class Grid(dft.gen_grid.Grids):
         """
         Generate the cube density for the given molecule.
         """
-        if coords is None:
-            coords = self.coords
+        start_time = time.time()
 
-        if weights is None:
-            weights = self.weights
+        coor_cube = self.gen_cube(mol, dms)
 
-        gridcube = self.gen_cube(mol, dms, coords, weights)
+        gen_cube_time = time.time()
+        print(f"        Time for gen_cube: {gen_cube_time - start_time} seconds")
 
-        make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, gridcube)
+        rho_cube = np.zeros((len(self.coords), 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
 
-        rho_cube = np.zeros((4, len(gridcube.coords)))
+        for i in range(CUBE_SIZE):
+            for j in range(CUBE_SIZE):
+                for k in range(CUBE_SIZE):
+                    ao = ni.eval_ao(mol, coor_cube[:, i, j, k, :], deriv=1)
+                    rho = ni.eval_rho(mol, ao, dms, xctype=xc_type)
+                    exc_lda, _ = ni.eval_xc_eff(
+                        "LDA,", rho[0], deriv=1, xctype=ni._xc_type("LDA,")
+                    )[:2]
+                    exc_vwn, _ = ni.eval_xc_eff(
+                        ",VWN3", rho[0], deriv=1, xctype=ni._xc_type(",VWN3")
+                    )[:2]
+                    exc_b88, _ = ni.eval_xc_eff(
+                        "B88,", rho, deriv=1, xctype=ni._xc_type("B88,")
+                    )[:2]
+                    exc_lyp, _ = ni.eval_xc_eff(
+                        ",LYP", rho, deriv=1, xctype=ni._xc_type(",LYP")
+                    )[:2]
 
-        for ao, mask, _, _, ip0, ip1 in modified_block_loop(
-            ni, mol, gridcube, nao, 1, max_memory=max_memory
-        ):
-            for i in range(nset):
-                rho = make_rho(i, ao, mask, ni._xc_type("b3lyp"))
-                exc_lda, _ = ni.eval_xc_eff(
-                    "LDA,", rho[0], deriv=1, xctype=ni._xc_type("LDA,")
-                )[:2]
-                exc_vwn, _ = ni.eval_xc_eff(
-                    ",VWN3", rho[0], deriv=1, xctype=ni._xc_type(",VWN3")
-                )[:2]
-                exc_b88, _ = ni.eval_xc_eff(
-                    "B88,", rho, deriv=1, xctype=ni._xc_type("B88,")
-                )[:2]
-                exc_lyp, _ = ni.eval_xc_eff(
-                    ",LYP", rho, deriv=1, xctype=ni._xc_type(",LYP")
-                )[:2]
+                    if len(rho.shape) == 2:
+                        rho0 = rho[0]
+                    else:
+                        rho0 = rho[0][0] + rho[1][0]
 
-                rho0 = rho[0]
+                    rho_cube[:, :, i, j, k] = np.array(
+                        [
+                            exc_lda * rho0,
+                            exc_vwn * rho0,
+                            exc_b88 * rho0,
+                            exc_lyp * rho0,
+                        ]
+                    ).T
 
-                rho_cube[:, ip0:ip1] = np.array(
-                    [
-                        exc_lda * rho0,
-                        exc_vwn * rho0,
-                        exc_b88 * rho0,
-                        exc_lyp * rho0,
-                    ]
-                )
-
-        rho_cube = rho_cube.reshape((4, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
-        rho_cube = rho_cube.transpose(1, 0, 2, 3, 4)
-
-        return rho_cube
-
-    def gen_cube_rho_uks(
-        self,
-        mol,
-        dms,
-        ni=None,
-        coords=None,
-        weights=None,
-        xc_type="GGA",
-        hermi=1,
-        max_memory=2000,
-    ):
-        """
-        Generate the cube density for the given molecule.
-        """
-        if coords is None:
-            coords = self.coords
-
-        if weights is None:
-            weights = self.weights
-
-        gridcube = self.gen_cube(mol, dms, coords, weights)
-
-        dma, dmb = _format_uks_dm(dms)
-        nao = dma.shape[-1]
-        make_rhoa, nset = ni._gen_rho_evaluator(mol, dma, hermi, False, gridcube)[:2]
-        make_rhob = ni._gen_rho_evaluator(mol, dmb, hermi, False, gridcube)[0]
-
-        rho_cube = np.zeros((4, len(gridcube.coords)))
-
-        for ao, mask, _, _, ip0, ip1 in modified_block_loop(
-            ni, mol, gridcube, nao, 1, max_memory=max_memory
-        ):
-            for i in range(nset):
-                rho_a = make_rhoa(i, ao, mask, ni._xc_type("b3lyp"))
-                rho_b = make_rhob(i, ao, mask, ni._xc_type("b3lyp"))
-                rho = (rho_a, rho_b)
-                rho_lda = (rho_a[0], rho_b[0])
-
-                exc_lda, _ = ni.eval_xc_eff(
-                    "LDA,", rho_lda, deriv=1, xctype=ni._xc_type("LDA,")
-                )[:2]
-                exc_vwn, _ = ni.eval_xc_eff(
-                    ",VWN3", rho_lda, deriv=1, xctype=ni._xc_type(",VWN3")
-                )[:2]
-                exc_b88, _ = ni.eval_xc_eff(
-                    "B88,", rho, deriv=1, xctype=ni._xc_type("B88,")
-                )[:2]
-                exc_lyp, _ = ni.eval_xc_eff(
-                    ",LYP", rho, deriv=1, xctype=ni._xc_type(",LYP")
-                )[:2]
-
-                rho0 = rho_a[0] + rho_b[0]
-
-                rho_cube[:, ip0:ip1] = np.array(
-                    [
-                        exc_lda * rho0,
-                        exc_vwn * rho0,
-                        exc_b88 * rho0,
-                        exc_lyp * rho0,
-                    ]
-                )
-
-        rho_cube = rho_cube.reshape((4, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
-        rho_cube = rho_cube.transpose(1, 0, 2, 3, 4)
+        gen_cube_rho_time = time.time()
+        print(
+            f"        Time for gen_cube_rho: {gen_cube_rho_time - gen_cube_time} seconds"
+        )
 
         return rho_cube
 

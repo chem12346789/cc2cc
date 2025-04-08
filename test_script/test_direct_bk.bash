@@ -1,6 +1,6 @@
 #!/bin/bash
 export MODEL="densenet"
-export load_args_list="atom-1-1055975"
+export load_args_list="atom-1-3052180"
 
 # export MODEL="transformer_4_ang"
 # export load_args_list="atom-1-3928342"
@@ -9,7 +9,7 @@ export load_args_list="atom-1-1055975"
 export DATASET="gmtkn"
 # export DATASET="gmtkn-cc-pVDZ"
 
-export if_continue_args="0"
+export if_continue_args="1"
 
 export dl_args="0 0 1"
 # export basis_args="Def2-TZVPD"
@@ -17,16 +17,11 @@ export basis_args="cc-pVDZ"
 export n_rad_args=""
 export n_ang_args=""
 
-export NUMBER_OF_GPU=1
-export NUMBER_OF_THREADS=12
-
-export OMP_NUM_THREADS=${NUMBER_OF_THREADS}
-export MKL_NUM_THREADS=${NUMBER_OF_THREADS}
-export NUMEXPR_NUM_THREADS=${NUMBER_OF_THREADS}
-export OPENBLAS_NUM_THREADS=${NUMBER_OF_THREADS}
-export OMP_SCHEDULE=STATIC
-export OMP_PROC_BIND=CLOSE
-export LD_PRELOAD=~/.local/lib/libjemalloc.so:$LD_PRELOAD
+## user's own commands below
+export OMP_NUM_THREADS=12
+export MKL_NUM_THREADS=12
+export OPENBLAS_NUM_THREADS=12
+export NUMEXPR_NUM_THREADS=12
 
 export PYSCF_MAX_MEMORY=80000
 export PYTHONPATH=~/python:$PYTHONPATH
@@ -56,7 +51,7 @@ for load_args in ${load_args_list}; do
 echo Starting test.py at $(date)
 echo "Testing mol: ${mol_args}"
 echo "Load model: ${MODEL} ${load_args}"
-~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 ${load_model_args} --load_epoch -41000 --load ${load_args} --model ${MODEL} --dataset ${DATASET} --device cpu --name_mol molecule_W4_11 molecule_G21EA molecule_G21IP molecule_DIPCS10 molecule_PA26 molecule_SIE4x4 molecule_ALKBDE10 molecule_YBDE18 molecule_AL2X6 molecule_HEAVYSB11 molecule_NBPRC molecule_ALK8 molecule_RC21 molecule_G2RC molecule_BH76 molecule_FH51 molecule_TAUT15 molecule_DC13 molecule_MB16_43 molecule_DARC molecule_RSE43 molecule_BSR36 molecule_CDIE20 molecule_ISO34 molecule_ISOL24 molecule_C60ISO molecule_PArel molecule_BHPERI molecule_BHDIV10 molecule_INV24 molecule_BHROT27 molecule_PX13 molecule_WCPT18 molecule_RG18 molecule_ADIM6 molecule_S22 molecule_S66 molecule_HEAVY28 molecule_WATER27 molecule_CARBHB12 molecule_PNICO23 molecule_HAL59 molecule_AHB21 molecule_CHB6 molecule_IL16 molecule_IDISP molecule_ICONF molecule_ACONF molecule_Amino20x4 molecule_PCONF21 molecule_MCONF molecule_SCONF molecule_UPU23 molecule_BUT14DIOL --if_continue ${if_continue_args}
+~/anaconda3/envs/pyscf/bin/python test.py ${mol_args} --precision float64 ${load_model_args} --load_epoch -21000 --load ${load_args} --model ${MODEL} --dataset ${DATASET} --device cpu --name_mol SIE4x4-nh32+_1.5 --if_continue ${if_continue_args}
 echo "Test completed successfully."
 echo DONE
 EOF
@@ -66,10 +61,10 @@ done
 # # Basic properties and reaction energies for small systems
 # molecule_W4_11 molecule_G21EA molecule_G21IP molecule_DIPCS10 molecule_PA26 molecule_SIE4x4 molecule_ALKBDE10 molecule_YBDE18 molecule_AL2X6 molecule_HEAVYSB11 molecule_NBPRC molecule_ALK8 molecule_RC21 molecule_G2RC molecule_BH76 molecule_FH51 molecule_TAUT15 molecule_DC13
 # # Reaction energies for large systems and isomerisation reactions
-# molecule_MB16_43 molecule_DARC molecule_RSE43 molecule_BSR36 molecule_CDIE20 molecule_ISO34 molecule_ISOL24 molecule_C60ISO molecule_PArel
+# molecule-MB16-43 molecule-DARC molecule-RSE43 molecule-BSR36 molecule-CDIE20 molecule-ISO34 molecule-ISOL24 molecule-C60ISO molecule-PArel
 # # Reaction barrier heights
-# molecule_BHPERI molecule_BHDIV10 molecule_INV24 molecule_BHROT27 molecule_PX13 molecule_WCPT18
+# molecule-BHPERI molecule-BHDIV10 molecule-INV24 molecule-BHROT27 molecule-PX13 molecule-WCPT18
 # # Intermolecular noncovalent interactions
-# molecule_RG18 molecule_ADIM6 molecule_S22 molecule_S66 molecule_HEAVY28 molecule_WATER27 molecule_CARBHB12 molecule_PNICO23 molecule_HAL59 molecule_AHB21 molecule_CHB6 molecule_IL16
+# molecule-RG18 molecule-ADIM6 molecule-S22 molecule-S66 molecule-HEAVY28 molecule-WATER27 molecule-CARBHB12 molecule-PNICO23 molecule-HAL59 molecule-AHB21 molecule-CHB6 molecule-IL16
 # # Intramolecular noncovalent interactions
-# molecule_IDISP molecule_ICONF molecule_ACONF molecule_Amino20x4 molecule_PCONF21 molecule_MCONF molecule_SCONF molecule_UPU23 molecule_BUT14DIOL
+# molecule-IDISP molecule-ICONF molecule-ACONF molecule-AMINO20x4 molecule-PCONF21 molecule-MCONF molecule-SCONF molecule-UPU23 molecule-BUT14DIOL

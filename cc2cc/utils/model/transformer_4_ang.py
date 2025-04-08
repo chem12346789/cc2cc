@@ -15,22 +15,25 @@ RAD = 75
 D_MODEL = RAD
 SEQ_LEN = 4
 NUM_LAYER_TRANSFORMER = 3
-NUM_HEADS = 1
-
-L_DENSE = 108
-NUM_LAYER_DENSE = 3
-
+NUM_HEADS = 5
 QKV_BIAS = False
 DROP_RATE = 0
 
+MLP_DENSE = 108
+DEPTH_DENSE = 5
+IF_SKIP_CONNECTION_DENSE = 1
+
+
 # ATTE_ACTV = "relu"
-ATTE_ACTV = "gelu"
 # ATTE_NORMAL = "layer"
+
+ATTE_ACTV = "gelu"
 ATTE_NORMAL = "rms"
 
 # DENSE_ACTV = "relu"
-DENSE_ACTV = "gelu"
 # DENSE_NORMAL = "layer"
+
+DENSE_ACTV = "gelu"
 DENSE_NORMAL = "rms"
 
 
@@ -191,8 +194,8 @@ class DenseNet(nn.Module):
 
     def __init__(self, **kwargs):
         super(DenseNet, self).__init__()
-        self.d_model = kwargs.get("seq_len", L_DENSE)
-        self.num_layer_dense = kwargs.get("num_layer_dense", NUM_LAYER_DENSE) - 1
+        self.d_model = kwargs.get("seq_len", MLP_DENSE)
+        self.num_layer_dense = kwargs.get("num_layer_dense", DEPTH_DENSE) - 1
         self.drop_rate = kwargs.get("drop_rate", DROP_RATE)
 
         sizes = [4] + [self.d_model] * self.num_layer_dense + [1]
@@ -225,12 +228,17 @@ class DenseNet(nn.Module):
         Standard forward function, required for all nn.Module classes
         """
         for i, layer in enumerate(self.layers):
+            if IF_SKIP_CONNECTION_DENSE:
+                skip = x
             if i < len(self.layers) - 1:
                 x = self.norm[i](x)
             x = layer(x)
             if i < len(self.layers) - 1:
                 x = self.actv_fn(x)
                 x = self.dropout(x)
+            if IF_SKIP_CONNECTION_DENSE:
+                if 1 < i < len(self.layers) - 1:
+                    x = x + skip
         return x
 
 
@@ -241,17 +249,6 @@ class Model(nn.Module):
 
     def __init__(self, **kwargs):
         super().__init__()
-
-        print("#INFO: **** detail of model ****")
-        print(f"#INFO: **** ANG is {ANG} ****")
-        print(f"#INFO: **** RAD is {RAD} ****")
-        print(f"#INFO: **** D_MODEL is {D_MODEL} ****")
-        print(f"#INFO: **** SEQ_LEN is {SEQ_LEN} ****")
-        print(f"#INFO: **** DEPTH is {NUM_LAYER_TRANSFORMER} ****")
-        print(f"#INFO: **** NUM_LAYER_DENSE is {NUM_LAYER_DENSE} ****")
-        print(f"#INFO: **** QKV_BIAS is {QKV_BIAS} ****")
-        print(f"#INFO: **** NUM_HEADS is {NUM_HEADS} ****")
-        print(f"#INFO: **** DROP_RATE is {DROP_RATE} ****")
 
         # print all contain in this file, for debugging and logging
         with importlib.resources.files("cc2cc").joinpath(

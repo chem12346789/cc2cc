@@ -41,7 +41,7 @@ def cc(mol, grids, name, cc_triple=False):
         dm1_cc = mdft.make_rdm1(ao_repr=True)
         e_cc = mdft.e_tot
         rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
-        rho_cube = grids.gen_cube_rho(mol, dm1_cc)
+        rho_cube = grids.gen_cube_rho_rks(mol, dm1_cc, ni=mdft._numint)
 
         exc_cc_grids = pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0]
         h1e = mdft.mol.intor("int1e_kin") + mdft.mol.intor("int1e_nuc")
@@ -89,7 +89,7 @@ def cc(mol, grids, name, cc_triple=False):
 
         rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
         rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
-        rho_cube = grids.gen_cube_rho(mol, dm1_cc)
+        rho_cube = grids.gen_cube_rho_rks(mol, dm1_cc, ni=mdft._numint)
         print(np.sum(np.abs(rho_cc - rho_dft) * grids.weights))
 
         expr_rinv_dm2_r = oe.contract_expression(
