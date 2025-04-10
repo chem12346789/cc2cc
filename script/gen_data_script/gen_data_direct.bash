@@ -46,7 +46,7 @@ fi
 
 nohup bash <<'EOF' >log/gen_data-${PID_THIS_RUN}.log 2>&1 &
 set -e  # Exit on any error
-~/anaconda3/envs/pyscf/bin/python gen_data.py ${mol_args} --name_mol BH76-hfch3ts S66-39B S66-42B FH51-diethylamine FH51-C4H9NH2 RSE43-P45 S66-62A ICONF-SI5H12_2 S30L-27B S66-34A GW100-14868-53-2 S66-34B S66-44B ACONF-P_TT S66-46B S66-41B S66-45B ACONF-P_TG ICONF-SI5H12_3 S66-37B ADIM6-AM5 ICONF-SI5H12_1 IL16-202A S66-43B RSE43-E45 ACONF-P_GG S66-35B ICONF-SI5H12_4 S66-40B S66-35A ACONF-P_GX S66-36B ISO34-E10 S66-36A ISO34-P10 S66-61A --dataset gmtkn || exit 1
+~/anaconda3/envs/pyscf/bin/python gen_data.py ${mol_args} --dataset gmtkn || exit 1
 echo DONE
 EOF
 

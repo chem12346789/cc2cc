@@ -10,11 +10,14 @@ checkpoint*/
 validate*/
 checkpoints
 validate
+jupyter-notebook/
+/gen_data_script/
+/test_script/
+/train_script/
 *.zip
 *map
 submit*
 out
-*.sh
 *.egg-info/
 *.npz
 *.png
@@ -23,8 +26,6 @@ out
 /.vscode
 
 PlotNeuralNet/
-gen_data_script/gen_data_template_direct.bash
-gen_data_script/mkdir-read-direct.py
 
 # ignore backup files
 .history
