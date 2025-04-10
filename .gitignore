@@ -23,6 +23,8 @@ out
 *.png
 *.pdf
 
+/.vscode
+
 PlotNeuralNet/
 
 # ignore backup files
