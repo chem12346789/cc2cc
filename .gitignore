@@ -20,6 +20,8 @@ out
 *.png
 *.pdf
 
+/.vscode
+
 PlotNeuralNet/
 gen_data_script/gen_data_template_direct.bash
 gen_data_script/mkdir-read-direct.py

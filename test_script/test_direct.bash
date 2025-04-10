@@ -1,6 +1,6 @@
 #!/bin/bash
 export MODEL="densenet"
-export load_args_list="atom-1-1055975"
+export load_args_list="atom-1-1069404"
 
 # export MODEL="transformer_4_ang"
 # export load_args_list="atom-1-3928342"
