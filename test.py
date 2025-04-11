@@ -13,11 +13,13 @@ from cc2cc.utils import MAIN_PATH
 
 if __name__ == "__main__":
     # 0. Prepare the args
-    print_gpu_info()
     parser = argparse.ArgumentParser(
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
+
+    if args.device == "cuda":
+        print_gpu_info()
 
     # 1. Init the model
     modeldict = ModelClass(args)

@@ -8,13 +8,14 @@ from cc2cc.utils import Grid, gen_mole, print_gpu_info
 
 
 if __name__ == "__main__":
-    print_gpu_info()
-
     parser = argparse.ArgumentParser(
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
     error_molecule = []
+
+    if args.device == "cuda":
+        print_gpu_info()
 
     for (
         name_mol,
