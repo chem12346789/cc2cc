@@ -12,16 +12,16 @@ from cc2cc.utils.env_var import CUBE_MIDDLE
 
 D_MODEL = 108
 MLP = 108
-DENSE_DEPTH = 3
+DENSE_DEPTH = 5
 IF_SKIP_CONNECTION = 1
 
 DROP_RATE = 0
 
-DENSE_ACTV = "relu"
-DENSE_NORMAL = "layer"
+# DENSE_ACTV = "relu"
+# DENSE_NORMAL = "layer"
 
-# DENSE_ACTV = "gelu"
-# DENSE_NORMAL = "rms"
+DENSE_ACTV = "gelu"
+DENSE_NORMAL = "rms"
 
 
 class Model(nn.Module):
@@ -78,13 +78,13 @@ class Model(nn.Module):
         Standard forward function, required for all nn.Module classes
         """
         # Extract the central values for each channel
-        # b3lyp_ene = (
-        #     0.72 * x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-        #     + 0.81 * x[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-        #     + 0.08 * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-        #     + 0.19 * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-        # )
-        b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        b3lyp_ene = (
+            0.72 * x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.81 * x[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.08 * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.19 * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        )
+        # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 
         # Reshape the input for the linear layers
         x = x.reshape(-1, self.d_model)

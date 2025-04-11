@@ -18488,6 +18488,87 @@
             ]
         }
     },
+    "molecule2-BHPERI": [
+        "BHPERI-13_c2h4",
+        "BHPERI-Ethylene",
+        "BHPERI-00r"
+    ],
+    "molecule3-BHPERI": [
+        "BHPERI-13r_6",
+        "BHPERI-13r_1",
+        "BHPERI-13r_5",
+        "BHPERI-13r_8",
+        "BHPERI-13r_9",
+        "BHPERI-13r_4",
+        "BHPERI-13r_3",
+        "BHPERI-13r_7",
+        "BHPERI-13r_2"
+    ],
+    "molecule4-BHPERI": [
+        "BHPERI-Cyclobutene",
+        "BHPERI-1,3-Butadiene",
+        "BHPERI-TS1",
+        "BHPERI-01r"
+    ],
+    "molecule5-BHPERI": [
+        "BHPERI-1,3-Pentadiene",
+        "BHPERI-1,3-Cyclopentadiene",
+        "BHPERI-13ts_4a",
+        "BHPERI-13ts_3a",
+        "BHPERI-13ts_9a",
+        "BHPERI-13ts_5a",
+        "BHPERI-13ts_7a",
+        "BHPERI-05r",
+        "BHPERI-04r",
+        "BHPERI-13ts_6a",
+        "BHPERI-02r",
+        "BHPERI-TS5",
+        "BHPERI-13ts_2a",
+        "BHPERI-TS4",
+        "BHPERI-03r",
+        "BHPERI-13ts_1a",
+        "BHPERI-09r",
+        "BHPERI-07r",
+        "BHPERI-13ts_8a"
+    ],
+    "molecule6-BHPERI": [
+        "BHPERI-TS7",
+        "BHPERI-cis-1,3,5-Hexatriene",
+        "BHPERI-Cyclohexene",
+        "BHPERI-01ts",
+        "BHPERI-1,3-Cyclohexadiene",
+        "BHPERI-TS2",
+        "BHPERI-TS6",
+        "BHPERI-1,5-Hexadiene"
+    ],
+    "molecule7-BHPERI": [
+        "BHPERI-03ts",
+        "BHPERI-04ts",
+        "BHPERI-06ts",
+        "BHPERI-02ts",
+        "BHPERI-05ts",
+        "BHPERI-TS8",
+        "BHPERI-08ts",
+        "BHPERI-09ts",
+        "BHPERI-07ts",
+        "BHPERI-Norbornene"
+    ],
+    "molecule8-BHPERI": [
+        "BHPERI-ortho-xylylene",
+        "BHPERI-Benzocyclobutane",
+        "BHPERI-TS3"
+    ],
+    "molecule9-BHPERI": [
+        "BHPERI-TS9",
+        "BHPERI-Cyclonona-1,4,7-triene",
+        "BHPERI-Cis-triscyclopropacyclohexane"
+    ],
+    "molecule10-BHPERI": [
+        "BHPERI-TS11"
+    ],
+    "molecule12-BHPERI": [
+        "BHPERI-TS10"
+    ],
     "molecule_RG18": [
         "RG18-ne3",
         "RG18-hfNe",
@@ -19491,6 +19572,45 @@
             ]
         }
     },
+    "molecule0-RG18": [
+        "RG18-ar",
+        "RG18-kr",
+        "RG18-ne"
+    ],
+    "molecule1-RG18": [
+        "RG18-hf"
+    ],
+    "molecule2-RG18": [
+        "RG18-hfNe",
+        "RG18-hfKr",
+        "RG18-c2h2",
+        "RG18-c2h6",
+        "RG18-ne2",
+        "RG18-hfAr",
+        "RG18-ar2",
+        "RG18-kr2"
+    ],
+    "molecule3-RG18": [
+        "RG18-ne3",
+        "RG18-kr3",
+        "RG18-ar3",
+        "RG18-c2h6Ar",
+        "RG18-c2h2Ne",
+        "RG18-c2h6Ne",
+        "RG18-c2h2Ar"
+    ],
+    "molecule4-RG18": [
+        "RG18-ne4",
+        "RG18-ar4"
+    ],
+    "molecule6-RG18": [
+        "RG18-bz",
+        "RG18-ne6"
+    ],
+    "molecule7-RG18": [
+        "RG18-bzAr",
+        "RG18-bzNe"
+    ],
     "molecule_AHB21": [
         "AHB21-4B",
         "AHB21-11",
@@ -21316,6 +21436,81 @@
             ]
         }
     },
+    "molecule0-AHB21": [
+        "AHB21-3A",
+        "AHB21-8A",
+        "AHB21-2A",
+        "AHB21-1A",
+        "AHB21-7A",
+        "AHB21-5A",
+        "AHB21-4A",
+        "AHB21-6A"
+    ],
+    "molecule1-AHB21": [
+        "AHB21-4B",
+        "AHB21-8B",
+        "AHB21-9B",
+        "AHB21-5B",
+        "AHB21-17B",
+        "AHB21-9A",
+        "AHB21-21B",
+        "AHB21-6B",
+        "AHB21-20B",
+        "AHB21-11B",
+        "AHB21-15A",
+        "AHB21-14B",
+        "AHB21-10A",
+        "AHB21-16B",
+        "AHB21-10B",
+        "AHB21-15B",
+        "AHB21-7B",
+        "AHB21-16A",
+        "AHB21-3B",
+        "AHB21-17A",
+        "AHB21-2B",
+        "AHB21-12B",
+        "AHB21-13B",
+        "AHB21-1B"
+    ],
+    "molecule2-AHB21": [
+        "AHB21-7",
+        "AHB21-5",
+        "AHB21-2",
+        "AHB21-1",
+        "AHB21-16",
+        "AHB21-10",
+        "AHB21-3",
+        "AHB21-15",
+        "AHB21-17",
+        "AHB21-18B",
+        "AHB21-6",
+        "AHB21-9",
+        "AHB21-8",
+        "AHB21-4",
+        "AHB21-19B"
+    ],
+    "molecule3-AHB21": [
+        "AHB21-20A",
+        "AHB21-11A",
+        "AHB21-14A",
+        "AHB21-19A",
+        "AHB21-21A",
+        "AHB21-13A",
+        "AHB21-12A",
+        "AHB21-18A"
+    ],
+    "molecule4-AHB21": [
+        "AHB21-11",
+        "AHB21-21",
+        "AHB21-14",
+        "AHB21-20",
+        "AHB21-12",
+        "AHB21-13"
+    ],
+    "molecule5-AHB21": [
+        "AHB21-18",
+        "AHB21-19"
+    ],
     "molecule_ICONF": [
         "ICONF-SI5H12_4",
         "ICONF-N3P3H12_2",
@@ -23533,6 +23728,47 @@
             ]
         }
     },
+    "molecule3-ICONF": [
+        "ICONF-N3H5_2",
+        "ICONF-N3H5_3",
+        "ICONF-N3H5_1"
+    ],
+    "molecule4-ICONF": [
+        "ICONF-N4H6_3",
+        "ICONF-N4H6_1",
+        "ICONF-N4H6_2"
+    ],
+    "molecule5-ICONF": [
+        "ICONF-SI5H12_4",
+        "ICONF-SI5H12_1",
+        "ICONF-SI5H12_2",
+        "ICONF-SI5H12_3"
+    ],
+    "molecule6-ICONF": [
+        "ICONF-N3P3H12_2",
+        "ICONF-SI6H12_2",
+        "ICONF-N3P3H12_1",
+        "ICONF-SI6H12_1"
+    ],
+    "molecule7-ICONF": [
+        "ICONF-P7H7_1",
+        "ICONF-P7H7_2"
+    ],
+    "molecule8-ICONF": [
+        "ICONF-S4O4_2",
+        "ICONF-S8_1",
+        "ICONF-S8_2",
+        "ICONF-S4O4_1"
+    ],
+    "molecule9-ICONF": [
+        "ICONF-H4P2O7_3",
+        "ICONF-H2S2O7_3",
+        "ICONF-H2S2O7_1",
+        "ICONF-H4P2O7_2",
+        "ICONF-H4P2O7_1",
+        "ICONF-H2S2O7_2",
+        "ICONF-H4P2O7_4"
+    ],
     "molecule_HAL59": [
         "HAL59-BrBr_OPH3",
         "HAL59-NH3_PhBr",
@@ -28526,6 +28762,99 @@
             ]
         }
     },
+    "molecule1-HAL59": [
+        "HAL59-NH3"
+    ],
+    "molecule2-HAL59": [
+        "HAL59-PCH",
+        "HAL59-NCH",
+        "HAL59-BrBr",
+        "HAL59-FBr",
+        "HAL59-FCl",
+        "HAL59-OCH2",
+        "HAL59-27_CH3Br-benB",
+        "HAL59-FMe",
+        "HAL59-25_benBr-mSHB",
+        "HAL59-26_benI-mSHB",
+        "HAL59-OPH3"
+    ],
+    "molecule3-HAL59": [
+        "HAL59-NH3_FBr",
+        "HAL59-BrBr_NH3",
+        "HAL59-NH3_FCl",
+        "HAL59-FCCH"
+    ],
+    "molecule4-HAL59": [
+        "HAL59-BrBr_OPH3",
+        "HAL59-21_benI-acetoneB",
+        "HAL59-NCH_FBr",
+        "HAL59-BrBr_NCH",
+        "HAL59-BrBr_OCH2",
+        "HAL59-PCH_FCl",
+        "HAL59-19_benCl-acetoneB",
+        "HAL59-20_benBr-acetoneB",
+        "HAL59-BrBr_PCH",
+        "HAL59-22_benCl-Nm3B",
+        "HAL59-24_benI-Nm3B",
+        "HAL59-PCH_FBr",
+        "HAL59-23_benBr-Nm3B",
+        "HAL59-NCH_FCl",
+        "HAL59-BrBr_FMe"
+    ],
+    "molecule5-HAL59": [
+        "HAL59-29_CF3Br-benB",
+        "HAL59-BrBr_FCCH"
+    ],
+    "molecule6-HAL59": [
+        "HAL59-27_CH3Br-benA",
+        "HAL59-30_CF3I-benA",
+        "HAL59-29_CF3Br-benA",
+        "HAL59-12_benF6-benB",
+        "HAL59-28_CH3I-benA",
+        "HAL59-11_benF3-benB",
+        "HAL59-pyr"
+    ],
+    "molecule7-HAL59": [
+        "HAL59-PhBr",
+        "HAL59-19_benCl-acetoneA",
+        "HAL59-25_benBr-mSHA",
+        "HAL59-20_benBr-acetoneA",
+        "HAL59-22_benCl-Nm3A",
+        "HAL59-23_benBr-Nm3A"
+    ],
+    "molecule8-HAL59": [
+        "HAL59-NH3_PhBr",
+        "HAL59-NBS",
+        "HAL59-27_CH3Br-benAB",
+        "HAL59-BrBr_pyr"
+    ],
+    "molecule9-HAL59": [
+        "HAL59-PCH_PhBr",
+        "HAL59-NCH_PhBr",
+        "HAL59-11_benF3-benA",
+        "HAL59-25_benBr-mSHAB",
+        "HAL59-NH3_NBS"
+    ],
+    "molecule10-HAL59": [
+        "HAL59-NCH_NBS",
+        "HAL59-PCH_NBS"
+    ],
+    "molecule11-HAL59": [
+        "HAL59-22_benCl-Nm3AB",
+        "HAL59-29_CF3Br-benAB",
+        "HAL59-20_benBr-acetoneAB",
+        "HAL59-23_benBr-Nm3AB",
+        "HAL59-19_benCl-acetoneAB"
+    ],
+    "molecule12-HAL59": [
+        "HAL59-12_benF6-benA"
+    ],
+    "molecule15-HAL59": [
+        "HAL59-11_benF3-benAB"
+    ],
+    "molecule18-HAL59": [
+        "HAL59-12_benF6-benAB"
+    ],
     "molecule_PX13": [
         "PX13-hf_2",
         "PX13-h2o_4",
@@ -30433,6 +30762,47 @@
             ]
         }
     },
+    "molecule1-PX13": [
+        "PX13-hf",
+        "PX13-h2o",
+        "PX13-nh3"
+    ],
+    "molecule2-PX13": [
+        "PX13-hf_2",
+        "PX13-nh3_2_ts",
+        "PX13-nh3_2",
+        "PX13-h2o_2",
+        "PX13-h2o_2_ts",
+        "PX13-hf_2_ts"
+    ],
+    "molecule3-PX13": [
+        "PX13-h2o_3_ts",
+        "PX13-h2o_3",
+        "PX13-hf_3_ts",
+        "PX13-nh3_3_ts",
+        "PX13-hf_3",
+        "PX13-nh3_3"
+    ],
+    "molecule4-PX13": [
+        "PX13-h2o_4",
+        "PX13-nh3_4",
+        "PX13-hf_4",
+        "PX13-h2o_4_ts",
+        "PX13-hf_4_ts",
+        "PX13-nh3_4_ts"
+    ],
+    "molecule5-PX13": [
+        "PX13-hf_5",
+        "PX13-h2o_5_ts",
+        "PX13-hf_5_ts",
+        "PX13-h2o_5"
+    ],
+    "molecule6-PX13": [
+        "PX13-h2o_6",
+        "PX13-hf_6_ts",
+        "PX13-h2o_6_ts",
+        "PX13-hf_6"
+    ],
     "molecule_MCONF": [
         "MCONF-36",
         "MCONF-29",
@@ -41399,6 +41769,60 @@
             ]
         }
     },
+    "molecule17-MCONF": [
+        "MCONF-36",
+        "MCONF-29",
+        "MCONF-11",
+        "MCONF-32",
+        "MCONF-30",
+        "MCONF-7",
+        "MCONF-5",
+        "MCONF-38",
+        "MCONF-21",
+        "MCONF-47",
+        "MCONF-41",
+        "MCONF-42",
+        "MCONF-39",
+        "MCONF-23",
+        "MCONF-2",
+        "MCONF-18",
+        "MCONF-31",
+        "MCONF-52",
+        "MCONF-1",
+        "MCONF-27",
+        "MCONF-33",
+        "MCONF-16",
+        "MCONF-10",
+        "MCONF-40",
+        "MCONF-24",
+        "MCONF-3",
+        "MCONF-14",
+        "MCONF-20",
+        "MCONF-28",
+        "MCONF-51",
+        "MCONF-43",
+        "MCONF-19",
+        "MCONF-15",
+        "MCONF-17",
+        "MCONF-25",
+        "MCONF-22",
+        "MCONF-49",
+        "MCONF-35",
+        "MCONF-6",
+        "MCONF-26",
+        "MCONF-9",
+        "MCONF-8",
+        "MCONF-12",
+        "MCONF-50",
+        "MCONF-13",
+        "MCONF-48",
+        "MCONF-4",
+        "MCONF-45",
+        "MCONF-46",
+        "MCONF-44",
+        "MCONF-34",
+        "MCONF-37"
+    ],
     "molecule_AL2X6": [
         "AL2X6-alcl3",
         "AL2X6-al2f6",
@@ -42266,6 +42690,31 @@
             ]
         }
     },
+    "molecule1-AL2X6": [
+        "AL2X6-alh3"
+    ],
+    "molecule2-AL2X6": [
+        "AL2X6-al2h6"
+    ],
+    "molecule3-AL2X6": [
+        "AL2X6-alme2"
+    ],
+    "molecule4-AL2X6": [
+        "AL2X6-alcl3",
+        "AL2X6-alme3",
+        "AL2X6-alf3"
+    ],
+    "molecule6-AL2X6": [
+        "AL2X6-al2me4"
+    ],
+    "molecule7-AL2X6": [
+        "AL2X6-al2me5"
+    ],
+    "molecule8-AL2X6": [
+        "AL2X6-al2f6",
+        "AL2X6-al2cl6",
+        "AL2X6-al2me6"
+    ],
     "molecule_HEAVY28": [
         "HEAVY28-h2s",
         "HEAVY28-hbr",
@@ -42697,6 +43146,13 @@
             ]
         }
     },
+    "molecule1-HEAVY28": [
+        "HEAVY28-h2s",
+        "HEAVY28-hbr",
+        "HEAVY28-hcl",
+        "HEAVY28-h2o",
+        "HEAVY28-nh3"
+    ],
     "molecule_W4_11": [
         "W4_11-nccn",
         "W4_11-sif",
@@ -48187,6 +48643,170 @@
             ]
         }
     },
+    "molecule0-W4_11": [
+        "W4_11-b",
+        "W4_11-si",
+        "W4_11-al",
+        "W4_11-p",
+        "W4_11-h",
+        "W4_11-be",
+        "W4_11-f",
+        "W4_11-n",
+        "W4_11-s",
+        "W4_11-c",
+        "W4_11-cl",
+        "W4_11-o"
+    ],
+    "molecule1-W4_11": [
+        "W4_11-h2s",
+        "W4_11-sih4",
+        "W4_11-ph3",
+        "W4_11-nh",
+        "W4_11-nh2",
+        "W4_11-bh",
+        "W4_11-alh3",
+        "W4_11-h2",
+        "W4_11-ch2-trip",
+        "W4_11-hcl",
+        "W4_11-bh3",
+        "W4_11-hf",
+        "W4_11-oh",
+        "W4_11-ch2-sing",
+        "W4_11-ch",
+        "W4_11-h2o",
+        "W4_11-hs",
+        "W4_11-nh3",
+        "W4_11-sih",
+        "W4_11-ch3",
+        "W4_11-ch4",
+        "W4_11-alh"
+    ],
+    "molecule2-W4_11": [
+        "W4_11-sif",
+        "W4_11-c2h4",
+        "W4_11-hocl",
+        "W4_11-ssh",
+        "W4_11-cf",
+        "W4_11-t-n2h2",
+        "W4_11-hco",
+        "W4_11-ch2nh",
+        "W4_11-n2",
+        "W4_11-alcl",
+        "W4_11-si2h6",
+        "W4_11-co",
+        "W4_11-f2",
+        "W4_11-ch3nh",
+        "W4_11-hnc",
+        "W4_11-methanol",
+        "W4_11-of",
+        "W4_11-hooh",
+        "W4_11-c-hcoh",
+        "W4_11-b2",
+        "W4_11-sih3f",
+        "W4_11-cn",
+        "W4_11-bn",
+        "W4_11-alf",
+        "W4_11-hno",
+        "W4_11-c2",
+        "W4_11-so",
+        "W4_11-hof",
+        "W4_11-c2h2",
+        "W4_11-h2cn",
+        "W4_11-cch",
+        "W4_11-s2",
+        "W4_11-c2h6",
+        "W4_11-clf",
+        "W4_11-nh2cl",
+        "W4_11-cl2",
+        "W4_11-b2h6",
+        "W4_11-ch2ch",
+        "W4_11-ch2nh2",
+        "W4_11-cs",
+        "W4_11-hcn",
+        "W4_11-hcnh",
+        "W4_11-no",
+        "W4_11-n2h",
+        "W4_11-sio",
+        "W4_11-t-hcoh",
+        "W4_11-p2",
+        "W4_11-c-n2h2",
+        "W4_11-bf",
+        "W4_11-clo",
+        "W4_11-n2h4",
+        "W4_11-bn3pi",
+        "W4_11-ch3nh2",
+        "W4_11-ch3f",
+        "W4_11-hoo",
+        "W4_11-o2",
+        "W4_11-ch2c",
+        "W4_11-h2co",
+        "W4_11-be2"
+    ],
+    "molecule3-W4_11": [
+        "W4_11-hnnn",
+        "W4_11-fo2",
+        "W4_11-honc",
+        "W4_11-ccl2",
+        "W4_11-oxirane",
+        "W4_11-propene",
+        "W4_11-hcno",
+        "W4_11-oxirene",
+        "W4_11-ketene",
+        "W4_11-bef2",
+        "W4_11-s3",
+        "W4_11-c2h5f",
+        "W4_11-hcof",
+        "W4_11-cs2",
+        "W4_11-c-hono",
+        "W4_11-hccf",
+        "W4_11-bhf2",
+        "W4_11-dioxirane",
+        "W4_11-c2h3f",
+        "W4_11-c-hooo",
+        "W4_11-hnco",
+        "W4_11-f2o",
+        "W4_11-cf2",
+        "W4_11-oclo",
+        "W4_11-n2o",
+        "W4_11-co2",
+        "W4_11-no2",
+        "W4_11-formic",
+        "W4_11-acetaldehyde",
+        "W4_11-propyne",
+        "W4_11-s2o",
+        "W4_11-t-hooo",
+        "W4_11-ocs",
+        "W4_11-t-hono",
+        "W4_11-o3",
+        "W4_11-becl2",
+        "W4_11-propane",
+        "W4_11-allene",
+        "W4_11-hocn",
+        "W4_11-ethanol",
+        "W4_11-cloo",
+        "W4_11-clcn",
+        "W4_11-so2",
+        "W4_11-ch2f2",
+        "W4_11-cl2o"
+    ],
+    "molecule4-W4_11": [
+        "W4_11-nccn",
+        "W4_11-alcl3",
+        "W4_11-f2co",
+        "W4_11-acetic",
+        "W4_11-bf3",
+        "W4_11-foof",
+        "W4_11-so3",
+        "W4_11-s4-c2v",
+        "W4_11-fccf",
+        "W4_11-glyoxal",
+        "W4_11-p4",
+        "W4_11-alf3"
+    ],
+    "molecule5-W4_11": [
+        "W4_11-cf4",
+        "W4_11-sif4"
+    ],
     "molecule_PNICO23": [
         "PNICO23-23b",
         "PNICO23-11",
@@ -51266,6 +51886,91 @@
             ]
         }
     },
+    "molecule1-PNICO23": [
+        "PNICO23-20a",
+        "PNICO23-16a",
+        "PNICO23-22a",
+        "PNICO23-16b",
+        "PNICO23-18b",
+        "PNICO23-14b",
+        "PNICO23-17a",
+        "PNICO23-1b",
+        "PNICO23-15b",
+        "PNICO23-21a",
+        "PNICO23-23a",
+        "PNICO23-1a"
+    ],
+    "molecule2-PNICO23": [
+        "PNICO23-19b",
+        "PNICO23-6a",
+        "PNICO23-17b",
+        "PNICO23-8a",
+        "PNICO23-4b",
+        "PNICO23-6b",
+        "PNICO23-1",
+        "PNICO23-7a",
+        "PNICO23-16",
+        "PNICO23-18a",
+        "PNICO23-19a",
+        "PNICO23-14a",
+        "PNICO23-13a",
+        "PNICO23-13b",
+        "PNICO23-4a",
+        "PNICO23-8b",
+        "PNICO23-2b",
+        "PNICO23-2a",
+        "PNICO23-7b",
+        "PNICO23-15a"
+    ],
+    "molecule3-PNICO23": [
+        "PNICO23-11b",
+        "PNICO23-18",
+        "PNICO23-12a",
+        "PNICO23-12b",
+        "PNICO23-10b",
+        "PNICO23-10a",
+        "PNICO23-14",
+        "PNICO23-21b",
+        "PNICO23-15",
+        "PNICO23-17",
+        "PNICO23-9a",
+        "PNICO23-9b",
+        "PNICO23-11a"
+    ],
+    "molecule4-PNICO23": [
+        "PNICO23-3b",
+        "PNICO23-7",
+        "PNICO23-21",
+        "PNICO23-2",
+        "PNICO23-5a",
+        "PNICO23-3a",
+        "PNICO23-20b",
+        "PNICO23-19",
+        "PNICO23-6",
+        "PNICO23-8",
+        "PNICO23-13",
+        "PNICO23-4",
+        "PNICO23-5b"
+    ],
+    "molecule5-PNICO23": [
+        "PNICO23-20",
+        "PNICO23-22b"
+    ],
+    "molecule6-PNICO23": [
+        "PNICO23-11",
+        "PNICO23-10",
+        "PNICO23-22",
+        "PNICO23-9",
+        "PNICO23-12"
+    ],
+    "molecule7-PNICO23": [
+        "PNICO23-23b"
+    ],
+    "molecule8-PNICO23": [
+        "PNICO23-5",
+        "PNICO23-23",
+        "PNICO23-3"
+    ],
     "molecule_GAPS": [
         "GAPS-Al2O3",
         "GAPS-AlAs",
@@ -56736,6 +57441,146 @@
             ]
         }
     },
+    "molecule0-GAPS": [
+        "GAPS-Ar",
+        "GAPS-Kr",
+        "GAPS-Ne"
+    ],
+    "molecule1-GAPS": [
+        "GAPS-LiH"
+    ],
+    "molecule2-GAPS": [
+        "GAPS-AlAs",
+        "GAPS-AlP",
+        "GAPS-BeSe",
+        "GAPS-BP",
+        "GAPS-C",
+        "GAPS-CaO",
+        "GAPS-CaS",
+        "GAPS-CaSe",
+        "GAPS-CuBr",
+        "GAPS-CuCl",
+        "GAPS-GaAs",
+        "GAPS-GaP",
+        "GAPS-Ge",
+        "GAPS-LiBr",
+        "GAPS-LiCl",
+        "GAPS-LiF",
+        "GAPS-MgO",
+        "GAPS-NaBr",
+        "GAPS-NaCl",
+        "GAPS-NaF",
+        "GAPS-ScN",
+        "GAPS-Si",
+        "GAPS-ZnSe"
+    ],
+    "molecule3-GAPS": [
+        "GAPS-CaF2",
+        "GAPS-Cu2Se",
+        "GAPS-LiZnAs",
+        "GAPS-LiZnN",
+        "GAPS-LiZnP",
+        "GAPS-Mg2Ge",
+        "GAPS-Mg2Si",
+        "GAPS-MgCl2"
+    ],
+    "molecule4-GAPS": [
+        "GAPS-AlN",
+        "GAPS-BeO",
+        "GAPS-BN",
+        "GAPS-CaH2",
+        "GAPS-CuAlO2",
+        "GAPS-CuGaO2",
+        "GAPS-CuScO2",
+        "GAPS-GaN",
+        "GAPS-LiCoO2",
+        "GAPS-P",
+        "GAPS-ZnO",
+        "GAPS-ZnS"
+    ],
+    "molecule5-GAPS": [
+        "GAPS-CaMg2N2"
+    ],
+    "molecule6-GAPS": [
+        "GAPS-CaCl2",
+        "GAPS-Cu2O",
+        "GAPS-Cu2S",
+        "GAPS-FeP2",
+        "GAPS-GeO2",
+        "GAPS-MgF2",
+        "GAPS-TiO2"
+    ],
+    "molecule7-GAPS": [
+        "GAPS-CaB6",
+        "GAPS-ZnGa2Se4"
+    ],
+    "molecule8-GAPS": [
+        "GAPS-CaZnOS",
+        "GAPS-Cu2ZnGeSe4",
+        "GAPS-Cu3AsSe4",
+        "GAPS-CuAlS2",
+        "GAPS-CuAlSe2",
+        "GAPS-CuBS2",
+        "GAPS-CuGaS2",
+        "GAPS-CuGaSe2",
+        "GAPS-GaS",
+        "GAPS-GaSe",
+        "GAPS-GeSe",
+        "GAPS-LiAsS2",
+        "GAPS-LiAsSe2",
+        "GAPS-MgSiP2",
+        "GAPS-ZnGeAs2",
+        "GAPS-ZnGeP2",
+        "GAPS-ZnSiAs2",
+        "GAPS-ZnSiP2"
+    ],
+    "molecule9-GAPS": [
+        "GAPS-CrSi2",
+        "GAPS-SiO2"
+    ],
+    "molecule10-GAPS": [
+        "GAPS-Al2O3",
+        "GAPS-CaCO3",
+        "GAPS-Ga2S3"
+    ],
+    "molecule12-GAPS": [
+        "GAPS-B",
+        "GAPS-Ca2Si",
+        "GAPS-Cu2GeS3",
+        "GAPS-Cu2GeSe3",
+        "GAPS-FeS2",
+        "GAPS-GeAs",
+        "GAPS-SiAs",
+        "GAPS-SiC"
+    ],
+    "molecule14-GAPS": [
+        "GAPS-B12P2",
+        "GAPS-Si3N4",
+        "GAPS-ZnAl2S4"
+    ],
+    "molecule16-GAPS": [
+        "GAPS-Cu2ZnSiS4",
+        "GAPS-Cu3AsS4",
+        "GAPS-Cu3PS4",
+        "GAPS-Cu3PSe4",
+        "GAPS-NaAsS2",
+        "GAPS-P3N5",
+        "GAPS-ZnGeN2"
+    ],
+    "molecule18-GAPS": [
+        "GAPS-AlPO4"
+    ],
+    "molecule20-GAPS": [
+        "GAPS-As2S3",
+        "GAPS-As2Se3"
+    ],
+    "molecule24-GAPS": [
+        "GAPS-GeAs2",
+        "GAPS-Na2Ti3O7",
+        "GAPS-SiP2",
+        "GAPS-ZnAs2",
+        "GAPS-ZnP2"
+    ],
     "molecule_DC13": [
         "DC13-c20cage",
         "DC13-c2h4",
@@ -58998,6 +59843,58 @@
             ]
         }
     },
+    "molecule0-DC13": [
+        "DC13-be"
+    ],
+    "molecule1-DC13": [
+        "DC13-HCL"
+    ],
+    "molecule2-DC13": [
+        "DC13-c2h4",
+        "DC13-c2h2",
+        "DC13-s2",
+        "DC13-ethen",
+        "DC13-CL2"
+    ],
+    "molecule3-DC13": [
+        "DC13-ch2n2",
+        "DC13-o3"
+    ],
+    "molecule4-DC13": [
+        "DC13-be4"
+    ],
+    "molecule5-DC13": [
+        "DC13-o3_c2h4_add",
+        "DC13-o3_c2h2_add",
+        "DC13-13dip"
+    ],
+    "molecule6-DC13": [
+        "DC13-C6H6",
+        "DC13-tmethen"
+    ],
+    "molecule7-DC13": [
+        "DC13-ISO_P36",
+        "DC13-heptatriyne",
+        "DC13-heptahexaene",
+        "DC13-ISO_E36"
+    ],
+    "molecule8-DC13": [
+        "DC13-ISO_C8H8_41",
+        "DC13-ISO_C8H8_1",
+        "DC13-s8"
+    ],
+    "molecule12-DC13": [
+        "DC13-ISO_P35",
+        "DC13-C6Cl6",
+        "DC13-omcb",
+        "DC13-ISO_E35",
+        "DC13-carbooxo1",
+        "DC13-carbooxo2"
+    ],
+    "molecule20-DC13": [
+        "DC13-c20cage",
+        "DC13-c20bowl"
+    ],
     "molecule_ISOL24": [
         "ISOL24-i11p",
         "ISOL24-i2p",
@@ -71290,6 +72187,86 @@
             ]
         }
     },
+    "molecule12-ISOL24": [
+        "ISOL24-i9p",
+        "ISOL24-i9e",
+        "ISOL24-i3p",
+        "ISOL24-i3e"
+    ],
+    "molecule14-ISOL24": [
+        "ISOL24-i14e",
+        "ISOL24-i14p",
+        "ISOL24-i13p",
+        "ISOL24-i13e"
+    ],
+    "molecule15-ISOL24": [
+        "ISOL24-i10p",
+        "ISOL24-i10e"
+    ],
+    "molecule16-ISOL24": [
+        "ISOL24-i5e",
+        "ISOL24-i5p",
+        "ISOL24-i20e",
+        "ISOL24-i20p"
+    ],
+    "molecule17-ISOL24": [
+        "ISOL24-i2p",
+        "ISOL24-i2e"
+    ],
+    "molecule18-ISOL24": [
+        "ISOL24-i15e",
+        "ISOL24-i23e",
+        "ISOL24-i23p",
+        "ISOL24-i15p"
+    ],
+    "molecule19-ISOL24": [
+        "ISOL24-i24p",
+        "ISOL24-i24e"
+    ],
+    "molecule20-ISOL24": [
+        "ISOL24-i11p",
+        "ISOL24-i21e",
+        "ISOL24-i11e",
+        "ISOL24-i21p"
+    ],
+    "molecule21-ISOL24": [
+        "ISOL24-i7p",
+        "ISOL24-i7e"
+    ],
+    "molecule22-ISOL24": [
+        "ISOL24-i8e",
+        "ISOL24-i8p"
+    ],
+    "molecule23-ISOL24": [
+        "ISOL24-i19e",
+        "ISOL24-i18p",
+        "ISOL24-i18e",
+        "ISOL24-i19p"
+    ],
+    "molecule24-ISOL24": [
+        "ISOL24-i12e",
+        "ISOL24-i17p",
+        "ISOL24-i17e",
+        "ISOL24-i12p"
+    ],
+    "molecule28-ISOL24": [
+        "ISOL24-i16e",
+        "ISOL24-i6p",
+        "ISOL24-i6e",
+        "ISOL24-i16p"
+    ],
+    "molecule29-ISOL24": [
+        "ISOL24-i22p",
+        "ISOL24-i22e"
+    ],
+    "molecule30-ISOL24": [
+        "ISOL24-i1e",
+        "ISOL24-i1p"
+    ],
+    "molecule31-ISOL24": [
+        "ISOL24-i4e",
+        "ISOL24-i4p"
+    ],
     "molecule_YBDE18": [
         "YBDE18-h2s",
         "YBDE18-ph3",
@@ -73223,6 +74200,49 @@
             ]
         }
     },
+    "molecule1-YBDE18": [
+        "YBDE18-h2s",
+        "YBDE18-ph3",
+        "YBDE18-ch2",
+        "YBDE18-nh3"
+    ],
+    "molecule2-YBDE18": [
+        "YBDE18-ph3-ch2",
+        "YBDE18-h2s-ch2",
+        "YBDE18-nh3-ch2"
+    ],
+    "molecule3-YBDE18": [
+        "YBDE18-me2s",
+        "YBDE18-f2s",
+        "YBDE18-cbh22"
+    ],
+    "molecule4-YBDE18": [
+        "YBDE18-nf3",
+        "YBDE18-me2s-ch2",
+        "YBDE18-nme3",
+        "YBDE18-ph3-cbh22",
+        "YBDE18-nh3-cbh22",
+        "YBDE18-pme3",
+        "YBDE18-pf3",
+        "YBDE18-f2s-ch2",
+        "YBDE18-h2s-cbh22"
+    ],
+    "molecule5-YBDE18": [
+        "YBDE18-nf3-ch2",
+        "YBDE18-pf3-ch2",
+        "YBDE18-nme3-ch2",
+        "YBDE18-pme3-ch2"
+    ],
+    "molecule6-YBDE18": [
+        "YBDE18-me2s-cbh22",
+        "YBDE18-f2s-cbh22"
+    ],
+    "molecule7-YBDE18": [
+        "YBDE18-pf3-cbh22",
+        "YBDE18-nme3-cbh22",
+        "YBDE18-pme3-cbh22",
+        "YBDE18-nf3-cbh22"
+    ],
     "molecule_DARC": [
         "DARC-P7X",
         "DARC-P10X",
@@ -75435,6 +76455,42 @@
             ]
         }
     },
+    "molecule2-DARC": [
+        "DARC-ethine",
+        "DARC-ethene"
+    ],
+    "molecule4-DARC": [
+        "DARC-butadiene"
+    ],
+    "molecule5-DARC": [
+        "DARC-furane",
+        "DARC-cpdiene"
+    ],
+    "molecule6-DARC": [
+        "DARC-P2",
+        "DARC-P1",
+        "DARC-chdiene"
+    ],
+    "molecule7-DARC": [
+        "DARC-P4",
+        "DARC-P3",
+        "DARC-malein",
+        "DARC-maleinNH"
+    ],
+    "molecule8-DARC": [
+        "DARC-P5",
+        "DARC-P6"
+    ],
+    "molecule12-DARC": [
+        "DARC-P7X",
+        "DARC-P10X",
+        "DARC-P9",
+        "DARC-P7",
+        "DARC-P8X",
+        "DARC-P10",
+        "DARC-P8",
+        "DARC-P9X"
+    ],
     "molecule_BH9": [
         "BH9-08_8P1",
         "BH9-04_89P1",
@@ -388042,6 +389098,1849 @@
             ]
         }
     },
+    "molecule0-BH9": [
+        "BH9-08_5P2",
+        "BH9-08_1R2",
+        "BH9-08_2R2"
+    ],
+    "molecule1-BH9": [
+        "BH9-03_1R2",
+        "BH9-02_51P3",
+        "BH9-07_10R2",
+        "BH9-03_15R2",
+        "BH9-03_12R2",
+        "BH9-08_3R2",
+        "BH9-03_8R2",
+        "BH9-02_51R2",
+        "BH9-02_51P2",
+        "BH9-07_9R2",
+        "BH9-07_9P2",
+        "BH9-07_10P2",
+        "BH9-03_7R2",
+        "BH9-02_51R3"
+    ],
+    "molecule2-BH9": [
+        "BH9-08_1P1",
+        "BH9-04_5R2",
+        "BH9-09_1R2",
+        "BH9-04_2R2",
+        "BH9-04_2P2",
+        "BH9-03_1P2",
+        "BH9-04_29P2",
+        "BH9-06_1R2",
+        "BH9-09_2R2",
+        "BH9-04_5P2",
+        "BH9-04_22P2",
+        "BH9-04_3R2",
+        "BH9-04_17R2",
+        "BH9-04_22R2",
+        "BH9-01_9R1",
+        "BH9-04_23R2",
+        "BH9-04_3P2",
+        "BH9-03_12P2",
+        "BH9-04_29R2",
+        "BH9-04_17P2",
+        "BH9-04_16R2",
+        "BH9-02_45R2",
+        "BH9-03_15P2",
+        "BH9-03_7P2",
+        "BH9-04_23P2",
+        "BH9-06_1P2",
+        "BH9-06_2R1",
+        "BH9-04_16P2",
+        "BH9-08_2P1",
+        "BH9-03_8P2",
+        "BH9-08_13R2"
+    ],
+    "molecule3-BH9": [
+        "BH9-04_9R2",
+        "BH9-04_25R2",
+        "BH9-06_19R1",
+        "BH9-04_14P2",
+        "BH9-04_12R2",
+        "BH9-02_61R2",
+        "BH9-04_13P2",
+        "BH9-04_13R2",
+        "BH9-04_24P2",
+        "BH9-04_10R2",
+        "BH9-04_14R2",
+        "BH9-04_24R2",
+        "BH9-04_12P2",
+        "BH9-04_39P2",
+        "BH9-09_5R1",
+        "BH9-04_25P2",
+        "BH9-04_9P2",
+        "BH9-04_10P2",
+        "BH9-09_6R1",
+        "BH9-02_62R2",
+        "BH9-04_11R2",
+        "BH9-03_3R2",
+        "BH9-04_50R2",
+        "BH9-09_4R1",
+        "BH9-04_38P2",
+        "BH9-09_11R1",
+        "BH9-04_79P2",
+        "BH9-04_79R2",
+        "BH9-04_15P2",
+        "BH9-08_3P1",
+        "BH9-04_11P2",
+        "BH9-09_3R1",
+        "BH9-09_13R1",
+        "BH9-04_39R2",
+        "BH9-04_38R2",
+        "BH9-04_15R2",
+        "BH9-04_50P2"
+    ],
+    "molecule4-BH9": [
+        "BH9-02_81R2",
+        "BH9-06_18P2",
+        "BH9-07_4R2",
+        "BH9-04_35R2",
+        "BH9-09_3R2",
+        "BH9-03_3P2",
+        "BH9-04_7P2",
+        "BH9-06_8R2",
+        "BH9-03_1P1",
+        "BH9-02_56R2",
+        "BH9-04_6R2",
+        "BH9-04_62R2",
+        "BH9-04_53P2",
+        "BH9-07_4P2",
+        "BH9-06_6R2",
+        "BH9-01_1R",
+        "BH9-02_73R2",
+        "BH9-06_1P1",
+        "BH9-03_6R2",
+        "BH9-04_6P2",
+        "BH9-06_9R2",
+        "BH9-06_4R2",
+        "BH9-04_3P1",
+        "BH9-08_1P2",
+        "BH9-03_11R2",
+        "BH9-06_21P2",
+        "BH9-03_30R2",
+        "BH9-01_1P",
+        "BH9-06_18R2",
+        "BH9-06_7R1",
+        "BH9-02_32R2",
+        "BH9-03_4R2",
+        "BH9-09_9R2",
+        "BH9-04_35P2",
+        "BH9-06_7P1",
+        "BH9-03_5R2",
+        "BH9-02_58R1",
+        "BH9-09_7R2",
+        "BH9-02_58R2",
+        "BH9-04_62P2",
+        "BH9-08_13P1",
+        "BH9-06_2R2",
+        "BH9-04_53R2",
+        "BH9-09_1R1",
+        "BH9-06_3R2",
+        "BH9-04_3R1",
+        "BH9-09_5R2",
+        "BH9-08_2P2",
+        "BH9-09_6R2",
+        "BH9-06_1R1",
+        "BH9-03_21R2",
+        "BH9-03_4P1",
+        "BH9-01_1TS",
+        "BH9-06_5R2",
+        "BH9-02_57R2",
+        "BH9-09_4R2",
+        "BH9-06_20R1",
+        "BH9-02_55R2",
+        "BH9-06_21R2",
+        "BH9-02_59R1",
+        "BH9-04_7R2",
+        "BH9-06_22R1",
+        "BH9-02_60R2",
+        "BH9-09_8R2",
+        "BH9-02_59R2"
+    ],
+    "molecule5-BH9": [
+        "BH9-05_13P1",
+        "BH9-04_54R2",
+        "BH9-04_1P",
+        "BH9-09_17R1",
+        "BH9-02_40R2",
+        "BH9-08_1R1",
+        "BH9-06_7P2",
+        "BH9-02_75R2",
+        "BH9-07_4R1",
+        "BH9-03_21P2",
+        "BH9-01_3P",
+        "BH9-03_5P2",
+        "BH9-03_1R1",
+        "BH9-04_51R2",
+        "BH9-04_51P2",
+        "BH9-01_2TS",
+        "BH9-09_15R1",
+        "BH9-01_3R",
+        "BH9-09_18R1",
+        "BH9-03_6P2",
+        "BH9-09_8R1",
+        "BH9-07_4P1",
+        "BH9-08_2R1",
+        "BH9-04_73R2",
+        "BH9-08_4R1",
+        "BH9-01_3TS",
+        "BH9-03_2R2",
+        "BH9-05_13R1",
+        "BH9-04_7P1",
+        "BH9-06_31R1",
+        "BH9-06_3R1",
+        "BH9-08_8R2",
+        "BH9-09_14R1",
+        "BH9-04_70R2",
+        "BH9-04_73P2",
+        "BH9-09_9R1",
+        "BH9-03_4P2",
+        "BH9-03_24R2",
+        "BH9-06_7R2",
+        "BH9-03_34R2",
+        "BH9-03_4R1",
+        "BH9-02_44R2",
+        "BH9-06_4R1",
+        "BH9-01_2R",
+        "BH9-04_1TS",
+        "BH9-03_30P2",
+        "BH9-04_54P2",
+        "BH9-04_6R1",
+        "BH9-04_6P1",
+        "BH9-04_70P2",
+        "BH9-03_10R2",
+        "BH9-03_33R2",
+        "BH9-09_16R1",
+        "BH9-02_41R2",
+        "BH9-01_2P",
+        "BH9-09_7R1",
+        "BH9-03_26R2",
+        "BH9-04_1R",
+        "BH9-04_7R1",
+        "BH9-03_11P2",
+        "BH9-08_9R2"
+    ],
+    "molecule6-BH9": [
+        "BH9-08_8P1",
+        "BH9-06_34R1",
+        "BH9-04_57R2",
+        "BH9-01_4P",
+        "BH9-04_26P2",
+        "BH9-03_19R2",
+        "BH9-02_99TS",
+        "BH9-03_24P2",
+        "BH9-03_38R2",
+        "BH9-02_48R2",
+        "BH9-09_1TS",
+        "BH9-08_2TS",
+        "BH9-04_74P2",
+        "BH9-04_26R2",
+        "BH9-04_74R2",
+        "BH9-04_86P2",
+        "BH9-01_7TS",
+        "BH9-03_9R2",
+        "BH9-04_71P2",
+        "BH9-01_4R",
+        "BH9-04_71R2",
+        "BH9-04_3TS",
+        "BH9-03_37R2",
+        "BH9-06_2P",
+        "BH9-02_52R2",
+        "BH9-04_4P",
+        "BH9-06_6R1",
+        "BH9-06_2TS",
+        "BH9-05_5R1",
+        "BH9-05_5R2",
+        "BH9-01_5P",
+        "BH9-02_98R",
+        "BH9-06_15R1",
+        "BH9-05_5P2",
+        "BH9-02_99P",
+        "BH9-02_42R2",
+        "BH9-02_99R",
+        "BH9-04_57P2",
+        "BH9-03_23P1",
+        "BH9-04_46R2",
+        "BH9-04_4TS",
+        "BH9-01_9R2",
+        "BH9-01_7R",
+        "BH9-05_7P1",
+        "BH9-04_86R2",
+        "BH9-03_36R2",
+        "BH9-04_30R2",
+        "BH9-04_45R2",
+        "BH9-04_27P2",
+        "BH9-04_46P2",
+        "BH9-03_22R2",
+        "BH9-03_22P1",
+        "BH9-05_7R1",
+        "BH9-09_12R2",
+        "BH9-02_98TS",
+        "BH9-04_30P2",
+        "BH9-01_4TS",
+        "BH9-03_26P2",
+        "BH9-04_2R1",
+        "BH9-02_44R1",
+        "BH9-06_32R1",
+        "BH9-01_7P",
+        "BH9-04_30R1",
+        "BH9-02_43R2",
+        "BH9-02_98P",
+        "BH9-01_5TS",
+        "BH9-03_10P2",
+        "BH9-03_34P2",
+        "BH9-02_42R1",
+        "BH9-04_2P1",
+        "BH9-02_43R1",
+        "BH9-04_45P2",
+        "BH9-01_5R",
+        "BH9-06_1TS",
+        "BH9-03_1TS",
+        "BH9-03_39R2",
+        "BH9-05_5P1",
+        "BH9-09_1P",
+        "BH9-02_134R",
+        "BH9-02_47R2",
+        "BH9-04_30P1",
+        "BH9-08_1TS",
+        "BH9-03_35R2",
+        "BH9-02_134TS",
+        "BH9-03_2P1",
+        "BH9-03_23R2",
+        "BH9-04_27R2",
+        "BH9-03_16R2",
+        "BH9-04_4R",
+        "BH9-03_2P2",
+        "BH9-03_33P2",
+        "BH9-02_134P",
+        "BH9-08_5R1"
+    ],
+    "molecule7-BH9": [
+        "BH9-06_15R2",
+        "BH9-03_16P2",
+        "BH9-03_32R2",
+        "BH9-08_10P2",
+        "BH9-02_45R1",
+        "BH9-04_49P2",
+        "BH9-01_14R",
+        "BH9-08_4R2",
+        "BH9-06_11R1",
+        "BH9-03_36P2",
+        "BH9-08_7R2",
+        "BH9-03_22R1",
+        "BH9-04_5R1",
+        "BH9-01_16TS",
+        "BH9-03_38P2",
+        "BH9-03_37P2",
+        "BH9-09_6P",
+        "BH9-03_31R2",
+        "BH9-04_8P",
+        "BH9-09_12R1",
+        "BH9-06_33P2",
+        "BH9-04_48P2",
+        "BH9-07_1TS",
+        "BH9-01_16R",
+        "BH9-01_13P",
+        "BH9-01_13R",
+        "BH9-06_24R2",
+        "BH9-03_22P2",
+        "BH9-09_4P",
+        "BH9-04_5P1",
+        "BH9-09_5P",
+        "BH9-06_35R1",
+        "BH9-03_23P2",
+        "BH9-04_46R1",
+        "BH9-03_19P2",
+        "BH9-03_14R2",
+        "BH9-01_11P",
+        "BH9-04_34P2",
+        "BH9-03_39P2",
+        "BH9-04_45P1",
+        "BH9-03_20R2",
+        "BH9-05_7P2",
+        "BH9-06_23R2",
+        "BH9-05_7R2",
+        "BH9-01_8TS",
+        "BH9-09_5TS",
+        "BH9-07_9P1",
+        "BH9-07_1P",
+        "BH9-01_16P",
+        "BH9-05_12P1",
+        "BH9-05_12R1",
+        "BH9-08_10R2",
+        "BH9-04_8R",
+        "BH9-01_11TS",
+        "BH9-03_3P1",
+        "BH9-03_35P2",
+        "BH9-03_5P1",
+        "BH9-04_46P1",
+        "BH9-04_34R2",
+        "BH9-01_8R",
+        "BH9-08_11R2",
+        "BH9-03_27R2",
+        "BH9-02_53R2",
+        "BH9-01_13TS",
+        "BH9-04_49R2",
+        "BH9-09_3TS",
+        "BH9-03_23R1",
+        "BH9-03_6P1",
+        "BH9-06_10R1",
+        "BH9-02_77R2",
+        "BH9-06_26R2",
+        "BH9-04_34R1",
+        "BH9-03_17R2",
+        "BH9-03_11P1",
+        "BH9-03_9P1",
+        "BH9-03_9P2",
+        "BH9-03_13R2",
+        "BH9-03_28R2",
+        "BH9-04_48R2",
+        "BH9-04_45R1",
+        "BH9-07_9R1",
+        "BH9-03_18R2",
+        "BH9-03_2R1",
+        "BH9-01_11R",
+        "BH9-09_6TS",
+        "BH9-04_8TS",
+        "BH9-01_8P",
+        "BH9-06_33R2",
+        "BH9-07_1R",
+        "BH9-04_34P1",
+        "BH9-06_25R2",
+        "BH9-09_3P",
+        "BH9-01_14TS",
+        "BH9-01_14P",
+        "BH9-03_13P1",
+        "BH9-09_4TS"
+    ],
+    "molecule8-BH9": [
+        "BH9-07_9TS",
+        "BH9-03_41R2",
+        "BH9-01_25P",
+        "BH9-04_44R1",
+        "BH9-02_55R1",
+        "BH9-04_58R2",
+        "BH9-08_11P1",
+        "BH9-04_22R1",
+        "BH9-04_59P2",
+        "BH9-04_21TS",
+        "BH9-04_33R2",
+        "BH9-02_116R2",
+        "BH9-01_22P",
+        "BH9-04_32R1",
+        "BH9-01_6P",
+        "BH9-04_66R1",
+        "BH9-03_40R2",
+        "BH9-04_66P2",
+        "BH9-01_10P",
+        "BH9-02_3R1",
+        "BH9-02_47R1",
+        "BH9-02_2R1",
+        "BH9-04_32R2",
+        "BH9-01_24P",
+        "BH9-04_33P1",
+        "BH9-02_79R2",
+        "BH9-01_24TS",
+        "BH9-04_40P1",
+        "BH9-02_4R1",
+        "BH9-02_107R2",
+        "BH9-03_20P2",
+        "BH9-04_77P2",
+        "BH9-04_80P2",
+        "BH9-02_58TS",
+        "BH9-04_21P",
+        "BH9-04_63P2",
+        "BH9-03_11R1",
+        "BH9-04_22P1",
+        "BH9-04_80R2",
+        "BH9-04_66R2",
+        "BH9-04_35P1",
+        "BH9-01_18P",
+        "BH9-03_40P1",
+        "BH9-02_29R2",
+        "BH9-03_13P2",
+        "BH9-09_2R1",
+        "BH9-01_6R",
+        "BH9-05_10R2",
+        "BH9-04_52R2",
+        "BH9-04_40P2",
+        "BH9-02_49R2",
+        "BH9-02_1R1",
+        "BH9-01_25R",
+        "BH9-04_20TS",
+        "BH9-01_10TS",
+        "BH9-01_23P",
+        "BH9-04_44R2",
+        "BH9-02_106R2",
+        "BH9-02_32R1",
+        "BH9-04_35R1",
+        "BH9-02_30R2",
+        "BH9-03_32P2",
+        "BH9-04_20R",
+        "BH9-01_22TS",
+        "BH9-04_40R2",
+        "BH9-03_28P2",
+        "BH9-02_30R1",
+        "BH9-04_47R2",
+        "BH9-04_23P1",
+        "BH9-09_18R2",
+        "BH9-03_6R1",
+        "BH9-04_29R1",
+        "BH9-03_14P2",
+        "BH9-01_20R",
+        "BH9-09_11R2",
+        "BH9-02_108R2",
+        "BH9-03_5R1",
+        "BH9-03_14P1",
+        "BH9-04_44P1",
+        "BH9-02_112R2",
+        "BH9-02_114R2",
+        "BH9-04_21R",
+        "BH9-03_18P1",
+        "BH9-04_59R2",
+        "BH9-04_44P2",
+        "BH9-04_66P1",
+        "BH9-03_13R1",
+        "BH9-04_2TS",
+        "BH9-02_59TS",
+        "BH9-04_23R1",
+        "BH9-01_22R",
+        "BH9-03_31P2",
+        "BH9-04_33R1",
+        "BH9-04_29P1",
+        "BH9-03_18P2",
+        "BH9-01_6TS",
+        "BH9-01_20TS",
+        "BH9-04_52P2",
+        "BH9-04_47P2",
+        "BH9-02_31R2",
+        "BH9-01_24R",
+        "BH9-04_32P1",
+        "BH9-03_29R2",
+        "BH9-03_9R1",
+        "BH9-04_20P",
+        "BH9-01_25TS",
+        "BH9-02_117R2",
+        "BH9-03_27P2",
+        "BH9-04_51P1",
+        "BH9-08_7P1",
+        "BH9-01_20P",
+        "BH9-05_10P2",
+        "BH9-02_115R2",
+        "BH9-01_9P",
+        "BH9-02_113R2",
+        "BH9-04_32P2",
+        "BH9-04_77R2",
+        "BH9-02_58P",
+        "BH9-08_6P2",
+        "BH9-01_18R",
+        "BH9-04_33P2",
+        "BH9-01_23R",
+        "BH9-01_9TS",
+        "BH9-02_59P",
+        "BH9-02_56R1",
+        "BH9-01_23TS",
+        "BH9-04_40R1",
+        "BH9-02_29R1",
+        "BH9-04_63R2",
+        "BH9-01_18TS",
+        "BH9-03_3R1",
+        "BH9-01_10R",
+        "BH9-04_51R1",
+        "BH9-03_10P1",
+        "BH9-03_17P2",
+        "BH9-04_58P2"
+    ],
+    "molecule9-BH9": [
+        "BH9-04_19P",
+        "BH9-08_15R2",
+        "BH9-05_3R",
+        "BH9-09_7TS",
+        "BH9-04_18P",
+        "BH9-09_21R2",
+        "BH9-09_15R2",
+        "BH9-01_30TS",
+        "BH9-01_27R",
+        "BH9-02_69R1",
+        "BH9-06_5R1",
+        "BH9-03_10R1",
+        "BH9-04_10P1",
+        "BH9-05_14R1",
+        "BH9-02_45TS",
+        "BH9-04_14R1",
+        "BH9-02_82R1",
+        "BH9-04_10R1",
+        "BH9-04_27R1",
+        "BH9-05_15R1",
+        "BH9-03_21P1",
+        "BH9-03_30P1",
+        "BH9-04_17R1",
+        "BH9-04_83P1",
+        "BH9-04_13R1",
+        "BH9-02_136TS",
+        "BH9-03_20P1",
+        "BH9-01_21R",
+        "BH9-04_12R1",
+        "BH9-04_83R1",
+        "BH9-03_27P1",
+        "BH9-04_63R1",
+        "BH9-05_14P1",
+        "BH9-04_24P1",
+        "BH9-03_41P1",
+        "BH9-08_6R2",
+        "BH9-01_27TS",
+        "BH9-09_8P",
+        "BH9-03_40R1",
+        "BH9-01_30R",
+        "BH9-03_18R1",
+        "BH9-05_3P",
+        "BH9-03_14R1",
+        "BH9-02_136P",
+        "BH9-04_67R2",
+        "BH9-09_9P",
+        "BH9-04_19TS",
+        "BH9-04_5TS",
+        "BH9-03_8P1",
+        "BH9-04_63P1",
+        "BH9-04_11P1",
+        "BH9-06_4P",
+        "BH9-04_24R1",
+        "BH9-04_6TS",
+        "BH9-04_39R1",
+        "BH9-04_82R1",
+        "BH9-04_67P2",
+        "BH9-09_16R2",
+        "BH9-04_9P1",
+        "BH9-06_4TS",
+        "BH9-01_30P",
+        "BH9-05_15P1",
+        "BH9-04_19R",
+        "BH9-09_8TS",
+        "BH9-02_45P",
+        "BH9-09_17R2",
+        "BH9-04_57R1",
+        "BH9-05_2P",
+        "BH9-05_3TS",
+        "BH9-02_136R",
+        "BH9-04_82P1",
+        "BH9-04_27P1",
+        "BH9-03_40P2",
+        "BH9-09_7P",
+        "BH9-04_25R1",
+        "BH9-03_4TS",
+        "BH9-04_38P1",
+        "BH9-06_11R2",
+        "BH9-04_15R1",
+        "BH9-06_3P",
+        "BH9-04_26P1",
+        "BH9-01_21TS",
+        "BH9-04_12P1",
+        "BH9-08_5R2",
+        "BH9-03_41P2",
+        "BH9-07_4TS",
+        "BH9-06_3TS",
+        "BH9-06_7TS",
+        "BH9-04_18TS",
+        "BH9-01_27P",
+        "BH9-04_57P1",
+        "BH9-06_10R2",
+        "BH9-04_9R1",
+        "BH9-04_58P1",
+        "BH9-09_14R2",
+        "BH9-04_11R1",
+        "BH9-02_111TS",
+        "BH9-04_16R1",
+        "BH9-04_58R1",
+        "BH9-04_17P1",
+        "BH9-02_111P",
+        "BH9-04_26R1",
+        "BH9-04_39P1",
+        "BH9-01_21P",
+        "BH9-04_15P1",
+        "BH9-02_82R2",
+        "BH9-04_13P1",
+        "BH9-05_1P",
+        "BH9-03_29P2",
+        "BH9-03_29P1",
+        "BH9-04_38R1",
+        "BH9-04_16P1",
+        "BH9-03_37P1",
+        "BH9-03_43R2",
+        "BH9-04_14P1",
+        "BH9-09_9TS",
+        "BH9-05_2TS",
+        "BH9-05_1R",
+        "BH9-02_111R",
+        "BH9-03_28P1",
+        "BH9-05_1TS",
+        "BH9-01_46R1",
+        "BH9-04_7TS",
+        "BH9-04_18R",
+        "BH9-04_25P1",
+        "BH9-05_2R",
+        "BH9-03_42R2"
+    ],
+    "molecule10-BH9": [
+        "BH9-04_89P1",
+        "BH9-03_31P1",
+        "BH9-03_28R1",
+        "BH9-04_28TS",
+        "BH9-03_17P1",
+        "BH9-03_16P1",
+        "BH9-05_20R1",
+        "BH9-03_30R1",
+        "BH9-03_42P1",
+        "BH9-02_53R1",
+        "BH9-04_29TS",
+        "BH9-01_12TS",
+        "BH9-03_39P1",
+        "BH9-08_6R1",
+        "BH9-09_26R1",
+        "BH9-03_36P1",
+        "BH9-03_32P1",
+        "BH9-04_68P1",
+        "BH9-06_9R1",
+        "BH9-08_14P2",
+        "BH9-04_77P1",
+        "BH9-05_4TS",
+        "BH9-07_2R",
+        "BH9-04_87P2",
+        "BH9-01_32TS",
+        "BH9-02_54R2",
+        "BH9-03_19P1",
+        "BH9-04_60P2",
+        "BH9-05_23P1",
+        "BH9-04_68R1",
+        "BH9-03_26P1",
+        "BH9-01_19R",
+        "BH9-03_43P1",
+        "BH9-08_3P2",
+        "BH9-04_77R1",
+        "BH9-03_33P1",
+        "BH9-03_43P2",
+        "BH9-03_35P1",
+        "BH9-06_6TS",
+        "BH9-02_52R1",
+        "BH9-05_23R1",
+        "BH9-01_15P",
+        "BH9-04_55P2",
+        "BH9-04_65P2",
+        "BH9-01_12R",
+        "BH9-05_20P1",
+        "BH9-05_16P1",
+        "BH9-01_15TS",
+        "BH9-03_7P1",
+        "BH9-09_2TS",
+        "BH9-03_42P2",
+        "BH9-06_8R1",
+        "BH9-03_21R1",
+        "BH9-01_19TS",
+        "BH9-03_29R1",
+        "BH9-03_37R1",
+        "BH9-01_17R",
+        "BH9-04_65R2",
+        "BH9-03_20R1",
+        "BH9-04_22TS",
+        "BH9-05_4P",
+        "BH9-04_28P",
+        "BH9-01_17TS",
+        "BH9-03_15P1",
+        "BH9-01_32R",
+        "BH9-04_23TS",
+        "BH9-07_2P",
+        "BH9-04_87R2",
+        "BH9-03_27R1",
+        "BH9-08_9P2",
+        "BH9-05_4R",
+        "BH9-03_41R1",
+        "BH9-04_55R2",
+        "BH9-01_19P",
+        "BH9-01_12P",
+        "BH9-04_85P1",
+        "BH9-05_16R1",
+        "BH9-01_32P",
+        "BH9-09_21R1",
+        "BH9-08_15P2",
+        "BH9-04_89R1",
+        "BH9-01_17P",
+        "BH9-04_53R1",
+        "BH9-07_2TS",
+        "BH9-04_28R",
+        "BH9-06_6P",
+        "BH9-04_85R1",
+        "BH9-04_60R2",
+        "BH9-09_2P",
+        "BH9-04_53P1",
+        "BH9-03_8R1",
+        "BH9-01_15R",
+        "BH9-06_23R1"
+    ],
+    "molecule11-BH9": [
+        "BH9-04_87R1",
+        "BH9-03_7R1",
+        "BH9-03_33R1",
+        "BH9-08_6P1",
+        "BH9-07_3TS",
+        "BH9-02_24P",
+        "BH9-05_25P1",
+        "BH9-04_75R1",
+        "BH9-04_80R1",
+        "BH9-05_26R1",
+        "BH9-02_44P",
+        "BH9-08_12R2",
+        "BH9-01_28TS",
+        "BH9-02_61R1",
+        "BH9-03_42R1",
+        "BH9-05_27P1",
+        "BH9-03_15R1",
+        "BH9-01_29P",
+        "BH9-09_11TS",
+        "BH9-02_24R",
+        "BH9-03_39R1",
+        "BH9-03_43R1",
+        "BH9-02_62R1",
+        "BH9-09_11P",
+        "BH9-03_16R1",
+        "BH9-03_35R1",
+        "BH9-02_104TS",
+        "BH9-05_27R1",
+        "BH9-03_32R1",
+        "BH9-03_3TS",
+        "BH9-03_34P1",
+        "BH9-05_11R2",
+        "BH9-05_21P1",
+        "BH9-07_3R",
+        "BH9-05_30P1",
+        "BH9-02_44TS",
+        "BH9-04_81P1",
+        "BH9-04_74R1",
+        "BH9-01_28P",
+        "BH9-04_75P1",
+        "BH9-03_36R1",
+        "BH9-02_105P",
+        "BH9-09_13R2",
+        "BH9-07_3P",
+        "BH9-05_26P1",
+        "BH9-04_74P1",
+        "BH9-04_81R1",
+        "BH9-01_28R",
+        "BH9-05_25R1",
+        "BH9-03_24P1",
+        "BH9-02_105R",
+        "BH9-03_19R1",
+        "BH9-01_26P",
+        "BH9-08_12P2",
+        "BH9-05_11P2",
+        "BH9-08_14R1",
+        "BH9-03_26R1",
+        "BH9-04_16TS",
+        "BH9-03_31R1",
+        "BH9-01_29R",
+        "BH9-01_26TS",
+        "BH9-03_8TS",
+        "BH9-02_105TS",
+        "BH9-05_30R1",
+        "BH9-02_104P",
+        "BH9-04_81R2",
+        "BH9-02_24TS",
+        "BH9-08_8P2",
+        "BH9-07_5R",
+        "BH9-02_104R",
+        "BH9-01_26R",
+        "BH9-03_17R1",
+        "BH9-01_29TS",
+        "BH9-07_5TS",
+        "BH9-05_21R1",
+        "BH9-04_80P1",
+        "BH9-04_17TS",
+        "BH9-04_81P2",
+        "BH9-04_87P1",
+        "BH9-02_60R1",
+        "BH9-07_5P"
+    ],
+    "molecule12-BH9": [
+        "BH9-02_42P",
+        "BH9-04_13TS",
+        "BH9-02_135TS",
+        "BH9-02_108R1",
+        "BH9-04_14TS",
+        "BH9-04_38TS",
+        "BH9-02_6R",
+        "BH9-04_48P1",
+        "BH9-01_35TS",
+        "BH9-03_7TS",
+        "BH9-02_48R1",
+        "BH9-02_43TS",
+        "BH9-04_30TS",
+        "BH9-04_12TS",
+        "BH9-03_2TS",
+        "BH9-05_5TS",
+        "BH9-02_5R",
+        "BH9-01_31R",
+        "BH9-04_56R",
+        "BH9-02_6P",
+        "BH9-04_47P1",
+        "BH9-04_35TS",
+        "BH9-03_5TS",
+        "BH9-04_39TS",
+        "BH9-04_52P1",
+        "BH9-02_42TS",
+        "BH9-04_71P1",
+        "BH9-04_55R1",
+        "BH9-02_139P",
+        "BH9-01_35P",
+        "BH9-04_60R1",
+        "BH9-02_32TS",
+        "BH9-02_97R",
+        "BH9-08_12P1",
+        "BH9-03_15TS",
+        "BH9-04_41TS",
+        "BH9-02_96R",
+        "BH9-08_4P",
+        "BH9-02_139TS",
+        "BH9-02_25TS",
+        "BH9-03_34R1",
+        "BH9-02_32P",
+        "BH9-02_55P",
+        "BH9-04_25TS",
+        "BH9-04_67P1",
+        "BH9-02_54R1",
+        "BH9-04_48R1",
+        "BH9-03_12P1",
+        "BH9-04_75P2",
+        "BH9-04_60P1",
+        "BH9-08_7P2",
+        "BH9-04_47R1",
+        "BH9-02_6TS",
+        "BH9-05_38P1",
+        "BH9-04_15TS",
+        "BH9-03_6TS",
+        "BH9-04_59R1",
+        "BH9-05_22P1",
+        "BH9-02_21TS",
+        "BH9-05_39P1",
+        "BH9-04_65R1",
+        "BH9-02_107R1",
+        "BH9-04_67R1",
+        "BH9-04_36TS",
+        "BH9-04_49R1",
+        "BH9-04_59P1",
+        "BH9-02_56TS",
+        "BH9-02_140R",
+        "BH9-02_97P",
+        "BH9-08_4TS",
+        "BH9-01_35R",
+        "BH9-04_9TS",
+        "BH9-05_22R1",
+        "BH9-02_49R1",
+        "BH9-01_31TS",
+        "BH9-05_32P1",
+        "BH9-02_5P",
+        "BH9-04_24TS",
+        "BH9-02_135R",
+        "BH9-04_68P2",
+        "BH9-03_38P1",
+        "BH9-04_71R1",
+        "BH9-04_10TS",
+        "BH9-05_37R1",
+        "BH9-04_36R",
+        "BH9-02_139R",
+        "BH9-02_21R",
+        "BH9-02_106R1",
+        "BH9-04_52R1",
+        "BH9-05_32R1",
+        "BH9-02_25R",
+        "BH9-04_50P1",
+        "BH9-02_21P",
+        "BH9-01_31P",
+        "BH9-02_43P",
+        "BH9-04_56P",
+        "BH9-04_54R1",
+        "BH9-04_36P",
+        "BH9-04_70R1",
+        "BH9-04_65P1",
+        "BH9-08_12R1",
+        "BH9-08_8R1",
+        "BH9-04_75R2",
+        "BH9-08_3R1",
+        "BH9-04_70P1",
+        "BH9-03_24R1",
+        "BH9-02_135P",
+        "BH9-04_56TS",
+        "BH9-05_37P1",
+        "BH9-02_96TS",
+        "BH9-04_55P1",
+        "BH9-02_56P",
+        "BH9-05_38R1",
+        "BH9-04_50R1",
+        "BH9-03_11TS",
+        "BH9-02_55TS",
+        "BH9-02_96P",
+        "BH9-02_140P",
+        "BH9-02_5TS",
+        "BH9-04_11TS",
+        "BH9-02_25P",
+        "BH9-04_68R2",
+        "BH9-04_49P1",
+        "BH9-02_41R1",
+        "BH9-02_97TS",
+        "BH9-04_41R",
+        "BH9-04_41P",
+        "BH9-05_39R1",
+        "BH9-04_54P1",
+        "BH9-02_140TS"
+    ],
+    "molecule13-BH9": [
+        "BH9-09_10TS",
+        "BH9-04_69P",
+        "BH9-09_18TS",
+        "BH9-08_11P2",
+        "BH9-01_48R1",
+        "BH9-09_10P",
+        "BH9-05_7TS",
+        "BH9-04_37P",
+        "BH9-06_15TS",
+        "BH9-04_61P",
+        "BH9-06_19R2",
+        "BH9-06_22R2",
+        "BH9-04_31P",
+        "BH9-07_8P1",
+        "BH9-05_19P1",
+        "BH9-02_109TS",
+        "BH9-06_5P",
+        "BH9-06_20R2",
+        "BH9-07_8R2",
+        "BH9-06_5TS",
+        "BH9-08_3TS",
+        "BH9-09_10R",
+        "BH9-04_69R",
+        "BH9-03_23TS",
+        "BH9-05_28R1",
+        "BH9-07_8P2",
+        "BH9-02_110TS",
+        "BH9-06_35R2",
+        "BH9-03_22TS",
+        "BH9-04_31TS",
+        "BH9-02_26R",
+        "BH9-07_8R1",
+        "BH9-01_36P",
+        "BH9-09_18P",
+        "BH9-04_37TS",
+        "BH9-06_33R1",
+        "BH9-06_15P",
+        "BH9-02_26TS",
+        "BH9-02_1R2",
+        "BH9-02_110R",
+        "BH9-05_33P1",
+        "BH9-04_61R",
+        "BH9-09_12TS",
+        "BH9-02_109P",
+        "BH9-06_21P1",
+        "BH9-09_12P",
+        "BH9-06_21R1",
+        "BH9-04_31R",
+        "BH9-02_26P",
+        "BH9-04_61TS",
+        "BH9-05_29P1",
+        "BH9-04_43P",
+        "BH9-02_110P",
+        "BH9-03_12R1",
+        "BH9-05_19R1",
+        "BH9-08_7R1",
+        "BH9-05_29R1",
+        "BH9-05_35R1",
+        "BH9-05_41R1",
+        "BH9-04_43R",
+        "BH9-06_31R2",
+        "BH9-05_33R1",
+        "BH9-05_41P1",
+        "BH9-02_109R",
+        "BH9-06_32R2",
+        "BH9-03_38R1",
+        "BH9-01_36R",
+        "BH9-02_2R2",
+        "BH9-04_62R1",
+        "BH9-05_28P1",
+        "BH9-02_4R2",
+        "BH9-05_35P1",
+        "BH9-04_46TS",
+        "BH9-04_45TS",
+        "BH9-04_37R",
+        "BH9-06_33P1",
+        "BH9-06_34R2",
+        "BH9-04_69TS",
+        "BH9-04_43TS",
+        "BH9-02_3R2",
+        "BH9-01_36TS",
+        "BH9-04_62P1",
+        "BH9-04_51TS"
+    ],
+    "molecule14-BH9": [
+        "BH9-07_10R1",
+        "BH9-02_73R1",
+        "BH9-02_114R1",
+        "BH9-02_79R1",
+        "BH9-04_64R",
+        "BH9-03_21TS",
+        "BH9-05_24R1",
+        "BH9-07_10P1",
+        "BH9-06_25R1",
+        "BH9-09_16TS",
+        "BH9-04_64TS",
+        "BH9-02_75R1",
+        "BH9-02_27R",
+        "BH9-02_112R1",
+        "BH9-06_26R1",
+        "BH9-02_63P",
+        "BH9-02_63R",
+        "BH9-02_63TS",
+        "BH9-09_13TS",
+        "BH9-02_62TS",
+        "BH9-05_24P1",
+        "BH9-06_18R1",
+        "BH9-09_15TS",
+        "BH9-02_22P",
+        "BH9-02_40R1",
+        "BH9-05_31P1",
+        "BH9-03_10TS",
+        "BH9-05_18R2",
+        "BH9-02_68R1",
+        "BH9-08_9P1",
+        "BH9-02_27TS",
+        "BH9-04_64P",
+        "BH9-03_9TS",
+        "BH9-05_6P",
+        "BH9-05_6R",
+        "BH9-08_5P1",
+        "BH9-02_47P",
+        "BH9-03_12TS",
+        "BH9-02_128R",
+        "BH9-02_62P",
+        "BH9-09_13P",
+        "BH9-09_14TS",
+        "BH9-06_9P",
+        "BH9-09_16P",
+        "BH9-04_53TS",
+        "BH9-02_61TS",
+        "BH9-08_10R1",
+        "BH9-05_6TS",
+        "BH9-06_8P",
+        "BH9-08_10P1",
+        "BH9-09_15P",
+        "BH9-04_34TS",
+        "BH9-02_68R2",
+        "BH9-02_61P",
+        "BH9-02_115R1",
+        "BH9-05_18P2",
+        "BH9-02_81R1",
+        "BH9-02_117R1",
+        "BH9-02_67R2",
+        "BH9-05_17P2",
+        "BH9-08_11R1",
+        "BH9-02_77R1",
+        "BH9-09_14P",
+        "BH9-09_17TS",
+        "BH9-02_27P",
+        "BH9-02_22R",
+        "BH9-02_113R1",
+        "BH9-02_116R1",
+        "BH9-06_18P1",
+        "BH9-02_22TS",
+        "BH9-06_8TS",
+        "BH9-02_47TS",
+        "BH9-02_128P",
+        "BH9-05_31R1",
+        "BH9-09_17P",
+        "BH9-06_9TS",
+        "BH9-02_69R2",
+        "BH9-06_24R1",
+        "BH9-05_17R2",
+        "BH9-02_128TS",
+        "BH9-03_30TS"
+    ],
+    "molecule15-BH9": [
+        "BH9-05_34R2",
+        "BH9-05_42R2",
+        "BH9-05_42P2",
+        "BH9-04_42P",
+        "BH9-05_16P2",
+        "BH9-05_8P",
+        "BH9-05_27P2",
+        "BH9-05_21R2",
+        "BH9-05_23P2",
+        "BH9-05_41P2",
+        "BH9-05_27R2",
+        "BH9-02_33TS",
+        "BH9-09_24R",
+        "BH9-05_32R2",
+        "BH9-05_12P2",
+        "BH9-05_39R2",
+        "BH9-04_50TS",
+        "BH9-05_35P2",
+        "BH9-05_13P2",
+        "BH9-05_9P",
+        "BH9-05_33P2",
+        "BH9-04_42R",
+        "BH9-04_26TS",
+        "BH9-05_32P2",
+        "BH9-09_26R2",
+        "BH9-05_9TS",
+        "BH9-02_129TS",
+        "BH9-07_10TS",
+        "BH9-05_33R2",
+        "BH9-05_29P2",
+        "BH9-09_24P",
+        "BH9-05_31P2",
+        "BH9-02_60P",
+        "BH9-05_30R2",
+        "BH9-05_8TS",
+        "BH9-02_33P",
+        "BH9-05_38P2",
+        "BH9-05_28R2",
+        "BH9-03_13TS",
+        "BH9-05_25R2",
+        "BH9-05_19R2",
+        "BH9-05_19P2",
+        "BH9-02_60TS",
+        "BH9-05_23R2",
+        "BH9-05_35R2",
+        "BH9-05_39P2",
+        "BH9-05_14R2",
+        "BH9-05_20P2",
+        "BH9-05_29R2",
+        "BH9-02_64P",
+        "BH9-09_23R",
+        "BH9-09_23TS",
+        "BH9-05_22P2",
+        "BH9-05_12R2",
+        "BH9-05_26R2",
+        "BH9-05_41R2",
+        "BH9-05_34P1",
+        "BH9-05_14P2",
+        "BH9-05_9R",
+        "BH9-05_38R2",
+        "BH9-04_90P1",
+        "BH9-09_24TS",
+        "BH9-05_37R2",
+        "BH9-05_28P2",
+        "BH9-05_31R2",
+        "BH9-04_90R1",
+        "BH9-04_57TS",
+        "BH9-05_34R1",
+        "BH9-05_20R2",
+        "BH9-02_64R",
+        "BH9-05_15R2",
+        "BH9-05_22R2",
+        "BH9-05_34P2",
+        "BH9-09_23P",
+        "BH9-05_16R2",
+        "BH9-05_30P2",
+        "BH9-05_26P2",
+        "BH9-05_21P2",
+        "BH9-04_42TS",
+        "BH9-04_27TS",
+        "BH9-02_64TS",
+        "BH9-02_129R",
+        "BH9-02_33R",
+        "BH9-05_13R2",
+        "BH9-02_129P",
+        "BH9-05_8R",
+        "BH9-08_5TS",
+        "BH9-05_15P2",
+        "BH9-05_25P2",
+        "BH9-05_37P2"
+    ],
+    "molecule16-BH9": [
+        "BH9-02_131P",
+        "BH9-02_137R",
+        "BH9-02_65R",
+        "BH9-02_100P",
+        "BH9-06_13TS",
+        "BH9-06_12TS",
+        "BH9-03_26TS",
+        "BH9-03_25R",
+        "BH9-03_33TS",
+        "BH9-01_33P",
+        "BH9-02_66R",
+        "BH9-06_11TS",
+        "BH9-05_36R1",
+        "BH9-01_34R",
+        "BH9-03_25TS",
+        "BH9-06_14TS",
+        "BH9-03_25P",
+        "BH9-02_100TS",
+        "BH9-02_100R",
+        "BH9-02_52TS",
+        "BH9-01_46R2",
+        "BH9-04_40TS",
+        "BH9-02_131TS",
+        "BH9-01_33TS",
+        "BH9-05_40R1",
+        "BH9-02_101P",
+        "BH9-06_12R",
+        "BH9-01_34P",
+        "BH9-02_103P",
+        "BH9-02_29TS",
+        "BH9-03_18TS",
+        "BH9-04_33TS",
+        "BH9-06_13P",
+        "BH9-06_14P",
+        "BH9-02_65P",
+        "BH9-03_14TS",
+        "BH9-04_73R1",
+        "BH9-06_19TS",
+        "BH9-04_72P",
+        "BH9-02_31R1",
+        "BH9-02_65TS",
+        "BH9-02_137P",
+        "BH9-06_14R",
+        "BH9-02_103TS",
+        "BH9-02_57R1",
+        "BH9-06_11P",
+        "BH9-04_66TS",
+        "BH9-02_30P",
+        "BH9-06_12P",
+        "BH9-02_102TS",
+        "BH9-02_101R",
+        "BH9-05_36P1",
+        "BH9-02_66TS",
+        "BH9-04_32TS",
+        "BH9-06_10TS",
+        "BH9-06_13R",
+        "BH9-06_19P",
+        "BH9-01_48R2",
+        "BH9-02_66P",
+        "BH9-02_102P",
+        "BH9-03_37TS",
+        "BH9-05_40P1",
+        "BH9-02_131R",
+        "BH9-02_30TS",
+        "BH9-02_137TS",
+        "BH9-02_101TS",
+        "BH9-01_33R",
+        "BH9-02_102R",
+        "BH9-04_73P1",
+        "BH9-04_44TS",
+        "BH9-02_103R",
+        "BH9-06_10P",
+        "BH9-04_72R",
+        "BH9-01_34TS",
+        "BH9-02_52P",
+        "BH9-04_72TS",
+        "BH9-02_29P"
+    ],
+    "molecule17-BH9": [
+        "BH9-02_53TS",
+        "BH9-02_125P",
+        "BH9-06_20TS",
+        "BH9-05_36P2",
+        "BH9-03_28TS",
+        "BH9-06_22P",
+        "BH9-05_40R2",
+        "BH9-02_67R1",
+        "BH9-02_124TS",
+        "BH9-09_19TS",
+        "BH9-09_20R",
+        "BH9-02_23P",
+        "BH9-04_63TS",
+        "BH9-03_39TS",
+        "BH9-05_17R1",
+        "BH9-02_124R",
+        "BH9-02_125TS",
+        "BH9-04_70TS",
+        "BH9-05_18R1",
+        "BH9-03_35TS",
+        "BH9-06_23P",
+        "BH9-09_20P",
+        "BH9-02_132R",
+        "BH9-05_18P1",
+        "BH9-03_27TS",
+        "BH9-02_41TS",
+        "BH9-04_62TS",
+        "BH9-03_16TS",
+        "BH9-06_23TS",
+        "BH9-05_36R2",
+        "BH9-09_19R",
+        "BH9-04_74TS",
+        "BH9-05_40P2",
+        "BH9-03_19TS",
+        "BH9-09_20TS",
+        "BH9-02_132TS",
+        "BH9-04_58TS",
+        "BH9-02_125R",
+        "BH9-03_40TS",
+        "BH9-06_20P",
+        "BH9-02_53P",
+        "BH9-02_35TS",
+        "BH9-02_23TS",
+        "BH9-04_54TS",
+        "BH9-03_24TS",
+        "BH9-03_34TS",
+        "BH9-02_35P",
+        "BH9-02_34TS",
+        "BH9-02_41P",
+        "BH9-06_22TS",
+        "BH9-08_8TS",
+        "BH9-05_24P2",
+        "BH9-02_132P",
+        "BH9-02_35R",
+        "BH9-02_34R",
+        "BH9-02_34P",
+        "BH9-03_20TS",
+        "BH9-03_36TS",
+        "BH9-09_19P",
+        "BH9-02_23R",
+        "BH9-02_124P",
+        "BH9-06_21TS",
+        "BH9-05_24R2",
+        "BH9-05_17P1"
+    ],
+    "molecule18-BH9": [
+        "BH9-02_46P",
+        "BH9-04_86P1",
+        "BH9-02_73TS",
+        "BH9-07_6R",
+        "BH9-02_37P",
+        "BH9-02_74P",
+        "BH9-04_90P2",
+        "BH9-03_31TS",
+        "BH9-02_138R",
+        "BH9-04_79P1",
+        "BH9-03_41TS",
+        "BH9-01_37P",
+        "BH9-01_37R",
+        "BH9-03_17TS",
+        "BH9-04_85P2",
+        "BH9-08_15P1",
+        "BH9-03_32TS",
+        "BH9-02_36P",
+        "BH9-04_83R2",
+        "BH9-04_77TS",
+        "BH9-02_37TS",
+        "BH9-02_74TS",
+        "BH9-02_81TS",
+        "BH9-02_82P",
+        "BH9-01_37TS",
+        "BH9-09_22TS",
+        "BH9-07_6P",
+        "BH9-09_22R",
+        "BH9-04_82P2",
+        "BH9-02_138P",
+        "BH9-02_48TS",
+        "BH9-02_138TS",
+        "BH9-04_79R1",
+        "BH9-04_82R2",
+        "BH9-02_48P",
+        "BH9-04_83P2",
+        "BH9-02_73P",
+        "BH9-04_90R2",
+        "BH9-04_89R2",
+        "BH9-04_71TS",
+        "BH9-04_86R1",
+        "BH9-02_36TS",
+        "BH9-03_29TS",
+        "BH9-02_37R",
+        "BH9-07_6TS",
+        "BH9-02_36R",
+        "BH9-04_89P2",
+        "BH9-06_31TS",
+        "BH9-06_31P",
+        "BH9-02_74R",
+        "BH9-04_85R2",
+        "BH9-02_82TS",
+        "BH9-08_13P2",
+        "BH9-02_46R",
+        "BH9-02_46TS",
+        "BH9-06_18TS",
+        "BH9-02_81P",
+        "BH9-09_22P"
+    ],
+    "molecule19-BH9": [
+        "BH9-04_78TS",
+        "BH9-06_32P",
+        "BH9-09_21TS",
+        "BH9-01_38TS",
+        "BH9-02_85TS",
+        "BH9-02_130TS",
+        "BH9-09_21P",
+        "BH9-04_76P",
+        "BH9-02_130R",
+        "BH9-01_38P",
+        "BH9-06_34P",
+        "BH9-02_84TS",
+        "BH9-01_38R",
+        "BH9-05_11P1",
+        "BH9-02_12TS",
+        "BH9-04_78R",
+        "BH9-02_130P",
+        "BH9-07_7P",
+        "BH9-07_7TS",
+        "BH9-02_9P",
+        "BH9-06_32TS",
+        "BH9-02_84P",
+        "BH9-05_10P1",
+        "BH9-02_76P",
+        "BH9-02_9R",
+        "BH9-02_84R",
+        "BH9-05_10R1",
+        "BH9-04_49TS",
+        "BH9-08_15R1",
+        "BH9-04_48TS",
+        "BH9-05_11R1",
+        "BH9-02_11R",
+        "BH9-02_10TS",
+        "BH9-02_10P",
+        "BH9-02_75P",
+        "BH9-02_11P",
+        "BH9-02_85R",
+        "BH9-08_6TS",
+        "BH9-04_76TS",
+        "BH9-02_76R",
+        "BH9-05_42P1",
+        "BH9-04_80TS",
+        "BH9-04_78P",
+        "BH9-05_42R1",
+        "BH9-03_38TS",
+        "BH9-08_9R1",
+        "BH9-02_11TS",
+        "BH9-02_40P",
+        "BH9-02_40TS",
+        "BH9-02_76TS",
+        "BH9-02_85P",
+        "BH9-02_12P",
+        "BH9-02_12R",
+        "BH9-02_10R",
+        "BH9-04_76R",
+        "BH9-02_75TS",
+        "BH9-07_7R",
+        "BH9-02_9TS",
+        "BH9-06_34TS"
+    ],
+    "molecule20-BH9": [
+        "BH9-06_35TS",
+        "BH9-02_17TS",
+        "BH9-02_108TS",
+        "BH9-01_40TS",
+        "BH9-08_14R2",
+        "BH9-04_84R",
+        "BH9-02_50R",
+        "BH9-03_42TS",
+        "BH9-01_42R",
+        "BH9-01_39P",
+        "BH9-06_33TS",
+        "BH9-02_50TS",
+        "BH9-09_25P",
+        "BH9-02_106TS",
+        "BH9-01_43R",
+        "BH9-02_91R",
+        "BH9-01_43TS",
+        "BH9-02_90TS",
+        "BH9-02_18R",
+        "BH9-02_51R1",
+        "BH9-09_25R",
+        "BH9-02_91TS",
+        "BH9-02_108P",
+        "BH9-02_91P",
+        "BH9-01_39TS",
+        "BH9-02_106P",
+        "BH9-02_18P",
+        "BH9-02_49P",
+        "BH9-04_52TS",
+        "BH9-04_47TS",
+        "BH9-01_43P",
+        "BH9-04_59TS",
+        "BH9-02_17P",
+        "BH9-04_84P",
+        "BH9-02_51P1",
+        "BH9-09_25TS",
+        "BH9-01_42TS",
+        "BH9-02_57TS",
+        "BH9-02_90R",
+        "BH9-02_50P",
+        "BH9-06_35P",
+        "BH9-05_13TS",
+        "BH9-02_57P",
+        "BH9-08_7TS",
+        "BH9-01_40P",
+        "BH9-04_84TS",
+        "BH9-02_17R",
+        "BH9-02_49TS",
+        "BH9-08_13R1",
+        "BH9-01_40R",
+        "BH9-02_90P",
+        "BH9-02_18TS",
+        "BH9-01_39R",
+        "BH9-02_107P",
+        "BH9-02_107TS",
+        "BH9-03_43TS",
+        "BH9-01_42P"
+    ],
+    "molecule21-BH9": [
+        "BH9-02_78TS",
+        "BH9-02_133TS",
+        "BH9-06_25TS",
+        "BH9-04_67TS",
+        "BH9-06_27P",
+        "BH9-02_16R",
+        "BH9-02_2P",
+        "BH9-02_16P",
+        "BH9-06_30P",
+        "BH9-06_26P",
+        "BH9-02_133P",
+        "BH9-01_44P",
+        "BH9-02_3P",
+        "BH9-02_3TS",
+        "BH9-06_25P",
+        "BH9-02_133R",
+        "BH9-01_44TS",
+        "BH9-06_29P",
+        "BH9-04_73TS",
+        "BH9-02_2TS",
+        "BH9-04_79TS",
+        "BH9-04_87TS",
+        "BH9-01_41TS",
+        "BH9-02_77P",
+        "BH9-02_4TS",
+        "BH9-06_28P",
+        "BH9-02_15P",
+        "BH9-02_16TS",
+        "BH9-01_41R",
+        "BH9-08_10TS",
+        "BH9-06_29R",
+        "BH9-06_27TS",
+        "BH9-02_4P",
+        "BH9-06_28TS",
+        "BH9-01_41P",
+        "BH9-02_78R",
+        "BH9-02_1TS",
+        "BH9-02_15TS",
+        "BH9-01_44R",
+        "BH9-06_29TS",
+        "BH9-06_24P",
+        "BH9-06_27R",
+        "BH9-02_77TS",
+        "BH9-02_1P",
+        "BH9-02_15R",
+        "BH9-06_28R",
+        "BH9-06_30R",
+        "BH9-06_30TS",
+        "BH9-06_24TS",
+        "BH9-06_26TS",
+        "BH9-02_78P",
+        "BH9-08_14P1",
+        "BH9-08_11TS"
+    ],
+    "molecule22-BH9": [
+        "BH9-02_80P",
+        "BH9-02_54TS",
+        "BH9-02_114P",
+        "BH9-02_54P",
+        "BH9-04_81TS",
+        "BH9-02_51TS",
+        "BH9-02_114TS",
+        "BH9-02_113P",
+        "BH9-02_117TS",
+        "BH9-04_60TS",
+        "BH9-02_79TS",
+        "BH9-02_116P",
+        "BH9-02_79P",
+        "BH9-02_80R",
+        "BH9-05_12TS",
+        "BH9-08_13TS",
+        "BH9-02_117P",
+        "BH9-04_55TS",
+        "BH9-04_68TS",
+        "BH9-02_113TS",
+        "BH9-02_116TS",
+        "BH9-02_115TS",
+        "BH9-02_115P",
+        "BH9-04_65TS",
+        "BH9-02_112P",
+        "BH9-02_80TS",
+        "BH9-02_112TS"
+    ],
+    "molecule23-BH9": [
+        "BH9-02_83P",
+        "BH9-02_93P",
+        "BH9-02_92R",
+        "BH9-02_88R",
+        "BH9-02_69P",
+        "BH9-02_83R",
+        "BH9-02_94R",
+        "BH9-04_75TS",
+        "BH9-06_16R",
+        "BH9-02_95P",
+        "BH9-02_94TS",
+        "BH9-06_17P",
+        "BH9-02_88P",
+        "BH9-02_92TS",
+        "BH9-02_94P",
+        "BH9-02_89R",
+        "BH9-06_17R",
+        "BH9-02_93TS",
+        "BH9-02_69TS",
+        "BH9-02_95TS",
+        "BH9-02_83TS",
+        "BH9-02_93R",
+        "BH9-02_88TS",
+        "BH9-02_95R",
+        "BH9-06_16TS",
+        "BH9-08_12TS",
+        "BH9-02_92P",
+        "BH9-02_28R",
+        "BH9-06_17TS",
+        "BH9-06_16P",
+        "BH9-02_89TS",
+        "BH9-02_89P",
+        "BH9-02_28TS",
+        "BH9-02_28P"
+    ],
+    "molecule24-BH9": [
+        "BH9-08_9TS",
+        "BH9-05_15TS",
+        "BH9-05_14TS",
+        "BH9-01_47P",
+        "BH9-02_13TS",
+        "BH9-02_13R",
+        "BH9-01_47TS",
+        "BH9-04_86TS",
+        "BH9-02_13P",
+        "BH9-02_31TS",
+        "BH9-01_47R",
+        "BH9-02_31P",
+        "BH9-02_14R",
+        "BH9-02_14TS",
+        "BH9-02_14P"
+    ],
+    "molecule25-BH9": [
+        "BH9-05_20TS",
+        "BH9-01_45TS",
+        "BH9-02_70R",
+        "BH9-01_45R",
+        "BH9-05_16TS",
+        "BH9-02_119TS",
+        "BH9-02_8P",
+        "BH9-02_39TS",
+        "BH9-02_120P",
+        "BH9-02_121TS",
+        "BH9-02_127R",
+        "BH9-02_127P",
+        "BH9-02_119P",
+        "BH9-02_72R",
+        "BH9-02_71R",
+        "BH9-02_119R",
+        "BH9-02_70P",
+        "BH9-02_118TS",
+        "BH9-05_23TS",
+        "BH9-02_8TS",
+        "BH9-02_8R",
+        "BH9-02_118R",
+        "BH9-02_39P",
+        "BH9-02_121P",
+        "BH9-02_38TS",
+        "BH9-02_72TS",
+        "BH9-02_38R",
+        "BH9-01_45P",
+        "BH9-02_121R",
+        "BH9-01_46P",
+        "BH9-09_26P",
+        "BH9-02_120TS",
+        "BH9-02_39R",
+        "BH9-02_71TS",
+        "BH9-02_38P",
+        "BH9-02_70TS",
+        "BH9-02_118P",
+        "BH9-02_120R",
+        "BH9-09_26TS",
+        "BH9-02_126P",
+        "BH9-02_126R",
+        "BH9-01_46TS",
+        "BH9-02_71P",
+        "BH9-02_126TS",
+        "BH9-02_72P",
+        "BH9-02_127TS"
+    ],
+    "molecule26-BH9": [
+        "BH9-05_21TS",
+        "BH9-05_30TS",
+        "BH9-02_87TS",
+        "BH9-02_87R",
+        "BH9-05_26TS",
+        "BH9-02_87P",
+        "BH9-07_8TS",
+        "BH9-05_27TS",
+        "BH9-02_20P",
+        "BH9-05_25TS",
+        "BH9-02_20R",
+        "BH9-02_86P",
+        "BH9-02_86TS",
+        "BH9-02_20TS",
+        "BH9-02_86R",
+        "BH9-02_19R",
+        "BH9-02_19TS",
+        "BH9-02_19P"
+    ],
+    "molecule27-BH9": [
+        "BH9-02_123P",
+        "BH9-02_122TS",
+        "BH9-02_122P",
+        "BH9-05_22TS",
+        "BH9-05_37TS",
+        "BH9-02_123TS",
+        "BH9-05_10TS",
+        "BH9-04_82TS",
+        "BH9-02_123R",
+        "BH9-05_39TS",
+        "BH9-05_38TS",
+        "BH9-02_122R",
+        "BH9-05_32TS",
+        "BH9-04_83TS"
+    ],
+    "molecule28-BH9": [
+        "BH9-08_15TS",
+        "BH9-05_41TS",
+        "BH9-05_33TS",
+        "BH9-05_28TS",
+        "BH9-05_19TS",
+        "BH9-04_85TS",
+        "BH9-02_68P",
+        "BH9-04_89TS",
+        "BH9-05_29TS",
+        "BH9-02_68TS",
+        "BH9-05_35TS"
+    ],
+    "molecule29-BH9": [
+        "BH9-02_7R",
+        "BH9-01_48TS",
+        "BH9-02_7TS",
+        "BH9-01_48P",
+        "BH9-04_88R",
+        "BH9-02_7P",
+        "BH9-04_88P",
+        "BH9-05_31TS",
+        "BH9-04_88TS"
+    ],
+    "molecule30-BH9": [
+        "BH9-05_11TS",
+        "BH9-05_34TS"
+    ],
+    "molecule31-BH9": [
+        "BH9-05_17TS",
+        "BH9-08_14TS",
+        "BH9-05_24TS",
+        "BH9-05_18TS",
+        "BH9-02_67P",
+        "BH9-02_67TS"
+    ],
+    "molecule33-BH9": [
+        "BH9-05_40TS",
+        "BH9-05_36TS",
+        "BH9-04_90TS"
+    ],
+    "molecule34-BH9": [
+        "BH9-05_42TS"
+    ],
     "molecule_BSR36": [
         "BSR36-r13",
         "BSR36-h9",
@@ -393962,6 +396861,62 @@
             ]
         }
     },
+    "molecule1-BSR36": [
+        "BSR36-ch4"
+    ],
+    "molecule2-BSR36": [
+        "BSR36-c2h6"
+    ],
+    "molecule5-BSR36": [
+        "BSR36-r1"
+    ],
+    "molecule6-BSR36": [
+        "BSR36-h3",
+        "BSR36-h2",
+        "BSR36-h5",
+        "BSR36-h1",
+        "BSR36-r2",
+        "BSR36-r3",
+        "BSR36-h4"
+    ],
+    "molecule7-BSR36": [
+        "BSR36-h9",
+        "BSR36-r8",
+        "BSR36-h7",
+        "BSR36-h11",
+        "BSR36-r7",
+        "BSR36-r5",
+        "BSR36-h12",
+        "BSR36-h13",
+        "BSR36-h10",
+        "BSR36-r9",
+        "BSR36-h14",
+        "BSR36-h6",
+        "BSR36-h8",
+        "BSR36-r6",
+        "BSR36-r4"
+    ],
+    "molecule8-BSR36": [
+        "BSR36-h15"
+    ],
+    "molecule10-BSR36": [
+        "BSR36-r13",
+        "BSR36-r11",
+        "BSR36-r12",
+        "BSR36-r14",
+        "BSR36-r10",
+        "BSR36-c1"
+    ],
+    "molecule12-BSR36": [
+        "BSR36-c3",
+        "BSR36-r16",
+        "BSR36-r15",
+        "BSR36-c2"
+    ],
+    "molecule14-BSR36": [
+        "BSR36-c5",
+        "BSR36-c4"
+    ],
     "molecule_BH76": [
         "BH76-c2h4",
         "BH76-hoch3fcomp1",
@@ -397528,6 +400483,102 @@
             ]
         }
     },
+    "molecule0-BH76": [
+        "BH76-f-",
+        "BH76-cl-",
+        "BH76-h",
+        "BH76-f",
+        "BH76-cl",
+        "BH76-O"
+    ],
+    "molecule1-BH76": [
+        "BH76-hclhts",
+        "BH76-CH4",
+        "BH76-RKT10",
+        "BH76-H2",
+        "BH76-RKT13",
+        "BH76-oh-",
+        "BH76-RKT16",
+        "BH76-NH3",
+        "BH76-NH",
+        "BH76-RKT03",
+        "BH76-NH2",
+        "BH76-RKT06",
+        "BH76-HS",
+        "BH76-hcl",
+        "BH76-PH3",
+        "BH76-H2S",
+        "BH76-RKT01",
+        "BH76-hf",
+        "BH76-PH2",
+        "BH76-hfhts",
+        "BH76-RKT14",
+        "BH76-oh",
+        "BH76-RKT02",
+        "BH76-H2O",
+        "BH76-RKT12",
+        "BH76-ch3"
+    ],
+    "molecule2-BH76": [
+        "BH76-c2h4",
+        "BH76-RKT04",
+        "BH76-hco",
+        "BH76-C2H6",
+        "BH76-hcots",
+        "BH76-n2",
+        "BH76-co",
+        "BH76-N2H2",
+        "BH76-CH2OH",
+        "BH76-f2",
+        "BH76-hf2ts",
+        "BH76-hch3clts",
+        "BH76-hnc",
+        "BH76-ch3cl",
+        "BH76-hcnts",
+        "BH76-RKT21",
+        "BH76-hn2ts",
+        "BH76-hn2",
+        "BH76-RKT11",
+        "BH76-c2h5ts",
+        "BH76-ch3oh",
+        "BH76-c2h5",
+        "BH76-clf",
+        "BH76-RKT18",
+        "BH76-hcn",
+        "BH76-RKT08",
+        "BH76-N2H",
+        "BH76-RKT15",
+        "BH76-RKT05",
+        "BH76-C2H5",
+        "BH76-hfch3ts",
+        "BH76-RKT07",
+        "BH76-ch3f",
+        "BH76-RKT17"
+    ],
+    "molecule3-BH76": [
+        "BH76-hoch3fcomp1",
+        "BH76-fch3fts",
+        "BH76-c3h7ts",
+        "BH76-RKT09",
+        "BH76-ch3fclts",
+        "BH76-hoch3fts",
+        "BH76-RKT20",
+        "BH76-c3h7",
+        "BH76-n2o",
+        "BH76-fch3clts",
+        "BH76-fch3clcomp1",
+        "BH76-clch3clts",
+        "BH76-fch3fcomp",
+        "BH76-clch3clcomp",
+        "BH76-RKT19",
+        "BH76-fch3clcomp2",
+        "BH76-hoch3fcomp2",
+        "BH76-n2ohts"
+    ],
+    "molecule5-BH76": [
+        "BH76-RKT22",
+        "BH76-C5H8"
+    ],
     "molecule_C60ISO": [
         "C60ISO-7",
         "C60ISO-5",
@@ -401252,6 +404303,18 @@
             ]
         }
     },
+    "molecule60-C60ISO": [
+        "C60ISO-7",
+        "C60ISO-5",
+        "C60ISO-2",
+        "C60ISO-1",
+        "C60ISO-10",
+        "C60ISO-3",
+        "C60ISO-6",
+        "C60ISO-9",
+        "C60ISO-8",
+        "C60ISO-4"
+    ],
     "molecule_S22": [
         "S22-09a",
         "S22-01a",
@@ -406207,6 +409270,91 @@
             ]
         }
     },
+    "molecule1-S22": [
+        "S22-01a",
+        "S22-02a",
+        "S22-17b",
+        "S22-18b",
+        "S22-10b",
+        "S22-08a",
+        "S22-02b"
+    ],
+    "molecule2-S22": [
+        "S22-09a",
+        "S22-19b",
+        "S22-16a",
+        "S22-16b",
+        "S22-08",
+        "S22-02",
+        "S22-01"
+    ],
+    "molecule3-S22": [
+        "S22-04a",
+        "S22-03a"
+    ],
+    "molecule4-S22": [
+        "S22-16",
+        "S22-09"
+    ],
+    "molecule6-S22": [
+        "S22-20a",
+        "S22-12a",
+        "S22-14b",
+        "S22-17a",
+        "S22-18a",
+        "S22-20b",
+        "S22-10a",
+        "S22-19a",
+        "S22-21b",
+        "S22-04",
+        "S22-03",
+        "S22-11a"
+    ],
+    "molecule7-S22": [
+        "S22-06a",
+        "S22-22a",
+        "S22-18",
+        "S22-10",
+        "S22-06b",
+        "S22-17",
+        "S22-22b"
+    ],
+    "molecule8-S22": [
+        "S22-05a",
+        "S22-19",
+        "S22-13a"
+    ],
+    "molecule9-S22": [
+        "S22-07b",
+        "S22-14a",
+        "S22-15b",
+        "S22-21a"
+    ],
+    "molecule10-S22": [
+        "S22-07a",
+        "S22-15a"
+    ],
+    "molecule12-S22": [
+        "S22-11",
+        "S22-20",
+        "S22-12"
+    ],
+    "molecule14-S22": [
+        "S22-06",
+        "S22-22"
+    ],
+    "molecule15-S22": [
+        "S22-21",
+        "S22-14"
+    ],
+    "molecule16-S22": [
+        "S22-13",
+        "S22-05"
+    ],
+    "molecule19-S22": [
+        "S22-07",
+        "S22-15"
+    ],
     "molecule_ALKBDE10": [
         "ALKBDE10-bef",
         "ALKBDE10-cao",
@@ -406547,6 +409695,30 @@
             ]
         }
     },
+    "molecule0-ALKBDE10": [
+        "ALKBDE10-li",
+        "ALKBDE10-ca",
+        "ALKBDE10-h",
+        "ALKBDE10-be",
+        "ALKBDE10-na",
+        "ALKBDE10-f",
+        "ALKBDE10-s",
+        "ALKBDE10-mg",
+        "ALKBDE10-o"
+    ],
+    "molecule1-ALKBDE10": [
+        "ALKBDE10-hf"
+    ],
+    "molecule2-ALKBDE10": [
+        "ALKBDE10-bef",
+        "ALKBDE10-cao",
+        "ALKBDE10-nao",
+        "ALKBDE10-beo",
+        "ALKBDE10-lif",
+        "ALKBDE10-lio",
+        "ALKBDE10-mgo",
+        "ALKBDE10-mgs"
+    ],
     "molecule_TAUT15": [
         "TAUT15-3b",
         "TAUT15-6a",
@@ -408642,6 +411814,43 @@
             ]
         }
     },
+    "molecule3-TAUT15": [
+        "TAUT15-9a",
+        "TAUT15-9b"
+    ],
+    "molecule5-TAUT15": [
+        "TAUT15-7a",
+        "TAUT15-2b",
+        "TAUT15-2a",
+        "TAUT15-7b"
+    ],
+    "molecule6-TAUT15": [
+        "TAUT15-8a",
+        "TAUT15-8b"
+    ],
+    "molecule7-TAUT15": [
+        "TAUT15-3b",
+        "TAUT15-4b",
+        "TAUT15-3a",
+        "TAUT15-10b",
+        "TAUT15-3c",
+        "TAUT15-10a",
+        "TAUT15-1b",
+        "TAUT15-4a",
+        "TAUT15-3d",
+        "TAUT15-1a"
+    ],
+    "molecule8-TAUT15": [
+        "TAUT15-5a",
+        "TAUT15-5c",
+        "TAUT15-5b"
+    ],
+    "molecule11-TAUT15": [
+        "TAUT15-6a",
+        "TAUT15-6c",
+        "TAUT15-6d",
+        "TAUT15-6b"
+    ],
     "molecule_RC21": [
         "RC21-2p2",
         "RC21-2e",
@@ -411443,6 +414652,63 @@
             ]
         }
     },
+    "molecule0-RC21": [
+        "RC21-3p2"
+    ],
+    "molecule1-RC21": [
+        "RC21-7p6",
+        "RC21-me",
+        "RC21-7p2"
+    ],
+    "molecule2-RC21": [
+        "RC21-9p2",
+        "RC21-2p3",
+        "RC21-1p3",
+        "RC21-ethylene",
+        "RC21-10p2"
+    ],
+    "molecule3-RC21": [
+        "RC21-2p2",
+        "RC21-5p",
+        "RC21-pr",
+        "RC21-7p3",
+        "RC21-1p2",
+        "RC21-7p4",
+        "RC21-4p"
+    ],
+    "molecule4-RC21": [
+        "RC21-4e",
+        "RC21-1p1",
+        "RC21-5e",
+        "RC21-8p1",
+        "RC21-2p1",
+        "RC21-10p1",
+        "RC21-6p1"
+    ],
+    "molecule5-RC21": [
+        "RC21-2e",
+        "RC21-9p1",
+        "RC21-7p1",
+        "RC21-7p5",
+        "RC21-6p3",
+        "RC21-1e"
+    ],
+    "molecule6-RC21": [
+        "RC21-7e",
+        "RC21-6e",
+        "RC21-8e",
+        "RC21-10e",
+        "RC21-6int"
+    ],
+    "molecule7-RC21": [
+        "RC21-3p3",
+        "RC21-3e",
+        "RC21-3int1",
+        "RC21-9e",
+        "RC21-3int3",
+        "RC21-3p1",
+        "RC21-3int2"
+    ],
     "molecule_RSE43": [
         "RSE43-E12",
         "RSE43-E5",
@@ -416789,6 +420055,108 @@
             ]
         }
     },
+    "molecule1-RSE43": [
+        "RSE43-E1",
+        "RSE43-P1"
+    ],
+    "molecule2-RSE43": [
+        "RSE43-P22",
+        "RSE43-E21",
+        "RSE43-P37",
+        "RSE43-P32",
+        "RSE43-E32",
+        "RSE43-E36",
+        "RSE43-P36",
+        "RSE43-P21",
+        "RSE43-E22",
+        "RSE43-P33",
+        "RSE43-P20",
+        "RSE43-E33",
+        "RSE43-E37",
+        "RSE43-E20"
+    ],
+    "molecule3-RSE43": [
+        "RSE43-E12",
+        "RSE43-P9",
+        "RSE43-E9",
+        "RSE43-E23",
+        "RSE43-E43",
+        "RSE43-P13",
+        "RSE43-E34",
+        "RSE43-P25",
+        "RSE43-P4",
+        "RSE43-P23",
+        "RSE43-P12",
+        "RSE43-E10",
+        "RSE43-E25",
+        "RSE43-E29",
+        "RSE43-E11",
+        "RSE43-P43",
+        "RSE43-P11",
+        "RSE43-E4",
+        "RSE43-E13",
+        "RSE43-P10",
+        "RSE43-E8",
+        "RSE43-P8",
+        "RSE43-P34",
+        "RSE43-P29"
+    ],
+    "molecule4-RSE43": [
+        "RSE43-E18",
+        "RSE43-P27",
+        "RSE43-P24",
+        "RSE43-P44",
+        "RSE43-E24",
+        "RSE43-P19",
+        "RSE43-E39",
+        "RSE43-P26",
+        "RSE43-P18",
+        "RSE43-P35",
+        "RSE43-P40",
+        "RSE43-E15",
+        "RSE43-P3",
+        "RSE43-P15",
+        "RSE43-E3",
+        "RSE43-E19",
+        "RSE43-E26",
+        "RSE43-E35",
+        "RSE43-E44",
+        "RSE43-E30",
+        "RSE43-P39",
+        "RSE43-P30",
+        "RSE43-E40",
+        "RSE43-E27"
+    ],
+    "molecule5-RSE43": [
+        "RSE43-E5",
+        "RSE43-E17",
+        "RSE43-P5",
+        "RSE43-P7",
+        "RSE43-P17",
+        "RSE43-P6",
+        "RSE43-P38",
+        "RSE43-E38",
+        "RSE43-E31",
+        "RSE43-E42",
+        "RSE43-P16",
+        "RSE43-P41",
+        "RSE43-E41",
+        "RSE43-E45",
+        "RSE43-E6",
+        "RSE43-P45",
+        "RSE43-P42",
+        "RSE43-E7",
+        "RSE43-E16",
+        "RSE43-P31"
+    ],
+    "molecule6-RSE43": [
+        "RSE43-P28",
+        "RSE43-E28"
+    ],
+    "molecule7-RSE43": [
+        "RSE43-E2",
+        "RSE43-P2"
+    ],
     "molecule_ALK8": [
         "ALK8-li5_ch",
         "ALK8-na2",
@@ -417540,6 +420908,39 @@
             ]
         }
     },
+    "molecule0-ALK8": [
+        "ALK8-li+",
+        "ALK8-na+"
+    ],
+    "molecule1-ALK8": [
+        "ALK8-li_h"
+    ],
+    "molecule2-ALK8": [
+        "ALK8-na2",
+        "ALK8-li2",
+        "ALK8-li_na_h2",
+        "ALK8-na2_h2",
+        "ALK8-li_me"
+    ],
+    "molecule3-ALK8": [
+        "ALK8-li2_ch4"
+    ],
+    "molecule4-ALK8": [
+        "ALK8-li_ch2n",
+        "ALK8-li3_me"
+    ],
+    "molecule5-ALK8": [
+        "ALK8-li4_c"
+    ],
+    "molecule6-ALK8": [
+        "ALK8-li5_ch"
+    ],
+    "molecule8-ALK8": [
+        "ALK8-li8",
+        "ALK8-li4_me4",
+        "ALK8-li2_ch2n_2",
+        "ALK8-na8"
+    ],
     "molecule_GW100": [
         "GW100-7782-65-2",
         "GW100-74-86-2",
@@ -421156,6 +424557,124 @@
             ]
         }
     },
+    "molecule0-GW100": [
+        "GW100-7440-01-9",
+        "GW100-7440-37-1",
+        "GW100-7439-90-9",
+        "GW100-7440-59-7"
+    ],
+    "molecule1-GW100": [
+        "GW100-7782-65-2",
+        "GW100-7664-39-3",
+        "GW100-7803-51-2",
+        "GW100-7580-67-8",
+        "GW100-1333-74-0",
+        "GW100-13283-31-3",
+        "GW100-7732-18-5",
+        "GW100-7664-41-7",
+        "GW100-7784-42-1",
+        "GW100-7783-06-4",
+        "GW100-74-82-8",
+        "GW100-7647-01-0",
+        "GW100-7803-62-5"
+    ],
+    "molecule2-GW100": [
+        "GW100-74-86-2",
+        "GW100-12190-70-4",
+        "GW100-302-01-2",
+        "GW100-17108-85-9",
+        "GW100-7782-50-5",
+        "GW100-7789-24-4",
+        "GW100-19287-45-7",
+        "GW100-7722-84-1",
+        "GW100-10043-11-5",
+        "GW100-1304-56-9",
+        "GW100-7726-95-6",
+        "GW100-74-85-1",
+        "GW100-12185-09-0",
+        "GW100-74-90-8",
+        "GW100-25681-79-2",
+        "GW100-1309-48-4",
+        "GW100-23878-46-8",
+        "GW100-50-00-0",
+        "GW100-17739-47-8",
+        "GW100-7782-41-4",
+        "GW100-74-84-0",
+        "GW100-67-56-1",
+        "GW100-13768-60-0",
+        "GW100-7647-14-5",
+        "GW100-7727-37-9",
+        "GW100-630-08-0",
+        "GW100-14452-59-6",
+        "GW100-1590-87-0"
+    ],
+    "molecule3-GW100": [
+        "GW100-124-38-9",
+        "GW100-75-07-0",
+        "GW100-75-19-4",
+        "GW100-463-58-1",
+        "GW100-75-02-5",
+        "GW100-593-60-2",
+        "GW100-7782-79-8",
+        "GW100-64-17-5",
+        "GW100-75-15-0",
+        "GW100-1603-84-5",
+        "GW100-7786-30-3",
+        "GW100-64-18-6",
+        "GW100-7783-40-6",
+        "GW100-74-98-6",
+        "GW100-75-01-4",
+        "GW100-593-60-2v2",
+        "GW100-10028-15-6",
+        "GW100-7446-09-5",
+        "GW100-544-92-3"
+    ],
+    "molecule4-GW100": [
+        "GW100-7784-18-1",
+        "GW100-57-13-6",
+        "GW100-39297-86-4",
+        "GW100-106-97-8",
+        "GW100-12184-80-4"
+    ],
+    "molecule5-GW100": [
+        "GW100-56-23-5",
+        "GW100-542-92-7",
+        "GW100-7783-63-3",
+        "GW100-7783-60-0",
+        "GW100-14868-53-2",
+        "GW100-75-73-0",
+        "GW100-60-29-7",
+        "GW100-558-13-4"
+    ],
+    "molecule6-GW100": [
+        "GW100-71-43-2",
+        "GW100-39297-88-6",
+        "GW100-110-86-1"
+    ],
+    "molecule7-GW100": [
+        "GW100-108-88-3",
+        "GW100-108-95-2",
+        "GW100-62-53-3",
+        "GW100-108-95-2v2"
+    ],
+    "molecule8-GW100": [
+        "GW100-629-20-9",
+        "GW100-100-41-4",
+        "GW100-66-22-8",
+        "GW100-71-30-7"
+    ],
+    "molecule9-GW100": [
+        "GW100-65-71-4"
+    ],
+    "molecule10-GW100": [
+        "GW100-73-24-5"
+    ],
+    "molecule11-GW100": [
+        "GW100-73-40-5"
+    ],
+    "molecule12-GW100": [
+        "GW100-392-56-3"
+    ],
     "molecule_S30L": [
         "S30L-30AB",
         "S30L-3A",
@@ -469112,6 +472631,184 @@
             ]
         }
     },
+    "molecule4-S30L": [
+        "S30L-29B",
+        "S30L-28B"
+    ],
+    "molecule5-S30L": [
+        "S30L-27B"
+    ],
+    "molecule6-S30L": [
+        "S30L-19B",
+        "S30L-13B",
+        "S30L-14B"
+    ],
+    "molecule8-S30L": [
+        "S30L-18B",
+        "S30L-17B"
+    ],
+    "molecule9-S30L": [
+        "S30L-30B",
+        "S30L-15B",
+        "S30L-20B"
+    ],
+    "molecule10-S30L": [
+        "S30L-2B"
+    ],
+    "molecule11-S30L": [
+        "S30L-21B"
+    ],
+    "molecule12-S30L": [
+        "S30L-16B"
+    ],
+    "molecule13-S30L": [
+        "S30L-4B"
+    ],
+    "molecule16-S30L": [
+        "S30L-1B",
+        "S30L-6B"
+    ],
+    "molecule18-S30L": [
+        "S30L-25B",
+        "S30L-26B"
+    ],
+    "molecule22-S30L": [
+        "S30L-24B",
+        "S30L-23B"
+    ],
+    "molecule23-S30L": [
+        "S30L-3B",
+        "S30L-5B"
+    ],
+    "molecule28-S30L": [
+        "S30L-22A"
+    ],
+    "molecule34-S30L": [
+        "S30L-23A"
+    ],
+    "molecule35-S30L": [
+        "S30L-22B"
+    ],
+    "molecule40-S30L": [
+        "S30L-7B"
+    ],
+    "molecule42-S30L": [
+        "S30L-2A",
+        "S30L-1A"
+    ],
+    "molecule46-S30L": [
+        "S30L-6A",
+        "S30L-5A"
+    ],
+    "molecule48-S30L": [
+        "S30L-8B"
+    ],
+    "molecule52-S30L": [
+        "S30L-2AB"
+    ],
+    "molecule56-S30L": [
+        "S30L-3A",
+        "S30L-30A",
+        "S30L-23AB",
+        "S30L-4A",
+        "S30L-29A"
+    ],
+    "molecule58-S30L": [
+        "S30L-1AB"
+    ],
+    "molecule60-S30L": [
+        "S30L-10A",
+        "S30L-12A",
+        "S30L-11A",
+        "S30L-9A",
+        "S30L-9B",
+        "S30L-29AB",
+        "S30L-11B"
+    ],
+    "molecule62-S30L": [
+        "S30L-6AB"
+    ],
+    "molecule63-S30L": [
+        "S30L-22AB"
+    ],
+    "molecule64-S30L": [
+        "S30L-7A",
+        "S30L-25A",
+        "S30L-26A"
+    ],
+    "molecule65-S30L": [
+        "S30L-30AB"
+    ],
+    "molecule68-S30L": [
+        "S30L-18A",
+        "S30L-17A"
+    ],
+    "molecule69-S30L": [
+        "S30L-5AB",
+        "S30L-4AB"
+    ],
+    "molecule70-S30L": [
+        "S30L-12B",
+        "S30L-10B"
+    ],
+    "molecule72-S30L": [
+        "S30L-8A",
+        "S30L-28A",
+        "S30L-27A"
+    ],
+    "molecule76-S30L": [
+        "S30L-28AB",
+        "S30L-18AB",
+        "S30L-17AB"
+    ],
+    "molecule77-S30L": [
+        "S30L-19A",
+        "S30L-20A",
+        "S30L-27AB"
+    ],
+    "molecule79-S30L": [
+        "S30L-3AB"
+    ],
+    "molecule82-S30L": [
+        "S30L-26AB",
+        "S30L-25AB"
+    ],
+    "molecule83-S30L": [
+        "S30L-19AB"
+    ],
+    "molecule84-S30L": [
+        "S30L-24A",
+        "S30L-21A"
+    ],
+    "molecule86-S30L": [
+        "S30L-20AB"
+    ],
+    "molecule95-S30L": [
+        "S30L-21AB"
+    ],
+    "molecule104-S30L": [
+        "S30L-7AB"
+    ],
+    "molecule106-S30L": [
+        "S30L-24AB"
+    ],
+    "molecule110-S30L": [
+        "S30L-14A",
+        "S30L-13A"
+    ],
+    "molecule116-S30L": [
+        "S30L-13AB",
+        "S30L-14AB"
+    ],
+    "molecule120-S30L": [
+        "S30L-8AB",
+        "S30L-9AB",
+        "S30L-11AB"
+    ],
+    "molecule130-S30L": [
+        "S30L-10AB",
+        "S30L-12AB"
+    ],
     "molecule_S66": [
         "S66-26B",
         "S66-53A",
@@ -486270,6 +489967,234 @@
             ]
         }
     },
+    "molecule1-S66": [
+        "S66-01B",
+        "S66-02A",
+        "S66-04A",
+        "S66-03A",
+        "S66-16B",
+        "S66-08B",
+        "S66-54B",
+        "S66-01A",
+        "S66-12B",
+        "S66-18A",
+        "S66-59B"
+    ],
+    "molecule2-S66": [
+        "S66-05A",
+        "S66-60A",
+        "S66-51B",
+        "S66-44A",
+        "S66-59A",
+        "S66-07A",
+        "S66-56B",
+        "S66-11A",
+        "S66-09B",
+        "S66-45A",
+        "S66-50B",
+        "S66-19A",
+        "S66-06B",
+        "S66-14B",
+        "S66-55B",
+        "S66-32B",
+        "S66-08A",
+        "S66-65B",
+        "S66-02B",
+        "S66-51A",
+        "S66-30B",
+        "S66-03B",
+        "S66-01",
+        "S66-10A",
+        "S66-64B",
+        "S66-10B",
+        "S66-09A",
+        "S66-12A",
+        "S66-33B",
+        "S66-31B",
+        "S66-66A",
+        "S66-05B",
+        "S66-13B",
+        "S66-06A"
+    ],
+    "molecule3-S66": [
+        "S66-08",
+        "S66-02",
+        "S66-59",
+        "S66-12",
+        "S66-03"
+    ],
+    "molecule4-S66": [
+        "S66-20A",
+        "S66-53B",
+        "S66-62B",
+        "S66-21B",
+        "S66-20B",
+        "S66-10",
+        "S66-09",
+        "S66-51",
+        "S66-06",
+        "S66-21A",
+        "S66-63B",
+        "S66-52B",
+        "S66-61B",
+        "S66-23A",
+        "S66-05",
+        "S66-22A",
+        "S66-60B"
+    ],
+    "molecule5-S66": [
+        "S66-64A",
+        "S66-35B",
+        "S66-37A",
+        "S66-07B",
+        "S66-45B",
+        "S66-04B",
+        "S66-57B",
+        "S66-37B",
+        "S66-14A",
+        "S66-39B",
+        "S66-41B",
+        "S66-46B",
+        "S66-11B",
+        "S66-36B",
+        "S66-34A",
+        "S66-61A",
+        "S66-15A",
+        "S66-44B",
+        "S66-62A",
+        "S66-40B",
+        "S66-38B",
+        "S66-38A",
+        "S66-42B",
+        "S66-13A",
+        "S66-35A",
+        "S66-43B",
+        "S66-15B",
+        "S66-36A",
+        "S66-46A",
+        "S66-16A",
+        "S66-34B"
+    ],
+    "molecule6-S66": [
+        "S66-53A",
+        "S66-52A",
+        "S66-65A",
+        "S66-27A",
+        "S66-48B",
+        "S66-33A",
+        "S66-55A",
+        "S66-47B",
+        "S66-30A",
+        "S66-58A",
+        "S66-29A",
+        "S66-24A",
+        "S66-25B",
+        "S66-60",
+        "S66-49A",
+        "S66-63A",
+        "S66-25A",
+        "S66-16",
+        "S66-49B",
+        "S66-48A",
+        "S66-28A",
+        "S66-47A",
+        "S66-54A",
+        "S66-58B",
+        "S66-18B",
+        "S66-56A",
+        "S66-40A",
+        "S66-39A",
+        "S66-66B",
+        "S66-50A",
+        "S66-04",
+        "S66-24B",
+        "S66-27B",
+        "S66-57A",
+        "S66-19B"
+    ],
+    "molecule7-S66": [
+        "S66-11",
+        "S66-07",
+        "S66-18",
+        "S66-14",
+        "S66-13",
+        "S66-54",
+        "S66-64",
+        "S66-45",
+        "S66-44"
+    ],
+    "molecule8-S66": [
+        "S66-26B",
+        "S66-22B",
+        "S66-17B",
+        "S66-30",
+        "S66-21",
+        "S66-31A",
+        "S66-55",
+        "S66-43A",
+        "S66-29B",
+        "S66-33",
+        "S66-41A",
+        "S66-26A",
+        "S66-28B",
+        "S66-20",
+        "S66-19",
+        "S66-23B",
+        "S66-56",
+        "S66-66",
+        "S66-50",
+        "S66-32A",
+        "S66-17A",
+        "S66-65",
+        "S66-42A"
+    ],
+    "molecule9-S66": [
+        "S66-62",
+        "S66-61"
+    ],
+    "molecule10-S66": [
+        "S66-36",
+        "S66-32",
+        "S66-53",
+        "S66-38",
+        "S66-31",
+        "S66-52",
+        "S66-63",
+        "S66-15",
+        "S66-35",
+        "S66-46",
+        "S66-34",
+        "S66-37"
+    ],
+    "molecule11-S66": [
+        "S66-39",
+        "S66-57",
+        "S66-40"
+    ],
+    "molecule12-S66": [
+        "S66-58",
+        "S66-47",
+        "S66-23",
+        "S66-27",
+        "S66-24",
+        "S66-25",
+        "S66-22",
+        "S66-49",
+        "S66-48"
+    ],
+    "molecule13-S66": [
+        "S66-41",
+        "S66-42",
+        "S66-43"
+    ],
+    "molecule14-S66": [
+        "S66-29",
+        "S66-28"
+    ],
+    "molecule16-S66": [
+        "S66-17",
+        "S66-26"
+    ],
     "molecule_WCPT18": [
         "WCPT18-ts7h2o",
         "WCPT18-reac9",
@@ -487816,6 +491741,40 @@
             ]
         }
     },
+    "molecule1-WCPT18": [
+        "WCPT18-h2o"
+    ],
+    "molecule3-WCPT18": [
+        "WCPT18-reac9",
+        "WCPT18-ts9",
+        "WCPT18-reac8",
+        "WCPT18-ts7",
+        "WCPT18-ts1",
+        "WCPT18-reac6",
+        "WCPT18-reac2",
+        "WCPT18-reac7",
+        "WCPT18-reac5",
+        "WCPT18-reac1",
+        "WCPT18-ts2",
+        "WCPT18-ts8",
+        "WCPT18-reac3",
+        "WCPT18-ts5",
+        "WCPT18-reac4",
+        "WCPT18-ts3",
+        "WCPT18-ts4",
+        "WCPT18-ts6"
+    ],
+    "molecule4-WCPT18": [
+        "WCPT18-ts7h2o",
+        "WCPT18-ts6h2o",
+        "WCPT18-ts3h2o",
+        "WCPT18-ts5h2o",
+        "WCPT18-ts2h2o",
+        "WCPT18-ts8h2o",
+        "WCPT18-ts4h2o",
+        "WCPT18-ts9h2o",
+        "WCPT18-ts1h2o"
+    ],
     "molecule_PA26": [
         "PA26-h2s",
         "PA26-sih4",
@@ -491260,6 +495219,82 @@
             ]
         }
     },
+    "molecule1-PA26": [
+        "PA26-h2s",
+        "PA26-sih4",
+        "PA26-ph3",
+        "PA26-hclp",
+        "PA26-h2",
+        "PA26-hcl",
+        "PA26-h2sp",
+        "PA26-ph3p",
+        "PA26-h2o",
+        "PA26-nh3p",
+        "PA26-nh3",
+        "PA26-sih4p",
+        "PA26-h2op",
+        "PA26-h2p"
+    ],
+    "molecule2-PA26": [
+        "PA26-c2h2p",
+        "PA26-si2h6",
+        "PA26-p2p",
+        "PA26-si2h6p",
+        "PA26-ch2sp",
+        "PA26-c2h2",
+        "PA26-ch2s",
+        "PA26-p2"
+    ],
+    "molecule3-PA26": [
+        "PA26-ethanolp",
+        "PA26-ethanol"
+    ],
+    "molecule4-PA26": [
+        "PA26-ch3cooh",
+        "PA26-p4p",
+        "PA26-ch3coohp",
+        "PA26-p4"
+    ],
+    "molecule5-PA26": [
+        "PA26-phosphapyrrol",
+        "PA26-phosphapyrrolp",
+        "PA26-glyp",
+        "PA26-gly"
+    ],
+    "molecule6-PA26": [
+        "PA26-p6p",
+        "PA26-p6"
+    ],
+    "molecule7-PA26": [
+        "PA26-cysp",
+        "PA26-phenolp",
+        "PA26-phenol",
+        "PA26-cys"
+    ],
+    "molecule8-PA26": [
+        "PA26-c2f6p",
+        "PA26-p8",
+        "PA26-C",
+        "PA26-c2f6",
+        "PA26-Cp",
+        "PA26-p8p"
+    ],
+    "molecule9-PA26": [
+        "PA26-T",
+        "PA26-Tp"
+    ],
+    "molecule10-PA26": [
+        "PA26-A",
+        "PA26-Ap"
+    ],
+    "molecule11-PA26": [
+        "PA26-Gp",
+        "PA26-G"
+    ],
+    "molecule13-PA26": [
+        "PA26-assp",
+        "PA26-ass"
+    ],
     "molecule_DIPCS10": [
         "DIPCS10-h2s",
         "DIPCS10-n2h2_2+",
@@ -491940,6 +495975,34 @@
             ]
         }
     },
+    "molecule0-DIPCS10": [
+        "DIPCS10-be_2+",
+        "DIPCS10-mg_2+",
+        "DIPCS10-be",
+        "DIPCS10-mg"
+    ],
+    "molecule1-DIPCS10": [
+        "DIPCS10-h2s",
+        "DIPCS10-ph3",
+        "DIPCS10-ph3_2+",
+        "DIPCS10-nh3_2+",
+        "DIPCS10-nh3",
+        "DIPCS10-h2s_2+"
+    ],
+    "molecule2-DIPCS10": [
+        "DIPCS10-n2h2_2+",
+        "DIPCS10-c2h4",
+        "DIPCS10-ch2o",
+        "DIPCS10-c2h6_2+",
+        "DIPCS10-n2h2",
+        "DIPCS10-c2h6",
+        "DIPCS10-ch2o_2+",
+        "DIPCS10-c2h4_2+"
+    ],
+    "molecule4-DIPCS10": [
+        "DIPCS10-c4h4_2+",
+        "DIPCS10-c4h4"
+    ],
     "molecule_IDISP": [
         "IDISP-octane1",
         "IDISP-ant",
@@ -494865,6 +498928,33 @@
             ]
         }
     },
+    "molecule1-IDISP": [
+        "IDISP-h2"
+    ],
+    "molecule8-IDISP": [
+        "IDISP-octane1",
+        "IDISP-octane2",
+        "IDISP-pxylene"
+    ],
+    "molecule11-IDISP": [
+        "IDISP-undecan2",
+        "IDISP-undecan1"
+    ],
+    "molecule14-IDISP": [
+        "IDISP-ant",
+        "IDISP-F14f",
+        "IDISP-F14l"
+    ],
+    "molecule16-IDISP": [
+        "IDISP-pc22"
+    ],
+    "molecule22-IDISP": [
+        "IDISP-F22f",
+        "IDISP-F22l"
+    ],
+    "molecule28-IDISP": [
+        "IDISP-antdimer"
+    ],
     "molecule_ACC24": [
         "ACC24-azulene",
         "ACC24-phenazine",
@@ -497289,6 +501379,50 @@
             ]
         }
     },
+    "molecule6-ACC24": [
+        "ACC24-fumaronitrile"
+    ],
+    "molecule7-ACC24": [
+        "ACC24-maleic_anhydride"
+    ],
+    "molecule8-ACC24": [
+        "ACC24-benzoquinone",
+        "ACC24-benzonitrile"
+    ],
+    "molecule9-ACC24": [
+        "ACC24-nitrobenzene"
+    ],
+    "molecule10-ACC24": [
+        "ACC24-azulene",
+        "ACC24-mdcnb",
+        "ACC24-tcne"
+    ],
+    "molecule11-ACC24": [
+        "ACC24-nitrobenzonitrile",
+        "ACC24-phthalimide",
+        "ACC24-phthalic_anhydride"
+    ],
+    "molecule12-ACC24": [
+        "ACC24-tetrafluorobenzoquinone",
+        "ACC24-tetrachlorobenzoquinone",
+        "ACC24-naphthalenedione"
+    ],
+    "molecule14-ACC24": [
+        "ACC24-phenazine",
+        "ACC24-tetrafluorobenzenedicarbonitrile",
+        "ACC24-dinitrobenzonitrile",
+        "ACC24-bodipy",
+        "ACC24-acridine",
+        "ACC24-anthracene",
+        "ACC24-dichlone"
+    ],
+    "molecule15-ACC24": [
+        "ACC24-ndca",
+        "ACC24-tetrachloro-isobenzofuranedione"
+    ],
+    "molecule16-ACC24": [
+        "ACC24-tcnq"
+    ],
     "molecule_MRADC": [
         "MRADC-hf",
         "MRADC-f2",
@@ -497679,6 +501813,26 @@
             ]
         }
     },
+    "molecule1-MRADC": [
+        "MRADC-hf",
+        "MRADC-h2o",
+        "MRADC-hf-stretch",
+        "MRADC-h2o-stretch"
+    ],
+    "molecule2-MRADC": [
+        "MRADC-f2",
+        "MRADC-co",
+        "MRADC-n2",
+        "MRADC-cs",
+        "MRADC-h2co",
+        "MRADC-c2h4",
+        "MRADC-f2-stretch",
+        "MRADC-co-stretch",
+        "MRADC-n2-stretch",
+        "MRADC-cs-stretch",
+        "MRADC-h2co-stretch",
+        "MRADC-c2h4-stretch"
+    ],
     "molecule_SIE4x4": [
         "SIE4x4-he2+_1.25",
         "SIE4x4-he2+_1.5",
@@ -498470,6 +502624,35 @@
             ]
         }
     },
+    "molecule0-SIE4x4": [
+        "SIE4x4-h",
+        "SIE4x4-he",
+        "SIE4x4-he+"
+    ],
+    "molecule1-SIE4x4": [
+        "SIE4x4-h2+_1.0",
+        "SIE4x4-h2+_1.25",
+        "SIE4x4-h2+_1.5",
+        "SIE4x4-h2o+",
+        "SIE4x4-h2o",
+        "SIE4x4-nh3",
+        "SIE4x4-h2+_1.75",
+        "SIE4x4-nh3+"
+    ],
+    "molecule2-SIE4x4": [
+        "SIE4x4-he2+_1.25",
+        "SIE4x4-he2+_1.5",
+        "SIE4x4-h2o2+_1.75",
+        "SIE4x4-nh32+_1.75",
+        "SIE4x4-h2o2+_1.25",
+        "SIE4x4-h2o2+_1.0",
+        "SIE4x4-nh32+_1.5",
+        "SIE4x4-nh32+_1.25",
+        "SIE4x4-nh32+_1.0",
+        "SIE4x4-h2o2+_1.5",
+        "SIE4x4-he2+_1.0",
+        "SIE4x4-he2+_1.75"
+    ],
     "molecule_Amino20x4": [
         "Amino20x4-MET_xav",
         "Amino20x4-ALA_xab",
@@ -516494,6 +520677,126 @@
             ]
         }
     },
+    "molecule9-Amino20x4": [
+        "Amino20x4-GLY_xab",
+        "Amino20x4-GLY_xad",
+        "Amino20x4-GLY_xac",
+        "Amino20x4-GLY_xag",
+        "Amino20x4-GLY_xae"
+    ],
+    "molecule10-Amino20x4": [
+        "Amino20x4-ALA_xab",
+        "Amino20x4-ALA_xac",
+        "Amino20x4-ALA_xai",
+        "Amino20x4-ALA_xag",
+        "Amino20x4-ALA_xak"
+    ],
+    "molecule11-Amino20x4": [
+        "Amino20x4-SER_xar",
+        "Amino20x4-CYS_xao",
+        "Amino20x4-CYS_xal",
+        "Amino20x4-CYS_xah",
+        "Amino20x4-CYS_xag",
+        "Amino20x4-SER_xad",
+        "Amino20x4-SER_xaf",
+        "Amino20x4-SER_xak",
+        "Amino20x4-CYS_xai",
+        "Amino20x4-SER_xah"
+    ],
+    "molecule12-Amino20x4": [
+        "Amino20x4-VAL_xak",
+        "Amino20x4-PRO_xaf",
+        "Amino20x4-PRO_xad",
+        "Amino20x4-PRO_xac",
+        "Amino20x4-THR_xab",
+        "Amino20x4-VAL_xaj",
+        "Amino20x4-PRO_xab",
+        "Amino20x4-VAL_xah",
+        "Amino20x4-PRO_xae",
+        "Amino20x4-VAL_xaf",
+        "Amino20x4-THR_xal",
+        "Amino20x4-THR_xag",
+        "Amino20x4-THR_xaq",
+        "Amino20x4-VAL_xad",
+        "Amino20x4-THR_xah"
+    ],
+    "molecule13-Amino20x4": [
+        "Amino20x4-MET_xav",
+        "Amino20x4-ASN_xah",
+        "Amino20x4-MET_xbm",
+        "Amino20x4-ASP_xbc",
+        "Amino20x4-MET_xbo",
+        "Amino20x4-MET_xbf",
+        "Amino20x4-LEU_xbb",
+        "Amino20x4-ILE_xaq",
+        "Amino20x4-ASP_xad",
+        "Amino20x4-ASN_xae",
+        "Amino20x4-ILE_xag",
+        "Amino20x4-ASN_xab",
+        "Amino20x4-ASP_xaz",
+        "Amino20x4-ILE_xaj",
+        "Amino20x4-ASN_xaj",
+        "Amino20x4-ASN_xaf",
+        "Amino20x4-MET_xag",
+        "Amino20x4-ILE_xae",
+        "Amino20x4-LEU_xad",
+        "Amino20x4-LEU_xaq",
+        "Amino20x4-ILE_xak",
+        "Amino20x4-LEU_xap",
+        "Amino20x4-LEU_xae",
+        "Amino20x4-ASP_xau",
+        "Amino20x4-ASP_xay"
+    ],
+    "molecule14-Amino20x4": [
+        "Amino20x4-GLU_xbi",
+        "Amino20x4-LYS_xan",
+        "Amino20x4-GLN_xan",
+        "Amino20x4-GLU_xar",
+        "Amino20x4-GLN_xal",
+        "Amino20x4-GLN_xai",
+        "Amino20x4-LYS_xas",
+        "Amino20x4-LYS_xat",
+        "Amino20x4-LYS_xap",
+        "Amino20x4-GLU_xal",
+        "Amino20x4-GLU_xad",
+        "Amino20x4-GLU_xav",
+        "Amino20x4-LYS_xao",
+        "Amino20x4-GLN_xap",
+        "Amino20x4-GLN_xat"
+    ],
+    "molecule15-Amino20x4": [
+        "Amino20x4-HIS_xau",
+        "Amino20x4-HIS_xaq",
+        "Amino20x4-HIS_xav",
+        "Amino20x4-HIS_xam",
+        "Amino20x4-HIS_xah"
+    ],
+    "molecule16-Amino20x4": [
+        "Amino20x4-ARG_xbx",
+        "Amino20x4-PHE_xab",
+        "Amino20x4-PHE_xar",
+        "Amino20x4-PHE_xan",
+        "Amino20x4-PHE_xal",
+        "Amino20x4-ARG_xbv",
+        "Amino20x4-ARG_xak",
+        "Amino20x4-ARG_xby",
+        "Amino20x4-PHE_xaw",
+        "Amino20x4-ARG_xci"
+    ],
+    "molecule17-Amino20x4": [
+        "Amino20x4-TYR_xag",
+        "Amino20x4-TYR_xah",
+        "Amino20x4-TYR_xar",
+        "Amino20x4-TYR_xan",
+        "Amino20x4-TYR_xab"
+    ],
+    "molecule19-Amino20x4": [
+        "Amino20x4-TRP_xao",
+        "Amino20x4-TRP_xag",
+        "Amino20x4-TRP_xah",
+        "Amino20x4-TRP_xac",
+        "Amino20x4-TRP_xaf"
+    ],
     "molecule_BHDIV10": [
         "BHDIV10-ts9",
         "BHDIV10-ed5",
@@ -518230,6 +522533,40 @@
             ]
         }
     },
+    "molecule2-BHDIV10": [
+        "BHDIV10-ed5",
+        "BHDIV10-ts5"
+    ],
+    "molecule3-BHDIV10": [
+        "BHDIV10-ed10",
+        "BHDIV10-ed4",
+        "BHDIV10-ts10",
+        "BHDIV10-ts4"
+    ],
+    "molecule4-BHDIV10": [
+        "BHDIV10-ts9",
+        "BHDIV10-ed9"
+    ],
+    "molecule5-BHDIV10": [
+        "BHDIV10-ed6",
+        "BHDIV10-ts6"
+    ],
+    "molecule6-BHDIV10": [
+        "BHDIV10-ts2",
+        "BHDIV10-ed2",
+        "BHDIV10-ts8",
+        "BHDIV10-ed8"
+    ],
+    "molecule8-BHDIV10": [
+        "BHDIV10-ts7",
+        "BHDIV10-ts1",
+        "BHDIV10-ed1",
+        "BHDIV10-ed7"
+    ],
+    "molecule10-BHDIV10": [
+        "BHDIV10-ed3",
+        "BHDIV10-ts3"
+    ],
     "molecule_FH51": [
         "FH51-C2H5O_2",
         "FH51-H2CO",
@@ -526661,6 +530998,113 @@
             ]
         }
     },
+    "molecule1-FH51": [
+        "FH51-H2",
+        "FH51-HCl",
+        "FH51-NH3",
+        "FH51-H2S",
+        "FH51-H2O"
+    ],
+    "molecule2-FH51": [
+        "FH51-H2CO",
+        "FH51-HCN",
+        "FH51-Cl2",
+        "FH51-H2O2",
+        "FH51-methanol",
+        "FH51-CO",
+        "FH51-ethene"
+    ],
+    "molecule3-FH51": [
+        "FH51-CO2"
+    ],
+    "molecule4-FH51": [
+        "FH51-C3H7SH",
+        "FH51-C3H7NH2",
+        "FH51-COCl2"
+    ],
+    "molecule5-FH51": [
+        "FH51-C2H5CO2H",
+        "FH51-trans-2-pentene",
+        "FH51-cis-2-pentene",
+        "FH51-diethylamine",
+        "FH51-dimethyloxirane",
+        "FH51-C4H9NH2",
+        "FH51-pentadiene",
+        "FH51-C2H5CONH2",
+        "FH51-2-pentyne",
+        "FH51-1-pentene",
+        "FH51-S_C2H5_2",
+        "FH51-C3H7CN",
+        "FH51-1-pentyne"
+    ],
+    "molecule6-FH51": [
+        "FH51-C2H5O_2",
+        "FH51-methylfuran",
+        "FH51-C2H5CClCHCH3",
+        "FH51-C4H9CHO",
+        "FH51-pentanol",
+        "FH51-C2H5CO2CH3",
+        "FH51-C3H7CO2H",
+        "FH51-methylpyrazole",
+        "FH51-hexyne",
+        "FH51-3-methylpentane",
+        "FH51-propyloxirane",
+        "FH51-OS_C2H5_2",
+        "FH51-dimethylbutane",
+        "FH51-3-hexene",
+        "FH51-1-hexene",
+        "FH51-C3H7CONH2",
+        "FH51-butanediol",
+        "FH51-n-hexane",
+        "FH51-neo-hexane",
+        "FH51-methylimidazole",
+        "FH51-methylpyrrole",
+        "FH51-C3H7CHCO",
+        "FH51-C2H4OH_2",
+        "FH51-C3H7NCO"
+    ],
+    "molecule7-FH51": [
+        "FH51-dimethylpyrrole",
+        "FH51-H2C-C5-CH2",
+        "FH51-methylcyclohexane",
+        "FH51-pentanediol",
+        "FH51-heptatriyne",
+        "FH51-HCON_C2H5_2",
+        "FH51-C4H9NO2",
+        "FH51-C6H12O",
+        "FH51-Heptene",
+        "FH51-C4H9NCO",
+        "FH51-C4H9ONO",
+        "FH51-methylcyclohexa-1,3-diene",
+        "FH51-ax-methylcyclohexene",
+        "FH51-methylcyclohexa-1,4-diene",
+        "FH51-toluene",
+        "FH51-C4H9CO2H",
+        "FH51-C4H9SO2H",
+        "FH51-C2H5CCNCHCH3",
+        "FH51-diethyloxirane",
+        "FH51-methylpyridine",
+        "FH51-eq-methylcyclohexene"
+    ],
+    "molecule8-FH51": [
+        "FH51-C3H7CO2C2H3",
+        "FH51-propylthiophene",
+        "FH51-C4H9SO3H",
+        "FH51-ethyl-g-butyrolactone",
+        "FH51-propylfuran",
+        "FH51-methyl-d-valerolactone",
+        "FH51-C3H7S_2",
+        "FH51-hexandione",
+        "FH51-HCO2C5H11",
+        "FH51-C4H9NHCONH2"
+    ],
+    "molecule9-FH51": [
+        "FH51-n-nonane",
+        "FH51-tetramethylpentane"
+    ],
+    "molecule10-FH51": [
+        "FH51-CO_2NHC3H7_2"
+    ],
     "molecule_BUT14DIOL": [
         "BUT14DIOL-B13",
         "BUT14DIOL-B14",
@@ -533740,6 +538184,73 @@
             ]
         }
     },
+    "molecule6-BUT14DIOL": [
+        "BUT14DIOL-B13",
+        "BUT14DIOL-B14",
+        "BUT14DIOL-B58",
+        "BUT14DIOL-B17",
+        "BUT14DIOL-B34",
+        "BUT14DIOL-B30",
+        "BUT14DIOL-B41",
+        "BUT14DIOL-B11",
+        "BUT14DIOL-B44",
+        "BUT14DIOL-B56",
+        "BUT14DIOL-B33",
+        "BUT14DIOL-B28",
+        "BUT14DIOL-B7",
+        "BUT14DIOL-B54",
+        "BUT14DIOL-B43",
+        "BUT14DIOL-B9",
+        "BUT14DIOL-B25",
+        "BUT14DIOL-B16",
+        "BUT14DIOL-B3",
+        "BUT14DIOL-B46",
+        "BUT14DIOL-B36",
+        "BUT14DIOL-B51",
+        "BUT14DIOL-B6",
+        "BUT14DIOL-B18",
+        "BUT14DIOL-B45",
+        "BUT14DIOL-B12",
+        "BUT14DIOL-B38",
+        "BUT14DIOL-B61",
+        "BUT14DIOL-B42",
+        "BUT14DIOL-B47",
+        "BUT14DIOL-B29",
+        "BUT14DIOL-B24",
+        "BUT14DIOL-B40",
+        "BUT14DIOL-B52",
+        "BUT14DIOL-B20",
+        "BUT14DIOL-B8",
+        "BUT14DIOL-B1",
+        "BUT14DIOL-B26",
+        "BUT14DIOL-B49",
+        "BUT14DIOL-B2",
+        "BUT14DIOL-B31",
+        "BUT14DIOL-B50",
+        "BUT14DIOL-B48",
+        "BUT14DIOL-B4",
+        "BUT14DIOL-B21",
+        "BUT14DIOL-B55",
+        "BUT14DIOL-B64",
+        "BUT14DIOL-B63",
+        "BUT14DIOL-B5",
+        "BUT14DIOL-B62",
+        "BUT14DIOL-B59",
+        "BUT14DIOL-B37",
+        "BUT14DIOL-B65",
+        "BUT14DIOL-B32",
+        "BUT14DIOL-B27",
+        "BUT14DIOL-B10",
+        "BUT14DIOL-B57",
+        "BUT14DIOL-B22",
+        "BUT14DIOL-B19",
+        "BUT14DIOL-B15",
+        "BUT14DIOL-B53",
+        "BUT14DIOL-B23",
+        "BUT14DIOL-B39",
+        "BUT14DIOL-B35",
+        "BUT14DIOL-B60"
+    ],
     "molecule_UPU23": [
         "UPU23-2h",
         "UPU23-7p",
@@ -542542,6 +547053,32 @@
             ]
         }
     },
+    "molecule37-UPU23": [
+        "UPU23-2h",
+        "UPU23-7p",
+        "UPU23-3b",
+        "UPU23-1g",
+        "UPU23-4b",
+        "UPU23-7a",
+        "UPU23-2p",
+        "UPU23-1f",
+        "UPU23-3a",
+        "UPU23-5z",
+        "UPU23-1b",
+        "UPU23-6p",
+        "UPU23-0a",
+        "UPU23-aa",
+        "UPU23-9a",
+        "UPU23-1p",
+        "UPU23-8d",
+        "UPU23-3d",
+        "UPU23-1e",
+        "UPU23-0b",
+        "UPU23-1c",
+        "UPU23-1a",
+        "UPU23-2a",
+        "UPU23-1m"
+    ],
     "molecule_HEAVYSB11": [
         "HEAVYSB11-asme2",
         "HEAVYSB11-pme2",
@@ -543202,6 +547739,30 @@
             ]
         }
     },
+    "molecule0-HEAVYSB11": [
+        "HEAVYSB11-cl",
+        "HEAVYSB11-br"
+    ],
+    "molecule1-HEAVYSB11": [
+        "HEAVYSB11-seh",
+        "HEAVYSB11-geh3",
+        "HEAVYSB11-sh"
+    ],
+    "molecule2-HEAVYSB11": [
+        "HEAVYSB11-h2s2",
+        "HEAVYSB11-br2",
+        "HEAVYSB11-cl2",
+        "HEAVYSB11-ge2h6",
+        "HEAVYSB11-h2se2"
+    ],
+    "molecule3-HEAVYSB11": [
+        "HEAVYSB11-asme2",
+        "HEAVYSB11-pme2"
+    ],
+    "molecule6-HEAVYSB11": [
+        "HEAVYSB11-as2me4",
+        "HEAVYSB11-p2me4"
+    ],
     "molecule_PArel": [
         "PArel-his3",
         "PArel-arg2",
@@ -546625,6 +551186,49 @@
             ]
         }
     },
+    "molecule6-PArel": [
+        "PArel-c2cl42",
+        "PArel-c2h2f41",
+        "PArel-c2h2f42",
+        "PArel-c2cl41",
+        "PArel-c2cl43"
+    ],
+    "molecule8-PArel": [
+        "PArel-s4o41",
+        "PArel-s4o42"
+    ],
+    "molecule9-PArel": [
+        "PArel-T1",
+        "PArel-T2",
+        "PArel-h4p2o71",
+        "PArel-T3",
+        "PArel-h2s2o71",
+        "PArel-T0",
+        "PArel-h2s2o72",
+        "PArel-h4p2o72"
+    ],
+    "molecule10-PArel": [
+        "PArel-A0",
+        "PArel-A1",
+        "PArel-aminocoohbz1",
+        "PArel-A2",
+        "PArel-aminocoohbz3",
+        "PArel-aminocoohbz2"
+    ],
+    "molecule11-PArel": [
+        "PArel-his3",
+        "PArel-his2",
+        "PArel-his0",
+        "PArel-his1"
+    ],
+    "molecule12-PArel": [
+        "PArel-arg2",
+        "PArel-sugar3",
+        "PArel-sugar0",
+        "PArel-arg0",
+        "PArel-sugar2",
+        "PArel-sugar4"
+    ],
     "molecule_BHROT27": [
         "BHROT27-h2s2_trans",
         "BHROT27-h2s2_cis",
@@ -549611,6 +554215,56 @@
             ]
         }
     },
+    "molecule2-BHROT27": [
+        "BHROT27-h2s2_trans",
+        "BHROT27-h2s2_cis",
+        "BHROT27-methylamine_ecl",
+        "BHROT27-n2h4_ecl1",
+        "BHROT27-h2s2",
+        "BHROT27-methylamine_st",
+        "BHROT27-nh2oh_ecl",
+        "BHROT27-h2o2_trans",
+        "BHROT27-methanol_ecl",
+        "BHROT27-ethane_st",
+        "BHROT27-n2h4_st1",
+        "BHROT27-methanol_st",
+        "BHROT27-n2h4_ecl2",
+        "BHROT27-h2o2",
+        "BHROT27-ethane_ecl",
+        "BHROT27-nh2oh_st2",
+        "BHROT27-nh2oh_st1",
+        "BHROT27-h2o2_cis"
+    ],
+    "molecule4-BHROT27": [
+        "BHROT27-butadiene_scis",
+        "BHROT27-butadiene_TS",
+        "BHROT27-acetamide_TS1",
+        "BHROT27-acetamide_RC",
+        "BHROT27-acetamide_TS2",
+        "BHROT27-butadiene_strans"
+    ],
+    "molecule6-BHROT27": [
+        "BHROT27-ethylthiourea_180",
+        "BHROT27-ethylthiourea_0",
+        "BHROT27-tmethane_60",
+        "BHROT27-tmethane_180",
+        "BHROT27-tmethane_0",
+        "BHROT27-ethylthiourea_TS1",
+        "BHROT27-ethylthiourea_TS2",
+        "BHROT27-tmethane_120"
+    ],
+    "molecule10-BHROT27": [
+        "BHROT27-bithiophene_syn",
+        "BHROT27-bithiophene_TS",
+        "BHROT27-bifuran_anti",
+        "BHROT27-bithiophene_anti",
+        "BHROT27-bifuran_syn",
+        "BHROT27-bifuran_TS"
+    ],
+    "molecule12-BHROT27": [
+        "BHROT27-biphenyl",
+        "BHROT27-biphenyl_TS"
+    ],
     "molecule_WATER27": [
         "WATER27-OHmH2O4c4",
         "WATER27-H2O8d2d",
@@ -553587,6 +558241,54 @@
             ]
         }
     },
+    "molecule1-WATER27": [
+        "WATER27-H3Op",
+        "WATER27-H2O",
+        "WATER27-OHm"
+    ],
+    "molecule2-WATER27": [
+        "WATER27-H3OpH2O",
+        "WATER27-H2O2",
+        "WATER27-OHmH2O"
+    ],
+    "molecule3-WATER27": [
+        "WATER27-OHmH2O2",
+        "WATER27-H2O3",
+        "WATER27-H3OpH2O2"
+    ],
+    "molecule4-WATER27": [
+        "WATER27-H3OpH2O3",
+        "WATER27-H2O4",
+        "WATER27-OHmH2O3"
+    ],
+    "molecule5-WATER27": [
+        "WATER27-OHmH2O4c4",
+        "WATER27-OHmH2O4cs",
+        "WATER27-H2O5"
+    ],
+    "molecule6-WATER27": [
+        "WATER27-H2O6c",
+        "WATER27-H2O6b",
+        "WATER27-H2O6c2",
+        "WATER27-H2O6",
+        "WATER27-OHmH2O5"
+    ],
+    "molecule7-WATER27": [
+        "WATER27-OHmH2O6",
+        "WATER27-H3OpH2O62d",
+        "WATER27-H3OpH2O63d"
+    ],
+    "molecule8-WATER27": [
+        "WATER27-H2O8d2d",
+        "WATER27-H2O8s4",
+        "WATER27-H3OpH2O6OHm"
+    ],
+    "molecule20-WATER27": [
+        "WATER27-H2O20es",
+        "WATER27-H2O20fs",
+        "WATER27-H2O20",
+        "WATER27-H2O20fc"
+    ],
     "molecule_G21EA": [
         "G21EA-EA_cl",
         "G21EA-EA_23",
@@ -554603,6 +559305,62 @@
             ]
         }
     },
+    "molecule0-G21EA": [
+        "G21EA-EA_cl",
+        "G21EA-EA_p",
+        "G21EA-EA_cl-",
+        "G21EA-EA_o",
+        "G21EA-EA_s-",
+        "G21EA-EA_p-",
+        "G21EA-EA_f",
+        "G21EA-EA_o-",
+        "G21EA-EA_c-",
+        "G21EA-EA_si",
+        "G21EA-EA_f-",
+        "G21EA-EA_s",
+        "G21EA-EA_c",
+        "G21EA-EA_si-"
+    ],
+    "molecule1-G21EA": [
+        "G21EA-EA_10",
+        "G21EA-EA_17",
+        "G21EA-EA_15",
+        "G21EA-EA_9",
+        "G21EA-EA_14",
+        "G21EA-EA_10n",
+        "G21EA-EA_11",
+        "G21EA-EA_8n",
+        "G21EA-EA_9n",
+        "G21EA-EA_16n",
+        "G21EA-EA_14n",
+        "G21EA-EA_19",
+        "G21EA-EA_17n",
+        "G21EA-EA_16",
+        "G21EA-EA_11n",
+        "G21EA-EA_13",
+        "G21EA-EA_19n",
+        "G21EA-EA_18n",
+        "G21EA-EA_13n",
+        "G21EA-EA_8",
+        "G21EA-EA_12n",
+        "G21EA-EA_18",
+        "G21EA-EA_15n",
+        "G21EA-EA_12"
+    ],
+    "molecule2-G21EA": [
+        "G21EA-EA_23",
+        "G21EA-EA_22n",
+        "G21EA-EA_22",
+        "G21EA-EA_21",
+        "G21EA-EA_25",
+        "G21EA-EA_20n",
+        "G21EA-EA_24",
+        "G21EA-EA_21n",
+        "G21EA-EA_24n",
+        "G21EA-EA_25n",
+        "G21EA-EA_20",
+        "G21EA-EA_23n"
+    ],
     "molecule_ADIM6": [
         "ADIM6-AM5",
         "ADIM6-AD6",
@@ -556377,6 +561135,38 @@
             ]
         }
     },
+    "molecule2-ADIM6": [
+        "ADIM6-AM2"
+    ],
+    "molecule3-ADIM6": [
+        "ADIM6-AM3"
+    ],
+    "molecule4-ADIM6": [
+        "ADIM6-AM4",
+        "ADIM6-AD2"
+    ],
+    "molecule5-ADIM6": [
+        "ADIM6-AM5"
+    ],
+    "molecule6-ADIM6": [
+        "ADIM6-AM6",
+        "ADIM6-AD3"
+    ],
+    "molecule7-ADIM6": [
+        "ADIM6-AM7"
+    ],
+    "molecule8-ADIM6": [
+        "ADIM6-AD4"
+    ],
+    "molecule10-ADIM6": [
+        "ADIM6-AD5"
+    ],
+    "molecule12-ADIM6": [
+        "ADIM6-AD6"
+    ],
+    "molecule14-ADIM6": [
+        "ADIM6-AD7"
+    ],
     "molecule_PCONF21": [
         "PCONF21-99",
         "PCONF21-SER_b",
@@ -561526,6 +566316,33 @@
             ]
         }
     },
+    "molecule19-PCONF21": [
+        "PCONF21-GLY_ab",
+        "PCONF21-GLY_pII",
+        "PCONF21-GLY_aL",
+        "PCONF21-GLY_aR",
+        "PCONF21-GLY_b"
+    ],
+    "molecule20-PCONF21": [
+        "PCONF21-99",
+        "PCONF21-444",
+        "PCONF21-224",
+        "PCONF21-357",
+        "PCONF21-366",
+        "PCONF21-215",
+        "PCONF21-470",
+        "PCONF21-300",
+        "PCONF21-691",
+        "PCONF21-412",
+        "PCONF21-114"
+    ],
+    "molecule21-PCONF21": [
+        "PCONF21-SER_b",
+        "PCONF21-SER_aR",
+        "PCONF21-SER_pII",
+        "PCONF21-SER_aL",
+        "PCONF21-SER_ab"
+    ],
     "molecule_CDIE20": [
         "CDIE20-R43",
         "CDIE20-P22",
@@ -565150,6 +569967,48 @@
             ]
         }
     },
+    "molecule5-CDIE20": [
+        "CDIE20-R20",
+        "CDIE20-R21",
+        "CDIE20-P20"
+    ],
+    "molecule6-CDIE20": [
+        "CDIE20-R43",
+        "CDIE20-P22",
+        "CDIE20-P44",
+        "CDIE20-R26",
+        "CDIE20-P26",
+        "CDIE20-P49",
+        "CDIE20-R28",
+        "CDIE20-P25",
+        "CDIE20-R22",
+        "CDIE20-R44",
+        "CDIE20-R29",
+        "CDIE20-R25",
+        "CDIE20-P43",
+        "CDIE20-R49"
+    ],
+    "molecule7-CDIE20": [
+        "CDIE20-P60",
+        "CDIE20-R48",
+        "CDIE20-R52",
+        "CDIE20-R40",
+        "CDIE20-R51",
+        "CDIE20-P40",
+        "CDIE20-R46",
+        "CDIE20-P51",
+        "CDIE20-R56",
+        "CDIE20-P47",
+        "CDIE20-R45",
+        "CDIE20-P52",
+        "CDIE20-P46",
+        "CDIE20-R57",
+        "CDIE20-P45",
+        "CDIE20-P48",
+        "CDIE20-P56",
+        "CDIE20-R47",
+        "CDIE20-R60"
+    ],
     "molecule_IL16": [
         "IL16-212B",
         "IL16-148B",
@@ -568754,6 +573613,74 @@
             ]
         }
     },
+    "molecule0-IL16": [
+        "IL16-212B",
+        "IL16-148B",
+        "IL16-202B",
+        "IL16-008B",
+        "IL16-227B",
+        "IL16-187B"
+    ],
+    "molecule3-IL16": [
+        "IL16-147A",
+        "IL16-229A",
+        "IL16-228A",
+        "IL16-230A",
+        "IL16-231A",
+        "IL16-144A",
+        "IL16-227A"
+    ],
+    "molecule4-IL16": [
+        "IL16-214A",
+        "IL16-228B",
+        "IL16-213B",
+        "IL16-150B",
+        "IL16-212A",
+        "IL16-227",
+        "IL16-213A"
+    ],
+    "molecule5-IL16": [
+        "IL16-229B",
+        "IL16-214B",
+        "IL16-212",
+        "IL16-202A",
+        "IL16-230B",
+        "IL16-152B"
+    ],
+    "molecule6-IL16": [
+        "IL16-148A",
+        "IL16-202",
+        "IL16-150A",
+        "IL16-187A",
+        "IL16-152A",
+        "IL16-144B"
+    ],
+    "molecule7-IL16": [
+        "IL16-228",
+        "IL16-147B",
+        "IL16-008A",
+        "IL16-148",
+        "IL16-187"
+    ],
+    "molecule8-IL16": [
+        "IL16-230",
+        "IL16-008",
+        "IL16-229",
+        "IL16-231B",
+        "IL16-213"
+    ],
+    "molecule9-IL16": [
+        "IL16-144",
+        "IL16-214"
+    ],
+    "molecule10-IL16": [
+        "IL16-150",
+        "IL16-147"
+    ],
+    "molecule11-IL16": [
+        "IL16-152",
+        "IL16-231"
+    ],
     "molecule_INV24": [
         "INV24-H2S_TS",
         "INV24-Sumanene",
@@ -575790,6 +580717,78 @@
             ]
         }
     },
+    "molecule1-INV24": [
+        "INV24-H2S_TS",
+        "INV24-H2S",
+        "INV24-H2O",
+        "INV24-H2O_TS"
+    ],
+    "molecule3-INV24": [
+        "INV24-SO2",
+        "INV24-Thioether",
+        "INV24-Ether_TS",
+        "INV24-Thioether_TS",
+        "INV24-SO2_TS",
+        "INV24-Ether"
+    ],
+    "molecule4-INV24": [
+        "INV24-PMe3",
+        "INV24-PCl3_TS",
+        "INV24-PMe3_TS",
+        "INV24-NCl3_TS",
+        "INV24-NCl3",
+        "INV24-PCl3",
+        "INV24-NMe3",
+        "INV24-NMe3_TS"
+    ],
+    "molecule7-INV24": [
+        "INV24-PH2Ph",
+        "INV24-PH2Ph_TS"
+    ],
+    "molecule15-INV24": [
+        "INV24-Dibenzocycloheptene_TS",
+        "INV24-Dibenzocycloheptene"
+    ],
+    "molecule18-INV24": [
+        "INV24-Tetrahelicene_TS",
+        "INV24-Tetrahelicene"
+    ],
+    "molecule19-INV24": [
+        "INV24-PPh3",
+        "INV24-PPh3_TS"
+    ],
+    "molecule20-INV24": [
+        "INV24-BN_Corannulene",
+        "INV24-Corannulene_TS",
+        "INV24-Corannulene",
+        "INV24-BN_Corannulene_TS"
+    ],
+    "molecule21-INV24": [
+        "INV24-Sumanene",
+        "INV24-BN_Sumanene_TS",
+        "INV24-BN_Sumanene",
+        "INV24-Triazasumanene",
+        "INV24-Triazasumanene_TS",
+        "INV24-Methinecyanine_TS",
+        "INV24-Dibenzocarbazole_TS",
+        "INV24-Dibenzocarbazole",
+        "INV24-Methinecyanine",
+        "INV24-Sumanene_TS"
+    ],
+    "molecule22-INV24": [
+        "INV24-Pentahelicene_TS",
+        "INV24-Pentahelicene"
+    ],
+    "molecule26-INV24": [
+        "INV24-Tetrabenzopyracylene_TS",
+        "INV24-Tetrabenzopyracylene",
+        "INV24-Hexahelicene",
+        "INV24-Hexahelicene_TS"
+    ],
+    "molecule30-INV24": [
+        "INV24-Triindenotriphenylene",
+        "INV24-Triindenotriphenylene_TS"
+    ],
     "molecule_NBPRC": [
         "NBPRC-H2",
         "NBPRC-PMe3",
@@ -577143,6 +582142,37 @@
             ]
         }
     },
+    "molecule1-NBPRC": [
+        "NBPRC-H2",
+        "NBPRC-h2",
+        "NBPRC-PH3",
+        "NBPRC-bh3",
+        "NBPRC-nh3",
+        "NBPRC-BH3"
+    ],
+    "molecule2-NBPRC": [
+        "NBPRC-nh2-bh2",
+        "NBPRC-BH3PH3",
+        "NBPRC-K_H",
+        "NBPRC-nh-bh",
+        "NBPRC-nh3-bh3"
+    ],
+    "molecule4-NBPRC": [
+        "NBPRC-PMe3",
+        "NBPRC-BCl3",
+        "NBPRC-cbut",
+        "NBPRC-BF3"
+    ],
+    "molecule6-NBPRC": [
+        "NBPRC-bz",
+        "NBPRC-ch"
+    ],
+    "molecule8-NBPRC": [
+        "NBPRC-BCl3PMe3",
+        "NBPRC-K_F",
+        "NBPRC-K_Cl",
+        "NBPRC-BF3PMe3"
+    ],
     "molecule_ISO34": [
         "ISO34-E12",
         "ISO34-E5",
@@ -582374,6 +587404,81 @@
             ]
         }
     },
+    "molecule3-ISO34": [
+        "ISO34-P24",
+        "ISO34-E24",
+        "ISO34-P25",
+        "ISO34-E15",
+        "ISO34-P14",
+        "ISO34-P16",
+        "ISO34-P3",
+        "ISO34-P15",
+        "ISO34-E25",
+        "ISO34-E3",
+        "ISO34-E14",
+        "ISO34-P2",
+        "ISO34-E1",
+        "ISO34-E16",
+        "ISO34-P1"
+    ],
+    "molecule4-ISO34": [
+        "ISO34-E5",
+        "ISO34-E17",
+        "ISO34-P27",
+        "ISO34-P7",
+        "ISO34-P17",
+        "ISO34-P26",
+        "ISO34-P6",
+        "ISO34-P4",
+        "ISO34-P28",
+        "ISO34-E4",
+        "ISO34-E26",
+        "ISO34-E7",
+        "ISO34-E28",
+        "ISO34-E27"
+    ],
+    "molecule5-ISO34": [
+        "ISO34-E18",
+        "ISO34-P9",
+        "ISO34-E9",
+        "ISO34-P18",
+        "ISO34-E10",
+        "ISO34-E29",
+        "ISO34-P10",
+        "ISO34-E8",
+        "ISO34-E30",
+        "ISO34-P8",
+        "ISO34-P30",
+        "ISO34-P29"
+    ],
+    "molecule6-ISO34": [
+        "ISO34-E31",
+        "ISO34-E19",
+        "ISO34-P20",
+        "ISO34-E20",
+        "ISO34-P31"
+    ],
+    "molecule7-ISO34": [
+        "ISO34-E12",
+        "ISO34-E21",
+        "ISO34-E23",
+        "ISO34-P32",
+        "ISO34-P23",
+        "ISO34-P12",
+        "ISO34-E32",
+        "ISO34-P21",
+        "ISO34-E22"
+    ],
+    "molecule8-ISO34": [
+        "ISO34-P13",
+        "ISO34-E34",
+        "ISO34-E11",
+        "ISO34-P11",
+        "ISO34-P33",
+        "ISO34-E13",
+        "ISO34-E33",
+        "ISO34-P34"
+    ],
     "molecule_CHB6": [
         "CHB6-26B",
         "CHB6-22B",
@@ -582990,6 +588095,30 @@
             ]
         }
     },
+    "molecule0-CHB6": [
+        "CHB6-25A",
+        "CHB6-26A",
+        "CHB6-23A",
+        "CHB6-22A"
+    ],
+    "molecule1-CHB6": [
+        "CHB6-22B",
+        "CHB6-23B",
+        "CHB6-24B"
+    ],
+    "molecule2-CHB6": [
+        "CHB6-23",
+        "CHB6-22"
+    ],
+    "molecule6-CHB6": [
+        "CHB6-26B",
+        "CHB6-25B",
+        "CHB6-27B"
+    ],
+    "molecule7-CHB6": [
+        "CHB6-25",
+        "CHB6-26"
+    ],
     "molecule_MB16_43": [
         "MB16_43-36",
         "MB16_43-29",
@@ -588534,6 +593663,80 @@
             ]
         }
     },
+    "molecule1-MB16_43": [
+        "MB16_43-CH4",
+        "MB16_43-H2",
+        "MB16_43-AlH3",
+        "MB16_43-MgH2",
+        "MB16_43-LiH",
+        "MB16_43-NaH",
+        "MB16_43-BeH2",
+        "MB16_43-BH3",
+        "MB16_43-SiH4"
+    ],
+    "molecule2-MB16_43": [
+        "MB16_43-F2",
+        "MB16_43-Cl2",
+        "MB16_43-N2",
+        "MB16_43-S2",
+        "MB16_43-P2",
+        "MB16_43-O2"
+    ],
+    "molecule7-MB16_43": [
+        "MB16_43-09",
+        "MB16_43-28"
+    ],
+    "molecule8-MB16_43": [
+        "MB16_43-36",
+        "MB16_43-39",
+        "MB16_43-18",
+        "MB16_43-14",
+        "MB16_43-06",
+        "MB16_43-22",
+        "MB16_43-26"
+    ],
+    "molecule9-MB16_43": [
+        "MB16_43-11",
+        "MB16_43-21",
+        "MB16_43-33",
+        "MB16_43-10",
+        "MB16_43-02",
+        "MB16_43-43",
+        "MB16_43-15",
+        "MB16_43-17",
+        "MB16_43-25",
+        "MB16_43-04"
+    ],
+    "molecule10-MB16_43": [
+        "MB16_43-29",
+        "MB16_43-07",
+        "MB16_43-32",
+        "MB16_43-38",
+        "MB16_43-41",
+        "MB16_43-23",
+        "MB16_43-27",
+        "MB16_43-16",
+        "MB16_43-40",
+        "MB16_43-24",
+        "MB16_43-20",
+        "MB16_43-19",
+        "MB16_43-01",
+        "MB16_43-03",
+        "MB16_43-05",
+        "MB16_43-34"
+    ],
+    "molecule11-MB16_43": [
+        "MB16_43-42",
+        "MB16_43-31",
+        "MB16_43-08",
+        "MB16_43-35",
+        "MB16_43-12",
+        "MB16_43-13"
+    ],
+    "molecule12-MB16_43": [
+        "MB16_43-30",
+        "MB16_43-37"
+    ],
     "molecule_ACONF": [
         "ACONF-B_T",
         "ACONF-H_tgg",
@@ -590758,6 +595961,30 @@
             ]
         }
     },
+    "molecule4-ACONF": [
+        "ACONF-B_T",
+        "ACONF-B_G"
+    ],
+    "molecule5-ACONF": [
+        "ACONF-P_GX",
+        "ACONF-P_TT",
+        "ACONF-P_TG",
+        "ACONF-P_GG"
+    ],
+    "molecule6-ACONF": [
+        "ACONF-H_tgg",
+        "ACONF-H_tgt",
+        "ACONF-H_ggg",
+        "ACONF-H_x+g-g-",
+        "ACONF-H_g+x-t+",
+        "ACONF-H_t+g+x-",
+        "ACONF-H_gtt",
+        "ACONF-H_ttt",
+        "ACONF-H_g+x-g-",
+        "ACONF-H_g+t+g-",
+        "ACONF-H_x+g-x+",
+        "ACONF-H_gtg"
+    ],
     "molecule_CARBHB12": [
         "CARBHB12-2O_B",
         "CARBHB12-3O_B",
@@ -592418,6 +597645,54 @@
             ]
         }
     },
+    "molecule1-CARBHB12": [
+        "CARBHB12-3O_B",
+        "CARBHB12-1CL_A",
+        "CARBHB12-3CL_B",
+        "CARBHB12-3CL_A",
+        "CARBHB12-1N_B",
+        "CARBHB12-3O_A",
+        "CARBHB12-1O_B",
+        "CARBHB12-4CL_B",
+        "CARBHB12-4O_B",
+        "CARBHB12-3N_A",
+        "CARBHB12-1CL_B",
+        "CARBHB12-2CL_A",
+        "CARBHB12-2N_A",
+        "CARBHB12-1O_A",
+        "CARBHB12-3N_B",
+        "CARBHB12-1N_A",
+        "CARBHB12-2O_A",
+        "CARBHB12-4N_B"
+    ],
+    "molecule2-CARBHB12": [
+        "CARBHB12-3CL",
+        "CARBHB12-1CL",
+        "CARBHB12-3N",
+        "CARBHB12-1O",
+        "CARBHB12-3O",
+        "CARBHB12-1N"
+    ],
+    "molecule3-CARBHB12": [
+        "CARBHB12-2O_B",
+        "CARBHB12-2CL_B",
+        "CARBHB12-2N_B"
+    ],
+    "molecule4-CARBHB12": [
+        "CARBHB12-2CL",
+        "CARBHB12-2O",
+        "CARBHB12-2N"
+    ],
+    "molecule7-CARBHB12": [
+        "CARBHB12-4N_A",
+        "CARBHB12-4O_A",
+        "CARBHB12-4CL_A"
+    ],
+    "molecule8-CARBHB12": [
+        "CARBHB12-4N",
+        "CARBHB12-4O",
+        "CARBHB12-4CL"
+    ],
     "molecule_G2RC": [
         "G2RC-118",
         "G2RC-11",
@@ -594213,6 +599488,65 @@
             ]
         }
     },
+    "molecule1-G2RC": [
+        "G2RC-11",
+        "G2RC-21",
+        "G2RC-18",
+        "G2RC-1",
+        "G2RC-14",
+        "G2RC-22",
+        "G2RC-6",
+        "G2RC-8",
+        "G2RC-13"
+    ],
+    "molecule2-G2RC": [
+        "G2RC-32",
+        "G2RC-30",
+        "G2RC-47",
+        "G2RC-39",
+        "G2RC-23",
+        "G2RC-52",
+        "G2RC-33",
+        "G2RC-24",
+        "G2RC-51",
+        "G2RC-25",
+        "G2RC-26",
+        "G2RC-45",
+        "G2RC-34"
+    ],
+    "molecule3-G2RC": [
+        "G2RC-113",
+        "G2RC-82",
+        "G2RC-68",
+        "G2RC-40",
+        "G2RC-56",
+        "G2RC-104",
+        "G2RC-97",
+        "G2RC-73",
+        "G2RC-121",
+        "G2RC-117",
+        "G2RC-100"
+    ],
+    "molecule4-G2RC": [
+        "G2RC-118",
+        "G2RC-58",
+        "G2RC-57",
+        "G2RC-60",
+        "G2RC-106",
+        "G2RC-126",
+        "G2RC-59",
+        "G2RC-128",
+        "G2RC-88"
+    ],
+    "molecule5-G2RC": [
+        "G2RC-67",
+        "G2RC-66",
+        "G2RC-62",
+        "G2RC-61"
+    ],
+    "molecule6-G2RC": [
+        "G2RC-94"
+    ],
     "molecule_SCONF": [
         "SCONF-C9",
         "SCONF-C13",
@@ -597360,6 +602694,27 @@
             ]
         }
     },
+    "molecule12-SCONF": [
+        "SCONF-C9",
+        "SCONF-C13",
+        "SCONF-G1",
+        "SCONF-C14",
+        "SCONF-C8",
+        "SCONF-C7",
+        "SCONF-C1",
+        "SCONF-G4",
+        "SCONF-C2",
+        "SCONF-C5",
+        "SCONF-C12",
+        "SCONF-C4",
+        "SCONF-C10",
+        "SCONF-G2",
+        "SCONF-C6",
+        "SCONF-C3",
+        "SCONF-C11",
+        "SCONF-G3",
+        "SCONF-C15"
+    ],
     "molecule_G21IP": [
         "G21IP-f+",
         "G21IP-mg+",
@@ -598829,6 +604184,83 @@
             ]
         }
     },
+    "molecule0-G21IP": [
+        "G21IP-f+",
+        "G21IP-mg+",
+        "G21IP-b+",
+        "G21IP-n+",
+        "G21IP-b",
+        "G21IP-li",
+        "G21IP-si",
+        "G21IP-al",
+        "G21IP-c+",
+        "G21IP-cl+",
+        "G21IP-o+",
+        "G21IP-li+",
+        "G21IP-al+",
+        "G21IP-p",
+        "G21IP-h",
+        "G21IP-be",
+        "G21IP-na",
+        "G21IP-f",
+        "G21IP-n",
+        "G21IP-s",
+        "G21IP-c",
+        "G21IP-mg",
+        "G21IP-cl",
+        "G21IP-na+",
+        "G21IP-o",
+        "G21IP-s+",
+        "G21IP-p+",
+        "G21IP-si+",
+        "G21IP-be+"
+    ],
+    "molecule1-G21IP": [
+        "G21IP-IP_65",
+        "G21IP-11",
+        "G21IP-137",
+        "G21IP-IP_62",
+        "G21IP-18",
+        "G21IP-IP_61",
+        "G21IP-IP_60",
+        "G21IP-14",
+        "G21IP-20",
+        "G21IP-19",
+        "G21IP-IP_59",
+        "G21IP-IP_70",
+        "G21IP-22",
+        "G21IP-IP_66",
+        "G21IP-8",
+        "G21IP-12",
+        "G21IP-13",
+        "G21IP-IP_64",
+        "G21IP-IP_n65",
+        "G21IP-IP_68",
+        "G21IP-IP_67",
+        "G21IP-IP_63"
+    ],
+    "molecule2-G21IP": [
+        "G21IP-30",
+        "G21IP-IP_74",
+        "G21IP-IP_78",
+        "G21IP-IP_80",
+        "G21IP-IP_76",
+        "G21IP-51",
+        "G21IP-43",
+        "G21IP-25",
+        "G21IP-IP_79",
+        "G21IP-IP_73",
+        "G21IP-IP_75",
+        "G21IP-26",
+        "G21IP-48",
+        "G21IP-IP_77",
+        "G21IP-IP_72",
+        "G21IP-45",
+        "G21IP-IP_71",
+        "G21IP-44",
+        "G21IP-34",
+        "G21IP-37"
+    ],
     "molecule0": [
         "RG18-ar",
         "RG18-kr",
