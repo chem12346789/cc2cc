@@ -164,8 +164,8 @@ class Extractor(nn.Module):
             self.actv_fn = nn.ReLU()
         elif ATTE_ACTV == "gelu":
             self.actv_fn = nn.GELU()
-        self.dense1 = nn.Linear(self.d_model, self.d_model)
 
+        self.dense1 = nn.Linear(self.d_model, self.d_model)
         self.dropout1 = nn.Dropout(self.drop_rate)
         self.layer_blocks = nn.ModuleList(
             [ABlock(**kwargs) for _ in range(self.num_layer)]
