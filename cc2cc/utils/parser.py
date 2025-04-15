@@ -370,7 +370,7 @@ def add_args(parser: argparse.ArgumentParser):
         args.train_atom = periodic_table[args.train_atom]
 
     print("Arguments:")
-    print(f"Name of molecule: {args.name_mol[:100]}")
+    print(f"Name of molecule: {args.name_mol_input}")
     print(f"Distance list: {args.distance_list}")
     print(f"Extend atom: {args.extend_atom}")
     print(f"Extend xyz: {args.extend_xyz}")
