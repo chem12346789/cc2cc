@@ -46,6 +46,7 @@ def test_uks(
     mdft.kernel(dm0=test_data.mf_dm1)
     dm1_scf = mdft.make_rdm1()
 
+    # mdft.max_cycle = -1
     # mdft.kernel(dm0=test_data.dm1_cc)
     # dm1_scf = test_data.dm1_cc.copy()
 
