@@ -45,7 +45,6 @@ def train_model(train_str_dict, eval_str_dict, args):
     modeldict = ModelClass(args)
 
     if args.model == "transformer_4_ang":
-        print("Using transformer_4_ang")
         print(
             summary(
                 modeldict.model,
@@ -60,7 +59,6 @@ def train_model(train_str_dict, eval_str_dict, args):
         database_eval = DataBase_4(eval_str_dict, args)
         database_train = DataBase_4(train_str_dict, args)
     else:
-        print("Using transformer_4_ang")
         print(
             summary(
                 modeldict.model,
@@ -105,20 +103,24 @@ def train_model(train_str_dict, eval_str_dict, args):
     time_start = time.time()
 
     for epoch in range(args.epoch + 1):
-        train_name_list, train_loss_ene, train_loss_ene_abs = modeldict.train_model(
-            database_train
-        )
+        (
+            train_name_list,
+            train_loss_ene,
+            train_loss_ene_abs,
+            train_loss_ene_tot,
+        ) = modeldict.train_model(database_train)
         if not modeldict.with_eval:
             modeldict.scheduler.step()
 
         if epoch % args.eval_step == 0:
-            eval_name_list, eval_loss_ene, eval_loss_ene_abs = modeldict.eval_model(
-                database_eval
-            )
+            (
+                eval_name_list,
+                eval_loss_ene,
+                eval_loss_ene_abs,
+                eval_loss_ene_tot,
+            ) = modeldict.eval_model(database_eval)
             if modeldict.with_eval:
-                modeldict.scheduler.step(
-                    np.mean(modeldict.tot_loss(eval_loss_ene, eval_loss_ene_abs))
-                )
+                modeldict.scheduler.step(np.mean(eval_loss_ene_tot))
 
             if epoch % (args.eval_step * 50) == 0:
                 modeldict.save_model(epoch)
@@ -160,14 +162,10 @@ def train_model(train_str_dict, eval_str_dict, args):
             "global_step": epoch,
             "train_loss_ene": np.mean(train_loss_ene),
             "train_loss_ene_abs": np.mean(train_loss_ene_abs),
-            "train_loss_tot": np.mean(
-                modeldict.tot_loss(train_loss_ene, train_loss_ene_abs)
-            ),
+            "train_loss_tot": np.mean(train_loss_ene_tot),
             "eval_loss_ene": np.mean(eval_loss_ene),
             "eval_loss_ene_abs": np.mean(eval_loss_ene_abs),
-            "eval_loss_tot": np.mean(
-                modeldict.tot_loss(eval_loss_ene, eval_loss_ene_abs)
-            ),
+            "eval_loss_tot": np.mean(eval_loss_ene_tot),
             "lr": modeldict.optimizer.param_groups[0]["lr"],
         }
         experiment.log(experiment_dict)

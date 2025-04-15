@@ -6,6 +6,7 @@ import importlib.resources
 import os
 from pathlib import Path
 
+import torch
 import torch.nn as nn
 
 from cc2cc.utils.env_var import CUBE_MIDDLE

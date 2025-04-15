@@ -206,11 +206,13 @@ class ModelClass:
 
         return loss_ene, loss_ene_abs
 
-    def tot_loss(self, loss_ene, loss_ene_abs):
+    def tot_loss(self, loss_ene, loss_ene_abs, data_weight=1):
         """
         Calculate the total loss.
         """
-        return loss_ene + self.loss_multiplier * loss_ene_abs
+        tot_loss = loss_ene / np.sqrt(data_weight)
+        tot_loss += loss_ene_abs * self.loss_multiplier * np.sqrt(data_weight)
+        return tot_loss
 
     def save_model(self, epoch):
         """
@@ -227,7 +229,7 @@ class ModelClass:
         https://pytorch.org/docs/stable/notes/amp_examples.html#gradient-accumulation
         """
         self.train()
-        name_l, loss_ene_l, loss_ene_abs_l = [], [], []
+        name_l, loss_ene_l, loss_ene_abs_l, loss_tot_l = [], [], [], []
         if database_train.if_load_to_gpu_once:
             database_train.shuffle()
 
@@ -239,8 +241,7 @@ class ModelClass:
             with torch.autocast(device_type="cuda", dtype=self.dtype):
                 loss_ene, loss_ene_abs = self.loss(batch)
                 tot_loss = (
-                    self.tot_loss(loss_ene, loss_ene_abs)
-                    * data_weight
+                    self.tot_loss(loss_ene, loss_ene_abs, data_weight)
                     / self.iters_to_accumulate
                 )
 
@@ -250,32 +251,35 @@ class ModelClass:
             number_batch_name = len(batch["weight"])
             loss_ene_name = loss_ene.item()
             loss_ene_abs_name = loss_ene_abs.item()
+            loss_tot_name = tot_loss.item()
 
             name_l.append(batch["name"])
             if isinstance(self.loss_ene, torch.nn.L1Loss):
                 loss_ene_l.append(AU2KCALMOL * loss_ene_name)
+                loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)
+                loss_tot_l.append(AU2KCALMOL * loss_tot_name)
             elif isinstance(self.loss_ene, torch.nn.MSELoss):
                 loss_ene_l.append(AU2KCALMOL * np.sqrt(loss_ene_name))
-            else:
-                raise ValueError("Unknown loss function")
-
-            if isinstance(self.loss_ene_abs, torch.nn.L1Loss):
-                loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)
-            elif isinstance(self.loss_ene_abs, torch.nn.MSELoss):
                 loss_ene_abs_l.append(
                     AU2KCALMOL * np.sqrt(loss_ene_abs_name * number_batch_name)
                 )
+                loss_tot_l.append(AU2KCALMOL * np.sqrt(loss_tot_name))
             else:
                 raise ValueError("Unknown loss function")
 
-        return name_l, np.array(loss_ene_l), np.array(loss_ene_abs_l)
+        return (
+            name_l,
+            np.array(loss_ene_l),
+            np.array(loss_ene_abs_l),
+            np.array(loss_tot_l),
+        )
 
     def eval_model(self, database_eval):
         """
         Evaluate the model.
         """
         self.eval()
-        name_l, loss_ene_l, loss_ene_abs_l = [], [], []
+        name_l, loss_ene_l, loss_ene_abs_l, loss_tot_l = [], [], [], []
         if database_eval.if_load_to_gpu_once:
             database_eval.shuffle()
 
@@ -288,22 +292,25 @@ class ModelClass:
             number_batch_name = len(batch["weight"])
             loss_ene_name = loss_ene.item()
             loss_ene_abs_name = loss_ene_abs.item()
+            loss_tot_name = self.tot_loss(loss_ene, loss_ene_abs, data_weight=1).item()
 
             name_l.append(batch["name"])
             if isinstance(self.loss_ene, torch.nn.L1Loss):
                 loss_ene_l.append(AU2KCALMOL * loss_ene_name)
+                loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)
+                loss_tot_l.append(AU2KCALMOL * loss_tot_name)
             elif isinstance(self.loss_ene, torch.nn.MSELoss):
                 loss_ene_l.append(AU2KCALMOL * np.sqrt(loss_ene_name))
-            else:
-                raise ValueError("Unknown loss function")
-
-            if isinstance(self.loss_ene_abs, torch.nn.L1Loss):
-                loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)
-            elif isinstance(self.loss_ene_abs, torch.nn.MSELoss):
                 loss_ene_abs_l.append(
                     AU2KCALMOL * np.sqrt(loss_ene_abs_name * number_batch_name)
                 )
+                loss_tot_l.append(AU2KCALMOL * np.sqrt(loss_tot_name))
             else:
                 raise ValueError("Unknown loss function")
 
-        return name_l, np.array(loss_ene_l), np.array(loss_ene_abs_l)
+        return (
+            name_l,
+            np.array(loss_ene_l),
+            np.array(loss_ene_abs_l),
+            np.array(loss_tot_l),
+        )

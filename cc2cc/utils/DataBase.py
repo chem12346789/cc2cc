@@ -62,6 +62,7 @@ class DataBase:
         self.data_weight_mol = {}
 
         self.name_list = []
+        error_molecule = []
 
         for (
             name_mol,
@@ -90,6 +91,8 @@ class DataBase:
             except ValueError as e:
                 print(f"SKIP: {name}")
                 print(e)
+                error_molecule.append(name)
+                print(f"Error molecule: {error_molecule}")
                 continue
             finally:
                 print(f"Processing: {name_mol} {extend_atom} {extend_xyz} {distance}")
@@ -102,10 +105,15 @@ class DataBase:
                 path_name_ = DATA_PATH / f"data_{name}.npz"
                 if not (path_name_).exists():
                     print(f"No file: {name:>40}", flush=True)
+                    error_molecule.append(name)
+                    print(f"Error molecule: {error_molecule}")
                     continue
 
                 num_data_used = self.load_data(mol, name)
-                if num_data_used != 0:
+                if num_data_used == 0:
+                    error_molecule.append(name)
+                    print(f"Error molecule: {error_molecule}")
+                else:
                     self.name_list.append(name)
                 print(f"Load: {name:>40}", flush=True)
 
@@ -121,7 +129,7 @@ class DataBase:
         for name in self.name_list:
             name_mol = name.split(f"_{self.basis}_")[0]
             if self.data_weight_mol[name_mol] == 1:
-                self.data.extend([d for d in self.data if d["name"] == name] * 9)
+                self.data.extend([d for d in self.data if d["name"] == name] * 4)
             self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
         self.name_list.extend(names_to_append)
         del self.data_weight_mol
@@ -140,8 +148,8 @@ class DataBase:
         weight_mat = data["weights"]
         output_mat = data["exc_cc_grids"]
 
-        print(f"Total energy real: {AU2KCALMOL * data['error_energy']}")
-        print(f"Total energy: {AU2KCALMOL * np.sum(output_mat * weight_mat)}")
+        # print(f"Total energy real: {AU2KCALMOL * data['error_energy']}")
+        # print(f"Total energy: {AU2KCALMOL * np.sum(output_mat * weight_mat)}")
         if (
             AU2KCALMOL * abs(data["error_energy"] - np.sum(output_mat * weight_mat))
             > 0.1 * mol.natm
@@ -165,7 +173,7 @@ class DataBase:
                     )
                     continue
 
-            print(f"Load: {name:>40} {mol.atom_pure_symbol(i_atom):>3}", flush=True)
+            # print(f"Load: {name:>40} {mol.atom_pure_symbol(i_atom):>3}", flush=True)
             num_data_used += 1
             for i_coord in range(data_length * i_atom, data_length * (i_atom + 1)):
                 input_.append(input_mat[i_coord, :, :, :, :])
