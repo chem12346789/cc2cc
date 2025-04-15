@@ -18,8 +18,7 @@ if __name__ == "__main__":
     )
     args = add_args(parser)
 
-    if args.device == "cuda":
-        print_gpu_info()
+    print_gpu_info(args.device)
 
     # 1. Init the model
     modeldict = ModelClass(args)

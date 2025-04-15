@@ -9,7 +9,7 @@ import os
 import torch
 
 
-def print_gpu_info():
+def print_gpu_info(device):
     """
     Print information about the GPU and CUDA environment.
 
@@ -26,12 +26,13 @@ def print_gpu_info():
     # print the information of the process
     print(f"PID: {os.getpid()}")
 
-    # print the gpu information
-    print(f"Is Available: {torch.cuda.is_available()}")
-    print(f"GPU: {torch.cuda.get_device_name()}")
-    print(f"GPU number: {os.environ.get('CUDA_VISIBLE_DEVICES')}")
-    print(f"Current Device: {torch.cuda.current_device()}")
-    print(f"Number of Devices: {torch.cuda.device_count()}")
+    if device == "cuda":
+        # print the gpu information
+        print(f"Is Available: {torch.cuda.is_available()}")
+        print(f"GPU: {torch.cuda.get_device_name()}")
+        print(f"GPU number: {os.environ.get('CUDA_VISIBLE_DEVICES')}")
+        print(f"Current Device: {torch.cuda.current_device()}")
+        print(f"Number of Devices: {torch.cuda.device_count()}")
 
 
 # set the environment variable
