@@ -26,10 +26,17 @@ if __name__ == "__main__":
     modeldict.eval()
 
     # 2. Test loop
-    data_record = DataRecord(
-        MAIN_PATH / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}.csv",
-        if_continue=args.if_continue,
-    )
+    if len(args.name_mol_input) == 1:
+        data_record = DataRecord(
+            MAIN_PATH
+            / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}_{args.name_mol_input[0]}.csv",
+            if_continue=args.if_continue,
+        )
+    else:
+        data_record = DataRecord(
+            MAIN_PATH / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}.csv",
+            if_continue=args.if_continue,
+        )
     error_molecule = []
 
     for (

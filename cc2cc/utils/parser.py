@@ -359,9 +359,10 @@ def add_args(parser: argparse.ArgumentParser):
         args.extend_xyz[i] += 1
 
     args.distance_list = gen_logger(args.distance_list)
+    args.name_mol_input = args.name_mol.copy()
     args.name_mol = gen_name_args(args.name_mol, args)
 
-    if args.train_atom not in periodic_table.keys():
+    if args.train_atom not in periodic_table:
         raise ValueError(
             f"Invalid train_atom value: {args.train_atom}. Please use a valid atomic number."
         )
