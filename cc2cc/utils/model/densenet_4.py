@@ -8,9 +8,7 @@ from pathlib import Path
 
 from torch import nn
 
-from cc2cc.utils.env_var import CUBE_MIDDLE
-
-D_MODEL = 108
+D_MODEL = 4
 MLP = 108
 DENSE_DEPTH = 5
 IF_SKIP_CONNECTION = 1
@@ -79,12 +77,9 @@ class Model(nn.Module):
         """
         # Extract the central values for each channel
         b3lyp_ene = (
-            0.72 * x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.81 * x[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.08 * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.19 * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            0.72 * x[:, [0]] + 0.81 * x[:, [1]] + 0.08 * x[:, [2]] + 0.19 * x[:, [3]]
         )
-        # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        # b3lyp_ene = x[:, [0]]
 
         # Reshape the input for the linear layers
         x = x.reshape(-1, self.d_model)

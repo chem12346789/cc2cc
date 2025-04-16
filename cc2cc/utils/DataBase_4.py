@@ -121,7 +121,7 @@ class DataBase:
         for name in self.name_list:
             name_mol = name.split(f"_{self.basis}_")[0]
             if self.data_weight_mol[name_mol] == 1:
-                self.data.extend([d for d in self.data if d["name"] == name] * 9)
+                self.data.extend([d for d in self.data if d["name"] == name] * 4)
             self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
         self.name_list.extend(names_to_append)
         del self.data_weight_mol

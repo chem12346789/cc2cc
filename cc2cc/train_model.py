@@ -44,7 +44,7 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     modeldict = ModelClass(args)
 
-    if args.model == "transformer_4_ang":
+    if args.model in ["transformer_4_ang", "densenet_4"]:
         print(
             summary(
                 modeldict.model,
