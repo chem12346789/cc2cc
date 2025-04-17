@@ -127,8 +127,8 @@ def gen_name_args(name_args, args):
                 else:
                     name_mol_new.add(name_args[i])
         name_mol_new = list(name_mol_new)
-    print(f"Name of molecule: {name_mol_new[:100]}")
     name_mol_new = sorted(name_mol_new, key=lambda x: len(dataset_dict[x]))
+    print(f"Name of molecule: {name_mol_new}")
     return name_mol_new
 
 
@@ -143,7 +143,7 @@ def add_args(parser: argparse.ArgumentParser):
         "-m",
         nargs="+",
         type=str,
-        default=None,
+        default=[],
         help="Name of molecule. Default is None (all the dataset).",
     )
 
@@ -370,7 +370,7 @@ def add_args(parser: argparse.ArgumentParser):
         args.train_atom = periodic_table[args.train_atom]
 
     print("Arguments:")
-    print(f"Name of molecule: {args.name_mol[:100]}")
+    print(f"Name of molecule: {args.name_mol_input}")
     print(f"Distance list: {args.distance_list}")
     print(f"Extend atom: {args.extend_atom}")
     print(f"Extend xyz: {args.extend_xyz}")
