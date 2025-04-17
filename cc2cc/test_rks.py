@@ -40,22 +40,26 @@ def test_rks(
 
     get_veff_modified_rks(mdft, modeldict)
 
-    mdft.max_cycle = 50
-    mdft.conv_tol = 1e-5
-    mdft.diis_space = 10
-    mdft.kernel(dm0=test_data.mf_dm1)
-    dm1_scf = mdft.make_rdm1()
+    # mdft.max_cycle = 50
+    # mdft.conv_tol = 1e-5
+    # mdft.kernel(dm0=test_data.mf_dm1)
+    # dm1_scf = mdft.make_rdm1()
+    # e_scf = mdft.e_tot
 
     # mdft.max_cycle = -1
     # mdft.kernel(dm0=test_data.dm1_cc)
     # dm1_scf = test_data.dm1_cc.copy()
+    # e_scf = mdft.e_tot
 
-    scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
+    dm1_scf = test_data.dm1_cc.copy()
+    e_scf = test_data.e_cc
 
     time_ai = timer() - time_ai_start
 
     error_dft_ene = AU2KCALMOL * (test_data.e_cc - test_data.e_dft)
-    error_scf_ene = AU2KCALMOL * (test_data.e_cc - mdft.e_tot)
+    error_scf_ene = AU2KCALMOL * (test_data.e_cc - e_scf)
+
+    scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
     error_dft_dip = np.linalg.norm(test_data.cc_dipole - test_data.dft_dipole)
     error_scf_dip = np.linalg.norm(test_data.cc_dipole - scf_dipole)
 

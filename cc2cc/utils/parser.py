@@ -127,8 +127,8 @@ def gen_name_args(name_args, args):
                 else:
                     name_mol_new.add(name_args[i])
         name_mol_new = list(name_mol_new)
-    print(f"Name of molecule: {name_mol_new[:100]}")
     name_mol_new = sorted(name_mol_new, key=lambda x: len(dataset_dict[x]))
+    print(f"Name of molecule: {name_mol_new}")
     return name_mol_new
 
 
@@ -359,7 +359,7 @@ def add_args(parser: argparse.ArgumentParser):
         args.extend_xyz[i] += 1
 
     args.distance_list = gen_logger(args.distance_list)
-    args.name_mol_input = args.name_mol.copy()    
+    args.name_mol_input = args.name_mol.copy()
     args.name_mol = gen_name_args(args.name_mol, args)
 
     if args.train_atom not in periodic_table:
