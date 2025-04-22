@@ -132,7 +132,7 @@ class ABlock(nn.Module):
         x_attn = self.layernorm1(x_inp)
         x_attn = self.atten(x_attn)
         x_attn = self.dropout0(x_attn)
-        x_attn += x_inp
+        x_attn = x_attn + x_inp
         # results.shape = (batch, seq_len, d_model)
 
         x_mlp = self.layernorm2(x_attn)
@@ -141,7 +141,7 @@ class ABlock(nn.Module):
         x_mlp = self.dropout1(x_mlp)
         x_mlp = self.dense2(x_mlp)
         x_mlp = self.dropout2(x_mlp)
-        x_mlp += x_attn
+        x_mlp = x_mlp + x_attn
         # results.shape = (batch, seq_len, d_model)
         return x_mlp
 
@@ -282,6 +282,7 @@ class Model(nn.Module):
             + 0.08 * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
             + 0.19 * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         )
+        # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 
         # x.shape = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
