@@ -125,13 +125,12 @@ class DataBase:
                         num_data_used,
                     )
 
-        names_to_append = []
         for name in self.name_list:
             name_mol = name.split(f"_{self.basis}_")[0]
             if self.data_weight_mol[name_mol] == 1:
-                self.data.extend([d for d in self.data if d["name"] == name] * 4)
-            self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
-        self.name_list.extend(names_to_append)
+                self.data_weight[name] = 5 / self.data_weight_mol[name_mol]
+            else:
+                self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
         del self.data_weight_mol
         print(self.data_weight)
 
@@ -223,7 +222,7 @@ class DataBase:
             self.data_gpu,
             shuffle=True,
             batch_size=1,
-            num_workers=4,
+            num_workers=1,
             pin_memory=True,
         )
 
