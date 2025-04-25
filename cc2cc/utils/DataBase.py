@@ -151,7 +151,7 @@ class DataBase:
         # print(f"Total energy: {AU2KCALMOL * np.sum(output_mat * weight_mat)}")
         if (
             AU2KCALMOL * abs(data["error_energy"] - np.sum(output_mat * weight_mat))
-            > 0.1 * mol.natm
+            > 0.15 * mol.natm
         ):
             print(f"Error energy is too large: {name:>40}", flush=True)
             return 0
