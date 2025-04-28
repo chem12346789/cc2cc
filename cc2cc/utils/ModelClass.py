@@ -39,6 +39,9 @@ class ModelClass:
         elif args.model == "transformer":
             Model = ModelTransformer
             print("Model: Transformer")
+        elif args.model == "transformer_7":
+            Model = ModelTransformer_7
+            print("Model: Transformer_7")
         elif args.model == "densenet_c":
             Model = ModelDensenet_c
             print("Model: Densenet_c")
