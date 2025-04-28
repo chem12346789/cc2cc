@@ -125,13 +125,12 @@ class DataBase:
                         num_data_used,
                     )
 
-        names_to_append = []
         for name in self.name_list:
             name_mol = name.split(f"_{self.basis}_")[0]
             if self.data_weight_mol[name_mol] == 1:
-                self.data.extend([d for d in self.data if d["name"] == name] * 4)
-            self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
-        self.name_list.extend(names_to_append)
+                self.data_weight[name] = 5 / self.data_weight_mol[name_mol]
+            else:
+                self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
         del self.data_weight_mol
         print(self.data_weight)
 
@@ -152,7 +151,7 @@ class DataBase:
         # print(f"Total energy: {AU2KCALMOL * np.sum(output_mat * weight_mat)}")
         if (
             AU2KCALMOL * abs(data["error_energy"] - np.sum(output_mat * weight_mat))
-            > 0.1 * mol.natm
+            > 0.15 * mol.natm
         ):
             print(f"Error energy is too large: {name:>40}", flush=True)
             return 0
@@ -223,7 +222,7 @@ class DataBase:
             self.data_gpu,
             shuffle=True,
             batch_size=1,
-            num_workers=4,
+            num_workers=1,
             pin_memory=True,
         )
 

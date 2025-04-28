@@ -48,7 +48,7 @@ def train_model(train_str_dict, eval_str_dict, args):
         print(
             summary(
                 modeldict.model,
-                input_size=(302 * 75 * 5, 4),
+                input_size=(302 * 75 * 30, 4),
                 depth=10,
                 dtypes=(
                     [torch.float32] if args.precision == "float32" else [torch.float64]
@@ -62,7 +62,7 @@ def train_model(train_str_dict, eval_str_dict, args):
         print(
             summary(
                 modeldict.model,
-                input_size=(302 * 75 * 5, 4, 3, 3, 3),
+                input_size=(302 * 75 * 30, 4, 3, 3, 3),
                 depth=10,
                 dtypes=(
                     [torch.float32] if args.precision == "float32" else [torch.float64]
