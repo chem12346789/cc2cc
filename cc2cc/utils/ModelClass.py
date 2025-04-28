@@ -15,8 +15,10 @@ from cc2cc.utils.env_var import CHECKPOINTS_PATH
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.model.densenet import Model as ModelDensenet
 from cc2cc.utils.model.transformer import Model as ModelTransformer
-from cc2cc.utils.model.transformer_4_ang import Model as ModelTransformer_4_Ang
-from cc2cc.utils.model.densenet_4 import Model as ModelDensenet_4
+from cc2cc.utils.model.transformer_c_ang import Model as ModelTransformer_c_Ang
+from cc2cc.utils.model.densenet_c import Model as ModelDensenet_c
+from cc2cc.utils.model.transformer_7 import Model as ModelTransformer_7
+
 
 class ModelClass:
     """
@@ -37,12 +39,12 @@ class ModelClass:
         elif args.model == "transformer":
             Model = ModelTransformer
             print("Model: Transformer")
-        elif args.model == "densenet_4":
-            Model = ModelDensenet_4
-            print("Model: Densenet_4")
-        elif args.model == "transformer_4_ang":
-            Model = ModelTransformer_4_Ang
-            print("Model: Transformer_4_Ang")
+        elif args.model == "densenet_c":
+            Model = ModelDensenet_c
+            print("Model: Densenet_c")
+        elif args.model == "transformer_c_ang":
+            Model = ModelTransformer_c_Ang
+            print("Model: Transformer_c_Ang")
         else:
             raise ValueError("Unknown model")
 

@@ -10,7 +10,7 @@ from torchinfo import summary
 import wandb
 
 from cc2cc.utils import DataRecord
-from cc2cc.utils import DataBase, ModelClass, DataBase_4
+from cc2cc.utils import DataBase, ModelClass, DataBase_c, DataBase_7
 
 seed = 42
 random.seed(seed)
@@ -44,7 +44,7 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     modeldict = ModelClass(args)
 
-    if args.model in ["transformer_4_ang", "densenet_4"]:
+    if args.model in ["transformer_c_ang", "densenet_c"]:
         print(
             summary(
                 modeldict.model,
@@ -56,8 +56,22 @@ def train_model(train_str_dict, eval_str_dict, args):
                 mode="train",
             )
         )
-        database_eval = DataBase_4(eval_str_dict, args)
-        database_train = DataBase_4(train_str_dict, args)
+        database_eval = DataBase_c(eval_str_dict, args)
+        database_train = DataBase_c(train_str_dict, args)
+    elif args.model in ["transformer_7"]:
+        print(
+            summary(
+                modeldict.model,
+                input_size=(302 * 75 * 30, 4, 7),
+                depth=10,
+                dtypes=(
+                    [torch.float32] if args.precision == "float32" else [torch.float64]
+                ),
+                mode="train",
+            )
+        )
+        database_eval = DataBase_7(eval_str_dict, args)
+        database_train = DataBase_7(train_str_dict, args)
     else:
         print(
             summary(
