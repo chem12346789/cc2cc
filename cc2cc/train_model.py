@@ -10,6 +10,7 @@ from torchinfo import summary
 import wandb
 
 from cc2cc.utils import DataRecord
+from cc2cc.utils import CUBE_SIZE
 from cc2cc.utils import DataBase, ModelClass, DataBase_c, DataBase_7
 
 seed = 42
@@ -76,7 +77,7 @@ def train_model(train_str_dict, eval_str_dict, args):
         print(
             summary(
                 modeldict.model,
-                input_size=(302 * 75 * 30, 4, 3, 3, 3),
+                input_size=(302 * 75 * 30, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE),
                 depth=10,
                 dtypes=(
                     [torch.float32] if args.precision == "float32" else [torch.float64]

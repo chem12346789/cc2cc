@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from cc2cc.utils.env_var import DATA_PATH
+from cc2cc.utils.env_var import DATA_PATH, CUBE_SIZE
 from cc2cc.utils.mol import gen_mole, AU2KCALMOL
 
 
@@ -128,9 +128,8 @@ class DataBase:
         for name in self.name_list:
             name_mol = name.split(f"_{self.basis}_")[0]
             if self.data_weight_mol[name_mol] == 1:
-                self.data_weight[name] = 5 / self.data_weight_mol[name_mol]
-            else:
-                self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
+                self.data.extend([d for d in self.data if d["name"] == name] * 9)
+            self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
         del self.data_weight_mol
         print(self.data_weight)
 
@@ -174,11 +173,14 @@ class DataBase:
 
             # print(f"Load: {name:>40} {mol.atom_pure_symbol(i_atom):>3}", flush=True)
             num_data_used += 1
-            for i_coord in range(data_length * i_atom, data_length * (i_atom + 1)):
-                input_.append(input_mat[i_coord, :, :, :, :])
-                weight_.append(weight_mat[[i_coord]])
-                output_.append(output_mat[[i_coord]])
-                total_ene_used += np.sum(output_mat[i_coord] * weight_mat[i_coord])
+            slice_ = slice(data_length * i_atom, data_length * (i_atom + 1))
+            input_.append(input_mat[slice_, :, :, :, :])
+            weight_.append(weight_mat[slice_])
+            output_.append(output_mat[slice_])
+            total_ene_used += np.sum(output_mat[slice_] * weight_mat[slice_])
+        input_ = np.array(input_).reshape((-1, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        weight_ = np.array(weight_).reshape((-1, 1))
+        output_ = np.array(output_).reshape((-1, 1))
 
         if num_data_used == 0:
             return 0
