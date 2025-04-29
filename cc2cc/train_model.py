@@ -90,8 +90,8 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     experiment_dict = {
         "batch_size": args.batch_size,
-        "n_train": len(database_train.data_gpu),
-        "n_eval": len(database_eval.data_gpu),
+        "n_train": len(database_train.name_list),
+        "n_eval": len(database_eval.name_list),
         "precision": args.precision,
         "basis": args.basis,
         "with_eval": args.with_eval,

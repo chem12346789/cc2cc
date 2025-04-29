@@ -125,11 +125,13 @@ class DataBase:
                         num_data_used,
                     )
 
+        name_extend = []
         for name in self.name_list:
             name_mol = name.split(f"_{self.basis}_")[0]
             if self.data_weight_mol[name_mol] == 1:
-                self.data.extend([d for d in self.data if d["name"] == name] * 9)
+                name_extend.extend([name] * 9)
             self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
+        self.name_list.extend(name_extend)
         del self.data_weight_mol
         print(self.data_weight)
 
@@ -222,22 +224,22 @@ class DataBase:
         """
         dataloader = DataLoader(
             self.data_gpu,
-            shuffle=True,
+            shuffle=False,
             batch_size=1,
             num_workers=1,
             pin_memory=True,
         )
 
-        if self.if_load_to_gpu_once:
-            dataloader_gpu = []
-            for batch in dataloader:
-                dataloader_gpu.append(self.process_batch(batch))
-        else:
-            dataloader_gpu = dataloader
+        dataloader_gpu = {}
+        for batch in dataloader:
+            if self.if_load_to_gpu_once:
+                dataloader_gpu[batch["name"][0]] = self.process_batch(batch)
+            else:
+                dataloader_gpu[batch["name"][0]] = batch
         return dataloader_gpu
 
     def shuffle(self):
         """
         Shuffle the data.
         """
-        random.shuffle(self.data_gpu)
+        random.shuffle(self.name_list)
