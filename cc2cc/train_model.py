@@ -10,7 +10,8 @@ from torchinfo import summary
 import wandb
 
 from cc2cc.utils import DataRecord
-from cc2cc.utils import DataBase, ModelClass, DataBase_4
+from cc2cc.utils import CUBE_SIZE
+from cc2cc.utils import DataBase, ModelClass, DataBase_c, DataBase_7
 
 seed = 42
 random.seed(seed)
@@ -37,14 +38,14 @@ def train_model(train_str_dict, eval_str_dict, args):
         project="DFT2CC",
         resume="allow",
         name="dft2cc",
-        dir="~/raid/tmp",
+        dir="/home/chenzihao/raid/tmp",
         allow_val_change=True,
     )
     wandb.define_metric("*", step_metric="global_step")
 
     modeldict = ModelClass(args)
 
-    if args.model in ["transformer_4_ang", "densenet_4"]:
+    if args.model in ["transformer_c_ang", "densenet_c"]:
         print(
             summary(
                 modeldict.model,
@@ -56,13 +57,27 @@ def train_model(train_str_dict, eval_str_dict, args):
                 mode="train",
             )
         )
-        database_eval = DataBase_4(eval_str_dict, args)
-        database_train = DataBase_4(train_str_dict, args)
+        database_eval = DataBase_c(eval_str_dict, args)
+        database_train = DataBase_c(train_str_dict, args)
+    elif args.model in ["transformer_7"]:
+        print(
+            summary(
+                modeldict.model,
+                input_size=(302 * 75 * 30, 4, 7),
+                depth=10,
+                dtypes=(
+                    [torch.float32] if args.precision == "float32" else [torch.float64]
+                ),
+                mode="train",
+            )
+        )
+        database_eval = DataBase_7(eval_str_dict, args)
+        database_train = DataBase_7(train_str_dict, args)
     else:
         print(
             summary(
                 modeldict.model,
-                input_size=(302 * 75 * 30, 4, 3, 3, 3),
+                input_size=(302 * 75 * 30, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE),
                 depth=10,
                 dtypes=(
                     [torch.float32] if args.precision == "float32" else [torch.float64]
@@ -75,8 +90,8 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     experiment_dict = {
         "batch_size": args.batch_size,
-        "n_train": len(database_train.data_gpu),
-        "n_eval": len(database_eval.data_gpu),
+        "n_train": len(database_train.name_list),
+        "n_eval": len(database_eval.name_list),
         "precision": args.precision,
         "basis": args.basis,
         "with_eval": args.with_eval,

@@ -15,8 +15,10 @@ from cc2cc.utils.env_var import CHECKPOINTS_PATH
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.model.densenet import Model as ModelDensenet
 from cc2cc.utils.model.transformer import Model as ModelTransformer
-from cc2cc.utils.model.transformer_4_ang import Model as ModelTransformer_4_Ang
-from cc2cc.utils.model.densenet_4 import Model as ModelDensenet_4
+from cc2cc.utils.model.transformer_c_ang import Model as ModelTransformer_c_Ang
+from cc2cc.utils.model.densenet_c import Model as ModelDensenet_c
+from cc2cc.utils.model.transformer_7 import Model as ModelTransformer_7
+
 
 class ModelClass:
     """
@@ -37,12 +39,15 @@ class ModelClass:
         elif args.model == "transformer":
             Model = ModelTransformer
             print("Model: Transformer")
-        elif args.model == "densenet_4":
-            Model = ModelDensenet_4
-            print("Model: Densenet_4")
-        elif args.model == "transformer_4_ang":
-            Model = ModelTransformer_4_Ang
-            print("Model: Transformer_4_Ang")
+        elif args.model == "transformer_7":
+            Model = ModelTransformer_7
+            print("Model: Transformer_7")
+        elif args.model == "densenet_c":
+            Model = ModelDensenet_c
+            print("Model: Densenet_c")
+        elif args.model == "transformer_c_ang":
+            Model = ModelTransformer_c_Ang
+            print("Model: Transformer_c_Ang")
         else:
             raise ValueError("Unknown model")
 
@@ -213,8 +218,8 @@ class ModelClass:
         """
         Calculate the total loss.
         """
-        tot_loss = loss_ene / np.sqrt(data_weight)
-        tot_loss += loss_ene_abs * self.loss_multiplier * np.sqrt(data_weight)
+        tot_loss = loss_ene * np.sqrt(data_weight)
+        tot_loss += loss_ene_abs * self.loss_multiplier * data_weight
         return tot_loss
 
     def save_model(self, epoch):
@@ -236,10 +241,11 @@ class ModelClass:
         if database_train.if_load_to_gpu_once:
             database_train.shuffle()
 
-        for batch in database_train.data_gpu:
+        for name in database_train.name_list:
+            batch = database_train.data_gpu[name]
             if not database_train.if_load_to_gpu_once:
                 batch = database_train.process_batch(batch)
-            data_weight = database_train.data_weight[batch["name"]]
+            data_weight = database_train.data_weight[name]
 
             with torch.autocast(device_type="cuda", dtype=self.dtype):
                 loss_ene, loss_ene_abs = self.loss(batch)
@@ -256,7 +262,7 @@ class ModelClass:
             loss_ene_abs_name = loss_ene_abs.item()
             loss_tot_name = tot_loss.item()
 
-            name_l.append(batch["name"])
+            name_l.append(name)
             if isinstance(self.loss_ene, torch.nn.L1Loss):
                 loss_ene_l.append(AU2KCALMOL * loss_ene_name)
                 loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)
@@ -286,7 +292,8 @@ class ModelClass:
         if database_eval.if_load_to_gpu_once:
             database_eval.shuffle()
 
-        for batch in database_eval.data_gpu:
+        for name in database_eval.name_list:
+            batch = database_eval.data_gpu[name]
             if not database_eval.if_load_to_gpu_once:
                 batch = database_eval.process_batch(batch)
 
@@ -297,7 +304,7 @@ class ModelClass:
             loss_ene_abs_name = loss_ene_abs.item()
             loss_tot_name = self.tot_loss(loss_ene, loss_ene_abs, data_weight=1).item()
 
-            name_l.append(batch["name"])
+            name_l.append(name)
             if isinstance(self.loss_ene, torch.nn.L1Loss):
                 loss_ene_l.append(AU2KCALMOL * loss_ene_name)
                 loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)

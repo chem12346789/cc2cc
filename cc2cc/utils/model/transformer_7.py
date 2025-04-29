@@ -9,12 +9,10 @@ from pathlib import Path
 import torch
 from torch import nn
 
-from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
-
 ANG = 302
 RAD = 75
 
-D_MODEL = CUBE_SIZE**3
+D_MODEL = 7
 SEQ_LEN = 4
 DEPTH_TRANSFORMER = 3
 QKV_BIAS = False
@@ -22,10 +20,9 @@ DROP_RATE_TRANSFORMER = 0
 NUM_HEADS = 1
 
 MLP_DENSE = 108
-DEPTH_DENSE = 7
+DEPTH_DENSE = 5
 IF_SKIP_CONNECTION_DENSE = 1
 DROP_RATE_DENSE = 0
-
 
 # ATTE_ACTV = "relu"
 # ATTE_NORMAL = "layer"
@@ -278,22 +275,21 @@ class Model(nn.Module):
         """
         # Extract the central values for each channel
         b3lyp_ene = (
-            0.72 * x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.81 * x[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.08 * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.19 * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            0.72 * x[:, [0], 0]
+            + 0.81 * x[:, [1], 0]
+            + 0.08 * x[:, [2], 0]
+            + 0.19 * x[:, [3], 0]
         )
-        # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        # b3lyp_ene = x[:, [0], 0, 0, 0]
+        # SHAPE x = (batch, 4, 7)
 
-        # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-        x = x.reshape(-1, 4, CUBE_SIZE**3)
         # SHAPE x = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
         x = self.predictor(x)
         # SHAPE shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
 
-        # SHAPE x = (batch, 4, CUBE_SIZE**3)
-        x = x.reshape(-1, 4 * CUBE_SIZE**3)
-        # SHAPE x = (batch, 4 * CUBE_SIZE**3)
+        # SHAPE x = (batch, SEQ_LEN, D_MODEL)
+        x = x.reshape(-1, SEQ_LEN * D_MODEL)
+        # SHAPE x = (batch, 4 * 7)
         x = self.densenet(x)
         # SHAPE x = (batch, 1)
         x = x * b3lyp_ene
