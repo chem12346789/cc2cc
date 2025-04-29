@@ -238,16 +238,16 @@ class DataBase:
             pin_memory=True,
         )
 
-        if self.if_load_to_gpu_once:
-            dataloader_gpu = []
-            for batch in dataloader:
-                dataloader_gpu.append(self.process_batch(batch))
-        else:
-            dataloader_gpu = dataloader
+        dataloader_gpu = {}
+        for batch in dataloader:
+            if self.if_load_to_gpu_once:
+                dataloader_gpu[batch["name"][0]] = self.process_batch(batch)
+            else:
+                dataloader_gpu[batch["name"][0]] = batch
         return dataloader_gpu
 
     def shuffle(self):
         """
         Shuffle the data.
         """
-        random.shuffle(self.data_gpu)
+        random.shuffle(self.name_list)

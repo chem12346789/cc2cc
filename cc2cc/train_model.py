@@ -38,7 +38,7 @@ def train_model(train_str_dict, eval_str_dict, args):
         project="DFT2CC",
         resume="allow",
         name="dft2cc",
-        dir="~/raid/tmp",
+        dir="/home/chenzihao/raid/tmp",
         allow_val_change=True,
     )
     wandb.define_metric("*", step_metric="global_step")
