@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from cc2cc.utils.env_var import DATA_PATH, CUBE_SIZE
+from cc2cc.utils.env_var import DATA_PATH, CUBE_MIDDLE
 from cc2cc.utils.mol import gen_mole, AU2KCALMOL
 
 
@@ -125,13 +125,12 @@ class DataBase:
                         num_data_used,
                     )
 
-        name_extend = []
         for name in self.name_list:
             name_mol = name.split(f"_{self.basis}_")[0]
             if self.data_weight_mol[name_mol] == 1:
-                name_extend.extend([name] * 9)
-            self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
-        self.name_list.extend(name_extend)
+                self.data_weight[name] = 5 / self.data_weight_mol[name_mol]
+            else:
+                self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
         del self.data_weight_mol
         print(self.data_weight)
 
@@ -152,7 +151,7 @@ class DataBase:
         # print(f"Total energy: {AU2KCALMOL * np.sum(output_mat * weight_mat)}")
         if (
             AU2KCALMOL * abs(data["error_energy"] - np.sum(output_mat * weight_mat))
-            > 0.15 * mol.natm
+            > 0.1 * mol.natm
         ):
             print(f"Error energy is too large: {name:>40}", flush=True)
             return 0
@@ -176,11 +175,20 @@ class DataBase:
             # print(f"Load: {name:>40} {mol.atom_pure_symbol(i_atom):>3}", flush=True)
             num_data_used += 1
             slice_ = slice(data_length * i_atom, data_length * (i_atom + 1))
-            input_.append(input_mat[slice_, :, :, :, :])
+            input_list = [
+                input_mat[slice_, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE],
+                input_mat[slice_, :, CUBE_MIDDLE, CUBE_MIDDLE, 0],
+                input_mat[slice_, :, CUBE_MIDDLE, CUBE_MIDDLE, -1],
+                input_mat[slice_, :, CUBE_MIDDLE, 0, CUBE_MIDDLE],
+                input_mat[slice_, :, CUBE_MIDDLE, -1, CUBE_MIDDLE],
+                input_mat[slice_, :, 0, CUBE_MIDDLE, CUBE_MIDDLE],
+                input_mat[slice_, :, -1, CUBE_MIDDLE, CUBE_MIDDLE],
+            ]
+            input_.append(np.transpose(np.array(input_list), (1, 2, 0)))
             weight_.append(weight_mat[slice_])
             output_.append(output_mat[slice_])
             total_ene_used += np.sum(output_mat[slice_] * weight_mat[slice_])
-        input_ = np.array(input_).reshape((-1, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        input_ = np.array(input_).reshape((-1, 4, 7))
         weight_ = np.array(weight_).reshape((-1, 1))
         output_ = np.array(output_).reshape((-1, 1))
 
@@ -191,9 +199,9 @@ class DataBase:
         print(f"Total data used for {name}: {num_data_used}", flush=True)
         self.data.append(
             {
-                "input": np.array(input_),
-                "weight": np.array(weight_),
-                "output": np.array(output_),
+                "input": input_,
+                "weight": weight_,
+                "output": output_,
                 "name": name,
             }
         )
@@ -224,7 +232,7 @@ class DataBase:
         """
         dataloader = DataLoader(
             self.data_gpu,
-            shuffle=False,
+            shuffle=True,
             batch_size=1,
             num_workers=1,
             pin_memory=True,

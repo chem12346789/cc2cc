@@ -1,5 +1,0 @@
-[default]
-entity = diels911alder
-project = DFT2CC
-base_url = https://api.wandb.ai
-
