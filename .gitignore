@@ -22,6 +22,7 @@ out
 *.npz
 *.png
 *.pdf
+*/tmp_mol/*
 
 /.vscode
 
