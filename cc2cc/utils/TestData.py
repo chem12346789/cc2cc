@@ -238,7 +238,7 @@ class TestData:
         end
         %MDCI Density Unrelaxed
         end
-        %pal nprocs 56 end
+        %pal nprocs {os.environ.get("OMP_NUM_THREADS")} end
         %maxcore 120000
         %coords
         CTyp   xyz     # the type of coordinates = xyz or internal
