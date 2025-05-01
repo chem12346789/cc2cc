@@ -223,6 +223,13 @@ def add_args(parser: argparse.ArgumentParser):
         help="Whether to calculate the gradient. Default is False.",
     )
 
+    parser.add_argument(
+        "--use_orca",
+        type=str2bool,
+        default=False,
+        help="Whether to use the ORCA package. Default is False.",
+    )
+
     # for machine learning
     parser.add_argument(
         "--model",

@@ -1,5 +1,5 @@
 from timeit import default_timer as timer
-
+import os
 import numpy as np
 
 import pyscf
@@ -26,6 +26,7 @@ class TestData:
         xc_code="b3lyp",
         if_grad=False,
         cc_triple=False,
+        use_orca=False,
     ):
         self.name = name
         self.mol = mol
@@ -63,6 +64,12 @@ class TestData:
             print(f"Data for {name} loaded.")
             print(f"CCSD energy: {self.e_cc}")
             print(f"DFT energy: {self.e_dft}")
+        elif use_orca:
+            self.test_mol_orca(if_grad=if_grad, cc_triple=cc_triple)
+            raise ValueError(
+                "The ORCA test is not compeleted yet. "
+                "The data will be saved in the tmp_mol folder."
+            )
         else:
             self.mf_dm1 = None
             self.dm1_cc = None
@@ -204,3 +211,47 @@ class TestData:
             g = mdft.nuc_grad_method()
             self.grad_dft = g.kernel()
         self.time_dft = timer() - time_start
+
+    def test_mol_orca(self, if_grad=False, cc_triple=False):
+        """
+        Generate 1-RDM, energy, dipole, and gradient for the molecule.
+        """
+        print(f"Generate data for {self.name}")
+
+        molecular_xyz = ""
+        for atom_info in self.mol._atom:
+            molecular_xyz += (
+                f"{atom_info[0]:<6}\t{atom_info[1][0]:<16.10}\t{atom_info[1][1]:<16.10}\t{atom_info[1][2]:<16.10}"
+                + "\n"
+            )
+
+        with open(f"tmp_mol/{self.name}.inp", "w", encoding="utf-8") as f:
+            f.write(
+                f"""! CCSD
+        %basis
+        # read an externally specified orbital basis
+        GTOName      = "cc-pvdz.1.orca"
+        end
+        %method
+        FrozenCore FC_NONE      #No frozencore approximation
+        WriteJSONPropertyfile True
+        end
+        %MDCI Density Unrelaxed
+        end
+        %pal nprocs 56 end
+        %maxcore 120000
+        %coords
+        CTyp   xyz     # the type of coordinates = xyz or internal
+        Charge {self.mol.charge}       # the total charge of the molecule
+        Mult   {self.mol.spin+1}        # the multiplicity = 2S+1
+        Units  bohrs    # the unit of length = angs or bohrs
+
+        # the subblock coords is for the actual coordinates
+        # for CTyp=xyz
+        coords
+        {molecular_xyz}end
+        end
+        """
+            )
+
+        os.system(f"~/orca/orca tmp_mol/{self.name}.inp > tmp_mol/{self.name}.out")

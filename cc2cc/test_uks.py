@@ -23,6 +23,7 @@ def test_uks(
     density_restriction = getattr(args, "density_restriction", 0)
     if_grad = getattr(args, "if_grad", False)
     cc_triple = getattr(args, "cc_triple", False)
+    use_orca = getattr(args, "use_orca", False)
 
     # 2.0 Prepare
     test_data = TestData(
@@ -31,6 +32,7 @@ def test_uks(
         xc_code="b3lyp",
         if_grad=if_grad,
         cc_triple=cc_triple,
+        use_orca=use_orca,
     )
 
     time_ai_start = timer()
