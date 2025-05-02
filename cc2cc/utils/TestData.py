@@ -18,7 +18,6 @@ from cc2cc.utils.env_var import DATA_TEST_PATH
 
 
 class TestData:
-
     def __init__(
         self,
         mol,
@@ -233,13 +232,12 @@ class TestData:
         GTOName      = "cc-pvdz.1.orca"
         end
         %method
-        FrozenCore FC_NONE      #No frozencore approximation
         WriteJSONPropertyfile True
         end
         %MDCI Density Unrelaxed
         end
         %pal nprocs {os.environ.get("OMP_NUM_THREADS")} end
-        %maxcore 120000
+        %maxcore {os.environ.get("PYSCF_MAX_MEMORY")}
         %coords
         CTyp   xyz     # the type of coordinates = xyz or internal
         Charge {self.mol.charge}       # the total charge of the molecule
