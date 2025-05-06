@@ -18,7 +18,6 @@ from cc2cc.utils.env_var import DATA_TEST_PATH
 
 
 class TestData:
-
     def __init__(
         self,
         mol,
@@ -32,7 +31,13 @@ class TestData:
         self.mol = mol
         self.xc_code = xc_code
 
-        if (DATA_TEST_PATH / f"{name}_cc.npz").exists():
+        if use_orca:
+            self.test_mol_orca(if_grad=if_grad, cc_triple=cc_triple)
+            raise ValueError(
+                "The ORCA test is not compeleted yet. "
+                "The data will be saved in the tmp_mol folder."
+            )
+        elif (DATA_TEST_PATH / f"{name}_cc.npz").exists():
             data_frame = np.load(DATA_TEST_PATH / f"{name}_cc.npz", allow_pickle=True)
             mol_corr = data_frame["mol_corr"]
 
@@ -64,12 +69,6 @@ class TestData:
             print(f"Data for {name} loaded.")
             print(f"CCSD energy: {self.e_cc}")
             print(f"DFT energy: {self.e_dft}")
-        elif use_orca:
-            self.test_mol_orca(if_grad=if_grad, cc_triple=cc_triple)
-            raise ValueError(
-                "The ORCA test is not compeleted yet. "
-                "The data will be saved in the tmp_mol folder."
-            )
         else:
             self.mf_dm1 = None
             self.dm1_cc = None
@@ -227,19 +226,21 @@ class TestData:
 
         with open(f"tmp_mol/{self.name}.inp", "w", encoding="utf-8") as f:
             f.write(
-                f"""! CCSD
+                f"""! DLPNO-CCSD
         %basis
         # read an externally specified orbital basis
         GTOName      = "cc-pvdz.1.orca"
+        Aux "AutoAux"
+        AuxJK "AutoAux"
+        AuxC "AutoAux"
         end
         %method
-        FrozenCore FC_NONE      #No frozencore approximation
         WriteJSONPropertyfile True
         end
         %MDCI Density Unrelaxed
         end
         %pal nprocs {os.environ.get("OMP_NUM_THREADS")} end
-        %maxcore 120000
+        %maxcore {os.environ.get("PYSCF_MAX_MEMORY")}
         %coords
         CTyp   xyz     # the type of coordinates = xyz or internal
         Charge {self.mol.charge}       # the total charge of the molecule
@@ -254,4 +255,4 @@ class TestData:
         """
             )
 
-        os.system(f"~/orca/orca tmp_mol/{self.name}.inp > tmp_mol/{self.name}.out")
+        os.system(f"$(which orca) tmp_mol/{self.name}.inp > tmp_mol/{self.name}.out")

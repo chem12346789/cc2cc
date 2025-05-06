@@ -23,9 +23,13 @@ def nr_uks(
     dms,
     xc_code="b3lyp",
     hermi=1,
-    max_memory=2000,
+    max_memory=20,
     verbose=None,
 ):
+    """
+    Obtain the nelec, excsum, and vmat.
+    Note the max_memory=20 use around 8GB gpu memory.
+    """
     xctype = ni._xc_type(xc_code)
     ao_loc = mol.ao_loc_nr()
     cutoff = grids.cutoff * 1e2
