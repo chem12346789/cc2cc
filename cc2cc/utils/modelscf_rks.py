@@ -24,7 +24,7 @@ def nr_rks(
     dms,
     xc_code="b3lyp",
     hermi=1,
-    max_memory=2000,
+    max_memory=20,
     verbose=None,
 ):
     """

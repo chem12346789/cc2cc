@@ -42,19 +42,20 @@ def test_uks(
 
     get_veff_modified_uks(mdft, modeldict)
 
-    # mdft.max_cycle = 50
-    # mdft.conv_tol = 1e-5
-    # mdft.kernel(dm0=test_data.mf_dm1)
-    # dm1_scf = mdft.make_rdm1()
-    # e_scf = mdft.e_tot
+    if "test" in args.load:
+        dm1_scf = test_data.dm1_cc.copy()
+        e_scf = test_data.e_cc
+    else:
+        mdft.max_cycle = 50
+        mdft.conv_tol = 1e-5
+        mdft.kernel(dm0=test_data.mf_dm1)
+        dm1_scf = mdft.make_rdm1()
+        e_scf = mdft.e_tot
 
-    # mdft.max_cycle = -1
-    # mdft.kernel(dm0=test_data.dm1_cc)
-    # dm1_scf = test_data.dm1_cc.copy()
-    # e_scf = mdft.e_tot
-
-    dm1_scf = test_data.dm1_cc.copy()
-    e_scf = test_data.e_cc
+        # mdft.max_cycle = -1
+        # mdft.kernel(dm0=test_data.dm1_cc)
+        # dm1_scf = test_data.dm1_cc.copy()
+        # e_scf = mdft.e_tot
 
     time_ai = timer() - time_ai_start
 
