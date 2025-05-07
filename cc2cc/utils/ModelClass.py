@@ -238,8 +238,7 @@ class ModelClass:
         """
         self.train()
         name_l, loss_ene_l, loss_ene_abs_l, loss_tot_l = [], [], [], []
-        if database_train.if_load_to_gpu_once:
-            database_train.shuffle()
+        database_train.shuffle()
 
         for name in database_train.name_list:
             batch = database_train.data_gpu[name]
@@ -289,8 +288,6 @@ class ModelClass:
         """
         self.eval()
         name_l, loss_ene_l, loss_ene_abs_l, loss_tot_l = [], [], [], []
-        if database_eval.if_load_to_gpu_once:
-            database_eval.shuffle()
 
         for name in database_eval.name_list:
             batch = database_eval.data_gpu[name]
