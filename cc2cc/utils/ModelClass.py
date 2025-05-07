@@ -241,21 +241,21 @@ class ModelClass:
 
         for name in database_train.name_list:
             batch = database_train.data_gpu[name]
+            data_weight = database_train.data_weight[name]
+
             if not database_train.if_load_to_gpu_once:
                 batch = database_train.process_batch(batch)
-            data_weight = database_train.data_weight[name]
 
             with torch.autocast(device_type="cuda", dtype=self.dtype):
                 loss_ene, loss_ene_abs = self.loss(batch)
-                tot_loss = (
-                    self.tot_loss(loss_ene, loss_ene_abs, data_weight)
-                    / self.iters_to_accumulate
-                )
 
+            tot_loss = (
+                self.tot_loss(loss_ene, loss_ene_abs, data_weight)
+                / self.iters_to_accumulate
+            )
             self.scaler.scale(tot_loss).backward()
             self.update()
 
-            number_batch_name = len(batch["weight"])
             loss_ene_name = loss_ene.item()
             loss_ene_abs_name = loss_ene_abs.item()
             loss_tot_name = tot_loss.item()
@@ -265,12 +265,6 @@ class ModelClass:
                 loss_ene_l.append(AU2KCALMOL * loss_ene_name)
                 loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)
                 loss_tot_l.append(AU2KCALMOL * loss_tot_name)
-            elif isinstance(self.loss_ene, torch.nn.MSELoss):
-                loss_ene_l.append(AU2KCALMOL * np.sqrt(loss_ene_name))
-                loss_ene_abs_l.append(
-                    AU2KCALMOL * np.sqrt(loss_ene_abs_name * number_batch_name)
-                )
-                loss_tot_l.append(AU2KCALMOL * np.sqrt(loss_tot_name))
             else:
                 raise ValueError("Unknown loss function")
 
@@ -290,27 +284,26 @@ class ModelClass:
 
         for name in database_eval.name_list:
             batch = database_eval.data_gpu[name]
+            data_weight = database_eval.data_weight[name]
+
             if not database_eval.if_load_to_gpu_once:
                 batch = database_eval.process_batch(batch)
 
-            with torch.no_grad():
-                loss_ene, loss_ene_abs = self.loss(batch)
-            number_batch_name = len(batch["weight"])
+            with torch.autocast(device_type="cuda", dtype=self.dtype):
+                with torch.no_grad():
+                    loss_ene, loss_ene_abs = self.loss(batch)
+
+            tot_loss = self.tot_loss(loss_ene, loss_ene_abs, data_weight)
+
             loss_ene_name = loss_ene.item()
             loss_ene_abs_name = loss_ene_abs.item()
-            loss_tot_name = self.tot_loss(loss_ene, loss_ene_abs, data_weight=1).item()
+            loss_tot_name = tot_loss.item()
 
             name_l.append(name)
             if isinstance(self.loss_ene, torch.nn.L1Loss):
                 loss_ene_l.append(AU2KCALMOL * loss_ene_name)
                 loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)
                 loss_tot_l.append(AU2KCALMOL * loss_tot_name)
-            elif isinstance(self.loss_ene, torch.nn.MSELoss):
-                loss_ene_l.append(AU2KCALMOL * np.sqrt(loss_ene_name))
-                loss_ene_abs_l.append(
-                    AU2KCALMOL * np.sqrt(loss_ene_abs_name * number_batch_name)
-                )
-                loss_tot_l.append(AU2KCALMOL * np.sqrt(loss_tot_name))
             else:
                 raise ValueError("Unknown loss function")
 
