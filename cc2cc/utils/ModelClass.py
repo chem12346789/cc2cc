@@ -83,10 +83,10 @@ class ModelClass:
             self.model.double()
 
         if self.with_eval:
-            self.optimizer = optim.Adam(
+            self.optimizer = optim.AdamW(
                 self.model.parameters(),
                 lr=args.lr,
-                # weight_decay=0.1,
+                weight_decay=1e-3,
             )
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer,
@@ -95,7 +95,7 @@ class ModelClass:
                 patience=50,
             )
         else:
-            self.optimizer = optim.Adam(
+            self.optimizer = optim.AdamW(
                 self.model.parameters(),
                 lr=args.lr,
                 # weight_decay=0.1,
