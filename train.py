@@ -4,7 +4,7 @@ from cc2cc import train_model
 from cc2cc.utils import add_args, print_gpu_info
 from cc2cc.utils.parser import gen_name_args
 
-train_str_dict = [
+train_str_list = [
     "molecule0",
     "molecule1-AHB21",
     "molecule1-ALK8",
@@ -52,9 +52,10 @@ train_str_dict = [
     "molecule3-W4_11",
     "molecule4-ALK8",
     "molecule4-W4_11",
-    "ADIM6-AD2",  # 4
 ]
-eval_str_dict = [
+eval_str_list = [
+    "W4_11-propane",  # 3
+    "ADIM6-AD2",  # 4
     "molecule5-BSR36",
     "molecule5-ALK8",
     "molecule5-BSR36",
@@ -78,6 +79,14 @@ if __name__ == "__main__":
 
     print_gpu_info(args.device)
 
-    train_str_dict = gen_name_args(train_str_dict, args)
-    eval_str_dict = gen_name_args(eval_str_dict, args)
-    train_model(train_str_dict, eval_str_dict, args)
+    train_str_list = gen_name_args(train_str_list, args)
+    eval_str_list = gen_name_args(eval_str_list, args)
+
+    # remove the same name in train and eval
+    train_str_list_remove = train_str_list.copy()
+    for i_name in train_str_list:
+        if i_name in eval_str_list:
+            train_str_list_remove.remove(i_name)
+    train_str_list = train_str_list_remove
+
+    train_model(train_str_list, eval_str_list, args)
