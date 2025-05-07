@@ -24,11 +24,12 @@ def nr_rks(
     dms,
     xc_code="b3lyp",
     hermi=1,
-    max_memory=20,
+    max_memory=200,
     verbose=None,
 ):
     """
     Obtain the nelec, excsum, and vmat.
+    Note the max_memory=20 use around 8GB gpu memory.
     """
     xctype = ni._xc_type(xc_code)
     make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, grids)
