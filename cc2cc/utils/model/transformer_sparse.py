@@ -82,11 +82,13 @@ class Attention(nn.Module):
         # SHAPE qkv = (batch, head, seq_len, d_model // head)
         qk = torch.matmul(q, k.transpose(-1, -2)) / self.sqrt_d
         # SHAPE qk = (batch, head, seq_len, seq_len)
+        # COST O(d_model * seq_len^2)
         attn = torch.softmax(qk, dim=-1)
         attn = self.dropout1(attn)
         # SHAPE attn = (batch, head, seq_len, seq_len)
         qkv = torch.permute(torch.matmul(attn, v), (0, 2, 1, 3))
         # SHAPE qkv = (batch, seq_len, head, d_model // head)
+        # COST O(d_model * seq_len^2)
         qkv = torch.reshape(qkv, (b, s, self.d_model))
         # SHAPE qkv = (batch, seq_len, d_model)
         results = self.dense2(qkv)
