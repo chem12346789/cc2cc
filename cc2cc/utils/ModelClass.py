@@ -246,7 +246,7 @@ class ModelClass:
             if not database_train.if_load_to_gpu_once:
                 batch = database_train.process_batch(batch)
 
-            with torch.autocast(device_type="cuda", dtype=self.dtype):
+            with torch.autocast(device_type="cuda", dtype=torch.float32):
                 loss_ene, loss_ene_abs = self.loss(batch)
 
             tot_loss = (
@@ -289,7 +289,7 @@ class ModelClass:
             if not database_eval.if_load_to_gpu_once:
                 batch = database_eval.process_batch(batch)
 
-            with torch.autocast(device_type="cuda", dtype=self.dtype):
+            with torch.autocast(device_type="cuda", dtype=torch.float32):
                 with torch.no_grad():
                     loss_ene, loss_ene_abs = self.loss(batch)
 
