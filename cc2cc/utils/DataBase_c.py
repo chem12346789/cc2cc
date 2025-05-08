@@ -165,15 +165,16 @@ class DataBase:
                     )
                     continue
 
-            print(f"Load: {name:>40} {mol.atom_pure_symbol(i_atom):>3}", flush=True)
+            # print(f"Load: {name:>40} {mol.atom_pure_symbol(i_atom):>3}", flush=True)
             num_data_used += 1
-            for i_coord in range(data_length * i_atom, data_length * (i_atom + 1)):
-                input_.append(
-                    input_mat[i_coord, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-                )
-                weight_.append(weight_mat[[i_coord]])
-                output_.append(output_mat[[i_coord]])
-                total_ene_used += np.sum(output_mat[i_coord] * weight_mat[i_coord])
+            slice_ = slice(data_length * i_atom, data_length * (i_atom + 1))
+            input_.append(input_mat[slice_, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE])
+            weight_.append(weight_mat[slice_])
+            output_.append(output_mat[slice_])
+            total_ene_used += np.sum(output_mat[slice_] * weight_mat[slice_])
+        input_ = np.array(input_).reshape((-1, 4))
+        weight_ = np.array(weight_).reshape((-1, 1))
+        output_ = np.array(output_).reshape((-1, 1))
 
         if num_data_used == 0:
             return 0

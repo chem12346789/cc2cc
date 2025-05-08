@@ -14,15 +14,15 @@ RAD = 75
 
 D_MODEL = RAD
 SEQ_LEN = 4
-NUM_LAYER_TRANSFORMER = 2
-NUM_HEADS = 1
+DEPTH_TRANSFORMER = 5
 QKV_BIAS = False
-DROP_RATE = 0
+DROP_RATE_TRANSFORMER = 0
+NUM_HEADS = 1
 
 MLP_DENSE = 108
-DEPTH_DENSE = 2
+DEPTH_DENSE = 7
 IF_SKIP_CONNECTION_DENSE = 1
-
+DROP_RATE_DENSE = 0
 
 # ATTE_ACTV = "relu"
 # ATTE_NORMAL = "layer"
@@ -48,41 +48,47 @@ class Attention(nn.Module):
         self.num_heads = kwargs.get("num_heads", NUM_HEADS)
         self.qkv_bias = kwargs.get("qkv_bias", QKV_BIAS)
         self.sqrt_d = self.d_model**0.5
+        self.drop_rate = kwargs.get("drop_rate", DROP_RATE_TRANSFORMER)
 
         self.dense1 = nn.Linear(self.d_model, self.d_model * 3, bias=self.qkv_bias)
         self.dense2 = nn.Linear(self.d_model, self.d_model, bias=self.qkv_bias)
+
+        self.dropout1 = nn.Dropout(self.drop_rate)
+        self.dropout2 = nn.Dropout(self.drop_rate)
 
     def forward(self, inputs):
         """
         Standard forward function, required for all nn.Module classes
         Time complexity: O(d_model * seq_len^2)
         """
-        # inputs.shape = (batch, seq_len, d_model)
+        # SHAPE inputs = (batch, seq_len, d_model)
+        b, s, _ = inputs.shape
         results = self.dense1(inputs)
-        # results.shape = (batch, seq_len, 3 * d_model)
-        b, s, _ = results.shape
+        # SHAPE results = (batch, seq_len, 3 * d_model)
         results = torch.reshape(
             results, (b, s, 3, self.num_heads, self.d_model // self.num_heads)
         )
-        # results.shape = (batch, seq_len, 3, head, d_model // head)
+        # SHAPE results = (batch, seq_len, 3, head, d_model // head)
         results = torch.permute(results, (0, 2, 3, 1, 4))
-        # results.shape = (batch, 3, head, seq_len, d_model // head)
+        # SHAPE results = (batch, 3, head, seq_len, d_model // head)
         q, k, v = (
             results[:, 0, ...],
             results[:, 1, ...],
             results[:, 2, ...],
         )
-        # shape = (batch, head, seq_len, d_model // head)
+        # SHAPE qkv = (batch, head, seq_len, d_model // head)
         qk = torch.matmul(q, k.transpose(-1, -2)) / self.sqrt_d
-        # qk.shape = (batch, head, seq_len, seq_len)
+        # SHAPE qk = (batch, head, seq_len, seq_len)
         attn = torch.softmax(qk, dim=-1)
-        # attn.shape = (batch, head, seq_len, seq_len)
+        attn = self.dropout1(attn)
+        # SHAPE attn = (batch, head, seq_len, seq_len)
         qkv = torch.permute(torch.matmul(attn, v), (0, 2, 1, 3))
-        # qkv.shape = (batch, seq_len, head, d_model // head)
+        # SHAPE qkv = (batch, seq_len, head, d_model // head)
         qkv = torch.reshape(qkv, (b, s, self.d_model))
-        # qkv.shape = (batch, seq_len, d_model)
+        # SHAPE qkv = (batch, seq_len, d_model)
         results = self.dense2(qkv)
-        # results.shape = (batch, seq_len, d_model)
+        results = self.dropout2(results)
+        # SHAPE results = (batch, seq_len, d_model)
         return results
 
 
@@ -95,20 +101,19 @@ class ABlock(nn.Module):
         super(ABlock, self).__init__()
         self.d_model = kwargs.get("d_model", D_MODEL)
         self.mlp_ratio = kwargs.get("mlp_ratio", 1)
-        self.drop_rate = kwargs.get("drop_rate", DROP_RATE)
+        self.drop_rate = kwargs.get("drop_rate", DROP_RATE_TRANSFORMER)
 
         self.dense1 = nn.Linear(self.d_model, self.d_model * self.mlp_ratio)
         self.dense2 = nn.Linear(self.d_model * self.mlp_ratio, self.d_model)
-
         if ATTE_ACTV == "relu":
             self.actv_fn = nn.ReLU()
         elif ATTE_ACTV == "gelu":
             self.actv_fn = nn.GELU()
-
         self.atten = Attention(**kwargs)
 
-        self.dropout_atten = nn.Dropout(self.drop_rate)
-        self.dropout_mlp = nn.Dropout(self.drop_rate)
+        self.dropout0 = nn.Dropout(self.drop_rate)
+        self.dropout1 = nn.Dropout(self.drop_rate)
+        self.dropout2 = nn.Dropout(self.drop_rate)
 
         if ATTE_NORMAL == "layer":
             self.layernorm1 = nn.LayerNorm(self.d_model)
@@ -121,20 +126,21 @@ class ABlock(nn.Module):
         """
         Standard forward function, required for all nn.Module classes
         """
-        # SHAPE: inputs = (batch, seq_len, d_model)
+        # SHAPE inputs = (batch, seq_len, d_model)
         x_attn = self.layernorm1(x_inp)
         x_attn = self.atten(x_attn)
-        x_attn = self.dropout_atten(x_attn)
-        x_attn += x_inp
-        # SHAPE: results = (batch, seq_len, d_model)
+        x_attn = self.dropout0(x_attn)
+        x_attn = x_attn + x_inp
+        # SHAPE results = (batch, seq_len, d_model)
 
         x_mlp = self.layernorm2(x_attn)
         x_mlp = self.dense1(x_mlp)
         x_mlp = self.actv_fn(x_mlp)
-        x_mlp = self.dropout_mlp(x_mlp)
+        x_mlp = self.dropout1(x_mlp)
         x_mlp = self.dense2(x_mlp)
-        x_mlp += x_attn
-        # SHAPE: results = (batch, seq_len, d_model)
+        x_mlp = self.dropout2(x_mlp)
+        x_mlp = x_mlp + x_attn
+        # SHAPE results = (batch, seq_len, d_model)
         return x_mlp
 
 
@@ -147,18 +153,18 @@ class Extractor(nn.Module):
         super(Extractor, self).__init__()
         self.d_model = kwargs.get("d_model", D_MODEL)
         self.seq_len = kwargs.get("seq_len", SEQ_LEN)
-        self.num_layer = kwargs.get("num_layer", NUM_LAYER_TRANSFORMER)
+        self.num_layer = kwargs.get("num_layer", DEPTH_TRANSFORMER)
         self.qkv_bias = kwargs.get("qkv_bias", QKV_BIAS)
         self.num_heads = kwargs.get("num_heads", NUM_HEADS)
-        self.drop_rate = kwargs.get("drop_rate", DROP_RATE)
+        self.drop_rate = kwargs.get("drop_rate", DROP_RATE_TRANSFORMER)
 
         if ATTE_ACTV == "relu":
             self.actv_fn = nn.ReLU()
         elif ATTE_ACTV == "gelu":
             self.actv_fn = nn.GELU()
-        self.dense1 = nn.Linear(self.d_model, self.d_model)
 
-        self.dropout = nn.Dropout(self.drop_rate)
+        self.dense1 = nn.Linear(self.d_model, self.d_model)
+        self.dropout1 = nn.Dropout(self.drop_rate)
         self.layer_blocks = nn.ModuleList(
             [ABlock(**kwargs) for _ in range(self.num_layer)]
         )
@@ -169,21 +175,21 @@ class Extractor(nn.Module):
         """
         Standard forward function, required for all nn.Module classes
         """
-        # inputs.shape = (batch, seq_len, d_model)
+        # SHAPE inputs = (batch, seq_len, d_model)
         results = self.dense1(inputs)
         results = self.actv_fn(results)
-        # results.shape = (batch, seq_len, d_model)
+        results = self.dropout1(results)
+        # SHAPE results = (batch, seq_len, d_model)
 
         # do attention only when the feature shape is small enough
         for i in range(self.num_layer):
             results = self.layer_blocks[i](results)
-        # results.shape = (batch, seq_len, d_model)
+        # SHAPE results = (batch, seq_len, d_model)
 
         results = self.dense2(results)
         results = self.actv_fn(results)
-        results = self.dropout(results)
         results = self.head(results)
-        # results.shape = (batch, seq_len, d_model)
+        # SHAPE results = (batch, seq_len, d_model)
         return results
 
 
@@ -194,20 +200,19 @@ class DenseNet(nn.Module):
 
     def __init__(self, **kwargs):
         super(DenseNet, self).__init__()
-        self.d_model = kwargs.get("seq_len", MLP_DENSE)
-        self.num_layer_dense = kwargs.get("num_layer_dense", DEPTH_DENSE) - 1
-        self.drop_rate = kwargs.get("drop_rate", DROP_RATE)
+        self.d_model = kwargs.get("seq_len", SEQ_LEN)
+        self.mlp = kwargs.get("mlp", MLP_DENSE)
+        self.depth = kwargs.get("depth_dense", DEPTH_DENSE)
+        self.drop_rate = kwargs.get("drop_rate", DROP_RATE_DENSE)
 
-        sizes = [4] + [self.d_model] * self.num_layer_dense + [1]
+        self.sizes = [self.d_model] + [self.mlp] * (self.depth - 1) + [1]
 
         self.layers = nn.ModuleList(
             [
                 nn.Linear(input_size, output_size)
-                for input_size, output_size in zip(sizes, sizes[1:])
+                for input_size, output_size in zip(self.sizes, self.sizes[1:])
             ]
         )
-
-        self.dropout = nn.Dropout(self.drop_rate)
 
         if DENSE_ACTV == "relu":
             self.actv_fn = nn.ReLU()
@@ -216,12 +221,14 @@ class DenseNet(nn.Module):
 
         if DENSE_NORMAL == "layer":
             self.norm = nn.ModuleList(
-                [nn.LayerNorm(input_size) for input_size in sizes[:-1]]
+                [nn.LayerNorm(i_size) for i_size in self.sizes[:-2]]
             )
         elif DENSE_NORMAL == "rms":
             self.norm = nn.ModuleList(
-                [nn.RMSNorm(input_size) for input_size in sizes[:-1]]
+                [nn.RMSNorm(i_size) for i_size in self.sizes[:-2]]
             )
+
+        self.dropout = nn.Dropout(self.drop_rate)
 
     def forward(self, x):
         """
@@ -254,7 +261,7 @@ class Model(nn.Module):
         with importlib.resources.files("cc2cc").joinpath(
             "utils/model"
         ) as resource_path:
-            file_path = Path(os.fspath(resource_path)) / "transformer_4_ang.py"
+            file_path = Path(os.fspath(resource_path)) / "transformer_c_ang.py"
             with open(file_path, "r", encoding="utf-8") as finput:
                 print(f"#INFO: **** input file is {file_path} ****\n")
                 print(finput.read())

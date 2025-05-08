@@ -305,6 +305,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--weight_decay",
+        type=float,
+        default=1e-3,
+        help="Weight decay for the optimizer. Default is 1e-3.",
+    )
+
+    parser.add_argument(
         "--eval_step",
         type=int,
         default=1,
