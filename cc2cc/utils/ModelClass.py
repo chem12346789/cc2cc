@@ -219,8 +219,7 @@ class ModelClass:
         """
         Calculate the total loss.
         """
-        tot_loss = loss_ene * np.sqrt(data_weight)
-        tot_loss += loss_ene_abs * self.loss_multiplier * data_weight
+        tot_loss = loss_ene + loss_ene_abs * self.loss_multiplier * data_weight
         return tot_loss
 
     def save_model(self, epoch):
