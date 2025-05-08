@@ -52,6 +52,10 @@ train_str_list = [
     "molecule3-W4_11",
     "molecule4-ALK8",
     "molecule4-W4_11",
+    "BH9-08_9R2",  # 5
+]
+train_str_exclude_list = [
+    "W4_11-propane",  # 3
 ]
 eval_str_list = [
     "W4_11-propane",  # 3
@@ -60,7 +64,6 @@ eval_str_list = [
     "molecule5-ALK8",
     "molecule5-BSR36",
     "molecule5-W4_11",
-    "BH9-08_9R2",  # 5
     "molecule6-BSR36",
     "ADIM6-AD3",  # 6
     "molecule7-MB16_43",
@@ -70,6 +73,7 @@ eval_str_list = [
     "molecule8-BSR36",
     "molecule8-IDISP",
 ]
+eval_str_exclude_list = []
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -82,11 +86,9 @@ if __name__ == "__main__":
     train_str_list = gen_name_args(train_str_list, args)
     eval_str_list = gen_name_args(eval_str_list, args)
 
-    # remove the same name in train and eval
-    train_str_list_remove = train_str_list.copy()
-    for i_name in train_str_list:
-        if i_name in eval_str_list:
-            train_str_list_remove.remove(i_name)
-    train_str_list = train_str_list_remove
+    # remove the same name in train and train_str_exclude_list
+    train_str_list = list(set(train_str_list) - set(train_str_exclude_list))
+    # remove the same name in eval and eval_str_exclude_list
+    eval_str_list = list(set(eval_str_list) - set(eval_str_exclude_list))
 
     train_model(train_str_list, eval_str_list, args)
