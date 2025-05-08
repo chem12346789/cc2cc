@@ -183,10 +183,12 @@ class Extractor(nn.Module):
         results = self.actv_fn(results)
         results = self.dropout1(results)
         # SHAPE results = (batch, seq_len, d_model)
+
         # do attention only when the feature shape is small enough
         for i in range(self.num_layer):
             results = self.layer_blocks[i](results)
         # SHAPE results = (batch, seq_len, d_model)
+
         results = self.dense2(results)
         results = self.actv_fn(results)
         results = self.head(results)

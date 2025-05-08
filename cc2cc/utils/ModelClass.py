@@ -51,13 +51,14 @@ class ModelClass:
         else:
             raise ValueError("Unknown model")
 
-        self.load = args.load
-        self.with_eval = args.with_eval
-        self.load_epoch = args.load_epoch
-        self.save_dir = args.save_dir
-        self.basis = args.basis
-        self.iters_to_accumulate = args.iters_to_accumulate
-        self.max_norm = args.max_norm
+        self.load = getattr(args, "load", "")
+        self.with_eval = getattr(args, "with_eval", True)
+        self.load_epoch = getattr(args, "load_epoch", -1)
+        self.save_dir = getattr(args, "save_dir", "")
+        self.basis = getattr(args, "basis", "cc-pVDZ")
+        self.iters_to_accumulate = getattr(args, "iters_to_accumulate", 1)
+        self.max_norm = getattr(args, "max_norm", -1)
+        self.weight_decay = getattr(args, "weight_decay", 1e-3)
         self.device = torch.device(args.device)
         self.dtype = torch.float32
         self.update_counter = 0
@@ -86,6 +87,7 @@ class ModelClass:
             self.optimizer = optim.Adam(
                 self.model.parameters(),
                 lr=args.lr,
+                weight_decay=self.weight_decay,
             )
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer,
@@ -97,7 +99,7 @@ class ModelClass:
             self.optimizer = optim.AdamW(
                 self.model.parameters(),
                 lr=args.lr,
-                weight_decay=1e-3,
+                weight_decay=self.weight_decay,
             )
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
@@ -245,7 +247,7 @@ class ModelClass:
             if not database_train.if_load_to_gpu_once:
                 batch = database_train.process_batch(batch)
 
-            with torch.autocast(device_type="cuda", dtype=torch.float32):
+            with torch.autocast(device_type="cuda", dtype=self.dtype):
                 loss_ene, loss_ene_abs = self.loss(batch)
 
             tot_loss = (
@@ -288,7 +290,7 @@ class ModelClass:
             if not database_eval.if_load_to_gpu_once:
                 batch = database_eval.process_batch(batch)
 
-            with torch.autocast(device_type="cuda", dtype=torch.float32):
+            with torch.autocast(device_type="cuda", dtype=self.dtype):
                 with torch.no_grad():
                     loss_ene, loss_ene_abs = self.loss(batch)
 

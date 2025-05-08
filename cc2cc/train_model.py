@@ -95,6 +95,7 @@ def train_model(train_str_dict, eval_str_dict, args):
         "precision": args.precision,
         "basis": args.basis,
         "with_eval": args.with_eval,
+        "weight_decay": args.weight_decay,
         "load": args.load,
         "jobid": os.environ.get("SLURM_JOB_ID"),
         "pid": os.getpid(),
