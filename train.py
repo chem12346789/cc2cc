@@ -68,10 +68,10 @@ eval_str_list = [
     "ADIM6-AD3",  # 6
     "molecule7-MB16_43",
     "molecule7-BSR36",
-    # "molecule8-MB16_43",
-    # "ADIM6-AD4",  # 8
-    # "molecule8-BSR36",
-    # "molecule8-IDISP",
+    "molecule8-MB16_43",
+    "ADIM6-AD4",  # 8
+    "molecule8-BSR36",
+    "molecule8-IDISP",
 ]
 eval_str_exclude_list = []
 
