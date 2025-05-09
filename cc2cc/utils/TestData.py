@@ -111,6 +111,7 @@ class TestData:
         mycc.max_cycle = 200
         if "C60ISO" in self.name or "UPU23" in self.name:
             mycc.set_frozen()
+            print(f"Number of core orbital frozen: {mycc.frozen}")
         _, t1, t2 = mycc.kernel()
         if mycc.converged is False:
             raise ValueError("CCSD not converged.")
