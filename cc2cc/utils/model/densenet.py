@@ -12,10 +12,10 @@ from cc2cc.utils.env_var import CUBE_MIDDLE
 
 D_MODEL = 108
 MLP = 108
-DENSE_DEPTH = 5
+DENSE_DEPTH = 7
 IF_SKIP_CONNECTION = 1
 
-DROP_RATE = 0.01
+DROP_RATE = 0
 
 # DENSE_ACTV = "relu"
 # DENSE_NORMAL = "layer"

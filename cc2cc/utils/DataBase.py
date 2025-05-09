@@ -129,7 +129,7 @@ class DataBase:
         for name in self.name_list:
             name_mol = name.split(f"_{self.basis}_")[0]
             if self.data_weight_mol[name_mol] == 1:
-                name_extend.extend([name] * 9)
+                name_extend.extend([name] * 4)
             self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
         self.name_list.extend(name_extend)
         del self.data_weight_mol
