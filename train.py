@@ -6,47 +6,8 @@ from cc2cc.utils.parser import gen_name_args
 
 train_str_list = [
     "molecule0",
-    "molecule1-AHB21",
-    "molecule1-ALK8",
-    "molecule1-ALKBDE10",
-    "molecule1-AL2X6",
-    "molecule1-BSR36",
-    "molecule1-BH76",
-    "molecule1-BH9",
-    "molecule1-CARBHB12",
-    "molecule1-CHB6",
-    "molecule1-DC13",
-    "molecule1-DIPCS10",
-    "molecule1-FH51",
-    "molecule1-G21EA",
-    "molecule1-G21IP",
-    "molecule1-G2RC",
-    "molecule1-HAL59",
-    "molecule1-HEAVY28",
-    "molecule1-HEAVYSB11",
-    "molecule1-IDISP",
-    "molecule1-INV24",
-    "molecule1-MB16_43",
-    "molecule1-NBPRC",
-    "molecule1-PA26",
-    "molecule1-PNICO23",
-    "molecule1-PX13",
-    "molecule1-RC21",
-    "molecule1-RG18",
-    "molecule1-RSE43",
-    "molecule1-S22",
-    "molecule1-S66",
-    "molecule1-SIE4x4",
-    "molecule1-W4_11",
-    "molecule1-WATER27",
-    "molecule1-WCPT18",
-    "molecule1-YBDE18",
-    "molecule2-ALK8",
-    "molecule2-BSR36",
-    "molecule2-G2RC",
-    "molecule2-HEAVYSB11",
-    "molecule2-SIE4x4",
-    "molecule2-W4_11",
+    "molecule1",
+    "molecule2",
     "molecule3-ALK8",
     "molecule3-HEAVYSB11",
     "molecule3-W4_11",
@@ -55,6 +16,16 @@ train_str_list = [
     "BH9-08_9R2",  # 5
 ]
 train_str_exclude_list = [
+    "molecule1-ACC24",
+    "molecule1-GAPS",
+    "molecule1-GW100",
+    "molecule1-MRADC",
+    "molecule1-S30L",
+    "molecule2-ACC24",
+    "molecule2-GAPS",
+    "molecule2-GW100",
+    "molecule2-MRADC",
+    "molecule2-S30L",
     "W4_11-propane",  # 3
 ]
 eval_str_list = [
@@ -84,7 +55,9 @@ if __name__ == "__main__":
     print_gpu_info(args.device)
 
     train_str_list = gen_name_args(train_str_list, args)
+    train_str_exclude_list = gen_name_args(train_str_exclude_list, args)
     eval_str_list = gen_name_args(eval_str_list, args)
+    eval_str_exclude_list = gen_name_args(eval_str_exclude_list, args)
 
     # remove the same name in train and train_str_exclude_list
     train_str_list = list(set(train_str_list) - set(train_str_exclude_list))
