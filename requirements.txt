@@ -7,4 +7,5 @@ scipy
 segmentation_models_pytorch
 tqdm
 wandb
+numba
 scikit-learn
