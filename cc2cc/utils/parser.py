@@ -96,7 +96,7 @@ def gen_logger(distance_list):
     return distance_l
 
 
-def gen_name_args(name_args, args):
+def gen_name_args(name_args, args, if_exclude=False):
     """
     Function to generate name args
     """
@@ -116,6 +116,8 @@ def gen_name_args(name_args, args):
                             name_mol_new.add(dataset_dict[extend_mol])
                         else:
                             name_mol_new.add(extend_mol)
+                elif if_exclude:
+                    print(f"Warning: {name_args[i]} is not in the dataset. " )
                 else:
                     raise ValueError(
                         f"Invalid molecule name: {name_args[i]}. "

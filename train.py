@@ -7,7 +7,12 @@ from cc2cc.utils.parser import gen_name_args
 train_str_list = [
     "molecule0",
     "molecule1",
-    "molecule2",
+    "molecule2-ALK8",
+    "molecule2-BSR36",
+    "molecule2-G2RC",
+    "molecule2-HEAVYSB11",
+    "molecule2-SIE4x4",
+    "molecule2-W4_11",
     "molecule3-ALK8",
     "molecule3-HEAVYSB11",
     "molecule3-W4_11",
@@ -16,20 +21,19 @@ train_str_list = [
     "BH9-08_9R2",  # 5
 ]
 train_str_exclude_list = [
+    "W4_11-propane",  # 3
     "molecule1-ACC24",
     "molecule1-GAPS",
     "molecule1-GW100",
     "molecule1-MRADC",
     "molecule1-S30L",
-    "molecule2-ACC24",
-    "molecule2-GAPS",
-    "molecule2-GW100",
-    "molecule2-MRADC",
-    "molecule2-S30L",
-    "W4_11-propane",  # 3
+    # "molecule2-ACC24",
+    # "molecule2-GAPS",
+    # "molecule2-GW100",
+    # "molecule2-MRADC",
+    # "molecule2-S30L",
 ]
 eval_str_list = [
-    "W4_11-propane",  # 3
     "ADIM6-AD2",  # 4
     "molecule5-BSR36",
     "molecule5-ALK8",
@@ -55,9 +59,11 @@ if __name__ == "__main__":
     print_gpu_info(args.device)
 
     train_str_list = gen_name_args(train_str_list, args)
-    train_str_exclude_list = gen_name_args(train_str_exclude_list, args)
+    train_str_exclude_list = gen_name_args(
+        train_str_exclude_list, args, if_exclude=True
+    )
     eval_str_list = gen_name_args(eval_str_list, args)
-    eval_str_exclude_list = gen_name_args(eval_str_exclude_list, args)
+    eval_str_exclude_list = gen_name_args(eval_str_exclude_list, args, if_exclude=True)
 
     # remove the same name in train and train_str_exclude_list
     train_str_list = list(set(train_str_list) - set(train_str_exclude_list))
