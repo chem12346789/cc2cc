@@ -110,10 +110,10 @@ class ModelClass:
         self.scaler = GradScaler("cuda")
 
         self.loss_multiplier = args.loss_multiplier
-        self.loss_ene = torch.nn.L1Loss(reduction="sum")
-        # self.loss_ene = torch.nn.MSELoss(reduction="sum")
-        self.loss_ene_abs = torch.nn.L1Loss(reduction="sum")
-        # self.loss_ene_abs = torch.nn.MSELoss(reduction="sum")
+        # self.loss_ene = torch.nn.L1Loss(reduction="sum")
+        self.loss_ene = torch.nn.MSELoss(reduction="sum")
+        # self.loss_ene_abs = torch.nn.L1Loss(reduction="sum")
+        self.loss_ene_abs = torch.nn.MSELoss(reduction="sum")
 
     def load_model(self):
         """
@@ -193,6 +193,13 @@ class ModelClass:
         self.zero_grad()
         self.update_counter = 0
 
+    def tot_loss(self, loss_ene, loss_ene_abs):
+        """
+        Calculate the total loss.
+        """
+        tot_loss = loss_ene + loss_ene_abs * self.loss_multiplier
+        return tot_loss
+
     def loss(self, batch):
         """
         Calculate the loss.
@@ -207,20 +214,16 @@ class ModelClass:
             torch.sum(output_mat_real),
             torch.sum(output_mat),
         )
-
         loss_ene_abs = self.loss_ene_abs(
             output_mat_real,
             output_mat,
         )
+        tot_loss = self.tot_loss(loss_ene, loss_ene_abs) / self.iters_to_accumulate
 
-        return loss_ene, loss_ene_abs
+        loss_record = torch.sum(output_mat_real - output_mat).item()
+        loss_abs_record = torch.sum(torch.abs(output_mat_real - output_mat)).item()
 
-    def tot_loss(self, loss_ene, loss_ene_abs, data_weight=1):
-        """
-        Calculate the total loss.
-        """
-        tot_loss = loss_ene + loss_ene_abs * self.loss_multiplier * data_weight
-        return tot_loss
+        return tot_loss, loss_record, loss_abs_record
 
     def save_model(self, epoch):
         """
@@ -242,32 +245,21 @@ class ModelClass:
 
         for name in database_train.name_list:
             batch = database_train.data_gpu[name]
-            data_weight = database_train.data_weight[name]
 
             if not database_train.if_load_to_gpu_once:
                 batch = database_train.process_batch(batch)
 
             with torch.autocast(device_type="cuda", dtype=self.dtype):
-                loss_ene, loss_ene_abs = self.loss(batch)
+                tot_loss, loss_record, loss_abs_record = self.loss(batch)
 
-            tot_loss = (
-                self.tot_loss(loss_ene, loss_ene_abs, data_weight)
-                / self.iters_to_accumulate
-            )
             self.scaler.scale(tot_loss).backward()
             self.update()
 
-            loss_ene_name = loss_ene.item()
-            loss_ene_abs_name = loss_ene_abs.item()
-            loss_tot_name = tot_loss.item()
-
+            loss_tot_record = tot_loss.item()
             name_l.append(name)
-            if isinstance(self.loss_ene, torch.nn.L1Loss):
-                loss_ene_l.append(AU2KCALMOL * loss_ene_name)
-                loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)
-                loss_tot_l.append(AU2KCALMOL * loss_tot_name)
-            else:
-                raise ValueError("Unknown loss function")
+            loss_ene_l.append(AU2KCALMOL * loss_record)
+            loss_ene_abs_l.append(AU2KCALMOL * loss_abs_record)
+            loss_tot_l.append(AU2KCALMOL * loss_tot_record)
 
         return (
             name_l,
@@ -285,28 +277,19 @@ class ModelClass:
 
         for name in database_eval.name_list:
             batch = database_eval.data_gpu[name]
-            data_weight = database_eval.data_weight[name]
 
             if not database_eval.if_load_to_gpu_once:
                 batch = database_eval.process_batch(batch)
 
             with torch.autocast(device_type="cuda", dtype=self.dtype):
                 with torch.no_grad():
-                    loss_ene, loss_ene_abs = self.loss(batch)
+                    tot_loss, loss_record, loss_abs_record = self.loss(batch)
 
-            tot_loss = self.tot_loss(loss_ene, loss_ene_abs, data_weight)
-
-            loss_ene_name = loss_ene.item()
-            loss_ene_abs_name = loss_ene_abs.item()
-            loss_tot_name = tot_loss.item()
-
+            loss_tot_record = tot_loss.item()
             name_l.append(name)
-            if isinstance(self.loss_ene, torch.nn.L1Loss):
-                loss_ene_l.append(AU2KCALMOL * loss_ene_name)
-                loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)
-                loss_tot_l.append(AU2KCALMOL * loss_tot_name)
-            else:
-                raise ValueError("Unknown loss function")
+            loss_ene_l.append(AU2KCALMOL * loss_record)
+            loss_ene_abs_l.append(AU2KCALMOL * loss_abs_record)
+            loss_tot_l.append(AU2KCALMOL * loss_tot_record)
 
         return (
             name_l,
