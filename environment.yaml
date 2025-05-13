@@ -1,4 +1,4 @@
-name: pyscf
+name: pyscf_ml
 channels:
   - conda-forge
   - pytorch
@@ -6,15 +6,12 @@ channels:
 dependencies:
   - python>=3.10
   - anaconda
-  - numpy==1.26.4
-  - scipy==1.14.0
-  - pandas==2.2.2
-  - pyscf==2.9.0
+  - numpy
+  - scipy
+  - pandas
+  - pyscf
   - opt_einsum
   - scikit-learn
   - basis_set_exchange
   - wandb
   - tqdm
-  - pip
-  - pip:
-    - segmentation_models_pytorch==0.3.3

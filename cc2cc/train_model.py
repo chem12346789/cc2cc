@@ -105,16 +105,15 @@ def train_model(train_str_dict, eval_str_dict, args):
     }
     print(experiment_dict)
 
-    wandb.define_metric("*", step_metric="global_step")
-
     with wandb.init(
         project="DFT2CC",
         resume="allow",
         name="dft2cc",
         dir="/home/chenzihao/raid/tmp",
-        allow_val_change=True,
         config=experiment_dict,
+        allow_val_change=True,
     ) as run:
+        wandb.define_metric("*", step_metric="global_step")
 
         print(f"Start training at {modeldict.dir_checkpoint}")
         time_start = time.time()

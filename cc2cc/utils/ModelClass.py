@@ -220,8 +220,10 @@ class ModelClass:
         )
         tot_loss = self.tot_loss(loss_ene, loss_ene_abs) / self.iters_to_accumulate
 
-        loss_record = torch.sum(output_mat_real - output_mat).item()
-        loss_abs_record = torch.sum(torch.abs(output_mat_real - output_mat)).item()
+        loss_record = np.abs(torch.sum(output_mat_real - output_mat).item())
+        loss_abs_record = np.abs(
+            torch.sum(torch.abs(output_mat_real - output_mat)).item()
+        )
 
         return tot_loss, loss_record, loss_abs_record
 
