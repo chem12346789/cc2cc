@@ -10,7 +10,6 @@ checkpoint*/
 validate*/
 checkpoints
 validate
-jupyter-notebook/
 /gen_data_script/
 /test_script/
 /train_script/
