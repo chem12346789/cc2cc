@@ -7,12 +7,7 @@ from cc2cc.utils.parser import gen_name_args
 train_str_list = [
     "molecule0",
     "molecule1",
-    "molecule2-ALK8",
-    "molecule2-BSR36",
-    "molecule2-G2RC",
-    "molecule2-HEAVYSB11",
-    "molecule2-SIE4x4",
-    "molecule2-W4_11",
+    "molecule2",
     "molecule3-ALK8",
     "molecule3-HEAVYSB11",
     "molecule3-W4_11",
@@ -27,11 +22,11 @@ train_str_exclude_list = [
     "molecule1-GW100",
     "molecule1-MRADC",
     "molecule1-S30L",
-    # "molecule2-ACC24",
-    # "molecule2-GAPS",
-    # "molecule2-GW100",
-    # "molecule2-MRADC",
-    # "molecule2-S30L",
+    "molecule2-ACC24",
+    "molecule2-GAPS",
+    "molecule2-GW100",
+    "molecule2-MRADC",
+    "molecule2-S30L",
 ]
 eval_str_list = [
     "ADIM6-AD2",  # 4
