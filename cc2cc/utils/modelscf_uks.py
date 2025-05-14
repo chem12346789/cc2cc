@@ -23,7 +23,7 @@ def nr_uks(
     dms,
     xc_code="b3lyp",
     hermi=1,
-    max_memory=200,
+    max_memory=20,
     verbose=None,
 ):
     """
