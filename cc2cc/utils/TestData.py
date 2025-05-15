@@ -108,6 +108,7 @@ class TestData:
         mf.kernel()
         self.mf_dm1 = mf.make_rdm1()
         mycc = pyscf.cc.CCSD(mf)
+        mycc.direct = True
         mycc.max_cycle = 200
         if "C60ISO" in self.name or "UPU23" in self.name:
             mycc.set_frozen()
@@ -169,6 +170,7 @@ class TestData:
         mf.kernel()
         self.mf_dm1 = mf.make_rdm1()
         mycc = pyscf.cc.UCCSD(mf)
+        mycc.direct = True
         mycc.max_cycle = 200
         if "C60ISO" in self.name or "UPU23" in self.name:
             mycc.set_frozen()
