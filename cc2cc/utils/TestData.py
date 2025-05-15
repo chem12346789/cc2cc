@@ -105,14 +105,21 @@ class TestData:
         mf = pyscf.scf.RHF(self.mol)
         mf.max_cycle = 200
         mf.diis_space = 12
-        mf.kernel()
-        self.mf_dm1 = mf.make_rdm1()
-        mycc = pyscf.cc.CCSD(mf)
-        mycc.direct = True
-        mycc.max_cycle = 200
+
         if "C60ISO" in self.name or "UPU23" in self.name:
+            mf = mf.density_fit().run()
+            self.mf_dm1 = mf.make_rdm1()
+            mycc = pyscf.cc.CCSD(mf)
+            mycc.max_cycle = 200
             mycc.set_frozen()
             print(f"Number of core orbital frozen: {mycc.frozen}")
+        else:
+            mf.kernel()
+            self.mf_dm1 = mf.make_rdm1()
+            mycc = pyscf.cc.CCSD(mf)
+            mycc.direct = True
+            mycc.max_cycle = 200
+
         _, t1, t2 = mycc.kernel()
         if mycc.converged is False:
             raise ValueError("CCSD not converged.")
@@ -167,13 +174,20 @@ class TestData:
         mf = pyscf.scf.UHF(self.mol)
         mf.max_cycle = 200
         mf.diis_space = 12
-        mf.kernel()
-        self.mf_dm1 = mf.make_rdm1()
-        mycc = pyscf.cc.UCCSD(mf)
-        mycc.direct = True
-        mycc.max_cycle = 200
+
         if "C60ISO" in self.name or "UPU23" in self.name:
+            mf = mf.density_fit().run()
+            self.mf_dm1 = mf.make_rdm1()
+            mycc = pyscf.cc.UCCSD(mf)
+            mycc.max_cycle = 200
             mycc.set_frozen()
+        else:
+            mf.kernel()
+            self.mf_dm1 = mf.make_rdm1()
+            mycc = pyscf.cc.UCCSD(mf)
+            mycc.direct = True
+            mycc.max_cycle = 200
+
         _, t1, t2 = mycc.kernel()
         if mycc.converged is False:
             raise ValueError("UCCSD not converged.")
