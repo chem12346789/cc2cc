@@ -12,7 +12,7 @@ from torch import nn
 ANG = 302
 RAD = 75
 
-D_MODEL = RAD
+D_MODEL = RAD // 15
 SEQ_LEN = 4
 DEPTH_TRANSFORMER = 5
 QKV_BIAS = False
@@ -277,14 +277,13 @@ class Model(nn.Module):
         """
         t = x[:, [0]]
 
-        if D_MODEL == RAD:
-            # SHAPE: x = (batch, 4)
-            x = x.reshape(-1, ANG, RAD, 4)
-            # SHAPE: x = (N_ATOM, ANG, RAD, 4)
-            x = x.reshape(-1, RAD, 4)
-            # SHAPE: x = (N_ATOM * ANG, RAD, 4)
-            x = torch.permute(x, (0, 2, 1))
-            # SHAPE: x = (N_ATOM * ANG, 4, RAD)
+        # SHAPE: x = (batch, 4)
+        x = x.reshape(-1, ANG, RAD, 4)
+        # SHAPE: x = (N_ATOM, ANG, RAD, 4)
+        x = x.reshape(-1, RAD, 4)
+        # SHAPE: x = (N_ATOM * ANG, RAD, 4)
+        x = torch.permute(x, (0, 2, 1))
+        # SHAPE: x = (N_ATOM * ANG, 4, RAD)
 
         # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
         x = self.predictor(x)
