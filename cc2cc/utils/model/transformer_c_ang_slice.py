@@ -12,7 +12,7 @@ from torch import nn
 ANG = 302
 RAD = 75
 
-D_MODEL = RAD
+D_MODEL = RAD // 15
 SEQ_LEN = 4
 DEPTH_TRANSFORMER = 5
 QKV_BIAS = False
@@ -276,8 +276,8 @@ class Model(nn.Module):
         Standard forward function, required for all nn.Module classes
         """
         t = x[:, [0]]
-
         # SHAPE: x = (batch, 4)
+
         x = x.reshape(-1, ANG, RAD, 4)
         # SHAPE: x = (N_ATOM, ANG, RAD, 4)
         x = x.reshape(-1, RAD, 4)
@@ -285,12 +285,24 @@ class Model(nn.Module):
         x = torch.permute(x, (0, 2, 1))
         # SHAPE: x = (N_ATOM * ANG, 4, RAD)
 
-        # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
-        x = self.predictor(x)
-        # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
+        x_out = torch.zeros_like(x)
+        normalize = torch.zeros_like(x)
+        # SHAPE: x_out = (N_ATOM * ANG, 4, RAD)
+        for i in range(0, RAD - D_MODEL):
+            x_slice = x[:, :, i : i + D_MODEL]
+            # SHAPE: x_slice = (N_ATOM * ANG, 4, D_MODEL)
+            x_slice = self.predictor(x_slice)
+            # SHAPE: x_slice = (N_ATOM * ANG, 4, D_MODEL)
+            x_out[:, :, i : i + D_MODEL] += x_slice
+            # SHAPE: x_out = (N_ATOM * ANG, 4, RAD)
+            normalize[:, :, i : i + D_MODEL] += 1
+            # SHAPE: normalize = (N_ATOM * ANG, 4, RAD)
 
+        x = x_out / normalize
+        # SHAPE: x = (N_ATOM * ANG, 4, RAD)
         x = torch.permute(x, (0, 2, 1))
-        # x.shape = (N_ATOM * ANG, D_MODEL, SEQ_LEN)
+
+        # x.shape = (batch, 4)
         x = x.reshape(-1, 4)
         # x.shape = (batch, 4)
         x = self.densenet(x)

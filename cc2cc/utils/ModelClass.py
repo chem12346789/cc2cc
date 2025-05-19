@@ -16,6 +16,9 @@ from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.model.densenet import Model as ModelDensenet
 from cc2cc.utils.model.transformer import Model as ModelTransformer
 from cc2cc.utils.model.transformer_c_ang import Model as ModelTransformer_c_Ang
+from cc2cc.utils.model.transformer_c_ang_slice import (
+    Model as ModelTransformer_c_Ang_slice,
+)
 from cc2cc.utils.model.densenet_c import Model as ModelDensenet_c
 from cc2cc.utils.model.transformer_7 import Model as ModelTransformer_7
 
@@ -48,6 +51,9 @@ class ModelClass:
         elif args.model == "transformer_c_ang":
             Model = ModelTransformer_c_Ang
             print("Model: Transformer_c_Ang")
+        elif args.model == "transformer_c_ang_slice":
+            Model = ModelTransformer_c_Ang_slice
+            print("Model: Transformer_c_Ang_slice")
         else:
             raise ValueError("Unknown model")
 

@@ -36,7 +36,7 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     modeldict = ModelClass(args)
 
-    if args.model in ["transformer_c_ang", "densenet_c"]:
+    if args.model in ["transformer_c_ang", "transformer_c_ang_slice", "densenet_c"]:
         print(
             summary(
                 modeldict.model,
