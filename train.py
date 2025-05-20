@@ -9,8 +9,7 @@ train_str_list = [
     "molecule1",
     "molecule2",
     "molecule3",
-    "molecule4-ALK8",
-    "molecule4-W4_11",
+    "molecule4",
     "BH9-08_9R2",  # 5
 ]
 train_str_exclude_list = [
@@ -30,6 +29,11 @@ train_str_exclude_list = [
     "molecule3-GW100",
     "molecule3-MRADC",
     "molecule3-S30L",
+    "molecule4-ACC24",
+    "molecule4-GAPS",
+    "molecule4-GW100",
+    "molecule4-MRADC",
+    "molecule4-S30L",
 ]
 eval_str_list = [
     "ADIM6-AD2",  # 4
