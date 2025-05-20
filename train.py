@@ -33,7 +33,6 @@ train_str_exclude_list = [
 ]
 eval_str_list = [
     "ADIM6-AD2",  # 4
-    "molecule5-BSR36",
     "molecule5-ALK8",
     "molecule5-BSR36",
     "molecule5-W4_11",
