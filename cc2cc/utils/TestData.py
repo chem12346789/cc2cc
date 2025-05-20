@@ -111,6 +111,7 @@ class TestData:
             self.mf_dm1 = mf.make_rdm1()
             mycc = pyscf.cc.CCSD(mf)
             mycc.max_cycle = 200
+            mycc.direct = True
             mycc.set_frozen()
             print(f"Number of core orbital frozen: {mycc.frozen}")
         else:
@@ -180,7 +181,9 @@ class TestData:
             self.mf_dm1 = mf.make_rdm1()
             mycc = pyscf.cc.UCCSD(mf)
             mycc.max_cycle = 200
+            mycc.direct = True
             mycc.set_frozen()
+            print(f"Number of core orbital frozen: {mycc.frozen}")
         else:
             mf.kernel()
             self.mf_dm1 = mf.make_rdm1()
