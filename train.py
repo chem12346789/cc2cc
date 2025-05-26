@@ -27,6 +27,7 @@ train_str_exclude_list = [
     "molecule1-GW100",
     "molecule1-MRADC",
     "molecule1-S30L",
+    "molecule1-BH9",
     "molecule2-ACC24",
     "molecule2-GAPS",
     "molecule2-GW100",
