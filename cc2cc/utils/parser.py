@@ -117,7 +117,7 @@ def gen_name_args(name_args, args, if_exclude=False):
                         else:
                             name_mol_new.add(extend_mol)
                 elif if_exclude:
-                    print(f"Warning: {name_args[i]} is not in the dataset. " )
+                    print(f"Warning: {name_args[i]} is not in the dataset. ")
                 else:
                     raise ValueError(
                         f"Invalid molecule name: {name_args[i]}. "
@@ -130,6 +130,8 @@ def gen_name_args(name_args, args, if_exclude=False):
                     name_mol_new.add(name_args[i])
         name_mol_new = list(name_mol_new)
     name_mol_new = sorted(name_mol_new, key=lambda x: len(dataset_dict[x]))
+    if args.name_mol_reverse:
+        name_mol_new = name_mol_new[::-1]
     print(f"Name of molecule: {name_mol_new}")
     return name_mol_new
 
@@ -147,6 +149,13 @@ def add_args(parser: argparse.ArgumentParser):
         type=str,
         default=[],
         help="Name of molecule. Default is None (all the dataset).",
+    )
+
+    parser.add_argument(
+        "--name_mol_reverse",
+        type=str2bool,
+        default=False,
+        help="Whether to reverse the order of the molecule names. Default is False.",
     )
 
     parser.add_argument(

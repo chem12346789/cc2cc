@@ -203,26 +203,35 @@ class ModelClass:
         """
         Calculate the total loss.
         """
-        tot_loss = loss_ene + loss_ene_abs * self.loss_multiplier
+        if self.loss_multiplier > 1e-6:
+            if isinstance(self.loss_ene, torch.nn.L1Loss):
+                tot_loss = loss_ene + loss_ene_abs * self.loss_multiplier
+            elif isinstance(self.loss_ene, torch.nn.MSELoss):
+                tot_loss = loss_ene + loss_ene_abs * self.loss_multiplier**2
+            else:
+                raise ValueError("Unknown loss function")
+        else:
+            tot_loss = loss_ene
         return tot_loss
 
-    def loss(self, batch):
+    def loss(self, batch, data_weight):
         """
         Calculate the loss.
         """
         input_mat = batch["input"]
         weight = batch["weight"]
         output_mat_real = batch["output"] * weight
+        data_weight = np.sqrt(data_weight)
 
         output_mat = self.model(input_mat) * weight
 
         loss_ene = self.loss_ene(
-            torch.sum(output_mat_real),
-            torch.sum(output_mat),
+            data_weight * torch.sum(output_mat_real),
+            data_weight * torch.sum(output_mat),
         )
         loss_ene_abs = self.loss_ene_abs(
-            output_mat_real,
-            output_mat,
+            data_weight * output_mat_real,
+            data_weight * output_mat,
         )
         tot_loss = self.tot_loss(loss_ene, loss_ene_abs) / self.iters_to_accumulate
 
@@ -253,12 +262,13 @@ class ModelClass:
 
         for name in database_train.name_list:
             batch = database_train.data_gpu[name]
+            data_weight = database_train.data_weight[name]
 
             if not database_train.if_load_to_gpu_once:
                 batch = database_train.process_batch(batch)
 
             with torch.autocast(device_type="cuda", dtype=self.dtype):
-                tot_loss, loss_record, loss_abs_record = self.loss(batch)
+                tot_loss, loss_record, loss_abs_record = self.loss(batch, data_weight)
 
             self.scaler.scale(tot_loss).backward()
             self.update()
@@ -285,13 +295,16 @@ class ModelClass:
 
         for name in database_eval.name_list:
             batch = database_eval.data_gpu[name]
+            data_weight = database_eval.data_weight[name]
 
             if not database_eval.if_load_to_gpu_once:
                 batch = database_eval.process_batch(batch)
 
             with torch.autocast(device_type="cuda", dtype=self.dtype):
                 with torch.no_grad():
-                    tot_loss, loss_record, loss_abs_record = self.loss(batch)
+                    tot_loss, loss_record, loss_abs_record = self.loss(
+                        batch, data_weight
+                    )
 
             loss_tot_record = tot_loss.item()
             name_l.append(name)

@@ -48,14 +48,14 @@ eval_str_list = [
     "molecule5-ALK8",
     "molecule5-BSR36",
     "molecule5-W4_11",
-    "molecule6-BSR36",
-    "ADIM6-AD3",  # 6
-    "molecule7-MB16_43",
-    "molecule7-BSR36",
-    "molecule8-MB16_43",
-    "ADIM6-AD4",  # 8
-    "molecule8-BSR36",
-    "molecule8-IDISP",
+    # "molecule6-BSR36",
+    # "ADIM6-AD3",  # 6
+    # "molecule7-MB16_43",
+    # "molecule7-BSR36",
+    # "molecule8-MB16_43",
+    # "ADIM6-AD4",  # 8
+    # "molecule8-BSR36",
+    # "molecule8-IDISP",
 ]
 eval_str_exclude_list = []
 
@@ -75,8 +75,11 @@ if __name__ == "__main__":
     eval_str_exclude_list = gen_name_args(eval_str_exclude_list, args, if_exclude=True)
 
     # remove the same name in train and train_str_exclude_list
-    train_str_list = list(set(train_str_list) - set(train_str_exclude_list))
+    train_str_list = [
+        mol for mol in train_str_list if mol not in train_str_exclude_list
+    ]
+
     # remove the same name in eval and eval_str_exclude_list
-    eval_str_list = list(set(eval_str_list) - set(eval_str_exclude_list))
+    eval_str_list = [mol for mol in eval_str_list if mol not in eval_str_exclude_list]
 
     train_model(train_str_list, eval_str_list, args)

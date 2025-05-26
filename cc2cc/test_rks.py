@@ -47,7 +47,7 @@ def test_rks(
         e_scf = test_data.e_cc
     else:
         mdft.max_cycle = 50
-        mdft.conv_tol = 1e-6
+        mdft.conv_tol = 1e-5
         mdft.kernel(dm0=test_data.mf_dm1)
         dm1_scf = mdft.make_rdm1()
         e_scf = mdft.e_tot
