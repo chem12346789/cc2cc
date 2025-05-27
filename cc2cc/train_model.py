@@ -36,7 +36,12 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     modeldict = ModelClass(args)
 
-    if args.model in ["transformer_c_ang", "transformer_c_ang_slice", "densenet_c"]:
+    if args.model in [
+        "densenet_c",
+        "transformer_c",
+        "transformer_c_ang",
+        "transformer_c_ang_slice",
+    ]:
         print(
             summary(
                 modeldict.model,
@@ -80,6 +85,7 @@ def train_model(train_str_dict, eval_str_dict, args):
         database_train = DataBase(train_str_dict, args)
 
     experiment_dict = {
+        "model": args.model,
         "batch_size": args.batch_size,
         "n_train": len(database_train.name_list),
         "n_eval": len(database_eval.name_list),

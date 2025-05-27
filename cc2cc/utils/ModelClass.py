@@ -20,6 +20,7 @@ from cc2cc.utils.model.transformer_c_ang_slice import (
     Model as ModelTransformer_c_Ang_slice,
 )
 from cc2cc.utils.model.densenet_c import Model as ModelDensenet_c
+from cc2cc.utils.model.transformer_c import Model as ModelTransformer_c
 from cc2cc.utils.model.transformer_7 import Model as ModelTransformer_7
 
 
@@ -42,6 +43,9 @@ class ModelClass:
         elif args.model == "transformer":
             Model = ModelTransformer
             print("Model: Transformer")
+        elif args.model == "transformer_c":
+            Model = ModelTransformer_c
+            print("Model: Transformer_c")
         elif args.model == "transformer_7":
             Model = ModelTransformer_7
             print("Model: Transformer_7")
@@ -214,14 +218,16 @@ class ModelClass:
             tot_loss = loss_ene
         return tot_loss
 
-    def loss(self, batch, data_weight):
+    def loss(self, batch, data_weight=1.0):
         """
         Calculate the loss.
         """
         input_mat = batch["input"]
         weight = batch["weight"]
         output_mat_real = batch["output"] * weight
-        data_weight = np.sqrt(data_weight)
+        data_weight = 1 / np.sqrt(data_weight)
+        # data_weight = 1
+        # data_weight = np.sqrt(data_weight)
 
         output_mat = self.model(input_mat) * weight
 

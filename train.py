@@ -27,7 +27,6 @@ train_str_exclude_list = [
     "molecule1-GW100",
     "molecule1-MRADC",
     "molecule1-S30L",
-    "molecule1-BH9",
     "molecule2-ACC24",
     "molecule2-GAPS",
     "molecule2-GW100",
@@ -49,14 +48,14 @@ eval_str_list = [
     "molecule5-ALK8",
     "molecule5-BSR36",
     "molecule5-W4_11",
-    # "molecule6-BSR36",
-    # "ADIM6-AD3",  # 6
-    # "molecule7-MB16_43",
-    # "molecule7-BSR36",
-    # "molecule8-MB16_43",
-    # "ADIM6-AD4",  # 8
-    # "molecule8-BSR36",
-    # "molecule8-IDISP",
+    "molecule6-BSR36",
+    "ADIM6-AD3",  # 6
+    "molecule7-MB16_43",
+    "molecule7-BSR36",
+    "molecule8-MB16_43",
+    "ADIM6-AD4",  # 8
+    "molecule8-BSR36",
+    "molecule8-IDISP",
 ]
 eval_str_exclude_list = []
 

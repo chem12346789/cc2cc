@@ -107,15 +107,15 @@ def gen_name_args(name_args, args, if_exclude=False):
     elif len(name_args) == 0:
         name_mol_new = []
     else:
-        name_mol_new = set()
+        name_mol_new = []
         for i in range(len(name_args)):
             if name_args[i].startswith("molecule"):
                 if name_args[i] in dataset_dict.keys():
                     for extend_mol in dataset_dict[name_args[i]]:
                         if isinstance(dataset_dict[extend_mol], str):
-                            name_mol_new.add(dataset_dict[extend_mol])
+                            name_mol_new.append(dataset_dict[extend_mol])
                         else:
-                            name_mol_new.add(extend_mol)
+                            name_mol_new.append(extend_mol)
                 elif if_exclude:
                     print(f"Warning: {name_args[i]} is not in the dataset. ")
                 else:
@@ -125,14 +125,23 @@ def gen_name_args(name_args, args, if_exclude=False):
                     )
             else:
                 if isinstance(dataset_dict[name_args[i]], str):
-                    name_mol_new.add(dataset_dict[name_args[i]])
+                    name_mol_new.append(dataset_dict[name_args[i]])
                 else:
-                    name_mol_new.add(name_args[i])
-        name_mol_new = list(name_mol_new)
-    name_mol_new = sorted(name_mol_new, key=lambda x: len(dataset_dict[x]))
+                    name_mol_new.append(name_args[i])
+
+        # remove duplicates
+        name_mol = []
+        for i in name_mol_new:
+            if i not in name_mol:
+                name_mol.append(i)
+        name_mol_new = name_mol
+
+    # sort the name_mol_new by the length of the molecule then by the name
+    # this is to ensure that the training process will be reproducible
+    name_mol_new.sort(key=lambda x: (len(dataset_dict[x]), x))
     if args.name_mol_reverse:
         name_mol_new = name_mol_new[::-1]
-    print(f"Name of molecule: {name_mol_new}")
+
     return name_mol_new
 
 
