@@ -511,8 +511,8 @@ class Grid(dft.gen_grid.Grids):
 
             e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_4_lda, deriv=1, xctype="LDA")[:2]
             e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_4_lda, deriv=1, xctype="LDA")[:2]
-            e_b88, v_b88 = ni.eval_xc_eff("B88,", rho, deriv=1, xctype="GGA")[:2]
-            e_lyp, v_lyp = ni.eval_xc_eff(",LYP", rho, deriv=1, xctype="GGA")[:2]
+            e_b88, v_b88 = ni.eval_xc_eff("B88,", rho_4, deriv=1, xctype="GGA")[:2]
+            e_lyp, v_lyp = ni.eval_xc_eff(",LYP", rho_4, deriv=1, xctype="GGA")[:2]
 
             exc_b3lyp = 0.08 * e_lda + 0.19 * e_vwn + 0.72 * e_b88 + 0.81 * e_lyp
 
