@@ -7,6 +7,7 @@ More details.
 # pylint: disable=W0212
 
 import ctypes
+import gc
 import numpy as np
 from numba import njit
 
@@ -131,6 +132,11 @@ def gen_atomic_grids(
             chg = gto.charge(symb)
             if symb in atom_grid:
                 n_rad, n_ang = atom_grid[symb]
+            else:
+                raise ValueError(
+                    f"Atomic grid for {symb} is not defined. "
+                    "Please provide a valid atom_grid."
+                )
             rad, dr = radi_method(n_rad, chg, ia, **kwargs)
 
             rad_weight = 4 * np.pi * rad**2 * dr
@@ -201,11 +207,9 @@ class GridCube:
     """
     Generate the Grids for the cube.
     Note that the no center weights are 0.
-    The cutoff is the cutoff for the cube.
-    This class is used to hack the modified_block_loop as the duck typing.
     """
 
-    def __init__(self, coords, weights, cutoff=None):
+    def __init__(self, coords, weights):
         self.weights = np.zeros((coords.shape[0], CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
         self.weights[:, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] = weights
         self.coords = coords.reshape(
@@ -213,61 +217,6 @@ class GridCube:
         )
         self.non0tab = None
         self.mol = None
-        self.cutoff = cutoff
-
-
-def modified_block_loop(
-    ni,
-    mol,
-    grids,
-    nao=None,
-    deriv=0,
-    max_memory=2000,
-    non0tab=None,
-    blksize=None,
-    buf=None,
-):
-    """Define this macro to loop over grids by blocks."""
-    if grids.coords is None:
-        grids.build(with_non0tab=True)
-    if nao is None:
-        nao = mol.nao
-    ngrids = grids.coords.shape[0]
-    comp = (deriv + 1) * (deriv + 2) * (deriv + 3) // 6
-    # NOTE to index grids.non0tab, the blksize needs to be an integer
-    # multiplier of BLKSIZE
-    if blksize is None:
-        blksize = int(max_memory * 1e6 / ((comp + 1) * nao * 8 * BLKSIZE))
-        blksize = max(4, min(blksize, ngrids // BLKSIZE + 1, 1200)) * BLKSIZE
-    assert blksize % BLKSIZE == 0
-
-    if non0tab is None and mol is grids.mol:
-        non0tab = grids.non0tab
-    if non0tab is None:
-        non0tab = np.empty(
-            ((ngrids + BLKSIZE - 1) // BLKSIZE, mol.nbas), dtype=np.uint8
-        )
-        non0tab[:] = NBINS + 1  # Corresponding to AO value ~= 1
-    screen_index = non0tab
-
-    # the xxx_sparse() functions require ngrids 8-byte aligned
-    allow_sparse = ngrids % ALIGNMENT_UNIT == 0 and nao > SWITCH_SIZE
-
-    if buf is None:
-        buf = _empty_aligned(comp * blksize * nao)
-    for ip0, ip1 in lib.prange(0, ngrids, blksize):
-        coords = grids.coords[ip0:ip1]
-        weight = grids.weights[ip0:ip1]
-        mask = screen_index[ip0 // BLKSIZE :]
-        # TODO: pass grids.cutoff to eval_ao
-        ao = ni.eval_ao(
-            mol, coords, deriv=deriv, non0tab=mask, cutoff=grids.cutoff, out=buf
-        )
-        if not allow_sparse and not _sparse_enough(mask):
-            # Unset mask for dense AO tensor. It determines which eval_rho
-            # to be called in make_rho
-            mask = None
-        yield ao, mask, weight, coords, ip0, ip1
 
 
 class Grid(dft.gen_grid.Grids):
@@ -317,7 +266,6 @@ class Grid(dft.gen_grid.Grids):
         mol,
         dm1_input,
         coords=None,
-        weights=None,
     ):
         """
         Generate the cube coordinates for the given molecule.
@@ -368,8 +316,10 @@ class Grid(dft.gen_grid.Grids):
 
         coor_cube = np.zeros((len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
         gen_cube_njit(rho_input_2, rho_input_1, coords, coor_cube)
-
-        return GridCube(coor_cube, weights, cutoff=self.cutoff)
+        coor_cube = coor_cube.reshape(
+            (len(coords) * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE, 3)
+        )
+        return coor_cube
 
     def get_center_density(self, den_cube):
         """
@@ -381,12 +331,11 @@ class Grid(dft.gen_grid.Grids):
         self,
         mol,
         dms,
-        rho_4,
+        rho,
         ni=None,
         coords=None,
         weights=None,
         hermi=1,
-        max_memory=2000,
         require_vxc=False,
     ):
         """
@@ -398,65 +347,60 @@ class Grid(dft.gen_grid.Grids):
         if weights is None:
             weights = self.weights
 
-        gridcube = self.gen_cube(mol, dms, coords, weights)
+        coor_cube = self.gen_cube(mol, dms, coords)
 
-        input_ = np.zeros((4, len(gridcube.coords)))
+        ao_cube = pyscf.dft.numint.eval_ao(mol, coor_cube, deriv=1)
+        rho_cube = ni.eval_rho(mol, ao_cube, dms, xctype="GGA", hermi=hermi)
+        exc_lda = ni.eval_xc_eff("LDA,", rho_cube[0], deriv=0, xctype="LDA")[0]
+        exc_vwn = ni.eval_xc_eff(",VWN3", rho_cube[0], deriv=0, xctype="LDA")[0]
+        exc_b88 = ni.eval_xc_eff("B88,", rho_cube, deriv=0, xctype="GGA")[0]
+        exc_lyp = ni.eval_xc_eff(",LYP", rho_cube, deriv=0, xctype="GGA")[0]
 
-        make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, gridcube)
+        rho_cube0 = rho_cube[0]
+        del ao_cube, rho_cube
+        gc.collect()
 
-        for ao, mask, _, _, ip0, ip1 in modified_block_loop(
-            ni, mol, gridcube, nao, 1, max_memory=max_memory
-        ):
-            for i in range(nset):
-                rho = make_rho(i, ao, mask, ni._xc_type("b3lyp"))
-                exc_lda = ni.eval_xc_eff("LDA,", rho[0], deriv=0, xctype="LDA")[0]
-                exc_vwn = ni.eval_xc_eff(",VWN3", rho[0], deriv=0, xctype="LDA")[0]
-                exc_b88 = ni.eval_xc_eff("B88,", rho, deriv=0, xctype="GGA")[0]
-                exc_lyp = ni.eval_xc_eff(",LYP", rho, deriv=0, xctype="GGA")[0]
-
-                rho0 = rho[0]
-
-                input_[:, ip0:ip1] = np.array(
-                    [
-                        exc_lda * rho0,
-                        exc_vwn * rho0,
-                        exc_b88 * rho0,
-                        exc_lyp * rho0,
-                    ]
-                )
-        del make_rho, nset
-
-        input_ = input_.reshape((4, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
-        input_ = input_.transpose(1, 0, 2, 3, 4)
+        rho_input = np.array(
+            [
+                exc_lda * rho_cube0,
+                exc_vwn * rho_cube0,
+                exc_b88 * rho_cube0,
+                exc_lyp * rho_cube0,
+            ]
+        )
+        rho_input = rho_input.reshape((4, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        rho_input = rho_input.transpose(1, 0, 2, 3, 4)
+        del rho_cube0, exc_lda, exc_vwn, exc_b88, exc_lyp
+        gc.collect()
 
         if require_vxc:
-            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_4[0], deriv=1, xctype="LDA")[:2]
-            e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_4[0], deriv=1, xctype="LDA")[:2]
-            e_b88, v_b88 = ni.eval_xc_eff("B88,", rho_4, deriv=1, xctype="GGA")[:2]
-            e_lyp, v_lyp = ni.eval_xc_eff(",LYP", rho_4, deriv=1, xctype="GGA")[:2]
+            rho_lda = rho[0]
+            rho_0 = rho[0]
+            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=1, xctype="LDA")[:2]
+            e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=1, xctype="LDA")[:2]
+            e_b88, v_b88 = ni.eval_xc_eff("B88,", rho, deriv=1, xctype="GGA")[:2]
+            e_lyp, v_lyp = ni.eval_xc_eff(",LYP", rho, deriv=1, xctype="GGA")[:2]
 
             exc_b3lyp = 0.08 * e_lda + 0.19 * e_vwn + 0.72 * e_b88 + 0.81 * e_lyp
-
             vxc_b3lyp = np.zeros((4, 4, len(coords)))
             vxc_b3lyp[0, 0:1, :] = v_lda
             vxc_b3lyp[1, 0:1, :] = v_vwn
             vxc_b3lyp[2, :, :] = v_b88
             vxc_b3lyp[3, :, :] = v_lyp
 
-            return exc_b3lyp * rho_4[0], input_, vxc_b3lyp
+            return exc_b3lyp * rho_0, rho_input, vxc_b3lyp
 
-        return input_
+        return rho_input
 
     def gen_cube_rho_uks(
         self,
         mol,
         dms,
-        rho_4,
+        rho,
         ni=None,
         coords=None,
         weights=None,
         hermi=1,
-        max_memory=2000,
         require_vxc=False,
     ):
         """
@@ -468,49 +412,49 @@ class Grid(dft.gen_grid.Grids):
         if weights is None:
             weights = self.weights
 
-        gridcube = self.gen_cube(mol, dms, coords, weights)
+        coor_cube = self.gen_cube(mol, dms, coords)
 
         dma, dmb = _format_uks_dm(dms)
-        nao = dma.shape[-1]
-        make_rhoa, nset = ni._gen_rho_evaluator(mol, dma, hermi, False, gridcube)[:2]
-        make_rhob = ni._gen_rho_evaluator(mol, dmb, hermi, False, gridcube)[0]
 
-        input_ = np.zeros((4, len(gridcube.coords)))
+        ao_cube = pyscf.dft.numint.eval_ao(mol, coor_cube, deriv=1)
+        rho_cube_a = pyscf.dft.numint.eval_rho(
+            mol, ao_cube, dma, xctype="GGA", hermi=hermi
+        )
+        rho_cube_b = pyscf.dft.numint.eval_rho(
+            mol, ao_cube, dmb, xctype="GGA", hermi=hermi
+        )
+        rho_cube = (rho_cube_a, rho_cube_b)
+        rho_cube_lda = (rho_cube_a[0], rho_cube_b[0])
 
-        for ao, mask, _, _, ip0, ip1 in modified_block_loop(
-            ni, mol, gridcube, nao, 1, max_memory=max_memory
-        ):
-            for i in range(nset):
-                rho_a = make_rhoa(i, ao, mask, ni._xc_type("b3lyp"))
-                rho_b = make_rhob(i, ao, mask, ni._xc_type("b3lyp"))
-                rho = (rho_a, rho_b)
-                rho_lda = (rho_a[0], rho_b[0])
-                rho0 = rho_a[0] + rho_b[0]
+        exc_lda = ni.eval_xc_eff("LDA,", rho_cube_lda, deriv=0, xctype="LDA")[0]
+        exc_vwn = ni.eval_xc_eff(",VWN3", rho_cube_lda, deriv=0, xctype="LDA")[0]
+        exc_b88 = ni.eval_xc_eff("B88,", rho_cube, deriv=0, xctype="GGA")[0]
+        exc_lyp = ni.eval_xc_eff(",LYP", rho_cube, deriv=0, xctype="GGA")[0]
 
-                exc_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=0, xctype="LDA")[0]
-                exc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=0, xctype="LDA")[0]
-                exc_b88 = ni.eval_xc_eff("B88,", rho, deriv=0, xctype="GGA")[0]
-                exc_lyp = ni.eval_xc_eff(",LYP", rho, deriv=0, xctype="GGA")[0]
+        rho_cube0 = rho_cube_a[0] + rho_cube_b[0]
+        del rho_cube_a, rho_cube_b, ao_cube
+        gc.collect()
 
-                input_[:, ip0:ip1] = np.array(
-                    [
-                        exc_lda * rho0,
-                        exc_vwn * rho0,
-                        exc_b88 * rho0,
-                        exc_lyp * rho0,
-                    ]
-                )
-        del make_rhoa, make_rhob, nset
+        rho_input = np.array(
+            [
+                exc_lda * rho_cube0,
+                exc_vwn * rho_cube0,
+                exc_b88 * rho_cube0,
+                exc_lyp * rho_cube0,
+            ]
+        )
+        del rho_cube0, exc_lda, exc_vwn, exc_b88, exc_lyp
+        gc.collect()
 
-        input_ = input_.reshape((4, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
-        input_ = input_.transpose(1, 0, 2, 3, 4)
+        rho_input = rho_input.reshape((4, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        rho_input = rho_input.transpose(1, 0, 2, 3, 4)
 
         if require_vxc:
-            rho_4_lda = (rho_4[0][0], rho_4[1][0])
-            rho_4_0 = rho_4[0][0] + rho_4[1][0]
+            rho_lda = (rho[0][0], rho[1][0])
+            rho_0 = rho[0][0] + rho[1][0]
 
-            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_4_lda, deriv=1, xctype="LDA")[1]
-            e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_4_lda, deriv=1, xctype="LDA")[1]
+            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=1, xctype="LDA")[1]
+            e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=1, xctype="LDA")[1]
             e_b88, v_b88 = ni.eval_xc_eff("B88,", rho, deriv=1, xctype="GGA")[1]
             e_lyp, v_lyp = ni.eval_xc_eff(",LYP", rho, deriv=1, xctype="GGA")[1]
 
@@ -522,20 +466,19 @@ class Grid(dft.gen_grid.Grids):
             vxc_b3lyp[2, :, :, :] = v_b88
             vxc_b3lyp[3, :, :, :] = v_lyp
 
-            return exc_b3lyp * rho_4_0, input_, vxc_b3lyp
+            return exc_b3lyp * rho_0, rho_cube, vxc_b3lyp
 
-        return input_
+        return rho_cube
 
     def gen_rho_rks(
         self,
         mol,
         dms,
-        rho_4,
+        rho,
         ni=None,
         coords=None,
         weights=None,
         hermi=1,
-        max_memory=2000,
         require_vxc=False,
     ):
         """
@@ -547,67 +490,45 @@ class Grid(dft.gen_grid.Grids):
         if weights is None:
             weights = self.weights
 
-        input_ = np.zeros((4, len(self.coords)))
+        rho_lda = rho[0]
+        rho_0 = rho[0]
 
-        if require_vxc:
-            vxc_b3lyp = np.zeros((4, 4, len(self.coords)))
+        exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=1, xctype="LDA")[:2]
+        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=1, xctype="LDA")[:2]
+        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, deriv=1, xctype="GGA")[:2]
+        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, deriv=1, xctype="GGA")[:2]
 
-        make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, self)
-
-        for ao, mask, _, _, ip0, ip1 in modified_block_loop(
-            ni, mol, self, nao, 1, max_memory=max_memory
-        ):
-            for i in range(nset):
-                rho = make_rho(i, ao, mask, ni._xc_type("b3lyp"))
-                exc_lda, vxc_lda = ni.eval_xc_eff(
-                    "LDA,", rho[0], deriv=1, xctype="LDA"
-                )[:2]
-                exc_vwn, vxc_vwn = ni.eval_xc_eff(
-                    ",VWN3", rho[0], deriv=1, xctype="LDA"
-                )[:2]
-                exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, deriv=1, xctype="GGA")[
-                    :2
-                ]
-                exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, deriv=1, xctype="GGA")[
-                    :2
-                ]
-
-                input_[:, ip0:ip1] = np.array(
-                    [
-                        exc_lda * rho[0],
-                        exc_vwn * rho[0],
-                        exc_b88 * rho[0],
-                        exc_lyp * rho[0],
-                    ]
-                )
-
-                if require_vxc:
-                    vxc_b3lyp[0, 0:1, ip0:ip1] = vxc_lda
-                    vxc_b3lyp[1, 0:1, ip0:ip1] = vxc_vwn
-                    vxc_b3lyp[2, :, ip0:ip1] = vxc_b88
-                    vxc_b3lyp[3, :, ip0:ip1] = vxc_lyp
+        rho_b3lyp = np.array(
+            [exc_lda * rho_0, exc_vwn * rho_0, exc_b88 * rho_0, exc_lyp * rho_0]
+        )
 
         if require_vxc:
             exc_b3lyp = (
-                0.08 * input_[:, 0]
-                + 0.19 * input_[:, 1]
-                + 0.72 * input_[:, 2]
-                + 0.81 * input_[:, 3]
+                0.08 * rho_b3lyp[:, 0]
+                + 0.19 * rho_b3lyp[:, 1]
+                + 0.72 * rho_b3lyp[:, 2]
+                + 0.81 * rho_b3lyp[:, 3]
             )
-            return exc_b3lyp, input_, vxc_b3lyp
 
-        return input_
+            vxc_b3lyp = np.zeros((4, 4, len(coords)))
+            vxc_b3lyp[0, 0:1, :] = vxc_lda
+            vxc_b3lyp[1, 0:1, :] = vxc_vwn
+            vxc_b3lyp[2, :, :] = vxc_b88
+            vxc_b3lyp[3, :, :] = vxc_lyp
+
+            return exc_b3lyp, rho_b3lyp, vxc_b3lyp
+
+        return rho_b3lyp
 
     def gen_rho_uks(
         self,
         mol,
         dms,
-        rho_4,
+        rho,
         ni=None,
         coords=None,
         weights=None,
         hermi=1,
-        max_memory=2000,
         require_vxc=False,
     ):
         """
@@ -619,28 +540,24 @@ class Grid(dft.gen_grid.Grids):
         if weights is None:
             weights = self.weights
 
-        rho_lda = (rho_4[0][0], rho_4[1][0])
-        rho0 = rho_4[0][0] + rho_4[1][0]
+        rho_lda = (rho[0][0], rho[1][0])
+        rho_0 = rho[0][0] + rho[1][0]
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=1, xctype="LDA")[:2]
         exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=1, xctype="LDA")[:2]
-        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho_4, deriv=1, xctype="GGA")[:2]
-        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho_4, deriv=1, xctype="GGA")[:2]
-        input_ = np.array(
-            [
-                exc_lda * rho0,
-                exc_vwn * rho0,
-                exc_b88 * rho0,
-                exc_lyp * rho0,
-            ]
+        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, deriv=1, xctype="GGA")[:2]
+        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, deriv=1, xctype="GGA")[:2]
+
+        rho_b3lyp = np.array(
+            [exc_lda * rho_0, exc_vwn * rho_0, exc_b88 * rho_0, exc_lyp * rho_0]
         )
 
         if require_vxc:
             exc_b3lyp = (
-                0.08 * input_[:, 0]
-                + 0.19 * input_[:, 1]
-                + 0.72 * input_[:, 2]
-                + 0.81 * input_[:, 3]
+                0.08 * rho_b3lyp[:, 0]
+                + 0.19 * rho_b3lyp[:, 1]
+                + 0.72 * rho_b3lyp[:, 2]
+                + 0.81 * rho_b3lyp[:, 3]
             )
 
             vxc_b3lyp = np.zeros((4, 2, 4, len(coords)))
@@ -649,6 +566,6 @@ class Grid(dft.gen_grid.Grids):
             vxc_b3lyp[2, :, :, :] = vxc_b88
             vxc_b3lyp[3, :, :, :] = vxc_lyp
 
-            return exc_b3lyp * rho0, input_, vxc_b3lyp
+            return exc_b3lyp, rho_b3lyp, vxc_b3lyp
 
-        return input_
+        return rho_b3lyp
