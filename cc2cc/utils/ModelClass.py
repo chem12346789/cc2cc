@@ -21,6 +21,8 @@ from cc2cc.utils.model.transformer_c_ang_slice import (
 )
 from cc2cc.utils.model.densenet_c import Model as ModelDensenet_c
 from cc2cc.utils.model.transformer_c import Model as ModelTransformer_c
+from cc2cc.utils.model.transformer_skip import Model as ModelTransformer_skip
+from cc2cc.utils.model.transformer_old import Model as ModelTransformer_old
 from cc2cc.utils.model.transformer_7 import Model as ModelTransformer_7
 
 
@@ -43,6 +45,12 @@ class ModelClass:
         elif args.model == "transformer":
             Model = ModelTransformer
             print("Model: Transformer")
+        elif args.model == "transformer_skip":
+            Model = ModelTransformer_skip
+            print("Model: Transformer_skip")
+        elif args.model == "transformer_old":
+            Model = ModelTransformer_old
+            print("Model: Transformer_old")
         elif args.model == "transformer_c":
             Model = ModelTransformer_c
             print("Model: Transformer_c")
@@ -324,3 +332,148 @@ class ModelClass:
             np.array(loss_ene_abs_l),
             np.array(loss_tot_l),
         )
+
+    def eval_xc_eff_cube(
+        self,
+        mol,
+        dms,
+        rho,
+        ni,
+        grids,
+        weights_,
+        coords_,
+    ):
+        """
+        Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
+        Args:
+            mol: PySCF molecule object.
+            dms: Density matrices.
+            ni: NumInt object.
+            coords_: Coordinates of the grid points.
+            weights_: Weights of the grid points.
+        Returns:
+            exc: Exchange-correlation energy.
+            vxc: Exchange-correlation potential.
+        """
+        if mol.spin == 0:
+            exc_b3lyp, rho_cube, vxc_b3lyp = grids.gen_cube_rho_rks(
+                mol, dms, rho, ni=ni, coords=coords_, weights=weights_, require_vxc=True
+            )
+        else:
+            exc_b3lyp, rho_cube, vxc_b3lyp = grids.gen_cube_rho_uks(
+                mol, dms, rho, ni=ni, coords=coords_, weights=weights_, require_vxc=True
+            )
+
+        input_mat = torch.tensor(
+            rho_cube,
+            dtype=self.dtype,
+            device=self.device,
+        )
+        input_mat.requires_grad = True
+        output_mat = self.model(input_mat)[:, 0]
+
+        middle_cube = torch.autograd.grad(
+            torch.sum(output_mat),
+            input_mat,
+            create_graph=True,
+        )[0]
+
+        middle_mat = grids.get_center_density(middle_cube).detach().cpu().numpy()
+        energy_den = exc_b3lyp + output_mat.detach().cpu().numpy()
+
+        vxc = (
+            (0.08 + middle_mat[:, 0]) * vxc_b3lyp[0]
+            + (0.19 + middle_mat[:, 1]) * vxc_b3lyp[1]
+            + (0.72 + middle_mat[:, 2]) * vxc_b3lyp[2]
+            + (0.81 + middle_mat[:, 3]) * vxc_b3lyp[3]
+        )
+        return energy_den, vxc
+
+    def eval_xc_eff_4(
+        self,
+        mol,
+        dms,
+        rho,
+        ni,
+        grids,
+        weights_,
+        coords_,
+    ):
+        """
+        Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
+        Args:
+            mol: PySCF molecule object.
+            dms: Density matrices.
+            ni: NumInt object.
+            coords_: Coordinates of the grid points.
+            weights_: Weights of the grid points.
+        Returns:
+            exc: Exchange-correlation energy.
+            vxc: Exchange-correlation potential.
+        """
+        if mol.spin == 0:
+            exc_b3lyp, rho_b3lyp, vxc_b3lyp = grids.gen_rho_rks(
+                mol, dms, rho, ni=ni, coords=coords_, weights=weights_, require_vxc=True
+            )
+        else:
+            exc_b3lyp, rho_b3lyp, vxc_b3lyp = grids.gen_rho_uks(
+                mol, dms, rho, ni=ni, coords=coords_, weights=weights_, require_vxc=True
+            )
+
+        input_mat = torch.tensor(
+            rho_b3lyp,
+            dtype=self.dtype,
+            device=self.device,
+        )
+        input_mat.requires_grad = True
+        output_mat = self.model(input_mat)[:, 0]
+
+        middle_cube = torch.autograd.grad(
+            torch.sum(output_mat),
+            input_mat,
+            create_graph=True,
+        )[0]
+
+        middle_mat = middle_cube.detach().cpu().numpy()
+        energy_den = exc_b3lyp + output_mat.detach().cpu().numpy()
+
+        vxc = (
+            (0.08 + middle_mat[:, 0]) * vxc_b3lyp[0]
+            + (0.19 + middle_mat[:, 1]) * vxc_b3lyp[1]
+            + (0.72 + middle_mat[:, 2]) * vxc_b3lyp[2]
+            + (0.81 + middle_mat[:, 3]) * vxc_b3lyp[3]
+        )
+        return energy_den, vxc
+
+    def eval_xc_eff(
+        self,
+        mol,
+        dms,
+        rho,
+        ni,
+        grids,
+        weights_,
+        coords_,
+    ):
+        """
+        Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
+        Args:
+            mol: PySCF molecule object.
+            dms: Density matrices.
+            ni: NumInt object.
+            coords_: Coordinates of the grid points.
+            weights_: Weights of the grid points.
+        Returns:
+            exc: Exchange-correlation energy.
+            vxc: Exchange-correlation potential.
+        """
+
+        if self.model_name in [
+            "transformer_c_ang",
+            "transformer_c_ang_slice",
+        ]:
+            return self.eval_xc_eff_4(mol, dms, rho, ni, grids, weights_, coords_)
+        elif self.model_name in ["transformer", "transformer_skip", "transformer_old"]:
+            return self.eval_xc_eff_cube(mol, dms, rho, ni, grids, weights_, coords_)
+        else:
+            raise ValueError(f"Unknown model {self.model_name} for eval_xc_eff")

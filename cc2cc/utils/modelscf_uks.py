@@ -1,3 +1,5 @@
+# pylint: disable=W0212
+
 import types
 
 import numpy as np
@@ -49,53 +51,12 @@ def nr_uks(
             mol, grids, nao, ao_deriv, max_memory=max_memory
         ):
             for i in range(nset):
-                rho_cube = grids.gen_cube_rho_uks(
-                    mol, dms, ni=ni, coords=coords_, weights=weights_
-                )
-
-                input_mat = torch.tensor(
-                    rho_cube,
-                    dtype=modelclass.dtype,
-                    device=modelclass.device,
-                )
-                input_mat.requires_grad = True
-                output_mat = modelclass.model(input_mat)[:, 0]
-
-                middle_cube = torch.autograd.grad(
-                    torch.sum(output_mat),
-                    input_mat,
-                    create_graph=True,
-                )[0]
-
-                middle_mat = (
-                    grids.get_center_density(middle_cube).detach().cpu().numpy()
-                )
-                energy_den = output_mat.detach().cpu().numpy()
-
                 rho_a = make_rhoa(i, ao, mask, xctype)
                 rho_b = make_rhob(i, ao, mask, xctype)
                 rho = (rho_a, rho_b)
-                rho_lda = (rho_a[0], rho_b[0])
-                exc_lda, vxc_lda = ni.eval_xc_eff(
-                    "LDA,", rho_lda, deriv=1, xctype=ni._xc_type("LDA,")
-                )[:2]
-                exc_vwn, vxc_vwn = ni.eval_xc_eff(
-                    ",VWN3", rho_lda, deriv=1, xctype=ni._xc_type(",VWN3")
-                )[:2]
-                exc_b88, vxc_b88 = ni.eval_xc_eff(
-                    "B88,", rho, deriv=1, xctype=ni._xc_type("B88,")
-                )[:2]
-                exc_lyp, vxc_lyp = ni.eval_xc_eff(
-                    ",LYP", rho, deriv=1, xctype=ni._xc_type(",LYP")
-                )[:2]
-
-                exc = 0.72 * exc_b88 + 0.81 * exc_lyp + 0.08 * exc_lda + 0.19 * exc_vwn
-                vxc = np.einsum(
-                    "p,ijp->ijp", (0.72 + middle_mat[:, 0]), vxc_b88
-                ) + np.einsum("p,ijp->ijp", (0.81 + middle_mat[:, 1]), vxc_lyp)
-                vxc[:, [0], :] += np.einsum(
-                    "p,ijp->ijp", (0.08 + middle_mat[:, 2]), vxc_lda
-                ) + np.einsum("p,ijp->ijp", (0.19 + middle_mat[:, 3]), vxc_vwn)
+                energy_den, vxc = modelclass.eval_xc_eff(
+                    mol, dms, rho, ni, grids, weights_, coords_
+                )
 
                 if xctype == "LDA":
                     den_a = rho_a * weights_
@@ -106,8 +67,6 @@ def nr_uks(
 
                 nelec[0, i] += den_a.sum()
                 nelec[1, i] += den_b.sum()
-                excsum[i] += np.dot(den_a, exc)
-                excsum[i] += np.dot(den_b, exc)
                 excsum[i] += np.dot(weights_, energy_den)
                 wv = weights_ * vxc
                 yield i, ao, mask, wv
@@ -293,8 +252,5 @@ def get_veff_modified(ks, modeldict):
 
         vxc = lib.tag_array(vxc, ecoul=ecoul, exc=exc, vj=vj, vk=vk)
         return vxc
-
-    if not hasattr(ks.grids, "gen_cube_rho_rks"):
-        raise ValueError("Grids does not have gen_cube_rho_rks.")
 
     ks.get_veff = types.MethodType(get_veff, ks)
