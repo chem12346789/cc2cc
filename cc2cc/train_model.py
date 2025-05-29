@@ -36,53 +36,32 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     modeldict = ModelClass(args)
 
-    if args.model in [
-        "densenet_c",
-        "transformer_c",
-        "transformer_c_ang",
-        "transformer_c_ang_slice",
-    ]:
-        print(
-            summary(
-                modeldict.model,
-                input_size=(302 * 75 * 10, 4),
-                depth=10,
-                dtypes=(
-                    [torch.float32] if args.precision == "float32" else [torch.float64]
-                ),
-                mode="train",
-            )
-        )
+    if modeldict.model_type == "center_4":
+        input_size = (302 * 75 * 10, 4)
         database_eval = DataBase_c(eval_str_dict, args)
         database_train = DataBase_c(train_str_dict, args)
-    elif args.model in ["transformer_7"]:
-        print(
-            summary(
-                modeldict.model,
-                input_size=(302 * 75 * 10, 4, 7),
-                depth=10,
-                dtypes=(
-                    [torch.float32] if args.precision == "float32" else [torch.float64]
-                ),
-                mode="train",
-            )
-        )
-        database_eval = DataBase_7(eval_str_dict, args)
-        database_train = DataBase_7(train_str_dict, args)
-    else:
-        print(
-            summary(
-                modeldict.model,
-                input_size=(302 * 75 * 10, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE),
-                depth=10,
-                dtypes=(
-                    [torch.float32] if args.precision == "float32" else [torch.float64]
-                ),
-                mode="train",
-            )
-        )
+    elif modeldict.model_type == "cube":
+        input_size = (302 * 75 * 10, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         database_eval = DataBase(eval_str_dict, args)
         database_train = DataBase(train_str_dict, args)
+    elif modeldict.model_type == "cube_7":
+        database_eval = DataBase_7(eval_str_dict, args)
+        database_train = DataBase_7(train_str_dict, args)
+        input_size = (302 * 75 * 10, 4, 7)
+    else:
+        raise ValueError(f"Unknown model type: {modeldict.model_type}")
+
+    print(
+        summary(
+            modeldict.model,
+            input_size=input_size,
+            depth=10,
+            dtypes=(
+                [torch.float32] if args.precision == "float32" else [torch.float64]
+            ),
+            mode="train",
+        )
+    )
 
     experiment_dict = {
         "model": args.model,

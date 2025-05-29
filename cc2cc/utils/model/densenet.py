@@ -2,10 +2,6 @@
 An 3d cnn model
 """
 
-import importlib.resources
-import os
-from pathlib import Path
-
 from torch import nn
 
 from cc2cc.utils.env_var import CUBE_MIDDLE
@@ -31,22 +27,13 @@ class Model(nn.Module):
 
     def __init__(self, **kwargs):
         super().__init__()
+
+        self.model_type = "cube"
+
         self.d_model = kwargs.get("d_model", D_MODEL)
         self.mlp = kwargs.get("mlp", MLP)
         self.depth = kwargs.get("depth", DENSE_DEPTH)
         self.drop_rate = kwargs.get("drop_rate", DROP_RATE)
-
-        # print all contain in this file, for debugging and logging
-        with importlib.resources.files("cc2cc").joinpath(
-            "utils/model"
-        ) as resource_path:
-            file_path = Path(os.fspath(resource_path)) / "densenet.py"
-            with open(file_path, "r", encoding="utf-8") as finput:
-                print(f"#INFO: **** input file is {file_path} ****\n")
-                print(finput.read())
-                print("#INFO: ****************** input file end ******************\n")
-                print("\n")
-                print("\n")
 
         self.sizes = [self.d_model] + [self.mlp] * (self.depth - 1) + [1]
 
@@ -79,10 +66,10 @@ class Model(nn.Module):
         """
         # Extract the central values for each channel
         b3lyp_ene = (
-            0.72 * x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.81 * x[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.08 * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.19 * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            0.08 * x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.19 * x[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.72 * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.81 * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         )
         # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 

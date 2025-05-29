@@ -39,6 +39,7 @@ def test_rks(
     mdft = pyscf.dft.RKS(mol)
     mdft.xc = test_data.xc_code
     mdft.grids = grids
+    mdft.verbose = 4
 
     get_veff_modified_rks(mdft, modeldict)
 
