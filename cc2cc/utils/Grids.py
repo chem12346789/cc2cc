@@ -6,6 +6,7 @@ More details.
 
 # pylint: disable=W0212
 
+import warnings
 import ctypes
 import numpy as np
 from numba import njit
@@ -131,6 +132,16 @@ def gen_atomic_grids(
             chg = gto.charge(symb)
             if symb in atom_grid:
                 n_rad, n_ang = atom_grid[symb]
+            else:
+                n_rad, n_ang = (
+                    RAD_GRIDS[LEVEL, PERIOD],
+                    LEBEDEV_ORDER[ANG_ORDER[LEVEL, PERIOD]],
+                )
+                warnings.warn(
+                    f"Atom {symb} is not in the atom_grid dict. "
+                    "Using default radial and angular grids."
+                )
+
             rad, dr = radi_method(n_rad, chg, ia, **kwargs)
 
             rad_weight = 4 * np.pi * rad**2 * dr

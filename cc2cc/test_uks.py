@@ -39,6 +39,7 @@ def test_uks(
     mdft = pyscf.dft.UKS(mol)
     mdft.xc = test_data.xc_code
     mdft.grids = grids
+    mdft.verbose = 4
 
     get_veff_modified_uks(mdft, modeldict)
 

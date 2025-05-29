@@ -74,7 +74,7 @@ def gen_mole(
     basis: str,
     if_basis_str: bool,
     dataset_name: str = "Mol",
-    verbose=4,
+    verbose=0,
 ) -> pyscf.gto.Mole:
     """
     Function to generate the molecule

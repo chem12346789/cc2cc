@@ -11,19 +11,17 @@ import torch
 import torch.optim as optim
 from torch.amp import GradScaler
 
-from cc2cc.utils.env_var import CHECKPOINTS_PATH
+from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH
 from cc2cc.utils.mol import AU2KCALMOL
+
 from cc2cc.utils.model.densenet import Model as ModelDensenet
 from cc2cc.utils.model.transformer import Model as ModelTransformer
-from cc2cc.utils.model.transformer_c_ang import Model as ModelTransformer_c_Ang
-from cc2cc.utils.model.transformer_c_ang_slice import (
-    Model as ModelTransformer_c_Ang_slice,
-)
-from cc2cc.utils.model.densenet_c import Model as ModelDensenet_c
-from cc2cc.utils.model.transformer_c import Model as ModelTransformer_c
 from cc2cc.utils.model.transformer_skip import Model as ModelTransformer_skip
 from cc2cc.utils.model.transformer_old import Model as ModelTransformer_old
-from cc2cc.utils.model.transformer_7 import Model as ModelTransformer_7
+
+from cc2cc.utils.model.densenet_c import Model as ModelDensenet_c
+from cc2cc.utils.model.transformer_c import Model as ModelTransformer_c
+from cc2cc.utils.model.transformer_c_middle import Model as ModelTransformer_c_middle
 
 
 class ModelClass:
@@ -39,33 +37,11 @@ class ModelClass:
         """
         self.model_name = args.model
 
-        if args.model == "densenet":
-            Model = ModelDensenet
-            print("Model: Densenet")
-        elif args.model == "transformer":
-            Model = ModelTransformer
-            print("Model: Transformer")
-        elif args.model == "transformer_skip":
-            Model = ModelTransformer_skip
-            print("Model: Transformer_skip")
-        elif args.model == "transformer_old":
-            Model = ModelTransformer_old
-            print("Model: Transformer_old")
-        elif args.model == "transformer_c":
-            Model = ModelTransformer_c
-            print("Model: Transformer_c")
-        elif args.model == "transformer_7":
-            Model = ModelTransformer_7
-            print("Model: Transformer_7")
-        elif args.model == "densenet_c":
-            Model = ModelDensenet_c
-            print("Model: Densenet_c")
-        elif args.model == "transformer_c_ang":
-            Model = ModelTransformer_c_Ang
-            print("Model: Transformer_c_Ang")
-        elif args.model == "transformer_c_ang_slice":
-            Model = ModelTransformer_c_Ang_slice
-            print("Model: Transformer_c_Ang_slice")
+        if (MAIN_PATH / f"cc2cc/utils/model/{args.model}.py").exists():
+            Model = getattr(
+                __import__(f"cc2cc.utils.model.{args.model}", fromlist=["Model"]),
+                "Model",
+            )
         else:
             raise ValueError("Unknown model")
 
@@ -95,6 +71,7 @@ class ModelClass:
             ).resolve()
 
         self.model: torch.nn.Module = Model().to(self.device)
+        self.model_type = self.model.model_type
         self.load_model()
 
         if args.precision == "float64":
@@ -467,13 +444,9 @@ class ModelClass:
             exc: Exchange-correlation energy.
             vxc: Exchange-correlation potential.
         """
-
-        if self.model_name in [
-            "transformer_c_ang",
-            "transformer_c_ang_slice",
-        ]:
+        if self.model_type == "center_4":
             return self.eval_xc_eff_4(mol, dms, rho, ni, grids, weights_, coords_)
-        elif self.model_name in ["transformer", "transformer_skip", "transformer_old"]:
+        elif self.model_type == "cube":
             return self.eval_xc_eff_cube(mol, dms, rho, ni, grids, weights_, coords_)
         else:
             raise ValueError(f"Unknown model {self.model_name} for eval_xc_eff")

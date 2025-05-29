@@ -2,12 +2,6 @@
 Generate list of model.
 """
 
-# pylint: disable=W0212
-
-import importlib.resources
-import os
-from pathlib import Path
-
 import torch
 from torch import nn
 
@@ -262,16 +256,7 @@ class Model(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
 
-        # print all contain in this file, for debugging and logging
-        with importlib.resources.files("cc2cc").joinpath(
-            "utils/model"
-        ) as resource_path:
-            file_path = Path(os.fspath(resource_path)) / "transformer.py"
-            with open(file_path, "r", encoding="utf-8") as finput:
-                print(f"#INFO: **** input file is {file_path} ****\n")
-                print(finput.read())
-                print("#INFO: ****************** input file end ******************\n")
-                print("\n")
+        self.model_type = "cube"
 
         self.predictor = Extractor(**kwargs)
         self.densenet = DenseNet(**kwargs)
