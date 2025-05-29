@@ -569,6 +569,7 @@ class Grid(dft.gen_grid.Grids):
         input_ = np.array(
             [exc_lda * rho0, exc_vwn * rho0, exc_b88 * rho0, exc_lyp * rho0]
         )
+        input_ = input_.transpose(1, 0)
 
         if require_vxc:
             exc_b3lyp = (
@@ -578,7 +579,7 @@ class Grid(dft.gen_grid.Grids):
                 + 0.81 * input_[:, 3]
             )
 
-            vxc_b3lyp = np.zeros((4, 4, len(self.coords)))
+            vxc_b3lyp = np.zeros((4, 4, len(coords)))
             vxc_b3lyp[0, 0:1, :] = vxc_lda
             vxc_b3lyp[1, 0:1, :] = vxc_vwn
             vxc_b3lyp[2, :, :] = vxc_b88
@@ -620,6 +621,7 @@ class Grid(dft.gen_grid.Grids):
         input_ = np.array(
             [exc_lda * rho0, exc_vwn * rho0, exc_b88 * rho0, exc_lyp * rho0]
         )
+        input_ = input_.transpose(1, 0)
 
         if require_vxc:
             exc_b3lyp = (
@@ -635,6 +637,6 @@ class Grid(dft.gen_grid.Grids):
             vxc_b3lyp[2, :, :, :] = vxc_b88
             vxc_b3lyp[3, :, :, :] = vxc_lyp
 
-            return exc_b3lyp * rho0, input_, vxc_b3lyp
+            return exc_b3lyp, input_, vxc_b3lyp
 
         return input_

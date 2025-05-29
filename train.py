@@ -22,6 +22,11 @@ train_str_list = [
 ]
 train_str_exclude_list = [
     "W4_11-propane",  # 3
+    "molecule0-ACC24",
+    "molecule0-GAPS",
+    "molecule0-GW100",
+    "molecule0-MRADC",
+    "molecule0-S30L",
     "molecule1-ACC24",
     "molecule1-GAPS",
     "molecule1-GW100",
