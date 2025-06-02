@@ -160,13 +160,16 @@ class DataBase:
         input_ = []
         weight_ = []
         output_ = []
+        atomic_systems = []
+        atomic_stoichiometry = []
 
         num_data_used = 0
         total_ene_used = 0
         data_length = len(input_mat) // mol.natm
         for i_atom in range(mol.natm):
+            atom_name = mol.atom_pure_symbol(i_atom)
             if self.train_atom not in ["all", "All", "ALL"]:
-                if mol.atom_pure_symbol(i_atom) != self.train_atom:
+                if atom_name != self.train_atom:
                     print(
                         f"SKIP: {name:>40} {mol.atom_pure_symbol(i_atom):>3}",
                         flush=True,
@@ -174,6 +177,12 @@ class DataBase:
                     continue
 
             # print(f"Load: {name:>40} {mol.atom_pure_symbol(i_atom):>3}", flush=True)
+            if atom_name not in atomic_systems:
+                atomic_systems.append(atom_name)
+                atomic_stoichiometry.append(1)
+            else:
+                atomic_stoichiometry[atomic_systems.index(atom_name)] += 1
+
             num_data_used += 1
             slice_ = slice(data_length * i_atom, data_length * (i_atom + 1))
             input_.append(input_mat[slice_, :, :, :, :])
@@ -195,6 +204,8 @@ class DataBase:
                 "weight": np.array(weight_),
                 "output": np.array(output_),
                 "name": name,
+                "atomic_systems": np.array(atomic_systems),
+                "atomic_stoichiometry": np.array(atomic_stoichiometry),
             }
         )
 
@@ -216,6 +227,9 @@ class DataBase:
                 batch_gpu[key] = self.process(val[0])
             elif key in ["name"]:
                 batch_gpu[key] = val[0]
+            else:
+                # For other keys, we just keep them as they are
+                batch_gpu[key] = val
         return batch_gpu
 
     def load_to_gpu(self):

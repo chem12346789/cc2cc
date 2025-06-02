@@ -397,7 +397,7 @@ class Grid(dft.gen_grid.Grids):
         coords=None,
         weights=None,
         hermi=1,
-        max_memory=2000,
+        max_memory=4000,
         require_vxc=False,
     ):
         """
@@ -467,7 +467,7 @@ class Grid(dft.gen_grid.Grids):
         coords=None,
         weights=None,
         hermi=1,
-        max_memory=2000,
+        max_memory=4000,
         require_vxc=False,
     ):
         """

@@ -64,10 +64,10 @@ if __name__ == "__main__":
         loss_ene_abs_l.append(AU2KCALMOL * loss_ene_abs_name)
 
         data_record.add_data(
-            name,
             {
+                "name": name,
                 "loss_ene_l": loss_ene_l[-1],
                 "loss_ene_abs_l": loss_ene_abs_l[-1],
-            },
+            }
         )
         data_record.save_csv()

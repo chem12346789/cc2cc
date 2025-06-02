@@ -104,24 +104,16 @@ def train_model(train_str_dict, eval_str_dict, args):
         time_start = time.time()
 
         for epoch in range(args.epoch + 1):
-            (
-                train_name_list,
-                train_loss_ene,
-                train_loss_ene_abs,
-                train_loss_ene_tot,
-            ) = modeldict.train_model(database_train)
+            train_data_record_l = modeldict.train_model(database_train)
             if not modeldict.with_eval:
                 modeldict.scheduler.step()
 
             if epoch % args.eval_step == 0:
-                (
-                    eval_name_list,
-                    eval_loss_ene,
-                    eval_loss_ene_abs,
-                    eval_loss_ene_tot,
-                ) = modeldict.eval_model(database_eval)
+                eval_data_record_l = modeldict.eval_model(database_eval)
                 if modeldict.with_eval:
-                    modeldict.scheduler.step(np.mean(eval_loss_ene_tot))
+                    modeldict.scheduler.step(
+                        np.mean([data["loss_tot"] for data in eval_data_record_l])
+                    )
 
                 if epoch % (args.eval_step * 50) == 0:
                     modeldict.save_model(epoch)
@@ -129,55 +121,55 @@ def train_model(train_str_dict, eval_str_dict, args):
                     data_record_train = DataRecord(
                         modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}"
                     )
-                    data_record_train.add_data(
-                        train_name_list,
-                        {
-                            "train_loss_ene": train_loss_ene,
-                            "train_loss_ene_abs": train_loss_ene_abs,
-                        },
-                    )
+                    for data in train_data_record_l:
+                        data_record_train.add_data(data)
                     data_record_train.save_csv()
 
                     data_record_eval = DataRecord(
                         modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}"
                     )
-                    data_record_eval.add_data(
-                        eval_name_list,
-                        {
-                            "train_loss_ene": eval_loss_ene,
-                            "train_loss_ene_abs": eval_loss_ene_abs,
-                        },
-                    )
+                    for data in eval_data_record_l:
+                        data_record_eval.add_data(data)
                     data_record_eval.save_csv()
 
                     experiment_dict = {
                         "epoch_eval": epoch,
-                        "train_loss_ene_epoch_eval": np.mean(train_loss_ene),
-                        "eval_loss_ene_epoch_eval": np.mean(eval_loss_ene),
+                        "train_loss_ene_epoch_eval": np.mean(
+                            [data["loss_ene"] for data in train_data_record_l]
+                        ),
+                        "eval_loss_ene_epoch_eval": np.mean(
+                            [data["loss_ene"] for data in eval_data_record_l]
+                        ),
                         "lr": modeldict.optimizer.param_groups[0]["lr"],
                     }
                     run.log(experiment_dict)
 
-            experiment_dict = {
-                "epoch": epoch,
-                "global_step": epoch,
-                "train_loss_ene": np.mean(train_loss_ene),
-                "train_loss_ene_abs": np.mean(train_loss_ene_abs),
-                "train_loss_tot": np.mean(train_loss_ene_tot),
-                "eval_loss_ene": np.mean(eval_loss_ene),
-                "eval_loss_ene_abs": np.mean(eval_loss_ene_abs),
-                "eval_loss_tot": np.mean(eval_loss_ene_tot),
-                "lr": modeldict.optimizer.param_groups[0]["lr"],
-            }
+            experiment_dict = {"epoch": epoch, "global_step": epoch}
+            for data in train_data_record_l:
+                experiment_dict.update(
+                    {
+                        f"train_{key}": data[key]
+                        for key in data.keys()
+                        if key.startswith("loss_")
+                    }
+                )
+            for data in eval_data_record_l:
+                experiment_dict.update(
+                    {
+                        f"eval_{key}": data[key]
+                        for key in data.keys()
+                        if key.startswith("loss_")
+                    }
+                )
             run.log(experiment_dict)
 
             time_end = time.time()
             time_elapsed = time_end - time_start
             print(
                 f"Epoch: {epoch}, "
-                f"Loss: {np.mean(train_loss_ene):>5.2f}, "
-                f"Eval: {np.mean(eval_loss_ene):>5.2f}, "
-                f"lr: {experiment_dict['lr']:>5.2e}, "
+                f"Loss: {np.mean([data["loss_ene"] for data in train_data_record_l]):>5.2f}, "
+                f"Eval: {np.mean([data["loss_ene"] for data in eval_data_record_l]):>5.2f}, "
+                f"lr: {experiment_dict["lr"]:>5.2e}, "
                 f"Speed: {time_elapsed / (epoch + 1):>5.2f}s/epoch",
                 flush=True,
             )

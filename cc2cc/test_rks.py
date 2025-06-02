@@ -75,8 +75,8 @@ def test_rks(
     error_dft_ele = np.sum(np.abs(rho_cc - rho_dft) * grids.weights)
 
     data_record.add_data(
-        name,
         {
+            "name": name,
             "error_scf_ene": error_scf_ene,
             "error_dft_ene": error_dft_ene,
             "error_scf_ele": error_scf_ele,

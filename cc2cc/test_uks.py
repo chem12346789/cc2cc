@@ -90,8 +90,8 @@ def test_uks(
     )
 
     data_record.add_data(
-        name,
         {
+            "name": name,
             "error_scf_ene": error_scf_ene,
             "error_dft_ene": error_dft_ene,
             "error_scf_ele": error_scf_ele,

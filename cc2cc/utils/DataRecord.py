@@ -15,22 +15,13 @@ class DataRecord:
             except FileNotFoundError:
                 pass
 
-    def add_data(self, name, dict_: dict):
+    def add_data(self, dict_: dict):
         """
         Add data to the dictionary
         """
-        if isinstance(name, (list, pd.core.series.Series, np.ndarray)):
-            for n in name:
-                self.df_dict["name"].append(n)
-        else:
-            self.df_dict["name"].append(name)
-
         for key, val in dict_.items():
             if key not in self.df_dict:
                 self.df_dict[key] = []
-            if isinstance(val, (list, pd.core.series.Series, np.ndarray)):
-                for v in val:
-                    self.df_dict[key].append(v)
             else:
                 self.df_dict[key].append(val)
 
