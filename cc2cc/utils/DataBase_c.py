@@ -63,6 +63,7 @@ class DataBase:
 
         self.name_list = []
         error_molecule = []
+        self.atomic_name_dict = {}
 
         for (
             name_mol,
@@ -95,8 +96,6 @@ class DataBase:
                 print(f"Error molecule: {error_molecule}")
                 continue
             finally:
-                print(f"Processing: {name_mol} {extend_atom} {extend_xyz} {distance}")
-
                 if args.n_rad is not None and args.n_ang is not None:
                     name = f"{name}_{args.n_rad}_{args.n_ang}"
                 else:
@@ -115,7 +114,6 @@ class DataBase:
                     print(f"Error molecule: {error_molecule}")
                 else:
                     self.name_list.append(name)
-                print(f"Load: {name:>40}", flush=True)
 
                 if name_mol not in self.data_weight_mol:
                     self.data_weight_mol[name_mol] = num_data_used
@@ -124,6 +122,10 @@ class DataBase:
                         self.data_weight_mol[name_mol],
                         num_data_used,
                     )
+
+                if mol.natm == 1 and mol.charge == 0:
+                    self.atomic_name_dict[mol.atom_pure_symbol(0)] = name
+                    print(f"{mol.atom_pure_symbol(0)} use {name}", flush=True)
 
         name_extend = []
         for name in self.name_list:

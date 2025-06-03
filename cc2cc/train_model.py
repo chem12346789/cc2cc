@@ -11,7 +11,7 @@ import wandb
 
 from cc2cc.utils import DataRecord
 from cc2cc.utils import CUBE_SIZE
-from cc2cc.utils import DataBase, ModelClass, DataBase_c, DataBase_7
+from cc2cc.utils import DataBase, ModelClass, DataBase_c
 
 seed = 42
 random.seed(seed)
@@ -44,10 +44,6 @@ def train_model(train_str_dict, eval_str_dict, args):
         input_size = (302 * 75 * 10, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         database_eval = DataBase(eval_str_dict, args)
         database_train = DataBase(train_str_dict, args)
-    elif modeldict.model_type == "cube_7":
-        database_eval = DataBase_7(eval_str_dict, args)
-        database_train = DataBase_7(train_str_dict, args)
-        input_size = (302 * 75 * 10, 4, 7)
     else:
         raise ValueError(f"Unknown model type: {modeldict.model_type}")
 
@@ -171,7 +167,7 @@ def train_model(train_str_dict, eval_str_dict, args):
             time_end = time.time()
             time_elapsed = time_end - time_start
             print(
-                f"Epoch: {epoch}, "
+                f"Epoch: {epoch:>5}, "
                 f"Loss: {np.mean([data["loss_ene"] for data in train_data_record_l]):>5.2f}, "
                 f"Eval: {np.mean([data["loss_ene"] for data in eval_data_record_l]):>5.2f}, "
                 f"lr: {experiment_dict["lr"]:>5.2e}, "

@@ -21,7 +21,7 @@ class DataRecord:
         """
         for key, val in dict_.items():
             if key not in self.df_dict:
-                self.df_dict[key] = []
+                self.df_dict[key] = [val]
             else:
                 self.df_dict[key].append(val)
 

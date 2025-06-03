@@ -96,8 +96,6 @@ class DataBase:
                 print(f"Error molecule: {error_molecule}")
                 continue
             finally:
-                print(f"Processing: {name_mol} {extend_atom} {extend_xyz} {distance}")
-
                 if args.n_rad is not None and args.n_ang is not None:
                     name = f"{name}_{args.n_rad}_{args.n_ang}"
                 else:
