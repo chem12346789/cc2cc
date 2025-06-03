@@ -17531,16 +17531,18 @@
         "G21IP-34": 0,
         "G21IP-37": 0
     },
-    "molecule_BHPERI": [
+    "molecule_ADDON": [
 <<<<<<< HEAD
 =======
     "ADDON_Se",
-    "ADDON_Ge",
-    "ADDON_As"],
-    "molecule0_BHPERI": [
-    "ADDON_Se",
-    "ADDON_Ge",
-    "ADDON_As"],
+        "ADDON_Ge",
+        "ADDON_As"
+    ],
+    "molecule0_ADDON": [
+        "ADDON_Se",
+        "ADDON_Ge",
+        "ADDON_As"
+    ],
     "molecule_BHPERI": [
 >>>>>>> d99c559fe87cc2ed96ad7bf09bc4be48765f519c
         "BHPERI-1,3-Pentadiene",
