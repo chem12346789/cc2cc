@@ -5,7 +5,7 @@ import numpy as np
 class DataRecord:
 
     def __init__(self, path, if_continue=False):
-        self.df_dict = {"name": []}
+        self.df_dict = {}
         self.path = path
         if if_continue:
             try:

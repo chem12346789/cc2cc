@@ -339,7 +339,14 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--loss_multiplier",
+        "--loss_multiplier_abs",
+        type=float,
+        default=1.0,
+        help="Lambda for the loss function. Default is 1.0.",
+    )
+
+    parser.add_argument(
+        "--loss_multiplier_atomic",
         type=float,
         default=1.0,
         help="Lambda for the loss function. Default is 1.0.",
@@ -425,7 +432,8 @@ def add_args(parser: argparse.ArgumentParser):
     print(f"Max norm: {args.max_norm}")
     print(f"With eval: {args.with_eval}")
     print(f"Eval step: {args.eval_step}")
-    print(f"Loss multiplier: {args.loss_multiplier}")
+    print(f"Loss multiplier abs: {args.loss_multiplier_abs}")
+    print(f"Loss multiplier atomic: {args.loss_multiplier_atomic}")
     print(f"Train atom: {args.train_atom}")
     print(f"Load: {args.load}")
     print(f"Save directory: {args.save_dir}")

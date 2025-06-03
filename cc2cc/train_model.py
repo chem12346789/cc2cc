@@ -51,6 +51,8 @@ def train_model(train_str_dict, eval_str_dict, args):
     else:
         raise ValueError(f"Unknown model type: {modeldict.model_type}")
 
+    modeldict.init_database(database_train, database_eval)
+
     print(
         summary(
             modeldict.model,
@@ -76,7 +78,8 @@ def train_model(train_str_dict, eval_str_dict, args):
         "jobid": os.environ.get("SLURM_JOB_ID"),
         "pid": os.getpid(),
         "checkpoint": modeldict.dir_checkpoint.stem,
-        "loss_multiplier": modeldict.loss_multiplier,
+        "loss_multiplier_abs": modeldict.loss_multiplier_abs,
+        "loss_multiplier_atomic": modeldict.loss_multiplier_atomic,
         "loss_ene": (
             "L1Loss" if isinstance(modeldict.loss_ene, torch.nn.L1Loss) else "MSELoss"
         ),
@@ -104,12 +107,12 @@ def train_model(train_str_dict, eval_str_dict, args):
         time_start = time.time()
 
         for epoch in range(args.epoch + 1):
-            train_data_record_l = modeldict.train_model(database_train)
+            train_data_record_l = modeldict.train_model()
             if not modeldict.with_eval:
                 modeldict.scheduler.step()
 
             if epoch % args.eval_step == 0:
-                eval_data_record_l = modeldict.eval_model(database_eval)
+                eval_data_record_l = modeldict.eval_model()
                 if modeldict.with_eval:
                     modeldict.scheduler.step(
                         np.mean([data["loss_tot"] for data in eval_data_record_l])
@@ -144,7 +147,11 @@ def train_model(train_str_dict, eval_str_dict, args):
                     }
                     run.log(experiment_dict)
 
-            experiment_dict = {"epoch": epoch, "global_step": epoch}
+            experiment_dict = {
+                "epoch": epoch,
+                "global_step": epoch,
+                "lr": modeldict.optimizer.param_groups[0]["lr"],
+            }
             for data in train_data_record_l:
                 experiment_dict.update(
                     {
