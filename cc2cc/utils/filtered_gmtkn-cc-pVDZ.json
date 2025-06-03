@@ -1,11 +1,8 @@
 {
     "molecule": [
-<<<<<<< HEAD
-=======
         "ADDON_Se",
         "ADDON_Ge",
         "ADDON_As",
->>>>>>> d99c559fe87cc2ed96ad7bf09bc4be48765f519c
         "BHPERI-13_c2h4",
         "BHPERI-Ethylene",
         "BHPERI-00r",
@@ -8728,12 +8725,9 @@
         "S30L-12AB"
     ],
     "spin": {
-<<<<<<< HEAD
-=======
         "ADDON_Se": 0,
         "ADDON_Ge": 0,
         "ADDON_As": 0,
->>>>>>> d99c559fe87cc2ed96ad7bf09bc4be48765f519c
         "BHPERI-13_c2h4": 0,
         "BHPERI-Ethylene": 0,
         "BHPERI-00r": 0,
@@ -13130,12 +13124,9 @@
         "G21IP-37": 2
     },
     "charge": {
-<<<<<<< HEAD
-=======
         "ADDON_Se": 0,
         "ADDON_Ge": 0,
         "ADDON_As": 0,
->>>>>>> d99c559fe87cc2ed96ad7bf09bc4be48765f519c
         "BHPERI-13_c2h4": 0,
         "BHPERI-Ethylene": 0,
         "BHPERI-00r": 0,
@@ -17532,9 +17523,7 @@
         "G21IP-37": 0
     },
     "molecule_ADDON": [
-<<<<<<< HEAD
-=======
-    "ADDON_Se",
+        "ADDON_Se",
         "ADDON_Ge",
         "ADDON_As"
     ],
@@ -17543,8 +17532,31 @@
         "ADDON_Ge",
         "ADDON_As"
     ],
+    "ADDON_Se": [
+        [
+            "Se",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "ADDON_Ge": [
+        [
+            "Ge",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "ADDON_As": [
+        [
+            "As",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
     "molecule_BHPERI": [
->>>>>>> d99c559fe87cc2ed96ad7bf09bc4be48765f519c
         "BHPERI-1,3-Pentadiene",
         "BHPERI-13r_6",
         "BHPERI-Cyclobutene",
@@ -592695,12 +592707,9 @@
         ]
     ],
     "molecule0": [
-<<<<<<< HEAD
-=======
         "ADDON_Se",
         "ADDON_Ge",
         "ADDON_As",
->>>>>>> d99c559fe87cc2ed96ad7bf09bc4be48765f519c
         "RG18-ar",
         "RG18-kr",
         "RG18-ne",
