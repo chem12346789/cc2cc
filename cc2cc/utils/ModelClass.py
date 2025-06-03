@@ -104,11 +104,23 @@ class ModelClass:
 
         self.scaler = GradScaler("cuda")
 
-        self.loss_multiplier = args.loss_multiplier
+        self.loss_multiplier_abs = args.loss_multiplier_abs
+        self.loss_multiplier_atomic = args.loss_multiplier_atomic
         # self.loss_ene = torch.nn.L1Loss(reduction="sum")
         self.loss_ene = torch.nn.MSELoss(reduction="sum")
         # self.loss_ene_abs = torch.nn.L1Loss(reduction="sum")
         self.loss_ene_abs = torch.nn.MSELoss(reduction="sum")
+
+        self.database_train = None
+        self.database_eval = None
+        self.name = None
+
+    def init_database(self, database_train, database_eval):
+        """
+        Initialize the database.
+        """
+        self.database_train = database_train
+        self.database_eval = database_eval
 
     def load_model(self):
         """
@@ -188,19 +200,31 @@ class ModelClass:
         self.zero_grad()
         self.update_counter = 0
 
-    def tot_loss(self, loss_ene, loss_ene_abs):
+    def tot_loss(self, loss_ene, loss_ene_abs, loss_ene_atomic=None):
         """
         Calculate the total loss.
         """
-        if self.loss_multiplier > 1e-6:
-            if isinstance(self.loss_ene, torch.nn.L1Loss):
-                tot_loss = loss_ene + loss_ene_abs * self.loss_multiplier
-            elif isinstance(self.loss_ene, torch.nn.MSELoss):
-                tot_loss = loss_ene + loss_ene_abs * self.loss_multiplier**2
+        if isinstance(self.loss_ene, torch.nn.L1Loss):
+            if loss_ene_atomic is not None:
+                tot_loss = (
+                    loss_ene
+                    + loss_ene_abs * self.loss_multiplier_abs
+                    + loss_ene_atomic * self.loss_multiplier_atomic
+                )
             else:
-                raise ValueError("Unknown loss function")
+                tot_loss = loss_ene + loss_ene_abs * self.loss_multiplier_abs
+        elif isinstance(self.loss_ene, torch.nn.MSELoss):
+            if loss_ene_atomic is not None:
+                tot_loss = (
+                    loss_ene
+                    + loss_ene_abs * self.loss_multiplier_abs**2
+                    + loss_ene_atomic * self.loss_multiplier_atomic**2
+                )
+            else:
+                tot_loss = loss_ene + loss_ene_abs * self.loss_multiplier_abs**2
         else:
-            tot_loss = loss_ene
+            raise ValueError("Unknown loss function")
+
         return tot_loss
 
     def loss(self, batch, data_weight=1.0):
@@ -224,14 +248,75 @@ class ModelClass:
             data_weight * output_mat_real,
             data_weight * output_mat,
         )
-        tot_loss = self.tot_loss(loss_ene, loss_ene_abs) / self.iters_to_accumulate
 
         loss_record = np.abs(torch.sum(output_mat_real - output_mat).item())
         loss_abs_record = np.abs(
             torch.sum(torch.abs(output_mat_real - output_mat)).item()
         )
+        loss_atomic_record = torch.sum(output_mat_real - output_mat)
 
-        return tot_loss, loss_record, loss_abs_record
+        if self.database_train is not None:
+            atomic_energy_pred = torch.sum(output_mat)
+            atomic_energy_real = torch.sum(output_mat_real)
+            for i_system in range(len(batch["atomic_systems"])):
+                system_atom = batch["atomic_systems"][i_system]
+                if system_atom in self.database_train.atomic_name_dict:
+                    name_atom = self.database_train.atomic_name_dict[system_atom]
+                else:
+                    print(
+                        f"Warning: {system_atom} not found in atomic_name_dict for {self.name}, "
+                        "skipping atomic energy calculation."
+                    )
+                    break
+                atomic_batch = self.database_train.data_gpu[name_atom]
+
+                if not self.database_train.if_load_to_gpu_once:
+                    atomic_batch = self.database_train.process_batch(atomic_batch)
+
+                atomic_input_mat = atomic_batch["input"]
+                atomic_weight = atomic_batch["weight"]
+                atomic_output_mat_real = atomic_batch["output"] * atomic_weight
+
+                atomic_output_mat = self.model(atomic_input_mat) * atomic_weight
+
+                atomic_energy_pred -= (
+                    torch.sum(atomic_output_mat)
+                    * batch["atomic_stoichiometry"][i_system]
+                )
+                atomic_energy_real -= (
+                    torch.sum(atomic_output_mat_real)
+                    * batch["atomic_stoichiometry"][i_system]
+                )
+                loss_atomic_record -= (
+                    torch.sum(atomic_output_mat_real - atomic_output_mat)
+                    * batch["atomic_stoichiometry"][i_system]
+                )
+            else:
+                # If we break the loop, we set the atomic energy loss to zero
+                atomic_energy_pred = torch.tensor(0.0, device=self.device)
+                atomic_energy_real = torch.tensor(0.0, device=self.device)
+
+            loss_ene_atomic = self.loss_ene(
+                data_weight * atomic_energy_real,
+                data_weight * atomic_energy_pred,
+            )
+            loss_atomic_record = torch.abs(loss_atomic_record).item()
+
+            tot_loss = (
+                self.tot_loss(loss_ene, loss_ene_abs, loss_ene_atomic)
+                / self.iters_to_accumulate
+            )
+        else:
+            tot_loss = self.tot_loss(loss_ene, loss_ene_abs) / self.iters_to_accumulate
+
+        data_record = {
+            "loss_ene": AU2KCALMOL * loss_record,
+            "loss_ene_abs": AU2KCALMOL * loss_abs_record,
+            "loss_ene_atomic": AU2KCALMOL * loss_atomic_record,
+            "loss_tot": AU2KCALMOL * tot_loss.item(),
+        }
+
+        return tot_loss, data_record
 
     def save_model(self, epoch):
         """
@@ -240,7 +325,7 @@ class ModelClass:
         state_dict = self.model.state_dict()
         torch.save(state_dict, self.dir_checkpoint / f"{epoch}.pth")
 
-    def train_model(self, database_train):
+    def train_model(self):
         """
         Train the model, one epoch.
         1 / self.iters_to_accumulate is the effective batch size.
@@ -248,67 +333,51 @@ class ModelClass:
         https://pytorch.org/docs/stable/notes/amp_examples.html#gradient-accumulation
         """
         self.train()
-        name_l, loss_ene_l, loss_ene_abs_l, loss_tot_l = [], [], [], []
-        database_train.shuffle()
+        data_record_l = []
+        self.database_train.shuffle()
 
-        for name in database_train.name_list:
-            batch = database_train.data_gpu[name]
-            data_weight = database_train.data_weight[name]
+        for name in self.database_train.name_list:
+            self.name = name  # for logging purposes
+            batch = self.database_train.data_gpu[name]
+            data_weight = self.database_train.data_weight[name]
 
-            if not database_train.if_load_to_gpu_once:
-                batch = database_train.process_batch(batch)
+            if not self.database_train.if_load_to_gpu_once:
+                batch = self.database_train.process_batch(batch)
 
             with torch.autocast(device_type="cuda", dtype=self.dtype):
-                tot_loss, loss_record, loss_abs_record = self.loss(batch, data_weight)
+                tot_loss, data_record = self.loss(batch, data_weight)
 
             self.scaler.scale(tot_loss).backward()
             self.update()
 
-            loss_tot_record = tot_loss.item()
-            name_l.append(name)
-            loss_ene_l.append(AU2KCALMOL * loss_record)
-            loss_ene_abs_l.append(AU2KCALMOL * loss_abs_record)
-            loss_tot_l.append(AU2KCALMOL * loss_tot_record)
+            data_record["name"] = name
+            data_record_l.append(data_record)
 
-        return (
-            name_l,
-            np.array(loss_ene_l),
-            np.array(loss_ene_abs_l),
-            np.array(loss_tot_l),
-        )
+        return data_record_l
 
-    def eval_model(self, database_eval):
+    def eval_model(self):
         """
         Evaluate the model.
         """
         self.eval()
-        name_l, loss_ene_l, loss_ene_abs_l, loss_tot_l = [], [], [], []
+        data_record_l = []
 
-        for name in database_eval.name_list:
-            batch = database_eval.data_gpu[name]
-            data_weight = database_eval.data_weight[name]
+        for name in self.database_eval.name_list:
+            self.name = name  # for logging purposes
+            batch = self.database_eval.data_gpu[name]
+            data_weight = self.database_eval.data_weight[name]
 
-            if not database_eval.if_load_to_gpu_once:
-                batch = database_eval.process_batch(batch)
+            if not self.database_eval.if_load_to_gpu_once:
+                batch = self.database_eval.process_batch(batch)
 
             with torch.autocast(device_type="cuda", dtype=self.dtype):
                 with torch.no_grad():
-                    tot_loss, loss_record, loss_abs_record = self.loss(
-                        batch, data_weight
-                    )
+                    _, data_record = self.loss(batch, data_weight)
 
-            loss_tot_record = tot_loss.item()
-            name_l.append(name)
-            loss_ene_l.append(AU2KCALMOL * loss_record)
-            loss_ene_abs_l.append(AU2KCALMOL * loss_abs_record)
-            loss_tot_l.append(AU2KCALMOL * loss_tot_record)
+            data_record["name"] = name
+            data_record_l.append(data_record)
 
-        return (
-            name_l,
-            np.array(loss_ene_l),
-            np.array(loss_ene_abs_l),
-            np.array(loss_tot_l),
-        )
+        return data_record_l
 
     def eval_xc_eff_cube(
         self,

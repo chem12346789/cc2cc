@@ -63,6 +63,7 @@ class DataBase:
 
         self.name_list = []
         error_molecule = []
+        self.atomic_name_dict = {}
 
         for (
             name_mol,
@@ -115,7 +116,6 @@ class DataBase:
                     print(f"Error molecule: {error_molecule}")
                 else:
                     self.name_list.append(name)
-                print(f"Load: {name:>40}", flush=True)
 
                 if name_mol not in self.data_weight_mol:
                     self.data_weight_mol[name_mol] = num_data_used
@@ -124,6 +124,10 @@ class DataBase:
                         self.data_weight_mol[name_mol],
                         num_data_used,
                     )
+
+                if mol.natm == 1 and mol.charge == 0:
+                    self.atomic_name_dict[mol.atom_pure_symbol(0)] = name
+                    print(f"{mol.atom_pure_symbol(0)} use {name}", flush=True)
 
         name_extend = []
         for name in self.name_list:
@@ -152,7 +156,7 @@ class DataBase:
         # print(f"Total energy: {AU2KCALMOL * np.sum(output_mat * weight_mat)}")
         if (
             AU2KCALMOL * abs(data["error_energy"] - np.sum(output_mat * weight_mat))
-            > 0.15 * mol.natm
+            > 0.2 * mol.natm
         ):
             print(f"Error energy is too large: {name:>40}", flush=True)
             return 0
@@ -160,20 +164,29 @@ class DataBase:
         input_ = []
         weight_ = []
         output_ = []
+        atomic_systems = []
+        atomic_stoichiometry = []
 
         num_data_used = 0
         total_ene_used = 0
         data_length = len(input_mat) // mol.natm
         for i_atom in range(mol.natm):
+            atom_name = mol.atom_pure_symbol(i_atom)
             if self.train_atom not in ["all", "All", "ALL"]:
-                if mol.atom_pure_symbol(i_atom) != self.train_atom:
+                if atom_name != self.train_atom:
                     print(
-                        f"SKIP: {name:>40} {mol.atom_pure_symbol(i_atom):>3}",
+                        f"SKIP: {name:>40} {atom_name:>3}",
                         flush=True,
                     )
                     continue
 
-            # print(f"Load: {name:>40} {mol.atom_pure_symbol(i_atom):>3}", flush=True)
+            # print(f"Load: {name:>40} {atom_name:>3}", flush=True)
+            if atom_name not in atomic_systems:
+                atomic_systems.append(atom_name)
+                atomic_stoichiometry.append(1)
+            else:
+                atomic_stoichiometry[atomic_systems.index(atom_name)] += 1
+
             num_data_used += 1
             slice_ = slice(data_length * i_atom, data_length * (i_atom + 1))
             input_.append(input_mat[slice_, :, :, :, :])
@@ -195,6 +208,8 @@ class DataBase:
                 "weight": np.array(weight_),
                 "output": np.array(output_),
                 "name": name,
+                "atomic_systems": atomic_systems,
+                "atomic_stoichiometry": atomic_stoichiometry,
             }
         )
 
@@ -215,6 +230,9 @@ class DataBase:
             if key in ["input", "weight", "output"]:
                 batch_gpu[key] = self.process(val[0])
             elif key in ["name"]:
+                batch_gpu[key] = val[0]
+            else:
+                # For other keys, we just keep them as they are
                 batch_gpu[key] = val[0]
         return batch_gpu
 
