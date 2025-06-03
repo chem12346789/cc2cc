@@ -152,22 +152,20 @@ def train_model(train_str_dict, eval_str_dict, args):
                 "global_step": epoch,
                 "lr": modeldict.optimizer.param_groups[0]["lr"],
             }
-            for data in train_data_record_l:
-                experiment_dict.update(
-                    {
-                        f"train_{key}": data[key]
-                        for key in data.keys()
-                        if key.startswith("loss_")
-                    }
-                )
-            for data in eval_data_record_l:
-                experiment_dict.update(
-                    {
-                        f"eval_{key}": data[key]
-                        for key in data.keys()
-                        if key.startswith("loss_")
-                    }
-                )
+            experiment_dict.update(
+                {
+                    f"train_{key}": np.mean([data[key] for data in train_data_record_l])
+                    for key in data.keys()
+                    if key.startswith("loss_")
+                }
+            )
+            experiment_dict.update(
+                {
+                    f"eval_{key}": np.mean([data[key] for data in eval_data_record_l])
+                    for key in data.keys()
+                    if key.startswith("loss_")
+                }
+            )
             run.log(experiment_dict)
 
             time_end = time.time()

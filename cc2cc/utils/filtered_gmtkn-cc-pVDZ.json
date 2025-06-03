@@ -8725,9 +8725,9 @@
         "S30L-12AB"
     ],
     "spin": {
-        "ADDON_Se": 0,
-        "ADDON_Ge": 0,
-        "ADDON_As": 0,
+        "ADDON_Ge": 2,
+        "ADDON_As": 3,
+        "ADDON_Se": 2,
         "BHPERI-13_c2h4": 0,
         "BHPERI-Ethylene": 0,
         "BHPERI-00r": 0,
