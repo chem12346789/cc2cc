@@ -38,6 +38,10 @@ def extend(
     Function to extend the molecule
     """
     molecule = np.array(copy.deepcopy(dataset[dataset_name][name_mol]), dtype=object)
+
+    if isinstance(extend_atom, int):
+        extend_atom = str(extend_atom)
+
     if verbose > 3:
         print(f"Generate {name_mol}_{distance:.4f}")
         print(f"Extend {extend_atom} {extend_xyz} {distance:.4f}")
