@@ -193,6 +193,24 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--loss_ene",
+        type=str,
+        choices=["MSELoss", "L1Loss"],
+        default="MSELoss",
+        help="Loss function for the energy. "
+        "Default is MSELoss. Other options are L1Loss.",
+    )
+
+    parser.add_argument(
+        "--loss_ene_abs",
+        type=str,
+        choices=["MSELoss", "L1Loss"],
+        default="MSELoss",
+        help="Loss function for the energy. "
+        "Default is MSELoss. Other options are L1Loss.",
+    )
+
+    parser.add_argument(
         "--n_rad",
         type=int,
         default=None,
