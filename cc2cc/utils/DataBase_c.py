@@ -1,3 +1,7 @@
+"""
+Module for handling molecular data and generating datasets for machine learning tasks, for center data.
+"""
+
 from itertools import product
 import random
 
@@ -14,9 +18,8 @@ class BasicDataset:
     Documentation for a class.
     """
 
-    def __init__(self, data, dtype):
+    def __init__(self, data):
         self.data = data
-        self.dtype = dtype
 
     def __len__(self):
         return len(self.data)
@@ -42,13 +45,7 @@ class DataBase:
     """Documentation for a class."""
 
     def __init__(self, molecule_list, args):
-        self.molecule_list = molecule_list
         self.train_atom = args.train_atom
-        self.extend_atom = args.extend_atom
-        self.extend_xyz = args.extend_xyz
-        self.distance_list = args.distance_list
-        self.basis = args.basis
-        self.device = torch.device("cuda")
         self.if_load_to_gpu_once = args.if_load_to_gpu_once
         print(f"Load to GPU once: {self.if_load_to_gpu_once}")
 
@@ -71,10 +68,10 @@ class DataBase:
             extend_xyz,
             distance,
         ) in product(
-            self.molecule_list,
-            self.extend_atom,
-            self.extend_xyz,
-            self.distance_list,
+            molecule_list,
+            args.extend_atom,
+            args.extend_xyz,
+            args.distance_list,
         ):
             name = f"{name_mol}_{args.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
 
@@ -129,7 +126,7 @@ class DataBase:
 
         name_extend = []
         for name in self.name_list:
-            name_mol = name.split(f"_{self.basis}_")[0]
+            name_mol = name.split(f"_{args.basis}_")[0]
             if self.data_weight_mol[name_mol] == 1:
                 name_extend.extend([name] * 9)
             self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
@@ -137,7 +134,7 @@ class DataBase:
         del self.data_weight_mol
         print(self.data_weight)
 
-        self.data_gpu = BasicDataset(self.data, self.dtype)
+        self.data_gpu = BasicDataset(self.data)
         self.data_gpu = self.load_to_gpu()
 
     def load_data(self, mol, name):
@@ -236,7 +233,7 @@ class DataBase:
 
     def load_to_gpu(self):
         """
-        Load the whole data to the device.
+        Load the whole data to the gpu.
         """
         dataloader = DataLoader(
             self.data_gpu,

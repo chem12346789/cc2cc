@@ -35,6 +35,9 @@ def train_model(train_str_dict, eval_str_dict, args):
     # 0. Init the criterion and the model
 
     modeldict = ModelClass(args)
+    modeldict.init_model(args)
+    modeldict.init_train(args)
+    modeldict.load_model(args)
 
     if modeldict.model_type == "center_4":
         input_size = (302 * 75 * 10, 4)
@@ -98,7 +101,6 @@ def train_model(train_str_dict, eval_str_dict, args):
         allow_val_change=True,
     ) as run:
         wandb.define_metric("*", step_metric="global_step")
-
         print(f"Start training at {modeldict.dir_checkpoint}")
         time_start = time.time()
 
@@ -151,14 +153,14 @@ def train_model(train_str_dict, eval_str_dict, args):
             experiment_dict.update(
                 {
                     f"train_{key}": np.mean([data[key] for data in train_data_record_l])
-                    for key in data.keys()
+                    for key in train_data_record_l[0].keys()
                     if key.startswith("loss_")
                 }
             )
             experiment_dict.update(
                 {
                     f"eval_{key}": np.mean([data[key] for data in eval_data_record_l])
-                    for key in data.keys()
+                    for key in eval_data_record_l[0].keys()
                     if key.startswith("loss_")
                 }
             )

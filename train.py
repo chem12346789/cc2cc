@@ -7,6 +7,7 @@ from cc2cc.utils.parser import gen_name_args
 train_str_list = [
     "molecule0",
     "molecule1",
+    # "molecule2",
     "molecule2-ALK8",
     "molecule2-BSR36",
     "molecule2-G2RC",
@@ -64,7 +65,6 @@ if __name__ == "__main__":
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
-
     print_gpu_info(args.device)
 
     train_str_list = gen_name_args(train_str_list, args)
