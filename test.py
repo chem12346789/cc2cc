@@ -22,6 +22,8 @@ if __name__ == "__main__":
 
     # 1. Init the model
     modeldict = ModelClass(args)
+    modeldict.init_model(args)
+    modeldict.load_model(args)
     modeldict.eval()
 
     # 2. Test loop
@@ -70,7 +72,9 @@ if __name__ == "__main__":
             name = f"{name}_default"
 
         if args.if_continue:
-            if name in data_record.df_dict["name"]:
+            if ("name" in data_record.df_dict.keys()) and (
+                name in data_record.df_dict["name"]
+            ):
                 print(f"SKIP: {name}")
                 continue
 

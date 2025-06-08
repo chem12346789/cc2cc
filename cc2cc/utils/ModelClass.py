@@ -157,14 +157,12 @@ class ModelClass:
         Set the model to train mode.
         """
         self.model.train(True)
-        self.optimizer.zero_grad(set_to_none=True)
 
     def eval(self):
         """
         Set the model to evaluation mode.
         """
         self.model.eval()
-        self.optimizer.zero_grad(set_to_none=True)
 
     def update(self):
         """
@@ -320,6 +318,7 @@ class ModelClass:
         https://pytorch.org/docs/stable/notes/amp_examples.html#gradient-accumulation
         """
         self.train()
+        self.optimizer.zero_grad(set_to_none=True)
         data_record_l = []
         self.database_train.shuffle()
 
@@ -344,6 +343,7 @@ class ModelClass:
         Evaluate the model.
         """
         self.eval()
+        self.optimizer.zero_grad(set_to_none=True)
         data_record_l = []
 
         for name in self.database_eval.name_list:
