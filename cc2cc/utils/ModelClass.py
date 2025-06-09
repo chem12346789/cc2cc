@@ -6,7 +6,6 @@ from pathlib import Path
 import datetime
 
 import numpy as np
-import pandas as pd
 import torch
 import torch.optim as optim
 
@@ -95,17 +94,14 @@ class ModelClass:
 
         if args.loss_ene == "L1Loss":
             self.loss_ene = torch.nn.L1Loss(reduction="sum")
+            self.loss_ene_abs = torch.nn.L1Loss(reduction="sum")
+            self.loss_ene_atomic = torch.nn.L1Loss(reduction="sum")
         elif args.loss_ene == "MSELoss":
             self.loss_ene = torch.nn.MSELoss(reduction="sum")
+            self.loss_ene_abs = torch.nn.MSELoss(reduction="sum")
+            self.loss_ene_atomic = torch.nn.MSELoss(reduction="sum")
         else:
             raise ValueError(f"Unknown loss function {args.loss_ene}")
-
-        if args.loss_ene_abs == "L1Loss":
-            self.loss_ene_abs = torch.nn.L1Loss(reduction="sum")
-        elif args.loss_ene_abs == "MSELoss":
-            self.loss_ene_abs = torch.nn.MSELoss(reduction="sum")
-        else:
-            raise ValueError(f"Unknown loss function {args.loss_ene_abs}")
 
         if args.save_dir is not None and args.save_dir != "":
             self.dir_checkpoint = (
@@ -181,28 +177,24 @@ class ModelClass:
         self.optimizer.zero_grad(set_to_none=True)
         self.update_counter = 0
 
-    def tot_loss(self, loss_ene, loss_ene_abs, loss_ene_atomic=None):
+    def tot_loss(self, loss_ene, loss_ene_abs, loss_ene_atomic):
         """
         Calculate the total loss.
         """
         if isinstance(self.loss_ene, torch.nn.L1Loss):
-            if loss_ene_atomic is not None:
-                tot_loss = (
-                    loss_ene
-                    + loss_ene_abs * self.loss_multiplier_abs
-                    + loss_ene_atomic * self.loss_multiplier_atomic
-                )
-            else:
-                tot_loss = loss_ene + loss_ene_abs * self.loss_multiplier_abs
+            tot_loss = (
+                # loss_ene
+                # + loss_ene_abs * self.loss_multiplier_abs
+                +loss_ene_atomic
+                * self.loss_multiplier_atomic
+            )
         elif isinstance(self.loss_ene, torch.nn.MSELoss):
-            if loss_ene_atomic is not None:
-                tot_loss = (
-                    loss_ene
-                    + loss_ene_abs * self.loss_multiplier_abs**2
-                    + loss_ene_atomic * self.loss_multiplier_atomic**2
-                )
-            else:
-                tot_loss = loss_ene + loss_ene_abs * self.loss_multiplier_abs**2
+            tot_loss = (
+                # loss_ene
+                # + loss_ene_abs * self.loss_multiplier_abs**2
+                +loss_ene_atomic
+                * self.loss_multiplier_atomic**2
+            )
         else:
             raise ValueError("Unknown loss function")
 
@@ -234,65 +226,53 @@ class ModelClass:
         loss_abs_record = np.abs(
             torch.sum(torch.abs(output_mat_real - output_mat)).item()
         )
+
+        atomic_energy_pred = torch.sum(output_mat)
+        atomic_energy_real = torch.sum(output_mat_real)
         loss_atomic_record = torch.sum(output_mat_real - output_mat)
-
-        if self.database_train is not None:
-            atomic_energy_pred = torch.sum(output_mat)
-            atomic_energy_real = torch.sum(output_mat_real)
-            for i_system in range(len(batch["atomic_systems"])):
-                system_atom = batch["atomic_systems"][i_system]
-                if system_atom in self.database_train.atomic_name_dict:
-                    name_atom = self.database_train.atomic_name_dict[system_atom]
-                else:
-                    print(
-                        f"Warning: {system_atom} not found in atomic_name_dict, "
-                        "skipping atomic energy calculation."
-                    )
-                    break
-                atomic_batch = self.database_train.data_gpu[name_atom]
-
-                if not self.database_train.if_load_to_gpu_once:
-                    atomic_batch = self.database_train.process_batch(atomic_batch)
-
-                atomic_input_mat = atomic_batch["input"]
-                atomic_weight = atomic_batch["weight"]
-                atomic_output_mat_real = atomic_batch["output"] * atomic_weight
-
-                atomic_output_mat = self.model(atomic_input_mat) * atomic_weight
-
-                atomic_energy_pred -= (
-                    torch.sum(atomic_output_mat)
-                    * batch["atomic_stoichiometry"][i_system]
-                )
-                atomic_energy_real -= (
-                    torch.sum(atomic_output_mat_real)
-                    * batch["atomic_stoichiometry"][i_system]
-                )
-                loss_atomic_record -= (
-                    torch.sum(atomic_output_mat_real - atomic_output_mat)
-                    * batch["atomic_stoichiometry"][i_system]
-                )
+        for i_system in range(len(batch["atomic_systems"])):
+            system_atom = batch["atomic_systems"][i_system]
+            if system_atom in self.database_train.atomic_name_dict:
+                name_atom = self.database_train.atomic_name_dict[system_atom]
             else:
-                # If we break the loop, we set the atomic energy loss to zero
-                atomic_energy_pred = torch.tensor(
-                    0.0, device=next(self.model.parameters()).device
+                print(
+                    f"Warning: {system_atom} not found in atomic_name_dict, "
+                    "skipping atomic energy calculation."
                 )
-                atomic_energy_real = torch.tensor(
-                    0.0, device=next(self.model.parameters()).device
-                )
+                break
 
-            loss_ene_atomic = self.loss_ene(
-                data_weight * atomic_energy_real,
-                data_weight * atomic_energy_pred,
-            )
-            loss_atomic_record = torch.abs(loss_atomic_record).item()
+            atomic_batch = self.database_train.data_gpu[name_atom]
+            if not self.database_train.if_load_to_gpu_once:
+                atomic_batch = self.database_train.process_batch(atomic_batch)
 
-            tot_loss = (
-                self.tot_loss(loss_ene, loss_ene_abs, loss_ene_atomic)
-                / self.iters_to_accumulate
+            atomic_input_mat = atomic_batch["input"]
+            atomic_weight = atomic_batch["weight"]
+            atomic_output_mat_real = atomic_batch["output"] * atomic_weight
+
+            atomic_output_mat = self.model(atomic_input_mat) * atomic_weight
+
+            atomic_energy_pred -= (
+                torch.sum(atomic_output_mat) * batch["atomic_stoichiometry"][i_system]
             )
-        else:
-            tot_loss = self.tot_loss(loss_ene, loss_ene_abs) / self.iters_to_accumulate
+            atomic_energy_real -= (
+                torch.sum(atomic_output_mat_real)
+                * batch["atomic_stoichiometry"][i_system]
+            )
+            loss_atomic_record -= (
+                torch.sum(atomic_output_mat_real - atomic_output_mat)
+                * batch["atomic_stoichiometry"][i_system]
+            )
+
+        loss_ene_atomic = self.loss_ene_atomic(
+            data_weight * atomic_energy_real,
+            data_weight * atomic_energy_pred,
+        )
+        loss_atomic_record = torch.abs(loss_atomic_record).item()
+
+        tot_loss = (
+            self.tot_loss(loss_ene, loss_ene_abs, loss_ene_atomic)
+            / self.iters_to_accumulate
+        )
 
         data_record = {
             "loss_ene": AU2KCALMOL * loss_record,
