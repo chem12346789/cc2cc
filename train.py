@@ -14,9 +14,11 @@ train_str_list = [
     "molecule2-HEAVYSB11",
     "molecule2-SIE4x4",
     "molecule2-W4_11",
+    # "molecule2-AL2X6",
     "molecule3-ALK8",
     "molecule3-HEAVYSB11",
     "molecule3-W4_11",
+    # "molecule3-AL2X6",
     "molecule4-ALK8",
     "molecule4-W4_11",
     "BH9-08_9R2",  # 5
