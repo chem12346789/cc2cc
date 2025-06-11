@@ -197,6 +197,10 @@ class DataBase:
 
         print(f"Total energy used: {AU2KCALMOL * total_ene_used}")
         print(f"Total data used for {name}: {num_data_used}", flush=True)
+        print(
+            f"Atomic systems: {atomic_systems}, Stoichiometry: {atomic_stoichiometry}",
+            flush=True,
+        )
         self.data.append(
             {
                 "input": np.array(input_),

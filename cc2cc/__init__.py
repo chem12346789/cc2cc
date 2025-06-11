@@ -1,5 +1,7 @@
 from cc2cc.cc import cc
 from cc2cc.ucc import ucc
+from cc2cc.cc_append import cc_append
+from cc2cc.ucc_append import ucc_append
 from cc2cc.train_model import train_model
 from cc2cc.test_rks import test_rks
 from cc2cc.test_uks import test_uks

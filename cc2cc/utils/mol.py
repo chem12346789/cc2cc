@@ -66,7 +66,10 @@ def extend(
         molecule[extend_atom][extend_xyz] += distance
     if verbose > 3:
         print("extend mol", molecule)
-    # rotate(molecule, rotation="random")
+    # rotate(
+    #     molecule,
+    #     # rotation="random",
+    # )
     return list(molecule)
 
 

@@ -13,7 +13,7 @@ from pyscf.cc import uccsd_rdm
 from pyscf.cc.uccsd_t_rdm import _gamma1_intermediates as u_gamma1_intermediates
 from pyscf.cc.uccsd_t_rdm import _gamma2_intermediates as u_gamma2_intermediates
 
-from cc2cc.utils import DATA_PATH, AU2KCALMOL, TEST
+from cc2cc.utils import DATA_PATH, AU2KCALMOL
 
 
 def ucc(mol, grids, name, cc_triple=False):
@@ -28,207 +28,169 @@ def ucc(mol, grids, name, cc_triple=False):
     mf.kernel()
     if mf.converged is False:
         raise ValueError("UHF not converged.")
+
     mdft = pyscf.scf.UKS(mol)
     mdft.max_cycle = 200
     mdft.xc = "b3lyp"
     mdft.kernel(mf.make_rdm1())
     if mdft.converged is False:
         raise ValueError("UKS not converged.")
+    dm1_dft = mdft.make_rdm1(ao_repr=True)
+    e_dft = mdft.energy_tot(dm1_dft)
 
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
     ao_value = ao_value[:4]
 
-    if TEST:
-        dm1_cc = mdft.make_rdm1(ao_repr=True)
-        e_cc = mdft.e_tot
-        rho_dft = [
-            pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
-            pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
-        ]
-        rho_cube = grids.gen_cube_rho_uks(mol, dm1_cc, rho_dft, ni=mdft._numint)
-
-        exc_cc_grids = pyscf.dft.libxc.eval_xc(
-            "b3lyp", rho_dft, spin=1 if mol.spin else 0
-        )[0] * (rho_dft[0][0] + rho_dft[1][0])
-        h1e = mdft.mol.intor("int1e_kin") + mdft.mol.intor("int1e_nuc")
-        eri = mdft.mol.intor("int2e")
-        error_energy = e_cc - (
-            np.einsum("pq,pq", h1e, dm1_cc[0] + dm1_cc[1])
-            + 0.5
-            * np.einsum("pqrs,pq,rs", eri, dm1_cc[0] + dm1_cc[1], dm1_cc[0] + dm1_cc[1])
-            - 0.1 * np.einsum("pqrs,pr,qs", eri, dm1_cc[0], dm1_cc[0])
-            - 0.1 * np.einsum("pqrs,pr,qs", eri, dm1_cc[1], dm1_cc[1])
-            + mdft.energy_nuc()
-        )
-        print(
-            f"Error energy: {AU2KCALMOL * (error_energy - np.sum(exc_cc_grids * grids.weights))}"
-        )
-        hybrid_exc = grids.get_center_density(rho_cube)
-        print(
-            AU2KCALMOL
-            * np.linalg.norm(
-                exc_cc_grids
-                - (
-                    0.08 * hybrid_exc[:, 0]
-                    + 0.19 * hybrid_exc[:, 1]
-                    + 0.72 * hybrid_exc[:, 2]
-                    + 0.81 * hybrid_exc[:, 3]
-                )
-            )
-        )
+    mycc = pyscf.cc.UCCSD(mf)
+    _, t1, t2 = mycc.kernel()
+    if cc_triple:
+        eris = mycc.ao2mo()
+        e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
+        l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
+        dm1_cc = uccsd_t_rdm.make_rdm1(mycc, t1, t2, l1, l2, eris=eris, ao_repr=True)
+        d1 = u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
+        d2 = u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
+        dm2_cc = uccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
+        del d1, d2
+        e_cc = mycc.e_tot + e3ref
     else:
-        mycc = pyscf.cc.UCCSD(mf)
-        _, t1, t2 = mycc.kernel()
-        if cc_triple:
-            eris = mycc.ao2mo()
-            e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
-            l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
-            dm1_cc = uccsd_t_rdm.make_rdm1(
-                mycc, t1, t2, l1, l2, eris=eris, ao_repr=True
-            )
-            d1 = u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
-            d2 = u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
-            dm2_cc = uccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
-            del d1, d2
-            e_cc = mycc.e_tot + e3ref
-        else:
-            dm1_cc = mycc.make_rdm1(ao_repr=True)
-            dm2_cc = mycc.make_rdm2(ao_repr=True)
-            e_cc = mycc.e_tot
-        dm1_cc = np.array(dm1_cc)
-        dm2_cc = np.array(dm2_cc)
+        dm1_cc = mycc.make_rdm1(ao_repr=True)
+        dm2_cc = mycc.make_rdm2(ao_repr=True)
+        e_cc = mycc.e_tot
+    dm1_cc = np.array(dm1_cc)
+    dm2_cc = np.array(dm2_cc)
 
-        dm1_dft = mdft.make_rdm1(ao_repr=True)
-        e_dft = mdft.energy_tot(dm1_dft)
-
-        rho_dft = [
-            pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft[0], xctype="GGA"),
-            pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft[1], xctype="GGA"),
-        ]
-        rho_cc = [
-            pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
-            pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
-        ]
-        rho_cube = grids.gen_cube_rho_uks(mol, dm1_cc, rho_cc, ni=mdft._numint)
-        print(
-            np.sum(
-                np.abs(rho_cc[0] - rho_dft[0]) * grids.weights
-                + np.abs(rho_cc[1] - rho_dft[1]) * grids.weights
-            )
+    rho_dft = [
+        pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft[0], xctype="GGA"),
+        pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft[1], xctype="GGA"),
+    ]
+    rho_cc = [
+        pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
+        pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
+    ]
+    rho_cube_cc = grids.gen_cube_rho_uks(mol, dm1_cc, rho_cc, ni=mdft._numint)
+    rho_cube_dft = grids.gen_cube_rho_uks(mol, dm1_dft, rho_dft, ni=mdft._numint)
+    print(
+        np.sum(
+            np.abs(rho_cc[0] - rho_dft[0]) * grids.weights
+            + np.abs(rho_cc[1] - rho_dft[1]) * grids.weights
         )
+    )
 
-        dm12 = (
-            0.5 * dm2_cc[0]
-            + 0.5 * dm2_cc[1]
-            + 0.5 * dm2_cc[1].transpose(2, 3, 0, 1)
-            + 0.5 * dm2_cc[2]
-            - 0.5
-            * oe.contract(
-                "pq,rs->pqrs",
-                dm1_dft[0] + dm1_dft[1],
-                dm1_dft[0] + dm1_dft[1],
-            )
-            + 0.1
-            * oe.contract(
-                "pr,qs->pqrs",
-                dm1_dft[0],
-                dm1_dft[0],
-            )
-            + 0.1
-            * oe.contract(
-                "pr,qs->pqrs",
-                dm1_dft[1],
-                dm1_dft[1],
-            )
+    dm12 = (
+        0.5 * dm2_cc[0]
+        + 0.5 * dm2_cc[1]
+        + 0.5 * dm2_cc[1].transpose(2, 3, 0, 1)
+        + 0.5 * dm2_cc[2]
+        - 0.5
+        * oe.contract(
+            "pq,rs->pqrs",
+            dm1_dft[0] + dm1_dft[1],
+            dm1_dft[0] + dm1_dft[1],
         )
-
-        expr_rinv_dm2_r = oe.contract_expression(
-            "ijkl,i,j,kl->",
-            dm12,
-            (mol.nao,),
-            (mol.nao,),
-            (mol.nao, mol.nao),
-            constants=[0],
-            optimize="optimal",
+        + 0.1
+        * oe.contract(
+            "pr,qs->pqrs",
+            dm1_dft[0],
+            dm1_dft[0],
         )
+        + 0.1
+        * oe.contract(
+            "pr,qs->pqrs",
+            dm1_dft[1],
+            dm1_dft[1],
+        )
+    )
 
-        exc_cc_grids = -pyscf.dft.libxc.eval_xc(
-            "b3lyp", rho_dft, spin=1 if mol.spin else 0
-        )[0] * (rho_dft[0][0] + rho_dft[1][0])
+    expr_rinv_dm2_r = oe.contract_expression(
+        "ijkl,i,j,kl->",
+        dm12,
+        (mol.nao,),
+        (mol.nao,),
+        (mol.nao, mol.nao),
+        constants=[0],
+        optimize="optimal",
+    )
 
-        for i, coord in enumerate(grids.coords):
-            if i * 10 % len(grids.coords) == 0:
-                print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
+    exc_cc_grids = -pyscf.dft.libxc.eval_xc(
+        "b3lyp", rho_dft, spin=1 if mol.spin else 0
+    )[0] * (rho_dft[0][0] + rho_dft[1][0])
 
-            with mol.with_rinv_origin(coord):
-                rinv = mol.intor("int1e_rinv")
-                exc_cc_grids[i] += expr_rinv_dm2_r(
-                    ao_value[0][i],
-                    ao_value[0][i],
-                    rinv,
-                    backend="torch",
-                )
+    for i, coord in enumerate(grids.coords):
+        if i * 10 % len(grids.coords) == 0:
+            print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
 
-        dm1_cc_mo = mycc.make_rdm1(ao_repr=False)
-        for i_spin in range(2):
-            eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo[i_spin])
-            eigs_v_dm1 = mf.mo_coeff[i_spin] @ eigs_v_dm1
-            for i in range(np.shape(eigs_v_dm1)[1]):
-                part = oe.contract(
-                    "pm,m,n,pn->p",
-                    ao_value[0],
-                    eigs_v_dm1[:, i],
-                    eigs_v_dm1[:, i],
-                    ao_2_diag,
-                )
-                exc_cc_grids -= part * eigs_e_dm1[i] / 2
+        with mol.with_rinv_origin(coord):
+            rinv = mol.intor("int1e_rinv")
+            exc_cc_grids[i] += expr_rinv_dm2_r(
+                ao_value[0][i],
+                ao_value[0][i],
+                rinv,
+                backend="torch",
+            )
 
-            for i in range(mol.nelec[i_spin]):
-                part = oe.contract(
-                    "pm,m,n,pn->p",
-                    ao_value[0],
-                    mdft.mo_coeff[i_spin][:, i],
-                    mdft.mo_coeff[i_spin][:, i],
-                    ao_2_diag,
-                )
-                exc_cc_grids += part / 2
+    dm1_cc_mo = mycc.make_rdm1(ao_repr=False)
+    for i_spin in range(2):
+        eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo[i_spin])
+        eigs_v_dm1 = mf.mo_coeff[i_spin] @ eigs_v_dm1
+        for i in range(np.shape(eigs_v_dm1)[1]):
+            part = oe.contract(
+                "pm,m,n,pn->p",
+                ao_value[0],
+                eigs_v_dm1[:, i],
+                eigs_v_dm1[:, i],
+                ao_2_diag,
+            )
+            exc_cc_grids -= part * eigs_e_dm1[i] / 2
 
-        for i, coord in enumerate(grids.coords):
-            for i_atom in range(mol.natm):
-                distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
-                if distance > 1e-3:
-                    exc_cc_grids[i] -= (
-                        (
-                            rho_cc[0][0][i]
-                            + rho_cc[1][0][i]
-                            - rho_dft[0][0][i]
-                            - rho_dft[1][0][i]
-                        )
-                        * mol.atom_charges()[i_atom]
-                        / distance
+        for i in range(mol.nelec[i_spin]):
+            part = oe.contract(
+                "pm,m,n,pn->p",
+                ao_value[0],
+                mdft.mo_coeff[i_spin][:, i],
+                mdft.mo_coeff[i_spin][:, i],
+                ao_2_diag,
+            )
+            exc_cc_grids += part / 2
+
+    for i, coord in enumerate(grids.coords):
+        for i_atom in range(mol.natm):
+            distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
+            if distance > 1e-3:
+                exc_cc_grids[i] -= (
+                    (
+                        rho_cc[0][0][i]
+                        + rho_cc[1][0][i]
+                        - rho_dft[0][0][i]
+                        - rho_dft[1][0][i]
                     )
+                    * mol.atom_charges()[i_atom]
+                    / distance
+                )
 
-        error_energy = e_cc - e_dft
-        error = np.sum(exc_cc_grids * grids.weights) - error_energy
-        print(
-            "exc_cc_grids: ",
-            f"max exc_cc_grids: {np.max(exc_cc_grids)}",
-            f"min exc_cc_grids: {np.min(exc_cc_grids)}",
-            f"mean exc_cc_grids: {np.mean(exc_cc_grids)}",
-            f"std exc_cc_grids: {np.std(exc_cc_grids)}",
-        )
-        print(
-            f"error_energy: {AU2KCALMOL * error_energy},",
-            f"Error: {AU2KCALMOL * error},",
-        )
+    error_energy = e_cc - e_dft
+    error = np.sum(exc_cc_grids * grids.weights) - error_energy
+    print(
+        "exc_cc_grids: ",
+        f"max exc_cc_grids: {np.max(exc_cc_grids)}",
+        f"min exc_cc_grids: {np.min(exc_cc_grids)}",
+        f"mean exc_cc_grids: {np.mean(exc_cc_grids)}",
+        f"std exc_cc_grids: {np.std(exc_cc_grids)}",
+        f"error_energy: {AU2KCALMOL * error_energy},",
+        f"Error: {AU2KCALMOL * error},",
+    )
 
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",
         e_cc=e_cc,
         dm_cc=dm1_cc,
-        rho_cube=rho_cube,
+        rho_cube_cc=rho_cube_cc,
+        rho_cube_dft=rho_cube_dft,
         weights=grids.weights,
         exc_cc_grids=exc_cc_grids,
         error_energy=error_energy,
+        mol=mol.tostring(format="xyz"),
+        charge=mol.charge,
+        spin=mol.spin,
     )
