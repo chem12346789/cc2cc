@@ -18,6 +18,7 @@ from cc2cc.utils.env_var import DATA_TEST_PATH
 
 
 class TestData:
+
     def __init__(
         self,
         mol,
@@ -25,20 +26,16 @@ class TestData:
         xc_code="b3lyp",
         if_grad=False,
         cc_triple=False,
-        use_orca=False,
+        disp=None,
     ):
         self.name = name
         self.mol = mol
         self.xc_code = xc_code
 
-        if use_orca:
-            self.test_mol_orca(if_grad=if_grad, cc_triple=cc_triple)
-            raise ValueError(
-                "The ORCA test is not compeleted yet. "
-                "The data will be saved in the tmp_mol folder."
-            )
-        elif (DATA_TEST_PATH / f"{name}_cc.npz").exists():
-            data_frame = np.load(DATA_TEST_PATH / f"{name}_cc.npz", allow_pickle=True)
+        if (DATA_TEST_PATH / f"{name}_cc.npz").exists():
+            data_frame = np.load(
+                DATA_TEST_PATH / f"{name}_cc.npz", allow_pickle=True
+            ).items()
             mol_corr = data_frame["mol_corr"]
 
             if np.linalg.norm(mol.atom_coords() - mol_corr, ord=1) > 1e-6:
@@ -57,14 +54,48 @@ class TestData:
                     raise ValueError("No gradient data.")
                 self.grad_ccsd = data_frame["grad_ccsd"]
 
-            self.dm1_dft = data_frame["dm1_dft"]
-            self.e_dft = data_frame["e_dft"].item()
-            self.dft_dipole = data_frame["dft_dipole"]
-            self.time_dft = data_frame["time_dft"].item()
-            if if_grad:
-                if "grad_dft" not in data_frame:
-                    raise ValueError("No DFT gradient data.")
-                self.grad_dft = data_frame["grad_dft"]
+            if disp is None:
+                self.dm1_dft = data_frame["dm1_dft"]
+                self.e_dft = data_frame["e_dft"].item()
+                self.dft_dipole = data_frame["dft_dipole"]
+                self.time_dft = data_frame["time_dft"].item()
+                if if_grad:
+                    if "grad_dft" not in data_frame:
+                        raise ValueError("No DFT gradient data.")
+                    self.grad_dft = data_frame["grad_dft"]
+            else:
+                if (
+                    f"dm1_dft_{disp}" in data_frame
+                    and f"e_dft_{disp}" in data_frame
+                    and f"dft_dipole_{disp}" in data_frame
+                    and f"time_dft_{disp}" in data_frame
+                ):
+                    self.dm1_dft = data_frame[f"dm1_dft_{disp}"]
+                    self.e_dft = data_frame[f"e_dft_{disp}"].item()
+                    self.dft_dipole = data_frame[f"dft_dipole_{disp}"]
+                    self.time_dft = data_frame[f"time_dft_{disp}"].item()
+                    if if_grad:
+                        if "grad_dft" not in data_frame:
+                            raise ValueError("No DFT gradient data.")
+                        self.grad_dft = data_frame[f"grad_dft_{disp}"]
+                else:
+                    self.dm1_dft = None
+                    self.e_dft = None
+                    self.dft_dipole = None
+                    self.time_dft = None
+                    if mol.spin == 0:
+                        self.test_mol_rks_disp(disp, if_grad)
+                    else:
+                        self.test_mol_uks_disp(disp, if_grad)
+
+                    data_frame.update(
+                        {
+                            f"dm1_dft_{disp}": self.dm1_dft,
+                            f"e_dft_{disp}": self.e_dft,
+                            f"dft_dipole_{disp}": self.dft_dipole,
+                            f"time_dft_{disp}": self.time_dft,
+                        }
+                    )
 
             print(f"Data for {name} loaded.")
             print(f"CCSD energy: {self.e_cc}")
@@ -219,6 +250,54 @@ class TestData:
         time_start = timer()
         mdft = pyscf.scf.UKS(self.mol)
         mdft.xc = self.xc_code
+        mdft.max_cycle = 250
+        mdft.kernel(dm0=self.mf_dm1)
+        if mdft.converged is False:
+            raise ValueError("UKS not converged.")
+        self.dm1_dft = mdft.make_rdm1(ao_repr=True)
+        self.e_dft = mdft.e_tot
+        self.dft_dipole = pyscf.scf.hf.dip_moment(
+            mol=self.mol,
+            dm=self.dm1_dft,
+            unit="A.U.",
+        )
+        if if_grad:
+            g = mdft.nuc_grad_method()
+            self.grad_dft = g.kernel()
+        self.time_dft = timer() - time_start
+
+    def test_mol_rks_disp(self, disp, if_grad=False):
+        """
+        Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected RKS molecule.
+        """
+        time_start = timer()
+        mdft = pyscf.scf.RKS(self.mol)
+        mdft.xc = self.xc_code
+        mdft.disp = disp
+        mdft.max_cycle = 250
+        mdft.kernel(dm0=self.mf_dm1)
+        if mdft.converged is False:
+            raise ValueError("RKS not converged.")
+        self.dm1_dft = mdft.make_rdm1(ao_repr=True)
+        self.e_dft = mdft.e_tot
+        self.dft_dipole = pyscf.scf.hf.dip_moment(
+            mol=self.mol,
+            dm=self.dm1_dft,
+            unit="A.U.",
+        )
+        if if_grad:
+            g = mdft.nuc_grad_method()
+            self.grad_dft = g.kernel()
+        self.time_dft = timer() - time_start
+
+    def test_mol_uks_disp(self, disp, if_grad=False):
+        """
+        Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected UKS molecule.
+        """
+        time_start = timer()
+        mdft = pyscf.scf.UKS(self.mol)
+        mdft.xc = self.xc_code
+        mdft.disp = disp
         mdft.max_cycle = 250
         mdft.kernel(dm0=self.mf_dm1)
         if mdft.converged is False:

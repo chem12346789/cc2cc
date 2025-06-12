@@ -16,24 +16,23 @@ from pyscf.cc.uccsd_t_rdm import _gamma2_intermediates as u_gamma2_intermediates
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 
 
-def ucc(mol, grids, name, cc_triple=False):
+def ucc(mol, grids, name, cc_triple=False, check_convergence=True):
     """
     Generate data for the UCCSD method.
     """
-
     print(f"Generate data for {name}, spin {mol.spin}")
 
     mf = pyscf.scf.UHF(mol)
     mf.max_cycle = 200
     mf.kernel()
-    if mf.converged is False:
+    if check_convergence and not mf.converged:
         raise ValueError("UHF not converged.")
 
     mdft = pyscf.scf.UKS(mol)
     mdft.max_cycle = 200
     mdft.xc = "b3lyp"
     mdft.kernel(mf.make_rdm1())
-    if mdft.converged is False:
+    if check_convergence and not mdft.converged:
         raise ValueError("UKS not converged.")
     dm1_dft = mdft.make_rdm1(ao_repr=True)
     e_dft = mdft.energy_tot(dm1_dft)

@@ -21,23 +21,21 @@ def test_uks(
     Test the model. Restrict Khon-Sham (no spin).
     """
     density_restriction = getattr(args, "density_restriction", 0)
-    if_grad = getattr(args, "if_grad", False)
-    cc_triple = getattr(args, "cc_triple", False)
-    use_orca = getattr(args, "use_orca", False)
 
     # 2.0 Prepare
     test_data = TestData(
         mol,
         name,
         xc_code="b3lyp",
-        if_grad=if_grad,
-        cc_triple=cc_triple,
-        use_orca=use_orca,
+        if_grad=args.if_grad,
+        cc_triple=args.cc_triple,
+        disp=args.disp,
     )
 
     time_ai_start = timer()
     mdft = pyscf.dft.UKS(mol)
     mdft.xc = test_data.xc_code
+    mdft.disp = test_data.disp
     mdft.grids = grids
     mdft.verbose = 4
 
