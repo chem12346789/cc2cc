@@ -70,30 +70,31 @@ class TestData:
             print(f"CCSD energy: {self.e_cc}")
             print(f"DFT energy: {self.e_dft}")
         else:
-            self.mf_dm1 = None
-            self.dm1_cc = None
-            self.e_cc = None
-            self.cc_dipole = None
-            if mol.spin == 0:
-                self.test_mol_rks(if_grad=if_grad, cc_triple=cc_triple)
-            else:
-                self.test_mol_uks(if_grad=if_grad, cc_triple=cc_triple)
+            raise ValueError(f"Data for {name} not found. ")
+            # self.mf_dm1 = None
+            # self.dm1_cc = None
+            # self.e_cc = None
+            # self.cc_dipole = None
+            # if mol.spin == 0:
+            #     self.test_mol_rks(if_grad=if_grad, cc_triple=cc_triple)
+            # else:
+            #     self.test_mol_uks(if_grad=if_grad, cc_triple=cc_triple)
 
-            np.savez_compressed(
-                DATA_TEST_PATH / f"{name}_cc.npz",
-                mol_corr=mol.atom_coords(),
-                mf_dm1=self.mf_dm1,
-                dm1_cc=self.dm1_cc,
-                e_cc=self.e_cc,
-                cc_dipole=self.cc_dipole,
-                time_cc=self.time_cc,
-                grad_ccsd=self.grad_ccsd if if_grad else None,
-                dm1_dft=self.dm1_dft,
-                e_dft=self.e_dft,
-                dft_dipole=self.dft_dipole,
-                time_dft=self.time_dft,
-                grad_dft=self.grad_dft if if_grad else None,
-            )
+            # np.savez_compressed(
+            #     DATA_TEST_PATH / f"{name}_cc.npz",
+            #     mol_corr=mol.atom_coords(),
+            #     mf_dm1=self.mf_dm1,
+            #     dm1_cc=self.dm1_cc,
+            #     e_cc=self.e_cc,
+            #     cc_dipole=self.cc_dipole,
+            #     time_cc=self.time_cc,
+            #     grad_ccsd=self.grad_ccsd if if_grad else None,
+            #     dm1_dft=self.dm1_dft,
+            #     e_dft=self.e_dft,
+            #     dft_dipole=self.dft_dipole,
+            #     time_dft=self.time_dft,
+            #     grad_dft=self.grad_dft if if_grad else None,
+            # )
 
     def test_mol_rks(self, if_grad=False, cc_triple=False):
         """
