@@ -33,9 +33,9 @@ class TestData:
         self.xc_code = xc_code
 
         if (DATA_TEST_PATH / f"{name}_cc.npz").exists():
-            data_frame = np.load(
-                DATA_TEST_PATH / f"{name}_cc.npz", allow_pickle=True
-            ).items()
+            data_frame = dict(
+                np.load(DATA_TEST_PATH / f"{name}_cc.npz", allow_pickle=True).items()
+            )
             mol_corr = data_frame["mol_corr"]
 
             if np.linalg.norm(mol.atom_coords() - mol_corr, ord=1) > 1e-6:
@@ -95,6 +95,10 @@ class TestData:
                             f"dft_dipole_{disp}": self.dft_dipole,
                             f"time_dft_{disp}": self.time_dft,
                         }
+                    )
+                    np.savez_compressed(
+                        DATA_TEST_PATH / f"{name}_cc.npz",
+                        **data_frame,
                     )
 
             print(f"Data for {name} loaded.")
