@@ -31,6 +31,7 @@ class TestData:
         self.name = name
         self.mol = mol
         self.xc_code = xc_code
+        self.disp = disp
 
         if (DATA_TEST_PATH / f"{name}_cc.npz").exists():
             data_frame = dict(
@@ -84,9 +85,9 @@ class TestData:
                     self.dft_dipole = None
                     self.time_dft = None
                     if mol.spin == 0:
-                        self.test_mol_rks_disp(disp, if_grad)
+                        self.test_mol_rks_disp(if_grad)
                     else:
-                        self.test_mol_uks_disp(disp, if_grad)
+                        self.test_mol_uks_disp(if_grad)
 
                     data_frame.update(
                         {
@@ -105,31 +106,30 @@ class TestData:
             print(f"CCSD energy: {self.e_cc}")
             print(f"DFT energy: {self.e_dft}")
         else:
-            raise ValueError(f"Data for {name} not found. ")
-            # self.mf_dm1 = None
-            # self.dm1_cc = None
-            # self.e_cc = None
-            # self.cc_dipole = None
-            # if mol.spin == 0:
-            #     self.test_mol_rks(if_grad=if_grad, cc_triple=cc_triple)
-            # else:
-            #     self.test_mol_uks(if_grad=if_grad, cc_triple=cc_triple)
+            self.mf_dm1 = None
+            self.dm1_cc = None
+            self.e_cc = None
+            self.cc_dipole = None
+            if mol.spin == 0:
+                self.test_mol_rks(if_grad=if_grad, cc_triple=cc_triple)
+            else:
+                self.test_mol_uks(if_grad=if_grad, cc_triple=cc_triple)
 
-            # np.savez_compressed(
-            #     DATA_TEST_PATH / f"{name}_cc.npz",
-            #     mol_corr=mol.atom_coords(),
-            #     mf_dm1=self.mf_dm1,
-            #     dm1_cc=self.dm1_cc,
-            #     e_cc=self.e_cc,
-            #     cc_dipole=self.cc_dipole,
-            #     time_cc=self.time_cc,
-            #     grad_ccsd=self.grad_ccsd if if_grad else None,
-            #     dm1_dft=self.dm1_dft,
-            #     e_dft=self.e_dft,
-            #     dft_dipole=self.dft_dipole,
-            #     time_dft=self.time_dft,
-            #     grad_dft=self.grad_dft if if_grad else None,
-            # )
+            np.savez_compressed(
+                DATA_TEST_PATH / f"{name}_cc.npz",
+                mol_corr=mol.atom_coords(),
+                mf_dm1=self.mf_dm1,
+                dm1_cc=self.dm1_cc,
+                e_cc=self.e_cc,
+                cc_dipole=self.cc_dipole,
+                time_cc=self.time_cc,
+                grad_ccsd=self.grad_ccsd if if_grad else None,
+                dm1_dft=self.dm1_dft,
+                e_dft=self.e_dft,
+                dft_dipole=self.dft_dipole,
+                time_dft=self.time_dft,
+                grad_dft=self.grad_dft if if_grad else None,
+            )
 
     def test_mol_rks(self, if_grad=False, cc_triple=False):
         """
@@ -271,14 +271,14 @@ class TestData:
             self.grad_dft = g.kernel()
         self.time_dft = timer() - time_start
 
-    def test_mol_rks_disp(self, disp, if_grad=False):
+    def test_mol_rks_disp(self, if_grad=False):
         """
         Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected RKS molecule.
         """
         time_start = timer()
         mdft = pyscf.scf.RKS(self.mol)
         mdft.xc = self.xc_code
-        mdft.disp = disp
+        mdft.disp = self.disp
         mdft.max_cycle = 250
         mdft.kernel(dm0=self.mf_dm1)
         if mdft.converged is False:
@@ -295,14 +295,14 @@ class TestData:
             self.grad_dft = g.kernel()
         self.time_dft = timer() - time_start
 
-    def test_mol_uks_disp(self, disp, if_grad=False):
+    def test_mol_uks_disp(self, if_grad=False):
         """
         Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected UKS molecule.
         """
         time_start = timer()
         mdft = pyscf.scf.UKS(self.mol)
         mdft.xc = self.xc_code
-        mdft.disp = disp
+        mdft.disp = self.disp
         mdft.max_cycle = 250
         mdft.kernel(dm0=self.mf_dm1)
         if mdft.converged is False:

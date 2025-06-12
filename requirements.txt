@@ -1,6 +1,7 @@
 basis_set_exchange
 opt_einsum
 pyscf
+pyscf-dispersion
 wandb
 numba
 torchinfo
