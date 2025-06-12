@@ -20,8 +20,6 @@ def print_gpu_info(device):
     - CUDA visible devices from environment
     - Current CUDA device
     - Number of available CUDA devices
-
-    If PyTorch is not installed, it will display a message instead.
     """
     # print the information of the process
     print(f"PID: {os.getpid()}")
@@ -58,7 +56,12 @@ if MAIN_PATH is None:
 else:
     MAIN_PATH = Path(MAIN_PATH)
 
-DATA_PATH = MAIN_PATH / "data" / "grids_dft"
+DATA_DIR = os.environ.get("DFT2CC_DATA_DIR")
+if DATA_DIR is None:
+    DATA_PATH = MAIN_PATH / "data" / "grids_dft"
+else:
+    DATA_PATH = MAIN_PATH / "data" / DATA_DIR
+
 DATA_TEST_PATH = MAIN_PATH / "data" / "test"
 DATA_SCF_PATH = MAIN_PATH / "data" / "grids_scf"
 CHECKPOINTS_PATH = MAIN_PATH / "checkpoints"
@@ -67,8 +70,15 @@ GENERATE_DATA = os.environ.get("DFT2CC_GENERATE_DATA")
 if GENERATE_DATA is None:
     GENERATE_DATA = False
 
-if __name__ == "__main__":
-    print(f"MAIN_PATH: {MAIN_PATH.resolve()}")
-    print(f"DATA_PATH: {DATA_PATH.resolve()}")
-    print(f"DATA_TEST_PATH: {DATA_TEST_PATH.resolve()}")
-    print(f"TEST: {TEST}")
+print(f"LEVEL: {LEVEL}")
+print(f"PERIOD: {PERIOD}")
+print(f"CUBE_SIZE: {CUBE_SIZE}")
+print(f"CUBE_MIDDLE: {CUBE_MIDDLE}")
+print(f"CUBE_LEN: {CUBE_LEN}")
+print(f"TEST: {TEST}")
+print(f"MAIN_PATH: {MAIN_PATH.resolve()}")
+print(f"DATA_PATH: {DATA_PATH.resolve()}")
+print(f"DATA_TEST_PATH: {DATA_TEST_PATH.resolve()}")
+print(f"DATA_SCF_PATH: {DATA_SCF_PATH.resolve()}")
+print(f"CHECKPOINTS_PATH: {CHECKPOINTS_PATH.resolve()}")
+print(f"GENERATE_DATA: {GENERATE_DATA}")

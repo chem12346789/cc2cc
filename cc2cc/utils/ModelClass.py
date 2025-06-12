@@ -183,17 +183,15 @@ class ModelClass:
         """
         if isinstance(self.loss_ene, torch.nn.L1Loss):
             tot_loss = (
-                # loss_ene
-                # + loss_ene_abs * self.loss_multiplier_abs
-                +loss_ene_atomic
-                * self.loss_multiplier_atomic
+                loss_ene
+                + loss_ene_abs * self.loss_multiplier_abs
+                + loss_ene_atomic * self.loss_multiplier_atomic
             )
         elif isinstance(self.loss_ene, torch.nn.MSELoss):
             tot_loss = (
-                # loss_ene
-                # + loss_ene_abs * self.loss_multiplier_abs**2
-                +loss_ene_atomic
-                * self.loss_multiplier_atomic**2
+                loss_ene
+                + loss_ene_abs * self.loss_multiplier_abs**2
+                + loss_ene_atomic * self.loss_multiplier_atomic**2
             )
         else:
             raise ValueError("Unknown loss function")
@@ -239,6 +237,8 @@ class ModelClass:
                     f"Warning: {system_atom} not found in atomic_name_dict, "
                     "skipping atomic energy calculation."
                 )
+                atomic_energy_pred = torch.zeros_like(atomic_energy_pred)
+                atomic_energy_real = torch.zeros_like(atomic_energy_real)
                 break
 
             atomic_batch = self.database_train.data_gpu[name_atom]

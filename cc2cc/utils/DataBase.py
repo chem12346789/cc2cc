@@ -105,7 +105,7 @@ class DataBase:
                     print(f"Error molecule: {error_molecule}")
                     continue
 
-                num_data_used = self.load_data(mol, name)
+                num_data_used = self.load_data(mol, name, args.rho_dft)
                 if num_data_used == 0:
                     error_molecule.append(name)
                     print(f"Error molecule: {error_molecule}")
@@ -127,8 +127,8 @@ class DataBase:
         name_extend = []
         for name in self.name_list:
             name_mol = name.split(f"_{args.basis}_")[0]
-            # if self.data_weight_mol[name_mol] == 1:
-            #     name_extend.extend([name] * 9)
+            if self.data_weight_mol[name_mol] == 1:
+                name_extend.extend([name] * 9)
             self.data_weight[name] = 1 / self.data_weight_mol[name_mol]
         self.name_list.extend(name_extend)
         del self.data_weight_mol
@@ -137,13 +137,16 @@ class DataBase:
         self.data_gpu = BasicDataset(self.data)
         self.data_gpu = self.load_to_gpu()
 
-    def load_data(self, mol, name):
+    def load_data(self, mol, name, rho_dft=True):
         """
         Load the data.
         """
         data = np.load(DATA_PATH / f"data_{name}.npz")
 
-        input_mat = data["rho_cube"]
+        if rho_dft:
+            input_mat = data["rho_cube_dft"]
+        else:
+            input_mat = data["rho_cube_cc"]
         weight_mat = data["weights"]
         output_mat = data["exc_cc_grids"]
 
@@ -197,6 +200,10 @@ class DataBase:
 
         print(f"Total energy used: {AU2KCALMOL * total_ene_used}")
         print(f"Total data used for {name}: {num_data_used}", flush=True)
+        print(
+            f"Atomic systems: {atomic_systems}, Stoichiometry: {atomic_stoichiometry}",
+            flush=True,
+        )
         self.data.append(
             {
                 "input": np.array(input_),

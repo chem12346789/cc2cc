@@ -193,6 +193,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--rho_dft",
+        type=str2bool,
+        default=True,
+        help="Whether to use the DFT density. ",
+    )
+
+    parser.add_argument(
         "--loss_ene",
         type=str,
         choices=["MSELoss", "L1Loss"],
@@ -252,6 +259,35 @@ def add_args(parser: argparse.ArgumentParser):
         default=False,
         help="Whether to use the noniterative CCSD(T) in the coupled cluster method. "
         "Default is False.",
+    )
+
+    parser.add_argument(
+        "--check_convergence",
+        type=str2bool,
+        default=True,
+        help="Whether to check the convergence of the wave function. "
+        "Default is True.",
+    )
+
+    parser.add_argument(
+        "--disp",
+        type=str,
+        default=None,
+        choices=[
+            "d3bj",
+            "d3zero",
+            "d3bjm",
+            "d3mbj",
+            "d3zerom",
+            "d3mzero",
+            "d3op",
+            "d4",
+            None,
+        ],
+        help="Type of dispersion correction to use. "
+        "Default is None (no dispersion correction). "
+        "Options are d3bj, d3zero, d3bjm, d3mbj, "
+        "d3zerom, d3mzero, d3op, d4.",
     )
 
     parser.add_argument(

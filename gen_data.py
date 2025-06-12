@@ -52,9 +52,21 @@ if __name__ == "__main__":
             grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
 
             if mol.spin == 0:
-                cc(mol, grids, name)
+                cc(
+                    mol,
+                    grids,
+                    name,
+                    cc_triple=args.cc_triple,
+                    check_convergence=args.check_convergence,
+                )
             else:
-                ucc(mol, grids, name)
+                ucc(
+                    mol,
+                    grids,
+                    name,
+                    cc_triple=args.cc_triple,
+                    check_convergence=args.check_convergence,
+                )
         except (ValueError, RuntimeError) as e:
             print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
             print(e)
