@@ -18,16 +18,35 @@ from cc2cc.utils.env_var import DATA_TEST_PATH
 
 
 class TestData:
+    """
+    Class to generate and store test data for CCSD and DFT calculations.
+    It generates 1-RDM, energy, dipole, and gradient for a given molecule.
+    The data is saved in a compressed npz file for later use.
+    Note:
+        1) If the data already exists, it will be loaded instead of recomputed.
+        2) If the molecule coordinates are different from the saved data, it will raise an error.
+        3) If disp is not None, it will generate data for the dispersion-corrected DFT calculation (Will store the data in the same file).
+    Args:
+        mol (pyscf.Mole): The molecule object.
+        name (str): The name of the molecule, used for saving/loading data.
+        xc_code (str): The exchange-correlation functional code for DFT calculations.
+        if_grad (bool): If True, compute gradients.
+            TODO: This function is under development.
+        cc_triple (bool): If True, include CCSD(T) corrections.
+        disp (str or None): Dispersion correction method, if any. Default is None.
+    Raises:
+        ValueError: If the molecule coordinates are different from the saved data.
+    """
 
     def __init__(
         self,
-        mol,
-        name,
-        xc_code="b3lyp",
-        if_grad=False,
-        cc_triple=False,
-        disp=None,
-    ):
+        mol: pyscf.M,
+        name: str,
+        xc_code: str = "b3lyp",
+        if_grad: bool = False,
+        cc_triple: bool = False,
+        disp: str = None,
+    ) -> None:
         self.name = name
         self.mol = mol
         self.xc_code = xc_code
