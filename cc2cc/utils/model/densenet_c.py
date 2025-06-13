@@ -5,8 +5,8 @@ An 3d cnn model
 from torch import nn
 
 D_MODEL = 4
-MLP = 108
-DENSE_DEPTH = 5
+MLP = 128
+DENSE_DEPTH = 7
 IF_SKIP_CONNECTION = 1
 
 DROP_RATE = 0
