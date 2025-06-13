@@ -51,8 +51,6 @@ class TestData:
             self.cc_dipole = data_frame["cc_dipole"]
             self.time_cc = data_frame["time_cc"].item()
             if if_grad:
-                if "grad_ccsd" not in data_frame:
-                    raise ValueError("No gradient data.")
                 self.grad_ccsd = data_frame["grad_ccsd"]
 
             if disp is None:
@@ -61,8 +59,6 @@ class TestData:
                 self.dft_dipole = data_frame["dft_dipole"]
                 self.time_dft = data_frame["time_dft"].item()
                 if if_grad:
-                    if "grad_dft" not in data_frame:
-                        raise ValueError("No DFT gradient data.")
                     self.grad_dft = data_frame["grad_dft"]
             else:
                 if (
@@ -76,8 +72,6 @@ class TestData:
                     self.dft_dipole = data_frame[f"dft_dipole_{disp}"]
                     self.time_dft = data_frame[f"time_dft_{disp}"].item()
                     if if_grad:
-                        if "grad_dft" not in data_frame:
-                            raise ValueError("No DFT gradient data.")
                         self.grad_dft = data_frame[f"grad_dft_{disp}"]
                 else:
                     self.dm1_dft = None
