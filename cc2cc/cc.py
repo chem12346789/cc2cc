@@ -16,7 +16,7 @@ from pyscf.cc.ccsd_t_rdm_slow import _gamma2_intermediates
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 
 
-def cc(mol, grids, name, cc_triple=False):
+def cc(mol, grids, name, cc_triple=False, check_convergence=True):
     """
     Generate data for the CCSD method. (Restrict scenario to spin 0).
     """
@@ -26,14 +26,14 @@ def cc(mol, grids, name, cc_triple=False):
     mf = pyscf.scf.RHF(mol)
     mf.max_cycle = 200
     mf.kernel()
-    if mf.converged is False:
+    if check_convergence and not mf.converged:
         raise ValueError("RHF not converged.")
 
     mdft = pyscf.scf.RKS(mol)
     mdft.max_cycle = 200
     mdft.xc = "b3lyp"
     mdft.kernel(mf.make_rdm1())
-    if mdft.converged is False:
+    if check_convergence and not mdft.converged:
         raise ValueError("RKS not converged.")
     dm1_dft = mdft.make_rdm1(ao_repr=True)
     e_dft = mdft.energy_tot(dm1_dft)

@@ -27,15 +27,20 @@ if __name__ == "__main__":
     modeldict.eval()
 
     # 2. Test loop
+    if args.disp is None:
+        suffix = ".csv"
+    else:
+        suffix = f"_{args.disp}.csv"
     if len(args.name_mol_input) == 1:
         data_record = DataRecord(
             MAIN_PATH
-            / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}_{args.name_mol_input[0]}.csv",
+            / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}_{args.name_mol_input[0]}{suffix}",
             if_continue=args.if_continue,
         )
     else:
         data_record = DataRecord(
-            MAIN_PATH / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}.csv",
+            MAIN_PATH
+            / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}{suffix}",
             if_continue=args.if_continue,
         )
     error_molecule = []
@@ -80,32 +85,32 @@ if __name__ == "__main__":
 
         grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
 
-        # try:
-        if mol.spin == 0:
-            test_rks(
-                mol,
-                grids,
-                name,
-                modeldict,
-                data_record,
-                args,
-            )
-        else:
-            test_uks(
-                mol,
-                grids,
-                name,
-                modeldict,
-                data_record,
-                args,
-            )
-        # except (ValueError, RuntimeError) as e:
-        #     print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
-        #     print(e)
-        #     error_molecule.append(name)
-        #     print(f"Error molecule: {error_molecule}")
-        # finally:
-        #     print(f"Processed: {name_mol} {extend_atom} {extend_xyz} {distance}")
-        # print()
+        try:
+            if mol.spin == 0:
+                test_rks(
+                    mol,
+                    grids,
+                    name,
+                    modeldict,
+                    data_record,
+                    args,
+                )
+            else:
+                test_uks(
+                    mol,
+                    grids,
+                    name,
+                    modeldict,
+                    data_record,
+                    args,
+                )
+        except (ValueError, RuntimeError) as e:
+            print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
+            print(e)
+            error_molecule.append(name)
+            print(f"Error molecule: {error_molecule}")
+        finally:
+            print(f"Processed: {name_mol} {extend_atom} {extend_xyz} {distance}")
+        print()
 
     print(f"Error molecule: {error_molecule}")
