@@ -28,19 +28,17 @@ if __name__ == "__main__":
 
     # 2. Test loop
     if args.disp is None:
-        suffix = ".csv"
+        file_prefix = f"validate/ccdft_{args.basis}_{args.load}"
     else:
-        suffix = f"_{args.disp}.csv"
+        file_prefix = f"validate/ccdft_{args.basis}_{args.load}_{args.disp}"
     if len(args.name_mol_input) == 1:
         data_record = DataRecord(
-            MAIN_PATH
-            / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}_{args.name_mol_input[0]}{suffix}",
+            MAIN_PATH / f"{file_prefix}_{args.dataset}_{args.name_mol_input[0]}.csv",
             if_continue=args.if_continue,
         )
     else:
         data_record = DataRecord(
-            MAIN_PATH
-            / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}{suffix}",
+            MAIN_PATH / f"{file_prefix}_{args.dataset}.csv",
             if_continue=args.if_continue,
         )
     error_molecule = []
