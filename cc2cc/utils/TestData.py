@@ -14,7 +14,7 @@ from pyscf.cc import uccsd_t_lambda
 from pyscf.cc import uccsd_t_rdm
 from pyscf.cc import uccsd_t
 
-from cc2cc.utils.env_var import DATA_TEST_PATH
+from cc2cc.utils.env_var import DATA_TEST_PATH, DATA_TEST_NO_GRAD_PATH
 
 
 class TestData:
@@ -56,68 +56,6 @@ class TestData:
             data_frame = dict(
                 np.load(DATA_TEST_PATH / f"{name}_cc.npz", allow_pickle=True).items()
             )
-            mol_corr = data_frame["mol_corr"]
-
-            if np.linalg.norm(mol.atom_coords() - mol_corr, ord=1) > 1e-6:
-                print("Molecule coordinates are different.")
-                print("With nothing to do, skip the test.")
-                raise ValueError("Molecule coordinates are different.")
-
-            self.mf_dm1 = data_frame["mf_dm1"]
-
-            self.dm1_cc = data_frame["dm1_cc"]
-            self.e_cc = data_frame["e_cc"].item()
-            self.cc_dipole = data_frame["cc_dipole"]
-            self.time_cc = data_frame["time_cc"].item()
-            if if_grad:
-                self.grad_ccsd = data_frame["grad_ccsd"]
-
-            if disp is None:
-                self.dm1_dft = data_frame["dm1_dft"]
-                self.e_dft = data_frame["e_dft"].item()
-                self.dft_dipole = data_frame["dft_dipole"]
-                self.time_dft = data_frame["time_dft"].item()
-                if if_grad:
-                    self.grad_dft = data_frame["grad_dft"]
-            else:
-                if (
-                    f"dm1_dft_{disp}" in data_frame
-                    and f"e_dft_{disp}" in data_frame
-                    and f"dft_dipole_{disp}" in data_frame
-                    and f"time_dft_{disp}" in data_frame
-                ):
-                    self.dm1_dft = data_frame[f"dm1_dft_{disp}"]
-                    self.e_dft = data_frame[f"e_dft_{disp}"].item()
-                    self.dft_dipole = data_frame[f"dft_dipole_{disp}"]
-                    self.time_dft = data_frame[f"time_dft_{disp}"].item()
-                    if if_grad:
-                        self.grad_dft = data_frame[f"grad_dft_{disp}"]
-                else:
-                    self.dm1_dft = None
-                    self.e_dft = None
-                    self.dft_dipole = None
-                    self.time_dft = None
-                    if mol.spin == 0:
-                        self.test_mol_rks_disp(if_grad)
-                    else:
-                        self.test_mol_uks_disp(if_grad)
-
-                    data_frame.update(
-                        {
-                            f"dm1_dft_{disp}": self.dm1_dft,
-                            f"e_dft_{disp}": self.e_dft,
-                            f"dft_dipole_{disp}": self.dft_dipole,
-                            f"time_dft_{disp}": self.time_dft,
-                        }
-                    )
-                    np.savez_compressed(
-                        DATA_TEST_PATH / f"{name}_cc.npz",
-                        **data_frame,
-                    )
-
-            print(f"Data for {name} loaded.")
-            print(f"CCSD energy: {self.e_cc}")
-            print(f"DFT energy: {self.e_dft}")
         else:
             self.mf_dm1 = None
             self.dm1_cc = None
@@ -143,6 +81,66 @@ class TestData:
                 time_dft=self.time_dft,
                 grad_dft=self.grad_dft if if_grad else None,
             )
+
+        mol_corr = data_frame["mol_corr"]
+
+        if np.linalg.norm(mol.atom_coords() - mol_corr, ord=1) > 1e-6:
+            print("Molecule coordinates are different.")
+            print("With nothing to do, skip the test.")
+            raise ValueError("Molecule coordinates are different.")
+
+        self.mf_dm1 = data_frame["mf_dm1"]
+
+        self.dm1_cc = data_frame["dm1_cc"]
+        self.e_cc = data_frame["e_cc"].item()
+        self.cc_dipole = data_frame["cc_dipole"]
+        self.time_cc = data_frame["time_cc"].item()
+        self.grad_ccsd = data_frame["grad_ccsd"]
+
+        if disp is None:
+            self.dm1_dft = data_frame["dm1_dft"]
+            self.e_dft = data_frame["e_dft"].item()
+            self.dft_dipole = data_frame["dft_dipole"]
+            self.time_dft = data_frame["time_dft"].item()
+            self.grad_dft = data_frame["grad_dft"]
+        else:
+            if (
+                f"dm1_dft_{disp}" in data_frame
+                and f"e_dft_{disp}" in data_frame
+                and f"dft_dipole_{disp}" in data_frame
+                and f"time_dft_{disp}" in data_frame
+            ):
+                self.dm1_dft = data_frame[f"dm1_dft_{disp}"]
+                self.e_dft = data_frame[f"e_dft_{disp}"].item()
+                self.dft_dipole = data_frame[f"dft_dipole_{disp}"]
+                self.time_dft = data_frame[f"time_dft_{disp}"].item()
+                self.grad_dft = data_frame[f"grad_dft_{disp}"]
+            else:
+                self.dm1_dft = None
+                self.e_dft = None
+                self.dft_dipole = None
+                self.time_dft = None
+                if mol.spin == 0:
+                    self.test_mol_rks_disp(if_grad)
+                else:
+                    self.test_mol_uks_disp(if_grad)
+
+                data_frame.update(
+                    {
+                        f"dm1_dft_{disp}": self.dm1_dft,
+                        f"e_dft_{disp}": self.e_dft,
+                        f"dft_dipole_{disp}": self.dft_dipole,
+                        f"time_dft_{disp}": self.time_dft,
+                    }
+                )
+                np.savez_compressed(
+                    DATA_TEST_PATH / f"{name}_cc.npz",
+                    **data_frame,
+                )
+
+        print(f"Data for {name} loaded.")
+        print(f"CCSD energy: {self.e_cc}")
+        print(f"DFT energy: {self.e_dft}")
 
     def test_mol_rks(self, if_grad=False, cc_triple=False):
         """
