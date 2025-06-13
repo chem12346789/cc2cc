@@ -293,8 +293,8 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--if_grad",
         type=str2bool,
-        default=False,
-        help="Whether to calculate the gradient. Default is False.",
+        default=True,
+        help="Whether to calculate the gradient. Default is True.",
     )
 
     parser.add_argument(
