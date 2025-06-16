@@ -56,6 +56,12 @@ class TestData:
             data_frame = dict(
                 np.load(DATA_TEST_PATH / f"{name}_cc.npz", allow_pickle=True).items()
             )
+        elif (DATA_TEST_NO_GRAD_PATH / f"{name}_cc.npz").exists():
+            data_frame = dict(
+                np.load(
+                    DATA_TEST_NO_GRAD_PATH / f"{name}_cc.npz", allow_pickle=True
+                ).items()
+            )
         else:
             self.mf_dm1 = None
             self.dm1_cc = None
@@ -109,6 +115,7 @@ class TestData:
                 and f"e_dft_{disp}" in data_frame
                 and f"dft_dipole_{disp}" in data_frame
                 and f"time_dft_{disp}" in data_frame
+                and f"grad_dft_{disp}" in data_frame
             ):
                 self.dm1_dft = data_frame[f"dm1_dft_{disp}"]
                 self.e_dft = data_frame[f"e_dft_{disp}"].item()
