@@ -22,6 +22,7 @@ out
 *.png
 *.pdf
 tmp_mol/*
+jupyter-notebook/new_dataset/sets
 
 /.vscode
 
