@@ -47,7 +47,7 @@ def test_uks(
     else:
         mdft.max_cycle = 50
         mdft.conv_tol = 1e-5
-        mdft.kernel(dm0=test_data.mf_dm1)
+        mdft.kernel(dm0=test_data.dm1_dft)
         dm1_scf = mdft.make_rdm1()
         e_scf = mdft.e_tot
 
