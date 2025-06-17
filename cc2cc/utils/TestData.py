@@ -140,6 +140,7 @@ class TestData:
                         f"e_dft_{disp}": self.e_dft,
                         f"dft_dipole_{disp}": self.dft_dipole,
                         f"time_dft_{disp}": self.time_dft,
+                        f"grad_dft_{disp}": self.grad_dft if if_grad else None
                     }
                 )
                 np.savez_compressed(
