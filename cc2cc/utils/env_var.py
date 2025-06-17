@@ -68,6 +68,12 @@ if DATA_TEST_DIR is None:
 else:
     DATA_TEST_PATH = MAIN_PATH / "data" / DATA_TEST_DIR
 
+DATA_TEST_NO_GRAD_DIR = os.environ.get("DFT2CC_DATA_TEST_NO_GRAD_DIR")
+if DATA_TEST_NO_GRAD_DIR is None:
+    DATA_TEST_NO_GRAD_PATH = MAIN_PATH / "data" / "test_no_grad"
+else:
+    DATA_TEST_NO_GRAD_PATH = MAIN_PATH / "data" / DATA_TEST_NO_GRAD_DIR
+
 DATA_SCF_PATH = MAIN_PATH / "data" / "grids_scf"
 CHECKPOINTS_PATH = MAIN_PATH / "checkpoints"
 

@@ -47,7 +47,7 @@ def test_rks(
     else:
         mdft.max_cycle = 50
         mdft.conv_tol = 1e-5
-        mdft.kernel(dm0=test_data.mf_dm1)
+        mdft.kernel(dm0=test_data.dm1_dft)
         dm1_scf = mdft.make_rdm1()
         e_scf = mdft.e_tot
 
@@ -84,6 +84,7 @@ def test_rks(
             "time_cc": test_data.time_cc,
             "time_dft": test_data.time_dft,
             "time_ai": time_ai,
+            "cc_ene": AU2KCALMOL * test_data.e_cc,
         },
     )
     data_record.save_csv()

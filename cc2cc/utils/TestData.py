@@ -52,9 +52,15 @@ class TestData:
         self.xc_code = xc_code
         self.disp = disp
 
-        if (DATA_TEST_PATH / f"{name}_cc.npz").exists():
+        if (if_grad) and (DATA_TEST_PATH / f"{name}_cc.npz").exists():
             data_frame = dict(
                 np.load(DATA_TEST_PATH / f"{name}_cc.npz", allow_pickle=True).items()
+            )
+        elif (not if_grad) and (DATA_TEST_NO_GRAD_PATH / f"{name}_cc.npz").exists():
+            data_frame = dict(
+                np.load(
+                    DATA_TEST_NO_GRAD_PATH / f"{name}_cc.npz", allow_pickle=True
+                ).items()
             )
         else:
             self.mf_dm1 = None
@@ -81,7 +87,9 @@ class TestData:
                 time_dft=self.time_dft,
                 grad_dft=self.grad_dft if if_grad else None,
             )
+            return
 
+        print(f"Data for {name} loaded from file.")
         mol_corr = data_frame["mol_corr"]
 
         if np.linalg.norm(mol.atom_coords() - mol_corr, ord=1) > 1e-6:
@@ -109,6 +117,7 @@ class TestData:
                 and f"e_dft_{disp}" in data_frame
                 and f"dft_dipole_{disp}" in data_frame
                 and f"time_dft_{disp}" in data_frame
+                and f"grad_dft_{disp}" in data_frame
             ):
                 self.dm1_dft = data_frame[f"dm1_dft_{disp}"]
                 self.e_dft = data_frame[f"e_dft_{disp}"].item()
