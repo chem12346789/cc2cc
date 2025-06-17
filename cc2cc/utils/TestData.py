@@ -67,13 +67,19 @@ class TestData:
             self.dm1_cc = None
             self.e_cc = None
             self.cc_dipole = None
+
             if mol.spin == 0:
                 self.test_mol_rks(if_grad=if_grad, cc_triple=cc_triple)
             else:
                 self.test_mol_uks(if_grad=if_grad, cc_triple=cc_triple)
 
+            if if_grad:
+                path_to_save = DATA_TEST_PATH
+            else:
+                path_to_save = DATA_TEST_NO_GRAD_PATH
+
             np.savez_compressed(
-                DATA_TEST_PATH / f"{name}_cc.npz",
+                path_to_save / f"{name}_cc.npz",
                 mol_corr=mol.atom_coords(),
                 mf_dm1=self.mf_dm1,
                 dm1_cc=self.dm1_cc,
