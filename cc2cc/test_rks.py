@@ -84,6 +84,7 @@ def test_rks(
             "time_cc": test_data.time_cc,
             "time_dft": test_data.time_dft,
             "time_ai": time_ai,
+            "cc_ene": AU2KCALMOL * test_data.e_cc,
         },
     )
     data_record.save_csv()

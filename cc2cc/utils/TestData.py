@@ -56,7 +56,7 @@ class TestData:
             data_frame = dict(
                 np.load(DATA_TEST_PATH / f"{name}_cc.npz", allow_pickle=True).items()
             )
-        elif (DATA_TEST_NO_GRAD_PATH / f"{name}_cc.npz").exists():
+        elif (not if_grad) and (DATA_TEST_NO_GRAD_PATH / f"{name}_cc.npz").exists():
             data_frame = dict(
                 np.load(
                     DATA_TEST_NO_GRAD_PATH / f"{name}_cc.npz", allow_pickle=True
@@ -87,7 +87,9 @@ class TestData:
                 time_dft=self.time_dft,
                 grad_dft=self.grad_dft if if_grad else None,
             )
+            return
 
+        print(f"Data for {name} loaded from file.")
         mol_corr = data_frame["mol_corr"]
 
         if np.linalg.norm(mol.atom_coords() - mol_corr, ord=1) > 1e-6:
