@@ -52,7 +52,7 @@ class TestData:
         self.xc_code = xc_code
         self.disp = disp
 
-        if (DATA_TEST_PATH / f"{name}_cc.npz").exists():
+        if (if_grad) and (DATA_TEST_PATH / f"{name}_cc.npz").exists():
             data_frame = dict(
                 np.load(DATA_TEST_PATH / f"{name}_cc.npz", allow_pickle=True).items()
             )
