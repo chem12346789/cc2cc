@@ -17,7 +17,7 @@ QKV_BIAS = False
 NUM_HEADS = 1
 DROP_RATE_TRANSFORMER = 0
 
-MLP_DENSE = 108
+MLP_DENSE = 2 * SEQ_LEN * D_MODEL
 DEPTH_DENSE = 7
 IF_SKIP_CONNECTION_DENSE = 1
 DROP_RATE_DENSE = 0
@@ -199,7 +199,7 @@ class DenseNet(nn.Module):
 
     def __init__(self, **kwargs):
         super(DenseNet, self).__init__()
-        self.d_model = kwargs.get("seq_len", SEQ_LEN * D_MODEL)
+        self.d_model = kwargs.get("seq_len", 2 * SEQ_LEN * D_MODEL)
         self.mlp = kwargs.get("mlp", MLP_DENSE)
         self.depth = kwargs.get("depth_dense", DEPTH_DENSE)
         self.drop_rate = kwargs.get("drop_rate", DROP_RATE_DENSE)
@@ -279,12 +279,13 @@ class Model(nn.Module):
         # SHAPE x = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
         skip = x
         x = self.predictor(x)
-        x = x + skip
         # SHAPE shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
 
         # SHAPE x = (batch, 4, CUBE_SIZE**3)
         x = x.reshape(-1, 4 * CUBE_SIZE**3)
-        # SHAPE x = (batch, 4 * CUBE_SIZE**3)
+        skip = skip.reshape(-1, 4 * CUBE_SIZE**3)
+        x = torch.cat((x, skip), dim=-1)
+        # SHAPE x = (batch, 8 * CUBE_SIZE**3)
         x = self.densenet(x)
         # SHAPE x = (batch, 1)
         x = x * b3lyp_ene
