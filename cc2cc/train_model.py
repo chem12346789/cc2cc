@@ -52,18 +52,6 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     modeldict.init_database(database_train, database_eval)
 
-    print(
-        summary(
-            modeldict.model,
-            input_size=input_size,
-            depth=10,
-            dtypes=(
-                [torch.float32] if args.precision == "float32" else [torch.float64]
-            ),
-            mode="train",
-        )
-    )
-
     experiment_dict = {
         "model": args.model,
         "batch_size": args.batch_size,

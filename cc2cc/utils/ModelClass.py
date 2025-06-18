@@ -182,17 +182,17 @@ class ModelClass:
         Calculate the total loss.
         """
         if isinstance(self.loss_ene, torch.nn.L1Loss):
-            tot_loss = (
-                loss_ene
-                + loss_ene_abs * self.loss_multiplier_abs
-                + loss_ene_atomic * self.loss_multiplier_atomic
-            )
+            tot_loss = loss_ene
+            if self.loss_multiplier_abs > 1e-8:
+                tot_loss += loss_ene_abs * self.loss_multiplier_abs
+            if self.loss_multiplier_atomic > 1e-8:
+                tot_loss += loss_ene_atomic * self.loss_multiplier_atomic
         elif isinstance(self.loss_ene, torch.nn.MSELoss):
-            tot_loss = (
-                loss_ene
-                + loss_ene_abs * self.loss_multiplier_abs**2
-                + loss_ene_atomic * self.loss_multiplier_atomic**2
-            )
+            tot_loss = loss_ene
+            if self.loss_multiplier_abs > 1e-8:
+                tot_loss += loss_ene_abs * self.loss_multiplier_abs**2
+            if self.loss_multiplier_atomic > 1e-8:
+                tot_loss += loss_ene_atomic * self.loss_multiplier_atomic**2
         else:
             raise ValueError("Unknown loss function")
 

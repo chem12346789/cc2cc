@@ -52,28 +52,28 @@ class TestData:
         self.xc_code = xc_code
         self.disp = disp
 
-        if (if_grad) and (DATA_TEST_PATH / f"{name}_cc.npz").exists():
+        if if_grad:
+            path_to_data = DATA_TEST_PATH
+        else:
+            path_to_data = DATA_TEST_NO_GRAD_PATH
+
+        if (path_to_data / f"{name}_cc.npz").exists():
             data_frame = dict(
-                np.load(DATA_TEST_PATH / f"{name}_cc.npz", allow_pickle=True).items()
-            )
-        elif (not if_grad) and (DATA_TEST_NO_GRAD_PATH / f"{name}_cc.npz").exists():
-            data_frame = dict(
-                np.load(
-                    DATA_TEST_NO_GRAD_PATH / f"{name}_cc.npz", allow_pickle=True
-                ).items()
+                np.load(path_to_data / f"{name}_cc.npz", allow_pickle=True).items()
             )
         else:
             self.mf_dm1 = None
             self.dm1_cc = None
             self.e_cc = None
             self.cc_dipole = None
+
             if mol.spin == 0:
                 self.test_mol_rks(if_grad=if_grad, cc_triple=cc_triple)
             else:
                 self.test_mol_uks(if_grad=if_grad, cc_triple=cc_triple)
 
             np.savez_compressed(
-                DATA_TEST_PATH / f"{name}_cc.npz",
+                path_to_data / f"{name}_cc.npz",
                 mol_corr=mol.atom_coords(),
                 mf_dm1=self.mf_dm1,
                 dm1_cc=self.dm1_cc,
@@ -140,10 +140,11 @@ class TestData:
                         f"e_dft_{disp}": self.e_dft,
                         f"dft_dipole_{disp}": self.dft_dipole,
                         f"time_dft_{disp}": self.time_dft,
+                        f"grad_dft_{disp}": self.grad_dft if if_grad else None,
                     }
                 )
                 np.savez_compressed(
-                    DATA_TEST_PATH / f"{name}_cc.npz",
+                    path_to_data / f"{name}_cc.npz",
                     **data_frame,
                 )
 
