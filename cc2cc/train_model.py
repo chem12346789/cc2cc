@@ -50,6 +50,18 @@ def train_model(train_str_dict, eval_str_dict, args):
     else:
         raise ValueError(f"Unknown model type: {modeldict.model_type}")
 
+    print(
+        summary(
+            modeldict.model,
+            input_size=input_size,
+            depth=10,
+            dtypes=(
+                [torch.float32] if args.precision == "float32" else [torch.float64]
+            ),
+            mode="train",
+        )
+    )
+
     modeldict.init_database(database_train, database_eval)
 
     experiment_dict = {
