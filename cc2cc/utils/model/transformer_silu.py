@@ -12,27 +12,24 @@ RAD = 75
 
 D_MODEL = CUBE_SIZE**3
 SEQ_LEN = 4
-DEPTH_TRANSFORMER = 2
+DEPTH_TRANSFORMER = 3
 QKV_BIAS = False
 NUM_HEADS = 1
 DROP_RATE_TRANSFORMER = 0
 
-MLP_DENSE = 2 * SEQ_LEN * D_MODEL
-DEPTH_DENSE = 3
+MLP_DENSE = 108
+DEPTH_DENSE = 7
 IF_SKIP_CONNECTION_DENSE = 1
 DROP_RATE_DENSE = 0
 
-
 # ATTE_ACTV = "relu"
-# ATTE_NORMAL = "layer"
-
-ATTE_ACTV = "gelu"
+# ATTE_ACTV = "gelu"
+ATTE_ACTV = "silu"
 ATTE_NORMAL = "rms"
 
 # DENSE_ACTV = "relu"
-# DENSE_NORMAL = "layer"
-
-DENSE_ACTV = "gelu"
+# DENSE_ACTV = "gelu"
+DENSE_ACTV = "silu"
 DENSE_NORMAL = "rms"
 
 
@@ -108,6 +105,8 @@ class ABlock(nn.Module):
             self.actv_fn = nn.ReLU()
         elif ATTE_ACTV == "gelu":
             self.actv_fn = nn.GELU()
+        elif ATTE_ACTV == "silu":
+            self.actv_fn = nn.SiLU()
         self.atten = Attention(**kwargs)
 
         self.dropout0 = nn.Dropout(self.drop_rate)
@@ -161,6 +160,8 @@ class Extractor(nn.Module):
             self.actv_fn = nn.ReLU()
         elif ATTE_ACTV == "gelu":
             self.actv_fn = nn.GELU()
+        elif ATTE_ACTV == "silu":
+            self.actv_fn = nn.SiLU()
 
         self.dense1 = nn.Linear(self.d_model, self.d_model)
         self.dropout1 = nn.Dropout(self.drop_rate)
@@ -199,7 +200,7 @@ class DenseNet(nn.Module):
 
     def __init__(self, **kwargs):
         super(DenseNet, self).__init__()
-        self.d_model = kwargs.get("seq_len", 2 * SEQ_LEN * D_MODEL)
+        self.d_model = kwargs.get("seq_len", SEQ_LEN * D_MODEL)
         self.mlp = kwargs.get("mlp", MLP_DENSE)
         self.depth = kwargs.get("depth_dense", DEPTH_DENSE)
         self.drop_rate = kwargs.get("drop_rate", DROP_RATE_DENSE)
@@ -217,6 +218,8 @@ class DenseNet(nn.Module):
             self.actv_fn = nn.ReLU()
         elif DENSE_ACTV == "gelu":
             self.actv_fn = nn.GELU()
+        elif DENSE_ACTV == "silu":
+            self.actv_fn = nn.SiLU()
 
         if DENSE_NORMAL == "layer":
             self.norm = nn.ModuleList(
@@ -236,7 +239,7 @@ class DenseNet(nn.Module):
         for i, layer in enumerate(self.layers):
             if IF_SKIP_CONNECTION_DENSE:
                 skip = x
-            if 1 < i < len(self.layers) - 1:
+            if i < len(self.layers) - 1:
                 x = self.norm[i](x)
             x = layer(x)
             if i < len(self.layers) - 1:
@@ -277,16 +280,13 @@ class Model(nn.Module):
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
         # SHAPE x = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
-        skip = x
         x = self.predictor(x)
         # SHAPE shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
 
         # SHAPE x = (batch, 4, CUBE_SIZE**3)
         x = x.reshape(-1, 4 * CUBE_SIZE**3)
-        skip = skip.reshape(-1, 4 * CUBE_SIZE**3)
-        x_in = torch.cat((x, skip), dim=-1)
-        # SHAPE x = (batch, 8 * CUBE_SIZE**3)
-        x = self.densenet(x_in)
+        # SHAPE x = (batch, 4 * CUBE_SIZE**3)
+        x = self.densenet(x)
         # SHAPE x = (batch, 1)
         x = x * b3lyp_ene
         return x
