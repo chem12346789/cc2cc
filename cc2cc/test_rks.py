@@ -20,8 +20,6 @@ def test_rks(
     """
     Test the model. Restrict Khon-Sham (no spin).
     """
-    density_restriction = getattr(args, "density_restriction", 0)
-
     # 2.0 Prepare
     test_data = TestData(
         mol,
