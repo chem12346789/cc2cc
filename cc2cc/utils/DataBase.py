@@ -86,13 +86,6 @@ class DataBase:
                     args.dataset,
                     verbose=-1,
                 )
-            except ValueError as e:
-                print(f"SKIP: {name}")
-                print(e)
-                error_molecule.append(name)
-                print(f"Error molecule: {error_molecule}")
-                continue
-            finally:
                 if args.n_rad is not None and args.n_ang is not None:
                     name = f"{name}_{args.n_rad}_{args.n_ang}"
                 else:
@@ -123,6 +116,10 @@ class DataBase:
                 if mol.natm == 1 and mol.charge == 0:
                     self.atomic_name_dict[mol.atom_pure_symbol(0)] = name
                     print(f"{mol.atom_pure_symbol(0)} use {name}", flush=True)
+            except ValueError as e:
+                print(f"Error generating molecule {name}: {e}", flush=True)
+
+            print("", flush=True)
 
         name_extend = []
         for name in self.name_list:

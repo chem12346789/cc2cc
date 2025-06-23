@@ -1,4 +1,9 @@
 import argparse
+import os
+import random
+
+import numpy as np
+import torch
 
 from cc2cc import train_model
 from cc2cc.utils import add_args, print_gpu_info
@@ -68,6 +73,18 @@ if __name__ == "__main__":
     )
     args = add_args(parser)
     print_gpu_info(args.device)
+
+    if args.seed is not None:
+        # Set the random seed for reproducibility
+        random.seed(args.seed)
+        os.environ["PYTHONHASHSEED"] = str(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.enabled = False
 
     train_str_list = gen_name_args(train_str_list, args)
     train_str_exclude_list = gen_name_args(

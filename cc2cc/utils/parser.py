@@ -304,7 +304,8 @@ def add_args(parser: argparse.ArgumentParser):
         help="Whether to use the ORCA package. Default is False.",
     )
 
-    # for machine learning
+    # ========== Arguments ==========
+    # for training
     parser.add_argument(
         "--model",
         type=str,
@@ -371,11 +372,10 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--with_eval",
-        type=str2bool,
-        default=True,
-        help="Whether to use the reduce on plateau. Default is True. \n"
-        "This will use the data from the eval set.",
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed for the training. Default is None (no seed). ",
     )
 
     parser.add_argument(
@@ -446,7 +446,7 @@ def add_args(parser: argparse.ArgumentParser):
         "--if_continue",
         type=str2bool,
         default=False,
-        help="Weather to continue the data record. Default is False.",
+        help="Weather to continue the test or generate data. Default is False.",
     )
 
     args = parser.parse_args()
@@ -484,7 +484,6 @@ def add_args(parser: argparse.ArgumentParser):
     print(f"Learning rate: {args.lr}")
     print(f"Iterations to accumulate: {args.iters_to_accumulate}")
     print(f"Max norm: {args.max_norm}")
-    print(f"With eval: {args.with_eval}")
     print(f"Eval step: {args.eval_step}")
     print(f"Loss multiplier abs: {args.loss_multiplier_abs}")
     print(f"Loss multiplier atomic: {args.loss_multiplier_atomic}")

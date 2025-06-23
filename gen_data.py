@@ -5,6 +5,7 @@ from itertools import product
 
 from cc2cc import add_args, cc, ucc
 from cc2cc.utils import Grid, gen_mole, print_gpu_info
+from cc2cc.utils.env_var import DATA_PATH
 
 
 if __name__ == "__main__":
@@ -50,6 +51,11 @@ if __name__ == "__main__":
                 name = f"{name}_default"
 
             grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
+
+            if args.if_continue:
+                if (DATA_PATH / f"data_{name}.npz").exists():
+                    print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+                    continue
 
             if mol.spin == 0:
                 cc(

@@ -118,7 +118,6 @@ class TestData:
                 and f"dft_dipole_{disp}" in data_frame
                 and f"time_dft_{disp}" in data_frame
                 and f"grad_dft_{disp}" in data_frame
-                and false:
             ):
                 self.dm1_dft = data_frame[f"dm1_dft_{disp}"]
                 self.e_dft = data_frame[f"e_dft_{disp}"].item()
