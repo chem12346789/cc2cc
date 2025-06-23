@@ -2,8 +2,9 @@
 Module for handling molecular data and generating datasets for machine learning tasks, for cube data.
 """
 
-from itertools import product
+import os
 import random
+from itertools import product
 
 import numpy as np
 import torch
@@ -243,7 +244,7 @@ class DataBase:
             self.data_gpu,
             shuffle=False,
             batch_size=1,
-            num_workers=1,
+            num_workers=int(os.environ.get("NUMBER_OF_THREADS", 1)),
             pin_memory=True,
         )
 
