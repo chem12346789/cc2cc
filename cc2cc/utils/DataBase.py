@@ -116,7 +116,7 @@ class DataBase:
         self.dataset = BasicDataset(self.name_list, self.mol_info_dict, self.load_data)
         self.data_gpu = DataLoader(
             self.dataset,
-            shuffle=False,
+            shuffle=True,
             batch_size=1,
             num_workers=int(os.environ.get("NUMBER_OF_THREADS", 1)),
             pin_memory=True,
@@ -209,9 +209,9 @@ class DataBase:
         output_ = torch.tensor(output_, dtype=self.dtype)
 
         if self.if_load_to_gpu_once:
-            input_ = input_.to(device="cuda", dtype=self.dtype, non_blocking=True)
-            weight_ = weight_.to(device="cuda", dtype=self.dtype, non_blocking=True)
-            output_ = output_.to(device="cuda", dtype=self.dtype, non_blocking=True)
+            input_ = input_.to(device="cuda", dtype=self.dtype)
+            weight_ = weight_.to(device="cuda", dtype=self.dtype)
+            output_ = output_.to(device="cuda", dtype=self.dtype)
 
         data_dict = {
             "input": input_,
