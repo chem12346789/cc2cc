@@ -5,12 +5,13 @@ from cc2cc.utils import add_args, print_gpu_info
 from cc2cc.utils.parser import gen_name_args
 
 train_str_list = [
-    "molecule0-W4_11",
-    "molecule1-W4_11",
+    "W4_11-si",
+    "W4_11-f",
+    "W4_11-c",
+    "W4_11-cf4",
 ]
 eval_str_list = [
-    "ADIM6-AD2",
-    "molecule5-W4_11",
+    "W4_11-sif4",
 ]
 
 if __name__ == "__main__":
