@@ -1,6 +1,7 @@
 """Module providing a training method."""
 
 import os
+import random
 import time
 import numpy as np
 import torch
@@ -19,6 +20,19 @@ def train_model(train_str_dict, eval_str_dict, args):
     Other parameter are from the argparse.
     """
     # 0. Init the criterion and the model
+
+    if args.seed is not None:
+        # Set the random seed for reproducibility
+        random.seed(args.seed)
+        os.environ["PYTHONHASHSEED"] = str(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.enabled = False
+        print("Warning: Using deterministic mode, which may slow down training.")
 
     modeldict = ModelClass(args)
     modeldict.init_model(args)

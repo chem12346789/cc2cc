@@ -23,11 +23,9 @@ class BasicDataset(Dataset):
         super(BasicDataset, self).__init__()
         self.data = {}
         self.name_list = []
-        self.data_weight = {}
 
         for name in name_list:
             num_data_used, data_dict = load_data(mol_info_dict[name], name)
-            self.data_weight[name] = 1 / num_data_used
             if num_data_used > 0:
                 self.data[name] = data_dict
                 self.name_list.append(name)
@@ -35,13 +33,21 @@ class BasicDataset(Dataset):
             # This is useful when we need to have more data for single-atom systems.
             if num_data_used == 1:
                 self.name_list.extend([name] * 9)
-        print(self.data_weight)
 
     def __len__(self):
         return len(self.name_list)
 
     def __getitem__(self, idx):
         return self.data[self.name_list[idx]]
+
+    def get_from_name(self, name):
+        """
+        Get the data from the name.
+        """
+        if name in self.data:
+            return self.data[name]
+        else:
+            raise KeyError(f"Data for {name} not found.")
 
 
 class DataBase:
@@ -54,8 +60,6 @@ class DataBase:
         else:
             self.dtype = torch.float32
         self.train_atom = args.train_atom
-        self.if_load_to_gpu_once = args.if_load_to_gpu_once
-        print(f"Load to GPU once: {self.if_load_to_gpu_once}")
 
         self.name_list = []
         error_molecule = []
@@ -129,11 +133,27 @@ class DataBase:
         """
         batch_gpu = {}
         for key, val in batch.items():
-            # key in ["input", "weight", "output"] and val is not in GPU
-            if key in ["input", "weight", "output"] and not self.if_load_to_gpu_once:
-                batch_gpu[key] = val[0].to(device="cuda", dtype=self.dtype)
+            if key in ["input", "weight", "output"]:
+                batch_gpu[key] = val[0].to(
+                    device="cuda", dtype=self.dtype, non_blocking=True
+                )
                 continue
             batch_gpu[key] = val[0]
+        return batch_gpu
+
+    def process_batch_dataset(self, batch):
+        """
+        Load the batch data to the GPU.
+        Note all data is in the list ([data]), so we need to access the first element.
+        """
+        batch_gpu = {}
+        for key, val in batch.items():
+            if key in ["input", "weight", "output"]:
+                batch_gpu[key] = val.to(
+                    device="cuda", dtype=self.dtype, non_blocking=True
+                )
+                continue
+            batch_gpu[key] = val
         return batch_gpu
 
     def load_data(self, mol_info, name):
@@ -204,22 +224,14 @@ class DataBase:
             flush=True,
         )
 
-        input_ = torch.tensor(input_, dtype=self.dtype)
-        weight_ = torch.tensor(weight_, dtype=self.dtype)
-        output_ = torch.tensor(output_, dtype=self.dtype)
-
-        if self.if_load_to_gpu_once:
-            input_ = input_.to(device="cuda", dtype=self.dtype)
-            weight_ = weight_.to(device="cuda", dtype=self.dtype)
-            output_ = output_.to(device="cuda", dtype=self.dtype)
-
         data_dict = {
-            "input": input_,
-            "weight": weight_,
-            "output": output_,
+            "input": torch.tensor(input_, dtype=self.dtype),
+            "weight": torch.tensor(weight_, dtype=self.dtype),
+            "output": torch.tensor(output_, dtype=self.dtype),
             "name": name,
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,
+            "data_weight": 1 / num_data_used if num_data_used > 0 else 0,
         }
 
         return num_data_used, data_dict

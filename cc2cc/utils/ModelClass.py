@@ -175,24 +175,7 @@ class ModelClass:
         """
         self.model.eval()
 
-    def update(self):
-        """
-        Update the model.
-
-        # See https://kozodoi.me/blog/20210219/gradient-accumulation and
-        # https://pytorch.org/docs/stable/notes/amp_examples.html#gradient-accumulation
-        """
-        self.update_counter += 1
-
-        if self.update_counter % self.iters_to_accumulate != 0:
-            return
-
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_norm)
-        self.optimizer.step()
-        self.optimizer.zero_grad(set_to_none=True)
-        self.update_counter = 0
-
-    def loss(self, batch, data_weight=1.0, if_train=True):
+    def loss(self, batch, if_train=True):
         """
         Calculate the loss.
         ae if for atomic energy.
@@ -200,7 +183,7 @@ class ModelClass:
         input_ = batch["input"]
         weight = batch["weight"]
         target = batch["output"] * weight
-        data_weight = 1 / np.sqrt(data_weight)
+        data_weight = batch["data_weight"]
         output = self.model(input_) * weight
 
         if if_train:
@@ -219,7 +202,7 @@ class ModelClass:
             )
         loss_abs_record = torch.sum(torch.abs(target - output)).item()
 
-        if self.loss_multiplier_atomic > 1e-8 and if_train:
+        if if_train and self.loss_multiplier_atomic > 1e-8:
             ae_target = torch.sum(target)
             ae_output = torch.sum(output)
         loss_atomic_record = torch.sum(target - output)
@@ -233,21 +216,20 @@ class ModelClass:
                     f"Warning: {system_atom} not found in atomic_name_dict, "
                     "skipping atomic energy calculation."
                 )
-                if self.loss_multiplier_atomic > 1e-8 and if_train:
+                if if_train and self.loss_multiplier_atomic > 1e-8:
                     ae_target = torch.zeros_like(ae_target)
                     ae_output = torch.zeros_like(ae_output)
                 break
 
-            atomic_batch = self.database_train.data_gpu[name_atom]
-            if not self.database_train.if_load_to_gpu_once:
-                atomic_batch = self.database_train.process_batch(atomic_batch)
+            atomic_batch = self.database_train.data_gpu.dataset.get_from_name(name_atom)
+            atomic_batch = self.database_train.process_batch_dataset(atomic_batch)
 
             atomic_input_ = atomic_batch["input"]
             atomic_weight = atomic_batch["weight"]
             atomic_target = atomic_batch["output"] * atomic_weight
             atomic_output = self.model(atomic_input_) * atomic_weight
 
-            if self.loss_multiplier_atomic > 1e-8 and if_train:
+            if if_train and self.loss_multiplier_atomic > 1e-8:
                 ae_target -= (
                     torch.sum(atomic_target) * batch["atomic_stoichiometry"][i_system]
                 )
@@ -259,7 +241,7 @@ class ModelClass:
                 * batch["atomic_stoichiometry"][i_system]
             )
 
-        if self.loss_multiplier_atomic > 1e-8 and if_train:
+        if if_train and self.loss_multiplier_atomic > 1e-8:
             tot_loss += self.loss_ene_atomic(
                 self.loss_multiplier_atomic * data_weight * ae_target,
                 self.loss_multiplier_atomic * data_weight * ae_output,
@@ -272,6 +254,7 @@ class ModelClass:
             "loss_ene_abs": AU2KCALMOL * loss_abs_record,
             "loss_ene_atomic": AU2KCALMOL * loss_atomic_record,
             "loss_tot": AU2KCALMOL * tot_loss.item(),
+            "name": batch["name"],
         }
 
         if if_train:
@@ -288,20 +271,20 @@ class ModelClass:
         self.train()
         self.optimizer.zero_grad(set_to_none=True)
         data_record_l = []
-        self.database_train.shuffle()
 
-        for name in self.database_train.name_list:
-            batch = self.database_train.data_gpu[name]
-            data_weight = self.database_train.data_weight[name]
+        for batch in self.database_train.data_gpu:
+            batch = self.database_train.process_batch(batch)
 
-            if not self.database_train.if_load_to_gpu_once:
-                batch = self.database_train.process_batch(batch)
-
-            tot_loss, data_record = self.loss(batch, data_weight)
+            tot_loss, data_record = self.loss(batch)
             tot_loss.backward()
-            self.update()
 
-            data_record["name"] = name
+            self.update_counter += 1
+            if self.update_counter % self.iters_to_accumulate == 0:
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_norm)
+                self.optimizer.step()
+                self.optimizer.zero_grad(set_to_none=True)
+                self.update_counter = 0
+
             data_record_l.append(data_record)
 
         return data_record_l
@@ -314,17 +297,12 @@ class ModelClass:
         self.optimizer.zero_grad(set_to_none=True)
         data_record_l = []
 
-        for name in self.database_eval.name_list:
-            batch = self.database_eval.data_gpu[name]
-            data_weight = self.database_eval.data_weight[name]
-
-            if not self.database_eval.if_load_to_gpu_once:
-                batch = self.database_eval.process_batch(batch)
+        for batch in self.database_eval.data_gpu:
+            batch = self.database_train.process_batch(batch)
 
             with torch.no_grad():
-                data_record = self.loss(batch, data_weight, if_train=False)
+                data_record = self.loss(batch, if_train=False)
 
-            data_record["name"] = name
             data_record_l.append(data_record)
 
         return data_record_l

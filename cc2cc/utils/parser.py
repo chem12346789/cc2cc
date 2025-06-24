@@ -335,14 +335,6 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--if_load_to_gpu_once",
-        type=str2bool,
-        default=True,
-        help="Whether to load all the data to GPU once. Default is True. "
-        "This will use more memory, but faster.",
-    )
-
-    parser.add_argument(
         "--precision",
         type=str,
         default="float64",
@@ -479,7 +471,6 @@ def add_args(parser: argparse.ArgumentParser):
     print(f"Model: {args.model}")
     print(f"Epoch: {args.epoch}")
     print(f"Batch size: {args.batch_size}")
-    print(f"Load to GPU once: {args.if_load_to_gpu_once}")
     print(f"Precision: {args.precision}")
     print(f"Learning rate: {args.lr}")
     print(f"Iterations to accumulate: {args.iters_to_accumulate}")
