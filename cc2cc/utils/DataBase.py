@@ -5,6 +5,7 @@ Module for handling molecular data and generating datasets for machine learning 
 import os
 import random
 from itertools import product
+import gc
 
 import numpy as np
 import torch
@@ -254,6 +255,10 @@ class DataBase:
                 dataloader_gpu[batch["name"][0]] = self.process_batch(batch)
             else:
                 dataloader_gpu[batch["name"][0]] = batch
+
+        del dataloader
+        gc.collect()
+        torch.cuda.empty_cache()
         return dataloader_gpu
 
     def shuffle(self):
