@@ -147,3 +147,4 @@ def train_model(train_str_dict, eval_str_dict, args):
                 f"Speed: {time_elapsed / (epoch + 1):>5.2f}s/epoch",
                 flush=True,
             )
+        torch.distributed.destroy_process_group()
