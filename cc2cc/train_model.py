@@ -19,8 +19,8 @@ def train_model(train_str_dict, eval_str_dict, args):
     eval_str_dict: list of evaluation molecules
     Other parameter are from the argparse.
     """
-    # 0. Init the criterion and the model
 
+    # 0. Init the environment
     if args.seed is not None:
         # Set the random seed for reproducibility
         random.seed(args.seed)
@@ -34,10 +34,16 @@ def train_model(train_str_dict, eval_str_dict, args):
         torch.backends.cudnn.enabled = False
         print("Warning: Using deterministic mode, which may slow down training.")
 
+    rank = int(os.environ["LOCAL_RANK"])
+    device = torch.device(f"cuda:{rank}")
+    torch.cuda.set_device(device)
+    torch.distributed.init_process_group(backend="nccl", device_id=device)
+
+    # 1. Init the criterion and the model
+
     modeldict = ModelClass(args)
     modeldict.init_model(args)
     modeldict.init_train(args)
-    modeldict.load_model(args)
     modeldict.init_database(args, train_str_dict, eval_str_dict)
 
     experiment_dict = {

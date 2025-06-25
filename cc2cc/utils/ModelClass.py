@@ -14,6 +14,7 @@ from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, CUBE_SIZE
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBase import DataBase
 from cc2cc.utils.DataBase_c import DataBase as DataBase_c
+from cc2cc.utils.checkpoint import Checkpointer
 
 
 class ModelClass:
@@ -47,6 +48,7 @@ class ModelClass:
         self.loss_ene_abs = None
         self.loss_ene_atomic = None
         self.dir_checkpoint = None
+        self.checkpointer = None
 
         self.database_train = None
         self.database_eval = None
@@ -71,6 +73,24 @@ class ModelClass:
         if args.precision == "float64":
             self.model.double()
 
+        self.model.fully_shard()
+
+        if args.save_dir is not None and args.save_dir != "":
+            self.dir_checkpoint = (
+                CHECKPOINTS_PATH / f"checkpoint_{args.save_dir}"
+            ).resolve()
+            if not self.dir_checkpoint.exists():
+                print(f"Directory {self.dir_checkpoint} not found. Created!")
+                (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
+        else:
+            self.dir_checkpoint = (
+                CHECKPOINTS_PATH
+                / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
+            ).resolve()
+        self.checkpointer = Checkpointer(self.dir_checkpoint, dcp_api=False)
+        if self.checkpointer.last_training_time is not None:
+            self.checkpointer.load_model(self.model)
+
     def init_train(self, args):
         """
         Initialize the optimizer, scheduler, loss function and checkpoint_dir.
@@ -86,6 +106,9 @@ class ModelClass:
             eta_min=args.lr / 100,
         )
 
+        if self.checkpointer.last_training_time is not None:
+            self.checkpointer.load_optim(self.model, self.optimizer)
+
         if args.loss_ene == "L1Loss":
             self.loss_ene = torch.nn.L1Loss(reduction="sum")
             self.loss_ene_abs = torch.nn.L1Loss(reduction="sum")
@@ -96,19 +119,6 @@ class ModelClass:
             self.loss_ene_atomic = torch.nn.MSELoss(reduction="sum")
         else:
             raise ValueError(f"Unknown loss function {args.loss_ene}")
-
-        if args.save_dir is not None and args.save_dir != "":
-            self.dir_checkpoint = (
-                CHECKPOINTS_PATH / f"checkpoint_{args.save_dir}"
-            ).resolve()
-            if not self.dir_checkpoint.exists():
-                print(f"Directory {self.dir_checkpoint} not found. Created!")
-                (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
-        else:
-            self.dir_checkpoint = (
-                CHECKPOINTS_PATH
-                / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
-            ).resolve()
 
     def init_database(self, args, train_str_dict, eval_str_dict):
         """
@@ -139,29 +149,6 @@ class ModelClass:
 
         self.database_train = database_train
         self.database_eval = database_eval
-
-    def load_model(self, args):
-        """
-        Load the model from the checkpoint.
-        """
-        load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.load}/").resolve()
-
-        list_of_path = list(load_checkpoint.glob("*.pth"))
-
-        if len(list_of_path) == 0:
-            print(f"No model found in {load_checkpoint}, use random initialization.")
-        else:
-            if args.load_epoch == -1:
-                load_path = max(list_of_path, key=lambda p: p.stat().st_ctime)
-            else:
-                load_path = load_checkpoint / f"{args.load_epoch}.pth"
-            state_dict = torch.load(
-                load_path,
-                map_location=self.model_device,
-                weights_only=True,
-            )
-            self.model.load_state_dict(state_dict)
-            print(f"Model loaded from {load_path}")
 
     def train(self):
         """

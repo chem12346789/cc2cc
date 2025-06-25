@@ -23,7 +23,6 @@ if __name__ == "__main__":
     # 1. Init the model
     modeldict = ModelClass(args)
     modeldict.init_model(args)
-    modeldict.load_model(args)
     modeldict.eval()
 
     # 2. Test loop
