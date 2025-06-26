@@ -66,14 +66,12 @@ class ModelClass:
             raise ValueError("Unknown model")
 
         self.model: torch.nn.Module = model().to(args.device)
-        self.model_device = next(self.model.parameters()).device
-        self.model_dtype = next(self.model.parameters()).dtype
-        self.model_type = self.model.model_type
-
         if args.precision == "float64":
             self.model.double()
 
-        self.model.fully_shard()
+        self.model_device = next(self.model.parameters()).device
+        self.model_dtype = next(self.model.parameters()).dtype
+        self.model_type = self.model.model_type
 
         if args.save_dir is not None and args.save_dir != "":
             self.dir_checkpoint = (
@@ -89,7 +87,6 @@ class ModelClass:
             ).resolve()
 
         load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.load}/").resolve()
-        list_of_path = list(load_checkpoint.glob("*.pth"))
         load_path = load_checkpoint / f"{args.load_epoch}.pth"
         state_dict = torch.load(
             load_path,

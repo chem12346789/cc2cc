@@ -4,7 +4,6 @@ Generate list of model.
 
 import torch
 from torch import nn
-from torch.distributed.fsdp import fully_shard
 
 from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
 
@@ -143,19 +142,6 @@ class ABlock(nn.Module):
         # SHAPE results = (batch, seq_len, d_model)
         return x_mlp
 
-    def fully_shard(self):
-        """
-        Fully shard the model for distributed training.
-        """
-        fully_shard(self.dense1)
-        fully_shard(self.dense2)
-        fully_shard(self.atten)
-        fully_shard(self.dropout0)
-        fully_shard(self.dropout1)
-        fully_shard(self.dropout2)
-        fully_shard(self.layernorm1)
-        fully_shard(self.layernorm2)
-
 
 class Extractor(nn.Module):
     """
@@ -204,17 +190,6 @@ class Extractor(nn.Module):
         results = self.head(results)
         # SHAPE results = (batch, seq_len, d_model)
         return results
-
-    def fully_shard(self):
-        """
-        Fully shard the model for distributed training.
-        """
-        fully_shard(self.dense1)
-        fully_shard(self.dropout1)
-        for layer in self.layer_blocks:
-            layer.fully_shard()
-        fully_shard(self.dense2)
-        fully_shard(self.head)
 
 
 class DenseNet(nn.Module):
@@ -272,16 +247,6 @@ class DenseNet(nn.Module):
                     x = x + skip
         return x
 
-    def fully_shard(self):
-        """
-        Fully shard the model for distributed training.
-        """
-        for layer in self.layers:
-            fully_shard(layer)
-        for norm in self.norm:
-            fully_shard(norm)
-        fully_shard(self.dropout)
-
 
 class Model(nn.Module):
     """
@@ -322,10 +287,3 @@ class Model(nn.Module):
         # SHAPE x = (batch, 1)
         x = x * b3lyp_ene
         return x
-
-    def fully_shard(self):
-        """
-        Fully shard the model for distributed training.
-        """
-        self.predictor.fully_shard()
-        self.densenet.fully_shard()
