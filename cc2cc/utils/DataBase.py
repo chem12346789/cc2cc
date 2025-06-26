@@ -26,7 +26,7 @@ class BasicDataset(Dataset):
 
         for name in name_list:
             num_data_used, data_dict = load_data(mol_info_dict[name], name)
-            if num_data_used > 0:
+            if num_data_used != 0:
                 self.data[name] = data_dict
                 self.name_list.append(name)
             # Add more copies of the atomic data to balance the dataset.
@@ -53,7 +53,7 @@ class BasicDataset(Dataset):
 class DataBase:
     """Documentation for a class."""
 
-    def __init__(self, molecule_list, args):
+    def __init__(self, molecule_list, args, shuffle=True):
         self.rho_dft = args.rho_dft
         if args.precision == "float64":
             self.dtype = torch.float64
@@ -120,7 +120,7 @@ class DataBase:
         self.dataset = BasicDataset(self.name_list, self.mol_info_dict, self.load_data)
         self.data_gpu = DataLoader(
             self.dataset,
-            shuffle=True,
+            shuffle=shuffle,
             batch_size=1,
             num_workers=int(os.environ.get("NUMBER_OF_THREADS", 1)),
             pin_memory=True,
@@ -215,7 +215,7 @@ class DataBase:
         output_ = np.array(output_).reshape((-1, 1))
 
         if num_data_used == 0:
-            return 0
+            return 0, {}
 
         print(f"Total energy used: {AU2KCALMOL * total_ene_used}")
         print(f"Total data used for {name}: {num_data_used}", flush=True)

@@ -49,8 +49,8 @@ def train_model(train_str_dict, eval_str_dict, args):
     experiment_dict = {
         "model": args.model,
         "batch_size": args.batch_size,
-        "n_train": len(modeldict.database_train.name_list),
-        "n_eval": len(modeldict.database_eval.name_list),
+        "n_train": len(modeldict.database_train),
+        "n_eval": len(modeldict.database_eval),
         "precision": args.precision,
         "basis": args.basis,
         "weight_decay": args.weight_decay,

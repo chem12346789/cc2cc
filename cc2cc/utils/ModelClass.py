@@ -87,9 +87,21 @@ class ModelClass:
                 CHECKPOINTS_PATH
                 / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
             ).resolve()
+
+        load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.load}/").resolve()
+        list_of_path = list(load_checkpoint.glob("*.pth"))
+        load_path = load_checkpoint / f"{args.load_epoch}.pth"
+        state_dict = torch.load(
+            load_path,
+            map_location=self.model_device,
+            weights_only=True,
+        )
+        self.model.load_state_dict(state_dict)
+        print(f"Model loaded from {load_path}")
+
         self.checkpointer = Checkpointer(self.dir_checkpoint, dcp_api=False)
-        if self.checkpointer.last_training_time is not None:
-            self.checkpointer.load_model(self.model)
+        # if self.checkpointer.last_training_time is not None:
+        #     self.checkpointer.load_model(self.model)
 
     def init_train(self, args):
         """
@@ -130,8 +142,8 @@ class ModelClass:
             database_train = DataBase_c(train_str_dict, args)
         elif self.model_type == "cube":
             input_size = (302 * 75 * 10, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-            database_eval = DataBase(eval_str_dict, args)
-            database_train = DataBase(train_str_dict, args)
+            database_eval = DataBase(eval_str_dict, args, shuffle=False)
+            database_train = DataBase(train_str_dict, args, shuffle=True)
         else:
             raise ValueError(f"Unknown model type: {self.model_type}")
 
