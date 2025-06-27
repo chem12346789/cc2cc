@@ -128,7 +128,7 @@ class DataBase:
     def __len__(self):
         return len(self.dataset.name_list)
 
-    def process_batch(self, batch, device="cuda", dtype=torch.float64):
+    def process_batch(self, batch, device="cuda"):
         """
         Load the batch data to the GPU.
         Note all data is in the list ([data]), so we need to access the first element.
@@ -138,13 +138,13 @@ class DataBase:
             if key in ["input", "weight", "output"]:
                 batch_gpu[key] = val[0].to(
                     device=device,
-                    dtype=dtype,
                     non_blocking=True,
                 )
+                continue
             batch_gpu[key] = val[0]
         return batch_gpu
 
-    def process_batch_dataset(self, batch, device="cuda", dtype=torch.float64):
+    def process_batch_dataset(self, batch, device="cuda"):
         """
         Load the batch data to the GPU.
         Note all data is in the list ([data]), so we need to access the first element.
@@ -154,9 +154,9 @@ class DataBase:
             if key in ["input", "weight", "output"]:
                 batch_gpu[key] = val.to(
                     device=device,
-                    dtype=dtype,
                     non_blocking=True,
                 )
+                continue
             batch_gpu[key] = val
         return batch_gpu
 

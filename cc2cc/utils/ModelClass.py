@@ -235,7 +235,9 @@ class ModelClass:
                 break
 
             atomic_batch = self.database_train.data_gpu.dataset.get_from_name(name_atom)
-            atomic_batch = self.database_train.process_batch_dataset(atomic_batch)
+            atomic_batch = self.database_train.process_batch_dataset(
+                atomic_batch, device=self.model_device
+            )
 
             atomic_input_ = atomic_batch["input"]
             atomic_weight = atomic_batch["weight"]
@@ -286,9 +288,7 @@ class ModelClass:
         data_record_l = []
 
         for batch in self.database_train.data_gpu:
-            batch = self.database_train.process_batch(
-                batch, device=self.model_device, dtype=self.model_dtype
-            )
+            batch = self.database_train.process_batch(batch, device=self.model_device)
             tot_loss, data_record = self.loss(batch)
 
             if self.deepspeed:
@@ -318,9 +318,7 @@ class ModelClass:
         data_record_l = []
 
         for batch in self.database_eval.data_gpu:
-            batch = self.database_train.process_batch(
-                batch, device=self.model_device, dtype=self.model_dtype
-            )
+            batch = self.database_train.process_batch(batch, device=self.model_device)
 
             with torch.no_grad():
                 data_record = self.loss(batch, if_train=False)

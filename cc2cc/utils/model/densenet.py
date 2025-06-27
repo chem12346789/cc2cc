@@ -75,7 +75,7 @@ class Model(nn.Module):
 
         # Reshape the input for the linear layers
         x = x.reshape(-1, self.d_model)
-
+        
         for i, layer in enumerate(self.layers):
             if IF_SKIP_CONNECTION:
                 skip = x
