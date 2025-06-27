@@ -88,13 +88,16 @@ class ModelClass:
 
         load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.load}/").resolve()
         load_path = load_checkpoint / f"{args.load_epoch}.pth"
-        state_dict = torch.load(
-            load_path,
-            map_location=self.model_device,
-            weights_only=True,
-        )
-        self.model.load_state_dict(state_dict)
-        print(f"Model loaded from {load_path}")
+        if load_path.exists():
+            print(f"Loading model from {load_path}")
+            state_dict = torch.load(
+                load_path,
+                map_location=self.model_device,
+                weights_only=True,
+            )
+            self.model.load_state_dict(state_dict)
+        else:
+            print(f"Model {load_path} not found, starting from scratch.")
 
         self.checkpointer = Checkpointer(self.dir_checkpoint, dcp_api=False)
         # if self.checkpointer.last_training_time is not None:

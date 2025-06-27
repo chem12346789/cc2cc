@@ -7,6 +7,7 @@ More details.
 
 import argparse
 import numpy as np
+import torch
 
 from cc2cc.utils.mol import dataset
 
@@ -455,6 +456,16 @@ def add_args(parser: argparse.ArgumentParser):
         )
     else:
         args.train_atom = periodic_table[args.train_atom]
+
+    if args.device == "cuda":
+        if not torch.cuda.is_available():
+            print("CUDA is not available. Use CPU instead. ")
+            args.device = "cpu"
+    elif args.device == "cpu":
+        if torch.cuda.is_available():
+            print("CUDA is available. This script is running on CPU. ")
+    else:
+        raise ValueError(f"Invalid device: {args.device}. Please use 'cuda' or 'cpu'.")
 
     print("Arguments:")
     print(f"Name of molecule: {args.name_mol_input}")
