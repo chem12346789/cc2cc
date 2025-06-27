@@ -6,8 +6,10 @@ More details.
 """
 
 import argparse
+
 import numpy as np
 import torch
+import deepspeed
 
 from cc2cc.utils.mol import dataset
 
@@ -84,7 +86,7 @@ def str2bool(v):
         raise argparse.ArgumentTypeError("Boolean value expected.")
 
 
-def gen_logger(distance_list):
+def get_distance(distance_list):
     """
     Function to distance list and generate logger
     """
@@ -442,11 +444,19 @@ def add_args(parser: argparse.ArgumentParser):
         help="Weather to continue the test or generate data. Default is False.",
     )
 
+    parser.add_argument(
+        "--local_rank",
+        type=int,
+        default=0,
+        help="Local rank for distributed training. Default is 0.",
+    )
+    parser = deepspeed.add_config_arguments(parser)
+
     args = parser.parse_args()
     for i in range(len(args.extend_xyz)):
         args.extend_xyz[i] += 1
 
-    args.distance_list = gen_logger(args.distance_list)
+    args.distance_list = get_distance(args.distance_list)
     args.name_mol_input = args.name_mol.copy()
     args.name_mol = gen_name_args(args.name_mol, args)
 

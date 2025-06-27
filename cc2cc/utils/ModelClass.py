@@ -9,11 +9,12 @@ import numpy as np
 import torch
 import torch.optim as optim
 from torchinfo import summary
+import deepspeed
 
 from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, CUBE_SIZE
 from cc2cc.utils.mol import AU2KCALMOL
-from cc2cc.utils.DataBase import DataBase
-from cc2cc.utils.DataBase_c import DataBase as DataBase_c
+from cc2cc.utils.DataBaseCube import DataBaseCube
+from cc2cc.utils.DataBaseCenter import DataBaseCenter
 from cc2cc.utils.checkpoint import Checkpointer
 
 
@@ -52,6 +53,12 @@ class ModelClass:
 
         self.database_train = None
         self.database_eval = None
+
+        self.deepspeed = args.deepspeed
+        self.gpu = None
+        if self.deepspeed:
+            self.gpu = args.local_rank
+            print(f"Use GPU: {self.gpu} for training")
 
     def init_model(self, args):
         """
@@ -118,8 +125,16 @@ class ModelClass:
             eta_min=args.lr / 100,
         )
 
-        if self.checkpointer.last_training_time is not None:
-            self.checkpointer.load_optim(self.model, self.optimizer)
+        if self.deepspeed:
+            torch.cuda.set_device(self.gpu)
+            self.model = self.model.cuda(self.gpu)
+            self.model, self.optimizer, _, self.scheduler = deepspeed.initialize(
+                model=self.model,
+                optimizer=self.optimizer,
+                lr_scheduler=self.scheduler,
+                args=args,
+                dist_init_required=True,
+            )
 
         if args.loss_ene == "L1Loss":
             self.loss_ene = torch.nn.L1Loss(reduction="sum")
@@ -138,12 +153,12 @@ class ModelClass:
         """
         if self.model_type == "center_4":
             input_size = (302 * 75 * 10, 4)
-            database_eval = DataBase_c(eval_str_dict, args)
-            database_train = DataBase_c(train_str_dict, args)
+            database_eval = DataBaseCenter(eval_str_dict, args)
+            database_train = DataBaseCenter(train_str_dict, args)
         elif self.model_type == "cube":
             input_size = (302 * 75 * 10, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-            database_eval = DataBase(eval_str_dict, args, shuffle=False)
-            database_train = DataBase(train_str_dict, args, shuffle=True)
+            database_eval = DataBaseCube(eval_str_dict, args, shuffle=False)
+            database_train = DataBaseCube(train_str_dict, args, shuffle=True)
         else:
             raise ValueError(f"Unknown model type: {self.model_type}")
 
@@ -275,14 +290,20 @@ class ModelClass:
             batch = self.database_train.process_batch(batch)
 
             tot_loss, data_record = self.loss(batch)
-            tot_loss.backward()
 
-            self.update_counter += 1
-            if self.update_counter % self.iters_to_accumulate == 0:
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_norm)
-                self.optimizer.step()
-                self.optimizer.zero_grad(set_to_none=True)
-                self.update_counter = 0
+            if self.deepspeed:
+                self.model.backward(tot_loss)
+                self.model.step()
+            else:
+                tot_loss.backward()
+                self.update_counter += 1
+                if self.update_counter % self.iters_to_accumulate == 0:
+                    torch.nn.utils.clip_grad_norm_(
+                        self.model.parameters(), self.max_norm
+                    )
+                    self.optimizer.step()
+                    self.optimizer.zero_grad(set_to_none=True)
+                    self.update_counter = 0
 
             data_record_l.append(data_record)
 

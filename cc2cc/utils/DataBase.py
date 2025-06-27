@@ -125,6 +125,9 @@ class DataBase:
             pin_memory=True,
         )
 
+    def __len__(self):
+        return len(self.dataset.name_list)
+
     def process_batch(self, batch):
         """
         Load the batch data to the GPU.
@@ -133,10 +136,7 @@ class DataBase:
         batch_gpu = {}
         for key, val in batch.items():
             if key in ["input", "weight", "output"]:
-                batch_gpu[key] = val[0].to(
-                    device="cuda", dtype=self.dtype, non_blocking=True
-                )
-                continue
+                batch_gpu[key] = val[0].to(device="cuda", non_blocking=True)
             batch_gpu[key] = val[0]
         return batch_gpu
 
@@ -148,10 +148,7 @@ class DataBase:
         batch_gpu = {}
         for key, val in batch.items():
             if key in ["input", "weight", "output"]:
-                batch_gpu[key] = val.to(
-                    device="cuda", dtype=self.dtype, non_blocking=True
-                )
-                continue
+                batch_gpu[key] = val.to(device="cuda", non_blocking=True)
             batch_gpu[key] = val
         return batch_gpu
 

@@ -34,11 +34,6 @@ def train_model(train_str_dict, eval_str_dict, args):
         torch.backends.cudnn.enabled = False
         print("Warning: Using deterministic mode, which may slow down training.")
 
-    rank = int(os.environ["LOCAL_RANK"])
-    device = torch.device(f"cuda:{rank}")
-    torch.cuda.set_device(device)
-    torch.distributed.init_process_group(backend="nccl", device_id=device)
-
     # 1. Init the criterion and the model
 
     modeldict = ModelClass(args)
