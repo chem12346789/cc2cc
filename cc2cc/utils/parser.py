@@ -447,7 +447,7 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--local_rank",
         type=int,
-        default=0,
+        default=-1,
         help="Local rank for distributed training. Default is 0.",
     )
     parser = deepspeed.add_config_arguments(parser)

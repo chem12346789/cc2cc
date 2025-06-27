@@ -15,7 +15,6 @@ from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, CUBE_SIZE
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBaseCube import DataBaseCube
 from cc2cc.utils.DataBaseCenter import DataBaseCenter
-from cc2cc.utils.checkpoint import Checkpointer
 
 
 class ModelClass:
@@ -30,6 +29,7 @@ class ModelClass:
             model_dict: dictionary of models
         """
         self.model_name = args.model
+        self.deepspeed = args.deepspeed
         self.load = getattr(args, "load", "")
         self.loss_multiplier_abs = getattr(args, "loss_multiplier_abs", 1.0)
         self.loss_multiplier_atomic = getattr(args, "loss_multiplier_atomic", 1.0)
@@ -42,6 +42,8 @@ class ModelClass:
         self.model_type = None
         self.model_device = None
         self.model_dtype = None
+        self.gpu = None
+        self.ngpus = None
 
         self.optimizer = None
         self.scheduler = None
@@ -53,12 +55,6 @@ class ModelClass:
 
         self.database_train = None
         self.database_eval = None
-
-        self.deepspeed = args.deepspeed
-        self.gpu = None
-        if self.deepspeed:
-            self.gpu = args.local_rank
-            print(f"Use GPU: {self.gpu} for training")
 
     def init_model(self, args):
         """
@@ -72,7 +68,16 @@ class ModelClass:
         else:
             raise ValueError("Unknown model")
 
-        self.model: torch.nn.Module = model().to(args.device)
+        self.model: torch.nn.Module = model()
+        if self.deepspeed:
+            self.gpu = args.local_rank
+            self.ngpus = torch.cuda.device_count()
+            if self.gpu is not None:
+                print(f"Use GPU: {self.gpu} for training")
+            torch.cuda.set_device(self.gpu)
+            self.model = self.model.cuda(self.gpu)
+        else:
+            self.model = self.model.to(args.device)
         if args.precision == "float64":
             self.model.double()
 
@@ -106,10 +111,6 @@ class ModelClass:
         else:
             print(f"Model {load_path} not found, starting from scratch.")
 
-        self.checkpointer = Checkpointer(self.dir_checkpoint, dcp_api=False)
-        # if self.checkpointer.last_training_time is not None:
-        #     self.checkpointer.load_model(self.model)
-
     def init_train(self, args):
         """
         Initialize the optimizer, scheduler, loss function and checkpoint_dir.
@@ -126,8 +127,6 @@ class ModelClass:
         )
 
         if self.deepspeed:
-            torch.cuda.set_device(self.gpu)
-            self.model = self.model.cuda(self.gpu)
             self.model, self.optimizer, _, self.scheduler = deepspeed.initialize(
                 model=self.model,
                 optimizer=self.optimizer,
@@ -287,8 +286,9 @@ class ModelClass:
         data_record_l = []
 
         for batch in self.database_train.data_gpu:
-            batch = self.database_train.process_batch(batch)
-
+            batch = self.database_train.process_batch(
+                batch, device=self.model_device, dtype=self.model_dtype
+            )
             tot_loss, data_record = self.loss(batch)
 
             if self.deepspeed:
@@ -318,7 +318,9 @@ class ModelClass:
         data_record_l = []
 
         for batch in self.database_eval.data_gpu:
-            batch = self.database_train.process_batch(batch)
+            batch = self.database_train.process_batch(
+                batch, device=self.model_device, dtype=self.model_dtype
+            )
 
             with torch.no_grad():
                 data_record = self.loss(batch, if_train=False)

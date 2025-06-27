@@ -43,6 +43,7 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     experiment_dict = {
         "model": args.model,
+        "device": args.device,
         "batch_size": args.batch_size,
         "n_train": len(modeldict.database_train),
         "n_eval": len(modeldict.database_eval),
