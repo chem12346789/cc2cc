@@ -1,3 +1,8 @@
+"""
+Train the model for the small dataset.
+Used to test the code and debug the model.
+"""
+
 import argparse
 
 from cc2cc import train_model

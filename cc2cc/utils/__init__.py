@@ -2,8 +2,8 @@ from cc2cc.utils.parser import add_args
 from cc2cc.utils.mol import gen_mole
 
 from cc2cc.utils.Grids import Grid
-from cc2cc.utils.DataBase import DataBase
-from cc2cc.utils.DataBase_c import DataBase as DataBase_c
+from cc2cc.utils.DataBaseCenter import DataBaseCenter
+from cc2cc.utils.DataBaseCube import DataBaseCube
 from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.modelscf_rks import get_veff_modified as get_veff_modified_rks
 from cc2cc.utils.modelscf_uks import get_veff_modified as get_veff_modified_uks
@@ -30,8 +30,8 @@ __all__ = [
     "add_args",
     "gen_mole",
     "Grid",
-    "DataBase",
-    "DataBase_c",
+    "DataBaseCenter",
+    "DataBaseCube",
     "ModelClass",
     "get_veff_modified_rks",
     "get_veff_modified_uks",
