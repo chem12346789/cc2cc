@@ -40,8 +40,8 @@ class ModelClass:
 
         self.model = None
         self.model_type = None
-        self.model_device = None
-        self.model_dtype = None
+        self.device = None
+        self.dtype = None
         self.gpu = None
         self.ngpus = None
 
@@ -81,8 +81,8 @@ class ModelClass:
         if args.precision == "float64":
             self.model.double()
 
-        self.model_device = next(self.model.parameters()).device
-        self.model_dtype = next(self.model.parameters()).dtype
+        self.device = next(self.model.parameters()).device
+        self.dtype = next(self.model.parameters()).dtype
         self.model_type = self.model.model_type
 
         if args.save_dir is not None and args.save_dir != "":
@@ -104,7 +104,7 @@ class ModelClass:
             print(f"Loading model from {load_path}")
             state_dict = torch.load(
                 load_path,
-                map_location=self.model_device,
+                map_location=self.device,
                 weights_only=True,
             )
             self.model.load_state_dict(state_dict)
@@ -205,7 +205,7 @@ class ModelClass:
                 data_weight * torch.sum(output),
             )
         else:
-            tot_loss = torch.tensor(0.0, device=self.model_device)
+            tot_loss = torch.tensor(0.0, device=self.device)
         loss_record = np.abs(torch.sum(target - output).item())
 
         if if_train and self.loss_multiplier_abs > 1e-8:
@@ -236,7 +236,7 @@ class ModelClass:
 
             atomic_batch = self.database_train.data_gpu.dataset.get_from_name(name_atom)
             atomic_batch = self.database_train.process_batch_dataset(
-                atomic_batch, device=self.model_device
+                atomic_batch, device=self.device
             )
 
             atomic_input_ = atomic_batch["input"]
@@ -288,7 +288,7 @@ class ModelClass:
         data_record_l = []
 
         for batch in self.database_train.data_gpu:
-            batch = self.database_train.process_batch(batch, device=self.model_device)
+            batch = self.database_train.process_batch(batch, device=self.device)
             tot_loss, data_record = self.loss(batch)
 
             if self.deepspeed:
@@ -318,7 +318,7 @@ class ModelClass:
         data_record_l = []
 
         for batch in self.database_eval.data_gpu:
-            batch = self.database_train.process_batch(batch, device=self.model_device)
+            batch = self.database_train.process_batch(batch, device=self.device)
 
             with torch.no_grad():
                 data_record = self.loss(batch, if_train=False)
@@ -367,8 +367,8 @@ class ModelClass:
 
         input_mat = torch.tensor(
             rho_cube,
-            dtype=self.model_dtype,
-            device=self.model_device,
+            dtype=self.dtype,
+            device=self.device,
         )
         input_mat.requires_grad = True
         output_mat = self.model(input_mat)[:, 0]
@@ -423,8 +423,8 @@ class ModelClass:
 
         input_mat = torch.tensor(
             rho_b3lyp,
-            dtype=self.model_dtype,
-            device=self.model_device,
+            dtype=self.dtype,
+            device=self.device,
         )
         input_mat.requires_grad = True
         output_mat = self.model(input_mat)[:, 0]

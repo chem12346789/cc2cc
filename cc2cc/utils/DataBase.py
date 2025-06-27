@@ -120,7 +120,7 @@ class DataBase:
         self.data_gpu = DataLoader(
             self.dataset,
             shuffle=shuffle,
-            batch_size=1,
+            batch_size=args.batch_size,
             num_workers=int(os.environ.get("NUMBER_OF_THREADS", 1)),
             pin_memory=True,
         )
