@@ -68,16 +68,14 @@ class ModelClass:
         else:
             raise ValueError("Unknown model")
 
-        self.model: torch.nn.Module = model()
-        if self.deepspeed:
-            self.gpu = args.local_rank
-            self.ngpus = torch.cuda.device_count()
-            if self.gpu is not None:
-                print(f"Use GPU: {self.gpu} for training")
-            torch.cuda.set_device(self.gpu)
-            self.model = self.model.cuda(self.gpu)
-        else:
-            self.model = self.model.to(args.device)
+        self.model: torch.nn.Module = model().to(args.device)
+        # if self.deepspeed:
+        #     self.gpu = args.local_rank
+        #     self.ngpus = torch.cuda.device_count()
+        #     if self.gpu is not None:
+        #         print(f"Use GPU: {self.gpu} for training")
+        #     torch.cuda.set_device(self.gpu)
+        #     self.model = self.model.cuda(self.gpu)
         if args.precision == "float64":
             self.model.double()
 
