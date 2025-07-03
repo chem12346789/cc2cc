@@ -13,8 +13,8 @@ from cc2cc.utils.DataBase import DataBase
 class DataBaseCube(DataBase):
     """Documentation for a class."""
 
-    def __init__(self, molecule_list, args, shuffle=True):
-        super().__init__(molecule_list, args, shuffle=True)
+    def __init__(self, molecule_list, args, shuffle=True, distributed=False):
+        super().__init__(molecule_list, args, shuffle=shuffle, distributed=distributed)
 
     def load_data(self, mol_info, name):
         """

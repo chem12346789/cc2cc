@@ -38,7 +38,6 @@ OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
 # treated as dense quantities and contracted by dgemm directly.
 SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
 
-libdft = lib.load_library("libdft")
 
 LEBEDEV_ORDER = {
     0: 1,

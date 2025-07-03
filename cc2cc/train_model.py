@@ -37,9 +37,9 @@ def train_model(train_str_dict, eval_str_dict, args):
     # 1. Init the criterion and the model
 
     modeldict = ModelClass(args)
-    modeldict.init_model(args)
-    modeldict.init_train(args)
-    modeldict.init_database(args, train_str_dict, eval_str_dict)
+    modeldict.init_model()
+    modeldict.init_train()
+    modeldict.init_database(train_str_dict, eval_str_dict)
 
     experiment_dict = {
         "model": args.model,
@@ -83,6 +83,9 @@ def train_model(train_str_dict, eval_str_dict, args):
         time_start = time.time()
 
         for epoch in range(args.epoch + 1):
+            if modeldict.distributed:
+                modeldict.database_train.sampler.set_epoch(epoch)
+                modeldict.database_eval.sampler.set_epoch(epoch)
             train_data_record_l = modeldict.train_model()
             modeldict.scheduler.step()
 
