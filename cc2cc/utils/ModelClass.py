@@ -4,17 +4,19 @@ Generate list of model.
 
 from pathlib import Path
 import datetime
-
+import os
 import numpy as np
 import torch
 import torch.optim as optim
 from torchinfo import summary
-import deepspeed
 
-from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, CUBE_SIZE
+from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, CUBE_SIZE, DEEPSPEED
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBaseCube import DataBaseCube
 from cc2cc.utils.DataBaseCenter import DataBaseCenter
+
+if DEEPSPEED:
+    import deepspeed
 
 
 class ModelClass:
@@ -22,72 +24,74 @@ class ModelClass:
     Model_Class
     """
 
+    optimizer: torch.optim.Optimizer
+    scheduler: torch.optim.lr_scheduler._LRScheduler
+    loss_ene: torch.nn.Module
+    loss_ene_abs: torch.nn.Module
+    loss_ene_atomic: torch.nn.Module
+    database_train: DataBaseCube | DataBaseCenter
+    database_eval: DataBaseCube | DataBaseCenter
+    model: torch.nn.Module
+    device: str
+    dtype: str
+    model_type: str
+
     def __init__(self, args):
         """
         input:
         output:
             model_dict: dictionary of models
         """
-        self.model_name = args.model
-        self.deepspeed = args.deepspeed
-        self.load = getattr(args, "load", "")
-        self.loss_multiplier_abs = getattr(args, "loss_multiplier_abs", 1.0)
-        self.loss_multiplier_atomic = getattr(args, "loss_multiplier_atomic", 1.0)
+        self.args = args
+        self.model_name = self.args.model
+        if self.args.dist_url == "env://" and self.args.world_size == -1:
+            self.args.world_size = int(os.environ["WORLD_SIZE"])
+        self.distributed = (
+            self.args.world_size > 1
+            or self.args.multiprocessing_distributed
+            or self.args.deepspeed
+        )
+        if self.args.deepspeed:
+            self.args.gpu = self.args.local_rank
+        else:
+            self.args.gpu = self.args.device
+        self.load = self.args.load
+        self.loss_multiplier_abs = self.args.loss_multiplier_abs
+        self.loss_multiplier_atomic = self.args.loss_multiplier_atomic
 
-        self.iters_to_accumulate = getattr(args, "iters_to_accumulate", 1)
-        self.max_norm = getattr(args, "max_norm", -1)
+        self.iters_to_accumulate = self.args.iters_to_accumulate
+        self.max_norm = self.args.max_norm
         self.update_counter = 0
 
-        self.model = None
-        self.model_type = None
-        self.device = None
-        self.dtype = None
-        self.gpu = None
-        self.ngpus = None
-
-        self.optimizer = None
-        self.scheduler = None
-        self.loss_ene = None
-        self.loss_ene_abs = None
-        self.loss_ene_atomic = None
         self.dir_checkpoint = None
         self.checkpointer = None
 
-        self.database_train = None
-        self.database_eval = None
-
-    def init_model(self, args):
+    def init_model(self):
         """
         Initialize the model.
         """
-        if (MAIN_PATH / f"cc2cc/utils/model/{args.model}.py").exists():
+        if (MAIN_PATH / f"cc2cc/utils/model/{self.args.model}.py").exists():
             model = getattr(
-                __import__(f"cc2cc.utils.model.{args.model}", fromlist=["Model"]),
+                __import__(f"cc2cc.utils.model.{self.args.model}", fromlist=["Model"]),
                 "Model",
             )
         else:
             raise ValueError("Unknown model")
 
-        self.model: torch.nn.Module = model()
-        if self.deepspeed:
-            self.gpu = args.local_rank
-            self.ngpus = torch.cuda.device_count()
-            if self.gpu is not None:
-                print(f"Use GPU: {self.gpu} for training")
-            torch.cuda.set_device(self.gpu)
-            self.model = self.model.cuda(self.gpu)
-        else:
-            self.model = self.model.to(args.device)
-        if args.precision == "float64":
+        self.model: torch.nn.Module = model().to(self.args.device)
+        if self.args.precision == "float64":
             self.model.double()
+
+        if self.args.deepspeed:
+            deepspeed.init_distributed()
 
         self.device = next(self.model.parameters()).device
         self.dtype = next(self.model.parameters()).dtype
         self.model_type = self.model.model_type
 
-        if args.save_dir is not None and args.save_dir != "":
+        if self.args.save_dir is not None and self.args.save_dir != "":
             self.dir_checkpoint = (
-                CHECKPOINTS_PATH / f"checkpoint_{args.save_dir}"
+                CHECKPOINTS_PATH / f"checkpoint_{self.args.save_dir}"
             ).resolve()
             if not self.dir_checkpoint.exists():
                 print(f"Directory {self.dir_checkpoint} not found. Created!")
@@ -99,7 +103,7 @@ class ModelClass:
             ).resolve()
 
         load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.load}/").resolve()
-        load_path = load_checkpoint / f"{args.load_epoch}.pth"
+        load_path = load_checkpoint / f"{self.args.load_epoch}.pth"
         if load_path.exists():
             print(f"Loading model from {load_path}")
             state_dict = torch.load(
@@ -107,57 +111,69 @@ class ModelClass:
                 map_location=self.device,
                 weights_only=True,
             )
+            if "module" in list(state_dict.keys())[0]:
+                # For deepspeed or distributed training
+                state_dict = {
+                    k.replace("module.", ""): v for k, v in state_dict.items()
+                }
             self.model.load_state_dict(state_dict)
         else:
             print(f"Model {load_path} not found, starting from scratch.")
 
-    def init_train(self, args):
+    def init_train(self):
         """
         Initialize the optimizer, scheduler, loss function and checkpoint_dir.
         """
         self.optimizer = optim.AdamW(
             self.model.parameters(),
-            lr=args.lr,
-            weight_decay=args.weight_decay,
+            lr=self.args.lr,
+            weight_decay=self.args.weight_decay,
         )
         self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer,
-            T_max=args.eval_step * 50,
-            eta_min=args.lr / 100,
+            T_max=self.args.eval_step * 50,
+            eta_min=self.args.lr / 100,
         )
 
-        if self.deepspeed:
-            self.model, self.optimizer, _, self.scheduler = deepspeed.initialize(
+        if self.args.loss_ene == "L1Loss":
+            self.loss_ene = torch.nn.L1Loss(reduction="sum").cuda(self.args.gpu)
+            self.loss_ene_abs = torch.nn.L1Loss(reduction="sum").cuda(self.args.gpu)
+            self.loss_ene_atomic = torch.nn.L1Loss(reduction="sum").cuda(self.args.gpu)
+        elif self.args.loss_ene == "MSELoss":
+            self.loss_ene = torch.nn.MSELoss(reduction="sum").cuda(self.args.gpu)
+            self.loss_ene_abs = torch.nn.MSELoss(reduction="sum").cuda(self.args.gpu)
+            self.loss_ene_atomic = torch.nn.MSELoss(reduction="sum").cuda(self.args.gpu)
+        else:
+            raise ValueError(f"Unknown loss function {self.args.loss_ene}")
+
+        if self.args.deepspeed:
+            self.model, self.optimizer, _, _ = deepspeed.initialize(
                 model=self.model,
                 optimizer=self.optimizer,
-                lr_scheduler=self.scheduler,
-                args=args,
-                dist_init_required=True,
+                args=self.args,
+                dist_init_required=False,
             )
 
-        if args.loss_ene == "L1Loss":
-            self.loss_ene = torch.nn.L1Loss(reduction="sum")
-            self.loss_ene_abs = torch.nn.L1Loss(reduction="sum")
-            self.loss_ene_atomic = torch.nn.L1Loss(reduction="sum")
-        elif args.loss_ene == "MSELoss":
-            self.loss_ene = torch.nn.MSELoss(reduction="sum")
-            self.loss_ene_abs = torch.nn.MSELoss(reduction="sum")
-            self.loss_ene_atomic = torch.nn.MSELoss(reduction="sum")
-        else:
-            raise ValueError(f"Unknown loss function {args.loss_ene}")
-
-    def init_database(self, args, train_str_dict, eval_str_dict):
+    def init_database(self, train_str_dict, eval_str_dict):
         """
         Initialize the database.
         """
         if self.model_type == "center_4":
             input_size = (302 * 75 * 10, 4)
-            database_eval = DataBaseCenter(eval_str_dict, args)
-            database_train = DataBaseCenter(train_str_dict, args)
+            self.database_eval = DataBaseCenter(
+                eval_str_dict, self.args, shuffle=False, distributed=self.distributed
+            )
+            self.database_train = DataBaseCenter(
+                train_str_dict, self.args, distributed=self.distributed
+            )
         elif self.model_type == "cube":
             input_size = (302 * 75 * 10, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-            database_eval = DataBaseCube(eval_str_dict, args, shuffle=False)
-            database_train = DataBaseCube(train_str_dict, args, shuffle=True)
+            self.database_eval = DataBaseCube(
+                eval_str_dict, self.args, shuffle=False, distributed=self.distributed
+            )
+            self.database_train = DataBaseCube(
+                train_str_dict, self.args, distributed=self.distributed
+            )
         else:
             raise ValueError(f"Unknown model type: {self.model_type}")
 
@@ -167,14 +183,13 @@ class ModelClass:
                 input_size=input_size,
                 depth=10,
                 dtypes=(
-                    [torch.float32] if args.precision == "float32" else [torch.float64]
+                    [torch.float32]
+                    if self.args.precision == "float32"
+                    else [torch.float64]
                 ),
                 mode="train",
             )
         )
-
-        self.database_train = database_train
-        self.database_eval = database_eval
 
     def train(self):
         """
@@ -188,7 +203,7 @@ class ModelClass:
         """
         self.model.eval()
 
-    def loss(self, batch, if_train=True):
+    def loss(self, batch, if_train=True, device=None):
         """
         Calculate the loss.
         ae if for atomic energy.
@@ -199,23 +214,20 @@ class ModelClass:
         data_weight = batch["data_weight"]
         output = self.model(input_) * weight
 
-        if if_train:
-            tot_loss = self.loss_ene(
-                data_weight * torch.sum(target),
-                data_weight * torch.sum(output),
-            )
-        else:
-            tot_loss = torch.tensor(0.0, device=self.device)
+        tot_loss = self.loss_ene(
+            data_weight * torch.sum(target),
+            data_weight * torch.sum(output),
+        )
         loss_record = np.abs(torch.sum(target - output).item())
 
-        if if_train and self.loss_multiplier_abs > 1e-8:
+        if self.loss_multiplier_abs > 1e-8:
             tot_loss += self.loss_ene_abs(
                 self.loss_multiplier_abs * data_weight * target,
                 self.loss_multiplier_abs * data_weight * output,
             )
         loss_abs_record = torch.sum(torch.abs(target - output)).item()
 
-        if if_train and self.loss_multiplier_atomic > 1e-8:
+        if self.loss_multiplier_atomic > 1e-8:
             ae_target = torch.sum(target)
             ae_output = torch.sum(output)
         loss_atomic_record = torch.sum(target - output)
@@ -229,14 +241,14 @@ class ModelClass:
                     f"Warning: {system_atom} not found in atomic_name_dict, "
                     "skipping atomic energy calculation."
                 )
-                if if_train and self.loss_multiplier_atomic > 1e-8:
+                if self.loss_multiplier_atomic > 1e-8:
                     ae_target = torch.zeros_like(ae_target)
                     ae_output = torch.zeros_like(ae_output)
                 break
 
-            atomic_batch = self.database_train.data_gpu.dataset.get_from_name(name_atom)
+            atomic_batch = self.database_train.dataset.get_from_name(name_atom)
             atomic_batch = self.database_train.process_batch_dataset(
-                atomic_batch, device=self.device
+                atomic_batch, device=device
             )
 
             atomic_input_ = atomic_batch["input"]
@@ -244,7 +256,7 @@ class ModelClass:
             atomic_target = atomic_batch["output"] * atomic_weight
             atomic_output = self.model(atomic_input_) * atomic_weight
 
-            if if_train and self.loss_multiplier_atomic > 1e-8:
+            if self.loss_multiplier_atomic > 1e-8:
                 ae_target -= (
                     torch.sum(atomic_target) * batch["atomic_stoichiometry"][i_system]
                 )
@@ -256,7 +268,7 @@ class ModelClass:
                 * batch["atomic_stoichiometry"][i_system]
             )
 
-        if if_train and self.loss_multiplier_atomic > 1e-8:
+        if self.loss_multiplier_atomic > 1e-8:
             tot_loss += self.loss_ene_atomic(
                 self.loss_multiplier_atomic * data_weight * ae_target,
                 self.loss_multiplier_atomic * data_weight * ae_output,
@@ -288,10 +300,10 @@ class ModelClass:
         data_record_l = []
 
         for batch in self.database_train.data_gpu:
-            batch = self.database_train.process_batch(batch, device=self.device)
-            tot_loss, data_record = self.loss(batch)
+            batch = self.database_train.process_batch(batch, device=self.args.gpu)
+            tot_loss, data_record = self.loss(batch, device=self.args.gpu)
 
-            if self.deepspeed:
+            if self.args.deepspeed:
                 self.model.backward(tot_loss)
                 self.model.step()
             else:
@@ -318,10 +330,10 @@ class ModelClass:
         data_record_l = []
 
         for batch in self.database_eval.data_gpu:
-            batch = self.database_train.process_batch(batch, device=self.device)
+            batch = self.database_train.process_batch(batch, device=self.args.gpu)
 
             with torch.no_grad():
-                data_record = self.loss(batch, if_train=False)
+                data_record = self.loss(batch, if_train=False, device=self.args.gpu)
 
             data_record_l.append(data_record)
 
@@ -331,8 +343,16 @@ class ModelClass:
         """
         Save the model to the checkpoint.
         """
-        state_dict = self.model.state_dict()
-        torch.save(state_dict, self.dir_checkpoint / f"{epoch}.pth")
+        if (
+            not self.args.multiprocessing_distributed
+            or (
+                self.args.multiprocessing_distributed
+                and self.args.rank % torch.cuda.device_count() == 0
+            )
+            or self.args.local_rank == 0
+        ):
+            state_dict = self.model.state_dict()
+            torch.save(state_dict, self.dir_checkpoint / f"{epoch}.pth")
 
     def eval_xc_eff_cube(
         self,

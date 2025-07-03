@@ -57,6 +57,12 @@ GENERATE_DATA = os.environ.get("DFT2CC_GENERATE_DATA")
 if GENERATE_DATA is None:
     GENERATE_DATA = False
 
+DEEPSPEED = os.environ.get("DEEPSPEED")
+if DEEPSPEED is None:
+    DEEPSPEED = False
+else:
+    DEEPSPEED = bool(int(DEEPSPEED))
+
 
 def print_gpu_info(device):
     """

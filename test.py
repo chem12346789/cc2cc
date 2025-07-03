@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     # 1. Init the model
     modeldict = ModelClass(args)
-    modeldict.init_model(args)
+    modeldict.init_model()
     modeldict.eval()
 
     # 2. Test loop
@@ -82,32 +82,32 @@ if __name__ == "__main__":
 
         grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
 
-        try:
-            if mol.spin == 0:
-                test_rks(
-                    mol,
-                    grids,
-                    name,
-                    modeldict,
-                    data_record,
-                    args,
-                )
-            else:
-                test_uks(
-                    mol,
-                    grids,
-                    name,
-                    modeldict,
-                    data_record,
-                    args,
-                )
-        except (ValueError, RuntimeError) as e:
-            print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
-            print(e)
-            error_molecule.append(name)
-            print(f"Error molecule: {error_molecule}")
-        finally:
-            print(f"Processed: {name_mol} {extend_atom} {extend_xyz} {distance}")
-        print()
+        # try:
+        if mol.spin == 0:
+            test_rks(
+                mol,
+                grids,
+                name,
+                modeldict,
+                data_record,
+                args,
+            )
+        else:
+            test_uks(
+                mol,
+                grids,
+                name,
+                modeldict,
+                data_record,
+                args,
+            )
+        # except (ValueError, RuntimeError) as e:
+        #     print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
+        #     print(e)
+        #     error_molecule.append(name)
+        #     print(f"Error molecule: {error_molecule}")
+        # finally:
+        #     print(f"Processed: {name_mol} {extend_atom} {extend_xyz} {distance}")
+        # print()
 
     print(f"Error molecule: {error_molecule}")

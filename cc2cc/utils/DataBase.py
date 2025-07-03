@@ -52,7 +52,21 @@ class BasicDataset(Dataset):
 class DataBase:
     """Documentation for a class."""
 
-    def __init__(self, molecule_list, args, shuffle=True):
+    def __init__(
+        self,
+        molecule_list,
+        args,
+        shuffle=True,
+        distributed=False,
+    ):
+        """
+        Initialize the DataBase with a list of molecules and arguments.
+        Args:
+            molecule_list (list): List of molecule names to include in the database.
+            args: Arguments containing various settings for the database.
+            shuffle (bool): Whether to shuffle the dataset.
+            distributed (bool): Whether the dataset is distributed.
+        """
         self.rho_dft = args.rho_dft
         if args.precision == "float64":
             self.dtype = torch.float64
@@ -60,10 +74,10 @@ class DataBase:
             self.dtype = torch.float32
         self.train_atom = args.train_atom
 
-        self.name_list = []
+        name_list = []
         error_molecule = []
+        mol_info_dict = {}
         self.atomic_name_dict = {}
-        self.mol_info_dict = {}
 
         for (
             name_mol,
@@ -101,12 +115,12 @@ class DataBase:
                     print(f"Error molecule: {error_molecule}")
                     continue
 
-                self.name_list.append(name)
+                name_list.append(name)
                 if mol.natm == 1 and mol.charge == 0:
                     self.atomic_name_dict[mol.atom_pure_symbol(0)] = name
                     print(f"{mol.elements} use {name}", flush=True)
 
-                self.mol_info_dict[name] = {
+                mol_info_dict[name] = {
                     "natm": mol.natm,
                     "elements": mol.elements,
                     "charge": mol.charge,
@@ -116,13 +130,21 @@ class DataBase:
             except ValueError as e:
                 print(f"Error generating molecule {name}: {e}", flush=True)
 
-        self.dataset = BasicDataset(self.name_list, self.mol_info_dict, self.load_data)
+        self.dataset = BasicDataset(name_list, mol_info_dict, self.load_data)
+        if distributed:
+            self.sampler = torch.utils.data.distributed.DistributedSampler(
+                self.dataset, shuffle=shuffle
+            )
+            shuffle = False
+        else:
+            self.sampler = None
         self.data_gpu = DataLoader(
             self.dataset,
             shuffle=shuffle,
             batch_size=args.batch_size,
             num_workers=int(os.environ.get("NUMBER_OF_THREADS", 1)),
             pin_memory=True,
+            sampler=self.sampler,
         )
 
     def __len__(self):

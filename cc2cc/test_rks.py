@@ -44,8 +44,8 @@ def test_rks(
         e_scf = test_data.e_cc
     else:
         mdft.max_cycle = 50
-        mdft.conv_tol = 1e-5
-        mdft.kernel(dm0=test_data.dm1_dft)
+        mdft.conv_tol = 1e-6
+        mdft.kernel()
         dm1_scf = mdft.make_rdm1()
         e_scf = mdft.e_tot
 
@@ -83,6 +83,17 @@ def test_rks(
             "time_dft": test_data.time_dft,
             "time_ai": time_ai,
             "cc_ene": AU2KCALMOL * test_data.e_cc,
+            "scf_ene": AU2KCALMOL * e_scf,
+            "dft_ene": AU2KCALMOL * test_data.e_dft,
+            "cc_dipole_x": test_data.cc_dipole[0],
+            "cc_dipole_y": test_data.cc_dipole[1],
+            "cc_dipole_z": test_data.cc_dipole[2],
+            "scf_dipole_x": scf_dipole[0],
+            "scf_dipole_y": scf_dipole[1],
+            "scf_dipole_z": scf_dipole[2],
+            "dft_dipole_x": test_data.dft_dipole[0],
+            "dft_dipole_y": test_data.dft_dipole[1],
+            "dft_dipole_z": test_data.dft_dipole[2],
         },
     )
     data_record.save_csv()
