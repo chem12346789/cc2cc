@@ -12,13 +12,13 @@ RAD = 75
 
 D_MODEL = CUBE_SIZE**3
 SEQ_LEN = 4
-DEPTH_TRANSFORMER = 3
+DEPTH_TRANSFORMER = 2
 QKV_BIAS = False
 NUM_HEADS = 1
 DROP_RATE_TRANSFORMER = 0
 
-MLP_DENSE = 108
-DEPTH_DENSE = 7
+MLP_DENSE = 2 * SEQ_LEN * D_MODEL
+DEPTH_DENSE = 3
 IF_SKIP_CONNECTION_DENSE = 1
 DROP_RATE_DENSE = 0
 
@@ -199,7 +199,7 @@ class DenseNet(nn.Module):
 
     def __init__(self, **kwargs):
         super(DenseNet, self).__init__()
-        self.d_model = kwargs.get("seq_len", SEQ_LEN * D_MODEL)
+        self.d_model = kwargs.get("seq_len", 2 * SEQ_LEN * D_MODEL)
         self.mlp = kwargs.get("mlp", MLP_DENSE)
         self.depth = kwargs.get("depth_dense", DEPTH_DENSE)
         self.drop_rate = kwargs.get("drop_rate", DROP_RATE_DENSE)
@@ -236,14 +236,14 @@ class DenseNet(nn.Module):
         for i, layer in enumerate(self.layers):
             if IF_SKIP_CONNECTION_DENSE:
                 skip = x
-            if i < len(self.layers) - 1:
+            if 1 < i < len(self.layers) - 1:
                 x = self.norm[i](x)
             x = layer(x)
             if i < len(self.layers) - 1:
                 x = self.actv_fn(x)
                 x = self.dropout(x)
             if IF_SKIP_CONNECTION_DENSE:
-                if 1 < i < len(self.layers) - 1:
+                if self.sizes[i] == self.sizes[i + 1]:
                     x = x + skip
         return x
 
@@ -277,13 +277,16 @@ class Model(nn.Module):
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
         # SHAPE x = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
+        skip = x
         x = self.predictor(x)
         # SHAPE shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
 
         # SHAPE x = (batch, 4, CUBE_SIZE**3)
         x = x.reshape(-1, 4 * CUBE_SIZE**3)
-        # SHAPE x = (batch, 4 * CUBE_SIZE**3)
-        x = self.densenet(x)
+        skip = skip.reshape(-1, 4 * CUBE_SIZE**3)
+        x_in = torch.cat((x, skip), dim=-1)
+        # SHAPE x = (batch, 8 * CUBE_SIZE**3)
+        x = self.densenet(x_in)
         # SHAPE x = (batch, 1)
         x = x * b3lyp_ene
         return x

@@ -183,7 +183,7 @@ def ucc(mol, grids, name, cc_triple=False, check_convergence=True):
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",
         e_cc=e_cc,
-        dm_cc=dm1_cc,
+        dm1_cc=dm1_cc,
         rho_cube_cc=rho_cube_cc,
         rho_cube_dft=rho_cube_dft,
         weights=grids.weights,

@@ -5,6 +5,7 @@ import random
 import time
 import numpy as np
 import torch
+from torch import distributed as dist
 
 import wandb
 
@@ -41,86 +42,64 @@ def train_model(train_str_dict, eval_str_dict, args):
     modeldict.init_train()
     modeldict.init_database(train_str_dict, eval_str_dict)
 
-    experiment_dict = {
-        "model": args.model,
-        "device": args.device,
-        "batch_size": args.batch_size,
-        "n_train": len(modeldict.database_train),
-        "n_eval": len(modeldict.database_eval),
-        "precision": args.precision,
-        "basis": args.basis,
-        "weight_decay": args.weight_decay,
-        "load": args.load,
-        "jobid": os.environ.get("SLURM_JOB_ID"),
-        "pid": os.getpid(),
-        "rho_dft": args.rho_dft,
-        "checkpoint": modeldict.dir_checkpoint.stem,
-        "loss_multiplier_abs": modeldict.loss_multiplier_abs,
-        "loss_multiplier_atomic": modeldict.loss_multiplier_atomic,
-        "loss_ene": (
-            "L1Loss" if isinstance(modeldict.loss_ene, torch.nn.L1Loss) else "MSELoss"
-        ),
-        "loss_ene_abs": (
-            "L1Loss"
-            if isinstance(modeldict.loss_ene_abs, torch.nn.L1Loss)
-            else "MSELoss"
-        ),
-        "iters_to_accumulate": modeldict.iters_to_accumulate,
-        "max_norm": modeldict.max_norm,
-    }
-    print(experiment_dict)
+    if modeldict.local_rank == 0:
+        experiment_dict = {
+            "model": args.model,
+            "device": args.device,
+            "batch_size": args.batch_size,
+            "n_train": len(modeldict.database_train),
+            "n_eval": len(modeldict.database_eval),
+            "precision": args.precision,
+            "basis": args.basis,
+            "weight_decay": args.weight_decay,
+            "load": args.load,
+            "jobid": os.environ.get("SLURM_JOB_ID"),
+            "pid": os.getpid(),
+            "rho_dft": args.rho_dft,
+            "checkpoint": modeldict.dir_checkpoint.stem,
+            "loss_multiplier_abs": modeldict.loss_multiplier_abs,
+            "loss_multiplier_atomic": modeldict.loss_multiplier_atomic,
+            "loss_ene": (
+                "L1Loss"
+                if isinstance(modeldict.loss_ene, torch.nn.L1Loss)
+                else "MSELoss"
+            ),
+            "loss_ene_abs": (
+                "L1Loss"
+                if isinstance(modeldict.loss_ene_abs, torch.nn.L1Loss)
+                else "MSELoss"
+            ),
+            "iters_to_accumulate": modeldict.iters_to_accumulate,
+            "max_norm": modeldict.max_norm,
+        }
+        print(experiment_dict)
 
-    with wandb.init(
-        project="DFT2CC",
-        resume="allow",
-        name="dft2cc",
-        dir="/home/chenzihao/raid/tmp",
-        config=experiment_dict,
-        allow_val_change=True,
-    ) as run:
+        run = wandb.init(
+            project="DFT2CC",
+            resume="allow",
+            name="dft2cc",
+            dir="/home/chenzihao/raid/tmp",
+            config=experiment_dict,
+            allow_val_change=True,
+        )
         wandb.define_metric("*", step_metric="global_step")
-        print(f"Start training at {modeldict.dir_checkpoint}")
-        time_start = time.time()
 
-        for epoch in range(args.epoch + 1):
-            if modeldict.distributed:
-                modeldict.database_train.sampler.set_epoch(epoch)
-                modeldict.database_eval.sampler.set_epoch(epoch)
-            train_data_record_l = modeldict.train_model()
-            modeldict.scheduler.step()
+    if modeldict.args.distributed:
+        dist.barrier()
 
-            if epoch % args.eval_step == 0:
-                eval_data_record_l = modeldict.eval_model()
+    time_start = time.time()
 
-                if epoch % (args.eval_step * 50) == 0:
-                    modeldict.save_model(epoch)
+    for epoch in range(args.epoch + 1):
+        if modeldict.args.distributed:
+            modeldict.database_train.sampler.set_epoch(epoch)
+            modeldict.database_eval.sampler.set_epoch(epoch)
+        train_data_record_l = modeldict.train_model()
+        modeldict.scheduler.step()
 
-                    data_record_train = DataRecord(
-                        modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}"
-                    )
-                    for data in train_data_record_l:
-                        data_record_train.add_data(data)
-                    data_record_train.save_csv()
+        if epoch % args.eval_step == 0:
+            eval_data_record_l = modeldict.eval_model()
 
-                    data_record_eval = DataRecord(
-                        modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}"
-                    )
-                    for data in eval_data_record_l:
-                        data_record_eval.add_data(data)
-                    data_record_eval.save_csv()
-
-                    experiment_dict = {
-                        "epoch_eval": epoch,
-                        "train_loss_ene_epoch_eval": np.mean(
-                            [data["loss_ene"] for data in train_data_record_l]
-                        ),
-                        "eval_loss_ene_epoch_eval": np.mean(
-                            [data["loss_ene"] for data in eval_data_record_l]
-                        ),
-                        "lr": modeldict.optimizer.param_groups[0]["lr"],
-                    }
-                    run.log(experiment_dict)
-
+        if modeldict.local_rank == 0:
             experiment_dict = {
                 "epoch": epoch,
                 "global_step": epoch,
@@ -142,14 +121,50 @@ def train_model(train_str_dict, eval_str_dict, args):
             )
             run.log(experiment_dict)
 
+            if epoch % args.eval_step == 0 and epoch % (args.eval_step * 50) == 0:
+                modeldict.save_model(epoch)
+
+                data_record_train = DataRecord(
+                    modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}"
+                )
+                for data in train_data_record_l:
+                    data_record_train.add_data(data)
+                data_record_train.save_csv()
+
+                data_record_eval = DataRecord(
+                    modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}"
+                )
+                for data in eval_data_record_l:
+                    data_record_eval.add_data(data)
+                data_record_eval.save_csv()
+
+                experiment_dict = {
+                    "epoch_eval": epoch,
+                    "train_loss_ene_epoch_eval": np.mean(
+                        [data["loss_ene"] for data in train_data_record_l]
+                    ),
+                    "eval_loss_ene_epoch_eval": np.mean(
+                        [data["loss_ene"] for data in eval_data_record_l]
+                    ),
+                    "lr": modeldict.optimizer.param_groups[0]["lr"],
+                }
+                run.log(experiment_dict)
+
             time_end = time.time()
             time_elapsed = time_end - time_start
+
             print(
+                f"Local_rank {modeldict.local_rank:>2}, "
                 f"Epoch: {epoch:>5}, "
+                f"Train: {len(train_data_record_l)}, "
+                f"Eval: {len(eval_data_record_l)}, "
                 f"Loss: {np.mean([data["loss_ene"] for data in train_data_record_l]):>5.2f}, "
                 f"Eval: {np.mean([data["loss_ene"] for data in eval_data_record_l]):>5.2f}, "
                 f"lr: {experiment_dict["lr"]:>5.2e}, "
                 f"Speed: {time_elapsed / (epoch + 1):>5.2f}s/epoch",
                 flush=True,
             )
-        torch.distributed.destroy_process_group()
+
+        if modeldict.args.distributed:
+            dist.barrier()
+    torch.distributed.destroy_process_group()

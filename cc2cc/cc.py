@@ -14,6 +14,7 @@ from pyscf.cc.ccsd_t_rdm_slow import _gamma1_intermediates
 from pyscf.cc.ccsd_t_rdm_slow import _gamma2_intermediates
 
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
+from cc2cc.zmp import RZMP
 
 
 def cc(mol, grids, name, cc_triple=False, check_convergence=True):
@@ -139,10 +140,18 @@ def cc(mol, grids, name, cc_triple=False, check_convergence=True):
         f"Error: {AU2KCALMOL * error},",
     )
 
+    # ZMP
+    mz = RZMP(mol, dm1_cc)
+    mz.with_df = True
+    for l in [8, 16, 32, 64, 128, 256, 512]:
+        mz.level_shift = l * 0.1
+        mz.zscf(l)
+    dm1_zmp = mz.dm
+
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",
         e_cc=e_cc,
-        dm_cc=dm1_cc,
+        dm1_cc=dm1_cc,
         rho_cube_cc=rho_cube_cc,
         rho_cube_dft=rho_cube_dft,
         weights=grids.weights,

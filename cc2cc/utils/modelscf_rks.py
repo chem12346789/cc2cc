@@ -27,12 +27,12 @@ def nr_rks(
     dms,
     xc_code="b3lyp",
     hermi=1,
-    max_memory=400,
+    max_memory=20,
     verbose=None,
 ):
     """
     # Obtain the nelec, excsum, and vmat.
-    # Note the max_memory=400 use around 8GB gpu memory.
+    # Note the max_memory=20 use around 8GB gpu memory.
     # Modified from pyscf.dft.numint.nr_rks (https://github.com/pyscf/pyscf/blob/v2.9.0/pyscf/dft/numint.py)
 
     Calculate RKS XC functional and potential matrix on given meshgrids

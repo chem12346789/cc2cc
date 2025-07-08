@@ -57,7 +57,6 @@ class DataBase:
         molecule_list,
         args,
         shuffle=True,
-        distributed=False,
     ):
         """
         Initialize the DataBase with a list of molecules and arguments.
@@ -65,7 +64,6 @@ class DataBase:
             molecule_list (list): List of molecule names to include in the database.
             args: Arguments containing various settings for the database.
             shuffle (bool): Whether to shuffle the dataset.
-            distributed (bool): Whether the dataset is distributed.
         """
         self.rho_dft = args.rho_dft
         if args.precision == "float64":
@@ -131,7 +129,7 @@ class DataBase:
                 print(f"Error generating molecule {name}: {e}", flush=True)
 
         self.dataset = BasicDataset(name_list, mol_info_dict, self.load_data)
-        if distributed:
+        if args.distributed:
             self.sampler = torch.utils.data.distributed.DistributedSampler(
                 self.dataset, shuffle=shuffle
             )
@@ -142,7 +140,7 @@ class DataBase:
             self.dataset,
             shuffle=shuffle,
             batch_size=args.batch_size,
-            num_workers=int(os.environ.get("NUMBER_OF_THREADS", 1)),
+            num_workers=0,
             pin_memory=True,
             sampler=self.sampler,
         )
@@ -162,8 +160,8 @@ class DataBase:
                     device=device,
                     non_blocking=True,
                 )
-                continue
-            batch_gpu[key] = val[0]
+            else:
+                batch_gpu[key] = val[0]
         return batch_gpu
 
     def process_batch_dataset(self, batch, device="cuda"):
@@ -178,11 +176,14 @@ class DataBase:
                     device=device,
                     non_blocking=True,
                 )
-                continue
-            batch_gpu[key] = val
+            else:
+                batch_gpu[key] = val
         return batch_gpu
 
     def load_data(self, mol_info, name):
         """
         Load the data.
         """
+        raise NotImplementedError(
+            "The load_data method should be implemented in the subclass."
+        )

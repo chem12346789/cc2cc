@@ -12,13 +12,13 @@ RAD = 75
 
 D_MODEL = CUBE_SIZE**3
 SEQ_LEN = 4
-DEPTH_TRANSFORMER = 2
+DEPTH_TRANSFORMER = 3
 QKV_BIAS = False
 NUM_HEADS = 1
 DROP_RATE_TRANSFORMER = 0
 
-MLP_DENSE = 2 * SEQ_LEN * D_MODEL
-DEPTH_DENSE = 3
+MLP_DENSE = 108
+DEPTH_DENSE = 7
 IF_SKIP_CONNECTION_DENSE = 1
 DROP_RATE_DENSE = 0
 
@@ -55,6 +55,11 @@ class Attention(nn.Module):
         self.dropout1 = nn.Dropout(self.drop_rate)
         self.dropout2 = nn.Dropout(self.drop_rate)
 
+        self.mask = torch.tril(torch.ones((SEQ_LEN, SEQ_LEN), device="cuda")).view(
+            1, 1, SEQ_LEN, SEQ_LEN
+        )
+        # SHAPE mask = (1, 1, seq_len, seq_len)
+
     def forward(self, inputs):
         """
         Standard forward function, required for all nn.Module classes
@@ -78,6 +83,8 @@ class Attention(nn.Module):
         # SHAPE qkv = (batch, head, seq_len, d_model // head)
         qk = torch.matmul(q, k.transpose(-1, -2)) / self.sqrt_d
         # SHAPE qk = (batch, head, seq_len, seq_len)
+        # mask = torch.ones((b, s, s), device=inputs.device)
+        qk = qk.masked_fill(self.mask == 0, float("-inf"))
         attn = torch.softmax(qk, dim=-1)
         attn = self.dropout1(attn)
         # SHAPE attn = (batch, head, seq_len, seq_len)
@@ -199,7 +206,7 @@ class DenseNet(nn.Module):
 
     def __init__(self, **kwargs):
         super(DenseNet, self).__init__()
-        self.d_model = kwargs.get("seq_len", 2 * SEQ_LEN * D_MODEL)
+        self.d_model = kwargs.get("seq_len", SEQ_LEN * D_MODEL)
         self.mlp = kwargs.get("mlp", MLP_DENSE)
         self.depth = kwargs.get("depth_dense", DEPTH_DENSE)
         self.drop_rate = kwargs.get("drop_rate", DROP_RATE_DENSE)
@@ -236,7 +243,7 @@ class DenseNet(nn.Module):
         for i, layer in enumerate(self.layers):
             if IF_SKIP_CONNECTION_DENSE:
                 skip = x
-            if 1 < i < len(self.layers) - 1:
+            if i < len(self.layers) - 1:
                 x = self.norm[i](x)
             x = layer(x)
             if i < len(self.layers) - 1:
@@ -277,16 +284,13 @@ class Model(nn.Module):
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
         # SHAPE x = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
-        skip = x
         x = self.predictor(x)
         # SHAPE shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
 
         # SHAPE x = (batch, 4, CUBE_SIZE**3)
         x = x.reshape(-1, 4 * CUBE_SIZE**3)
-        skip = skip.reshape(-1, 4 * CUBE_SIZE**3)
-        x_in = torch.cat((x, skip), dim=-1)
-        # SHAPE x = (batch, 8 * CUBE_SIZE**3)
-        x = self.densenet(x_in)
+        # SHAPE x = (batch, 4 * CUBE_SIZE**3)
+        x = self.densenet(x)
         # SHAPE x = (batch, 1)
         x = x * b3lyp_ene
         return x
