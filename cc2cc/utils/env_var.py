@@ -93,4 +93,4 @@ def print_gpu_info(device):
         print(f"DATA_TEST_NO_GRAD_PATH: {DATA_TEST_NO_GRAD_PATH.resolve()}")
         print(f"DATA_SCF_PATH: {DATA_SCF_PATH.resolve()}")
         print(f"CHECKPOINTS_PATH: {CHECKPOINTS_PATH.resolve()}")
-        print(f"GENERATE_DATA: {GENERATE_DATA}")
+        print(f"GENERATE_DATA: {GENERATE_DATA}", flush=True)

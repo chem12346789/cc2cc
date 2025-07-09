@@ -305,10 +305,12 @@ class ModelClass:
 
             if self.args.distributed:
                 dist.barrier()
-            output_data_record = [{} for _ in range(dist.get_world_size())]
-            dist.all_gather_object(output_data_record, data_record)
-            if self.local_rank == 0:
-                data_record_l.extend(output_data_record)
+                output_data_record = [{} for _ in range(dist.get_world_size())]
+                dist.all_gather_object(output_data_record, data_record)
+                if self.local_rank == 0:
+                    data_record_l.extend(output_data_record)
+            else:
+                data_record_l.append(data_record)
 
         return data_record_l
 
@@ -328,10 +330,12 @@ class ModelClass:
 
             if self.args.distributed:
                 dist.barrier()
-            output_data_record = [{} for _ in range(dist.get_world_size())]
-            dist.all_gather_object(output_data_record, data_record)
-            if self.local_rank == 0:
-                data_record_l.extend(output_data_record)
+                output_data_record = [{} for _ in range(dist.get_world_size())]
+                dist.all_gather_object(output_data_record, data_record)
+                if self.local_rank == 0:
+                    data_record_l.extend(output_data_record)
+            else:
+                data_record_l.append(data_record)
 
         return data_record_l
 

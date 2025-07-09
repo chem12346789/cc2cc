@@ -4,7 +4,7 @@ import numpy as np
 
 import pyscf
 
-from cc2cc.utils import get_veff_modified_rks
+from cc2cc.utils import get_veff_modified_rks, diff_rho
 from cc2cc.utils import AU2KCALMOL
 from cc2cc.utils import TestData
 
@@ -64,12 +64,8 @@ def test_rks(
     error_dft_dip = np.linalg.norm(test_data.cc_dipole - test_data.dft_dipole)
     error_scf_dip = np.linalg.norm(test_data.cc_dipole - scf_dipole)
 
-    ao = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=0)
-    rho_scf = pyscf.dft.numint.eval_rho(mol, ao, dm1_scf, xctype="LDA")
-    rho_cc = pyscf.dft.numint.eval_rho(mol, ao, test_data.dm1_cc, xctype="LDA")
-    rho_dft = pyscf.dft.numint.eval_rho(mol, ao, test_data.dm1_dft, xctype="LDA")
-    error_scf_ele = np.sum(np.abs(rho_cc - rho_scf) * grids.weights)
-    error_dft_ele = np.sum(np.abs(rho_cc - rho_dft) * grids.weights)
+    error_scf_ele = diff_rho(mol, test_data.dm1_cc, dm1_scf, grids)
+    error_dft_ele = diff_rho(mol, test_data.dm1_cc, test_data.dm1_dft, grids)
 
     dict_ = {
         "name": name,

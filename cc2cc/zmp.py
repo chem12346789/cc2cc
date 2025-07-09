@@ -3,6 +3,10 @@ Zhao-Morrison-Parr
 ==================
 
 **Summary** This script preforms a Zhao-Morrison-Parr [ZMP1994]_ Kohn Sham inversion.
+Copied from
+https://github.com/ssnam92/KSPies/blob/master/kspies/zmp.py
+and
+https://github.com/ssnam92/KSPies/blob/master/kspies/util.py
 
 Written for Python 3.7.4
 
@@ -38,6 +42,55 @@ Written for Python 3.7.4
 from functools import reduce
 import numpy as np
 from pyscf import scf, dft
+
+
+def parse_guide(description):
+    """Summary: Guiding potential parser for ZMP and WY
+
+    Args:
+        description (str) : guiding potential description for inversion
+
+    Returns:
+        (tuple): tuple containing:
+
+            (float): **fac_faxc** factor for Fermi-Amaldi potential (faxc)
+
+            (string): **dft_xc** description of dft part of xc
+
+    """
+
+    def _parse_guide(description):
+        fac_faxc = 0
+        dftxc = ""
+        for token in description.replace("-", "+-").replace(";+", ";").split("+"):
+            if token[0] == "-":
+                sign = -1
+                token = token[1:]
+            else:
+                sign = 1
+
+            if "*" in token:
+                fac, key = token.split("*")
+                if fac[0].isalpha():
+                    fac, key = key, fac
+                fac = sign * float(fac)
+            else:
+                fac, key = sign, token
+            if key.lower() == "faxc":
+                fac_faxc += fac
+            else:
+                dftxc += "+" + str(fac) + "*" + key
+        return fac_faxc, dftxc[1:]
+
+    if "," in description:
+        x_code, c_code = description.split(",")
+        fx, dft_x = _parse_guide(x_code)
+        fc, dft_c = _parse_guide(c_code)
+        fac_faxc = fx + fc
+        dft_xc = dft_x + "," + dft_c
+    else:
+        fac_faxc, dft_xc = _parse_guide(description)
+    return fac_faxc, dft_xc
 
 
 class DIIS:
@@ -115,7 +168,7 @@ class DIIS:
         return newfock, diis_error
 
 
-class Basic:
+def basic(mz, mol):
     """Summary: Common basic initialization function for RZMP and UZMP objects
 
     Args:
@@ -123,31 +176,23 @@ class Basic:
         mol (object) : an instance of :class:`Mole`
 
     """
+    mz.mol = mol
+    mz.guide = "faxc"
+    mz.diis_space = 40
+    mz.level_shift = 0.2
+    mz.max_cycle = 400
+    mz.conv_tol_dm = 1e-7
+    mz.conv_tol_diis = 1e-5
+    mz.with_df = False
+    mz.verbose = mz.mol.verbose
+    mz.stdout = mz.mol.stdout
 
-    def __init__(self, mol):
-        """Initialize common attributes for RZMP and UZMP objects
-
-        Args:
-            mz (object): RZMP or UZMP object
-            mol (object): an instance of :class:`Mole`
-        """
-        self.mol = mol
-        self.guide = "faxc"
-        self.diis_space = 40
-        self.level_shift = 0.2
-        self.max_cycle = 400
-        self.conv_tol_dm = 1e-7
-        self.conv_tol_diis = 1e-5
-        self.with_df = False
-        self.verbose = self.mol.verbose
-        self.stdout = self.mol.stdout
-
-        self.S = self.mol.intor_symmetric("int1e_ovlp")
-        self.T = self.mol.intor_symmetric("int1e_kin")
-        self.V = self.mol.intor_symmetric("int1e_nuc")
+    mz.S = mz.mol.intor_symmetric("int1e_ovlp")
+    mz.T = mz.mol.intor_symmetric("int1e_kin")
+    mz.V = mz.mol.intor_symmetric("int1e_nuc")
 
 
-class RZMP(Basic):
+class RZMP:
     """Summary: Perform ZMP calculation in restricted scheme, see [ZMP1994]_ for detail.
 
     .. _restricted-zmp:
@@ -179,7 +224,7 @@ class RZMP(Basic):
     """
 
     def __init__(self, mol, dm_tar, dm_aux=None):
-        super().__init__(mol)
+        basic(self, mol)
 
         self.dm_tar = dm_tar
         self.initialized = False
@@ -214,7 +259,19 @@ class RZMP(Basic):
             self.dm_aux = self.dm_tar
         self.J_tar = self.mf.get_jk(self.mol, self.dm_tar)[0]
 
-        self.V0 = np.zeros_like(self.dm_tar)
+        if self.guide is None:
+            self.V0 = np.zeros_like(self.dm_tar)
+        else:
+            fac_faxc, dft_xc = parse_guide(self.guide)
+
+            N = self.mol.nelectron
+            J_tar = scf.hf.get_jk(self.mol, self.dm_aux)[0]
+            VFA = -(1.0 / N) * (J_tar)
+
+            self.mf.xc = dft_xc
+            Vxcdft = self.mf.get_veff(self.mol, dm=self.dm_aux)
+
+            self.V0 = fac_faxc * VFA + Vxcdft
 
         self.F0 = self.T + self.V + self.V0
         self.initialized = True
@@ -256,7 +313,7 @@ class RZMP(Basic):
             HOMO, LUMO = self.mo_energy[nocc - 1], self.mo_energy[nocc]
             gap = LUMO - HOMO
 
-            print(f"\rlambda= {l:7.2f}  iter: {cycle:4d} gap= {gap:10.7f}   ", end="\r")
+            # print(f"\rlambda= {l:7.2f}  iter: {cycle:4d} gap= {gap:10.7f}   ", end="\r")
 
             self.converged = dm_converged and diis_converged
             if self.converged and cycle > 1:
@@ -268,12 +325,12 @@ class RZMP(Basic):
         C = np.einsum(
             "ij,ji", self.dm - self.dm_tar, self.J - self.J_tar
         )  # Objective of minimization
-        print(
-            f"lambda= {l:7.2f} niter: {cycle:4d} gap= {LUMO-HOMO:10.7f} dN= {dN:7.2f} C= {C:.2e} "
-        )
+        # print(
+        #     f"lambda= {l:7.2f} niter: {cycle:4d} gap= {LUMO-HOMO:10.7f} dN= {dN:7.2f} C= {C:.2e} "
+        # )
 
 
-class UZMP(Basic):
+class UZMP:
     """Summary: Perform ZMP calculation in unrestricted scheme, see [THG1997]_.
 
     .. _unrestricted-zmp:
@@ -305,8 +362,7 @@ class UZMP(Basic):
     """
 
     def __init__(self, mol, dm_tar, dm_aux=None):
-        super().__init__(mol)
-
+        basic(self, mol)
         self.nelec = [
             int((mol.nelectron + mol.spin) // 2),
             int((mol.nelectron - mol.spin) // 2),
@@ -346,7 +402,20 @@ class UZMP(Basic):
             self.dm_aux = self.dm_tar
         self.J_tar = self.mf.get_jk(self.mol, self.dm_tar)[0]
 
-        self.V0 = np.zeros_like(self.dm_tar)
+        if self.guide is None:
+            self.V0 = np.zeros_like(self.dm_tar)
+
+        else:
+            fac_faxc, dft_xc = parse_guide(self.guide)
+
+            N = self.mol.nelectron
+            J_tar = scf.hf.get_jk(self.mol, self.dm_aux)[0]
+            VFA = -(1.0 / N) * (J_tar[0] + J_tar[1])
+
+            self.mf.xc = dft_xc
+            Vxcdft = self.mf.get_veff(self.mol, dm=self.dm_aux)
+
+            self.V0 = fac_faxc * np.array((VFA, VFA)) + Vxcdft
 
         self.F0 = (self.T + self.V + self.V0[0], self.T + self.V + self.V0[1])
         self.initialized = True
@@ -403,7 +472,7 @@ class UZMP(Basic):
             )
             gap = LUMO - HOMO
 
-            print(f"\rlambda= {l:7.2f}  iter: {cycle:4d} gap= {gap:10.7f}   ", end="\r")
+            # print(f"\rlambda= {l:7.2f}  iter: {cycle:4d} gap= {gap:10.7f}   ", end="\r")
 
             self.converged = dm_converged and diis_converged
             if self.converged and cycle > 1:
@@ -424,6 +493,6 @@ class UZMP(Basic):
         Ca = np.einsum("ij,ji", self.dm[0] - self.dm_tar[0], self.J[0] - self.J_tar[0])
         Cb = np.einsum("ij,ji", self.dm[1] - self.dm_tar[1], self.J[1] - self.J_tar[1])
         C = 2 * (Ca + Cb)
-        print(
-            f"lambda= {l:7.2f} niter: {cycle:4d} gap= {gap:10.7f} dN= {dN:7.2f} C= {C:.2e}  "
-        )
+        # print(
+        #     f"lambda= {l:7.2f} niter: {cycle:4d} gap= {gap:10.7f} dN= {dN:7.2f} C= {C:.2e}  "
+        # )
