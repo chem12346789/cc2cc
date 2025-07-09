@@ -13,9 +13,12 @@ train_str_list = [
     "W4_11-si",
     "W4_11-f",
     "W4_11-c",
+    "W4_11-cf2",
 ]
 eval_str_list = [
+    "W4_11-sif",
     "W4_11-cf4",
+    "W4_11-sif4",
 ]
 
 if __name__ == "__main__":

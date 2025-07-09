@@ -11,10 +11,6 @@ import numpy as np
 import torch
 
 from cc2cc.utils.mol import dataset
-from cc2cc.utils.env_var import DEEPSPEED
-
-if DEEPSPEED:
-    import deepspeed
 
 periodic_table = {
     -1: "all",
@@ -334,6 +330,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--distributed",
+        default=False,
+        type=str2bool,
+        help="Whether to use distributed training. Default is False.",
+    )
+
+    parser.add_argument(
         "--batch_size",
         type=int,
         default=1,
@@ -447,54 +450,12 @@ def add_args(parser: argparse.ArgumentParser):
         help="Weather to continue the test or generate data. Default is False.",
     )
 
-    # deepspeed arguments.
-    # Note that those arguments will be overwritten by deepspeed.
     parser.add_argument(
-        "--gpu",
-        default=None,
-        type=int,
-        help="GPU id to use.",
+        "--if_disp",
+        type=str2bool,
+        default=True,
+        help="Weather to use dispersion correction. Default is True.",
     )
-
-    parser.add_argument(
-        "--local_rank",
-        type=int,
-        default=0,
-        help="Local rank for distributed training. Default is 0.",
-    )
-
-    parser.add_argument(
-        "--world_size",
-        default=-1,
-        type=int,
-        help="number of nodes for distributed training",
-    )
-
-    parser.add_argument(
-        "--multiprocessing_distributed",
-        action="store_true",
-        help="Use multi-processing distributed training to launch "
-        "N processes per node, which has N GPUs. This is the "
-        "fastest way to use PyTorch for either single node or "
-        "multi node data parallel training",
-    )
-
-    parser.add_argument(
-        "--dist_url",
-        default="tcp://224.66.41.62:23456",
-        type=str,
-        help="url used to set up distributed training",
-    )
-
-    if DEEPSPEED:
-        parser = deepspeed.add_config_arguments(parser)
-    else:
-        parser.add_argument(
-            "--deepspeed",
-            default=False,
-            type=str2bool,
-            help="Use deepspeed for distributed training. ",
-        )
 
     args = parser.parse_args()
     for i in range(len(args.extend_xyz)):

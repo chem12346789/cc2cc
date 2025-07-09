@@ -45,12 +45,11 @@ class TestData:
         xc_code: str = "b3lyp",
         if_grad: bool = False,
         cc_triple: bool = False,
-        disp: str = None,
+        if_disp: str = None,
     ) -> None:
         self.name = name
         self.mol = mol
         self.xc_code = xc_code
-        self.disp = disp
 
         if if_grad:
             path_to_data = DATA_TEST_PATH
@@ -105,47 +104,49 @@ class TestData:
         self.time_cc = data_frame["time_cc"].item()
         self.grad_ccsd = data_frame["grad_ccsd"]
 
-        if disp is None:
-            self.dm1_dft = data_frame["dm1_dft"]
-            self.e_dft = data_frame["e_dft"].item()
-            self.dft_dipole = data_frame["dft_dipole"]
-            self.time_dft = data_frame["time_dft"].item()
-            self.grad_dft = data_frame["grad_dft"]
-        else:
-            if (
-                f"dm1_dft_{disp}" in data_frame
-                and f"e_dft_{disp}" in data_frame
-                and f"dft_dipole_{disp}" in data_frame
-                and f"time_dft_{disp}" in data_frame
-                and f"grad_dft_{disp}" in data_frame
-            ):
-                self.dm1_dft = data_frame[f"dm1_dft_{disp}"]
-                self.e_dft = data_frame[f"e_dft_{disp}"].item()
-                self.dft_dipole = data_frame[f"dft_dipole_{disp}"]
-                self.time_dft = data_frame[f"time_dft_{disp}"].item()
-                self.grad_dft = data_frame[f"grad_dft_{disp}"]
-            else:
-                self.dm1_dft = None
-                self.e_dft = None
-                self.dft_dipole = None
-                self.time_dft = None
-                if mol.spin == 0:
-                    self.test_mol_rks_disp(if_grad)
-                else:
-                    self.test_mol_uks_disp(if_grad)
+        self.dm1_dft = data_frame["dm1_dft"]
+        self.e_dft = data_frame["e_dft"].item()
+        self.dft_dipole = data_frame["dft_dipole"]
+        self.time_dft = data_frame["time_dft"].item()
+        self.grad_dft = data_frame["grad_dft"]
 
-                data_frame.update(
-                    {
-                        f"dm1_dft_{disp}": self.dm1_dft,
-                        f"e_dft_{disp}": self.e_dft,
-                        f"dft_dipole_{disp}": self.dft_dipole,
-                        f"time_dft_{disp}": self.time_dft,
-                        f"grad_dft_{disp}": self.grad_dft if if_grad else None,
-                    }
-                )
-                np.savez_compressed(
-                    path_to_data / f"{name}_cc.npz",
-                    **data_frame,
+        if if_disp:
+            self.delta_e = {}
+            for disp in ["d3zero", "d3bj"]:
+                if not (
+                    f"dm1_dft_{disp}" in data_frame
+                    and f"e_dft_{disp}" in data_frame
+                    and f"dft_dipole_{disp}" in data_frame
+                    and f"time_dft_{disp}" in data_frame
+                    and f"grad_dft_{disp}" in data_frame
+                ):
+                    print(f"Dispersion {disp} not found in data, generating...")
+                    self.dm1_dft_disp = None
+                    self.e_dft_disp = None
+                    self.dft_dipole_disp = None
+                    self.time_dft_disp = None
+                    self.grad_dft_disp = None
+                    if mol.spin == 0:
+                        self.test_mol_rks_disp(disp, if_grad)
+                    else:
+                        self.test_mol_uks_disp(disp, if_grad)
+
+                    data_frame.update(
+                        {
+                            f"dm1_dft_{disp}": self.dm1_dft_disp,
+                            f"e_dft_{disp}": self.e_dft_disp,
+                            f"dft_dipole_{disp}": self.dft_dipole_disp,
+                            f"time_dft_{disp}": self.time_dft_disp,
+                            f"grad_dft_{disp}": self.grad_dft_disp if if_grad else None,
+                        }
+                    )
+                    np.savez_compressed(
+                        path_to_data / f"{name}_cc.npz",
+                        **data_frame,
+                    )
+
+                self.delta_e[disp] = (
+                    data_frame[f"e_dft_{disp}"].item() - data_frame["e_dft"].item()
                 )
 
         print(f"Data for {name} loaded.")
@@ -292,53 +293,53 @@ class TestData:
             self.grad_dft = g.kernel()
         self.time_dft = timer() - time_start
 
-    def test_mol_rks_disp(self, if_grad=False):
+    def test_mol_rks_disp(self, disp, if_grad=False):
         """
         Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected RKS molecule.
         """
         time_start = timer()
         mdft = pyscf.scf.RKS(self.mol)
         mdft.xc = self.xc_code
-        mdft.disp = self.disp
+        mdft.disp = disp
         mdft.max_cycle = 250
         mdft.kernel(dm0=self.mf_dm1)
         if mdft.converged is False:
             raise ValueError("RKS not converged.")
-        self.dm1_dft = mdft.make_rdm1(ao_repr=True)
-        self.e_dft = mdft.e_tot
-        self.dft_dipole = pyscf.scf.hf.dip_moment(
+        self.dm1_dft_disp = mdft.make_rdm1(ao_repr=True)
+        self.e_dft_disp = mdft.e_tot
+        self.dft_dipole_disp = pyscf.scf.hf.dip_moment(
             mol=self.mol,
-            dm=self.dm1_dft,
+            dm=self.dm1_dft_disp,
             unit="A.U.",
         )
         if if_grad:
             g = mdft.nuc_grad_method()
-            self.grad_dft = g.kernel()
-        self.time_dft = timer() - time_start
+            self.grad_dft_disp = g.kernel()
+        self.time_dft_disp = timer() - time_start
 
-    def test_mol_uks_disp(self, if_grad=False):
+    def test_mol_uks_disp(self, disp, if_grad=False):
         """
         Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected UKS molecule.
         """
         time_start = timer()
         mdft = pyscf.scf.UKS(self.mol)
         mdft.xc = self.xc_code
-        mdft.disp = self.disp
+        mdft.disp = disp
         mdft.max_cycle = 250
         mdft.kernel(dm0=self.mf_dm1)
         if mdft.converged is False:
             raise ValueError("UKS not converged.")
-        self.dm1_dft = mdft.make_rdm1(ao_repr=True)
-        self.e_dft = mdft.e_tot
-        self.dft_dipole = pyscf.scf.hf.dip_moment(
+        self.dm1_dft_disp = mdft.make_rdm1(ao_repr=True)
+        self.e_dft_disp = mdft.e_tot
+        self.dft_dipole_disp = pyscf.scf.hf.dip_moment(
             mol=self.mol,
-            dm=self.dm1_dft,
+            dm=self.dm1_dft_disp,
             unit="A.U.",
         )
         if if_grad:
             g = mdft.nuc_grad_method()
-            self.grad_dft = g.kernel()
-        self.time_dft = timer() - time_start
+            self.grad_dft_disp = g.kernel()
+        self.time_dft_disp = timer() - time_start
 
     def test_mol_orca(self, if_grad=False, cc_triple=False):
         """
