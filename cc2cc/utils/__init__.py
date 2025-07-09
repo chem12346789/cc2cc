@@ -11,6 +11,8 @@ from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.modelscf_rks import get_veff_modified as get_veff_modified_rks
 from cc2cc.utils.modelscf_uks import get_veff_modified as get_veff_modified_uks
 from cc2cc.utils.rotate import rotate
+from cc2cc.utils.zmp import RZMP, UZMP, ZMPLIST
+from cc2cc.utils.lambda_dft import LambdaRKS, LambdaUKS
 from cc2cc.utils.DataRecord import DataRecord
 from cc2cc.utils.TestData import TestData
 
@@ -46,18 +48,24 @@ def diff_rho(mol, dm1_compare1, dm1_compare2, grids):
 
 
 __all__ = [
-    "add_args",
-    "gen_mole",
-    "Grid",
     "DataBaseCenter",
     "DataBaseCube",
+    "Grid",
     "ModelClass",
+    "RZMP",
+    "UZMP",
+    "LambdaRKS",
+    "LambdaUKS",
+    "add_args",
+    "gen_mole",
     "get_veff_modified_rks",
     "get_veff_modified_uks",
     "rotate",
     "print_gpu_info",
+    "diff_rho",
     "DataRecord",
     "TestData",
+    "ZMPLIST",
     "MAIN_PATH",
     "DATA_PATH",
     "DATA_SCF_PATH",

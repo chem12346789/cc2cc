@@ -43,6 +43,37 @@ from functools import reduce
 import numpy as np
 from pyscf import scf, dft
 
+ZMPLIST = [
+    8,
+    16,
+    32,
+    64,
+    128,
+    256,
+    512,
+    1024,
+    2048,
+    4096,
+    8192,
+    16384,
+    32768,
+    65536,
+    131072,
+    262144,
+    524288,
+    1048576,
+    2097152,
+    4194304,
+    8388608,
+    16777216,
+    # 33554432,
+    # 67108864,
+    # 134217728,
+    # 268435456,
+    # 536870912,
+    # 1073741824,
+]
+
 
 def parse_guide(description):
     """Summary: Guiding potential parser for ZMP and WY
@@ -325,9 +356,10 @@ class RZMP:
         C = np.einsum(
             "ij,ji", self.dm - self.dm_tar, self.J - self.J_tar
         )  # Objective of minimization
-        # print(
-        #     f"lambda= {l:7.2f} niter: {cycle:4d} gap= {LUMO-HOMO:10.7f} dN= {dN:7.2f} C= {C:.2e} "
-        # )
+        print(
+            f"lambda= {l:7.2f} niter: {cycle:4d} gap= {LUMO-HOMO:10.7f} dN= {dN:7.2f} C= {C:.2e} ",
+            flush=True,
+        )
 
 
 class UZMP:
@@ -493,6 +525,7 @@ class UZMP:
         Ca = np.einsum("ij,ji", self.dm[0] - self.dm_tar[0], self.J[0] - self.J_tar[0])
         Cb = np.einsum("ij,ji", self.dm[1] - self.dm_tar[1], self.J[1] - self.J_tar[1])
         C = 2 * (Ca + Cb)
-        # print(
-        #     f"lambda= {l:7.2f} niter: {cycle:4d} gap= {gap:10.7f} dN= {dN:7.2f} C= {C:.2e}  "
-        # )
+        print(
+            f"lambda= {l:7.2f} niter: {cycle:4d} gap= {gap:10.7f} dN= {dN:7.2f} C= {C:.2e}  ",
+            flush=True,
+        )
