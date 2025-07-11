@@ -62,30 +62,18 @@ class TestData:
             )
         else:
             self.mf_dm1 = None
-            self.dm1_cc = None
-            self.e_cc = None
-            self.cc_dipole = None
+            data_frame = {"mol_corr": mol.atom_coords(), "mf_dm1": self.mf_dm1}
 
             if mol.spin == 0:
-                self.test_mol_rks(if_grad=if_grad, cc_triple=cc_triple)
+                data_frame_cc = self.test_mol_rcc(if_grad=if_grad, cc_triple=cc_triple)
+                data_frame_ks = self.test_mol_rks(disp=None, if_grad=if_grad)
             else:
-                self.test_mol_uks(if_grad=if_grad, cc_triple=cc_triple)
+                data_frame_cc = self.test_mol_ucc(if_grad=if_grad, cc_triple=cc_triple)
+                data_frame_ks = self.test_mol_uks(disp=None, if_grad=if_grad)
+            data_frame.update(data_frame_cc)
+            data_frame.update(data_frame_ks)
 
-            np.savez_compressed(
-                path_to_data / f"{name}_cc.npz",
-                mol_corr=mol.atom_coords(),
-                mf_dm1=self.mf_dm1,
-                dm1_cc=self.dm1_cc,
-                e_cc=self.e_cc,
-                cc_dipole=self.cc_dipole,
-                time_cc=self.time_cc,
-                grad_ccsd=self.grad_ccsd if if_grad else None,
-                dm1_dft=self.dm1_dft,
-                e_dft=self.e_dft,
-                dft_dipole=self.dft_dipole,
-                time_dft=self.time_dft,
-                grad_dft=self.grad_dft if if_grad else None,
-            )
+            np.savez_compressed(path_to_data / f"{name}_cc.npz", **data_frame)
             return
 
         print(f"Data for {name} loaded from file.")
@@ -121,25 +109,12 @@ class TestData:
                     and f"grad_dft_{disp}" in data_frame
                 ):
                     print(f"Dispersion {disp} not found in data, generating...")
-                    self.dm1_dft_disp = None
-                    self.e_dft_disp = None
-                    self.dft_dipole_disp = None
-                    self.time_dft_disp = None
-                    self.grad_dft_disp = None
                     if mol.spin == 0:
-                        self.test_mol_rks_disp(disp, if_grad)
+                        data_frame_ks = self.test_mol_rks(disp=disp, if_grad=if_grad)
                     else:
-                        self.test_mol_uks_disp(disp, if_grad)
+                        data_frame_ks = self.test_mol_uks(disp=disp, if_grad=if_grad)
 
-                    data_frame.update(
-                        {
-                            f"dm1_dft_{disp}": self.dm1_dft_disp,
-                            f"e_dft_{disp}": self.e_dft_disp,
-                            f"dft_dipole_{disp}": self.dft_dipole_disp,
-                            f"time_dft_{disp}": self.time_dft_disp,
-                            f"grad_dft_{disp}": self.grad_dft_disp if if_grad else None,
-                        }
-                    )
+                    data_frame.update(data_frame_ks)
                     np.savez_compressed(
                         path_to_data / f"{name}_cc.npz",
                         **data_frame,
@@ -153,7 +128,7 @@ class TestData:
         print(f"CCSD energy: {self.e_cc}")
         print(f"DFT energy: {self.e_dft}")
 
-    def test_mol_rks(self, if_grad=False, cc_triple=False):
+    def test_mol_rcc(self, if_grad=False, cc_triple=False):
         """
         Generate 1-RDM, energy, dipole, and gradient for the molecule.
         """
@@ -186,44 +161,32 @@ class TestData:
             eris = mycc.ao2mo()
             e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
             l1, l2 = ccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
-            self.dm1_cc = ccsd_t_rdm.make_rdm1(
-                mycc, t1, t2, l1, l2, eris=eris, ao_repr=True
-            )
-            self.e_cc = mycc.e_tot + e3ref
+            dm1_cc = ccsd_t_rdm.make_rdm1(mycc, t1, t2, l1, l2, eris=eris, ao_repr=True)
+            e_cc = mycc.e_tot + e3ref
         else:
-            self.dm1_cc = mycc.make_rdm1(ao_repr=True)
-            self.e_cc = mycc.e_tot
-        self.dm1_cc = np.array(self.dm1_cc)
-        self.cc_dipole = pyscf.scf.hf.dip_moment(
+            dm1_cc = mycc.make_rdm1(ao_repr=True)
+            e_cc = mycc.e_tot
+        dm1_cc = np.array(dm1_cc)
+        cc_dipole = pyscf.scf.hf.dip_moment(
             mol=self.mol,
-            dm=self.dm1_cc,
+            dm=dm1_cc,
             unit="A.U.",
         )
         if if_grad:
             g = ccsd_grad.Gradients(mycc)
-            self.grad_ccsd = g.kernel()
-        self.time_cc = timer() - time_start
+            grad_ccsd = g.kernel()
+        else:
+            grad_ccsd = None
+        time_cc = timer() - time_start
+        return {
+            "dm1_cc": dm1_cc,
+            "e_cc": e_cc,
+            "cc_dipole": cc_dipole,
+            "time_cc": time_cc,
+            "grad_ccsd": grad_ccsd,
+        }
 
-        time_start = timer()
-        mdft = pyscf.scf.RKS(self.mol)
-        mdft.xc = self.xc_code
-        mdft.max_cycle = 250
-        mdft.kernel(dm0=self.mf_dm1)
-        if mdft.converged is False:
-            raise ValueError("RKS not converged.")
-        self.dm1_dft = mdft.make_rdm1(ao_repr=True)
-        self.e_dft = mdft.e_tot
-        self.dft_dipole = pyscf.scf.hf.dip_moment(
-            mol=self.mol,
-            dm=self.dm1_dft,
-            unit="A.U.",
-        )
-        if if_grad:
-            g = mdft.nuc_grad_method()
-            self.grad_dft = g.kernel()
-        self.time_dft = timer() - time_start
-
-    def test_mol_uks(self, if_grad=False, cc_triple=False):
+    def test_mol_ucc(self, if_grad=False, cc_triple=False):
         """
         Generate 1-RDM, energy, dipole, and gradient for the molecule.
         """
@@ -256,133 +219,103 @@ class TestData:
             eris = mycc.ao2mo()
             e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
             l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
-            self.dm1_cc = uccsd_t_rdm.make_rdm1(
+            dm1_cc = uccsd_t_rdm.make_rdm1(
                 mycc, t1, t2, l1, l2, eris=eris, ao_repr=True
             )
-            self.e_cc = mycc.e_tot + e3ref
+            e_cc = mycc.e_tot + e3ref
         else:
-            self.dm1_cc = mycc.make_rdm1(ao_repr=True)
-            self.e_cc = mycc.e_tot
-        self.dm1_cc = np.array(self.dm1_cc)
-        self.cc_dipole = pyscf.scf.uhf.dip_moment(
+            dm1_cc = mycc.make_rdm1(ao_repr=True)
+            e_cc = mycc.e_tot
+        dm1_cc = np.array(dm1_cc)
+        cc_dipole = pyscf.scf.uhf.dip_moment(
             mol=self.mol,
-            dm=self.dm1_cc,
+            dm=dm1_cc,
             unit="A.U.",
         )
         if if_grad:
             g = uccsd_grad.Gradients(mycc)
-            self.grad_ccsd = g.kernel()
-        self.time_cc = timer() - time_start
+            grad_ccsd = g.kernel()
+        else:
+            grad_ccsd = None
+        time_cc = timer() - time_start
+        return {
+            "dm1_cc": dm1_cc,
+            "e_cc": e_cc,
+            "cc_dipole": cc_dipole,
+            "time_cc": time_cc,
+            "grad_ccsd": grad_ccsd,
+        }
 
-        time_start = timer()
-        mdft = pyscf.scf.UKS(self.mol)
-        mdft.xc = self.xc_code
-        mdft.max_cycle = 250
-        mdft.kernel(dm0=self.mf_dm1)
-        if mdft.converged is False:
-            raise ValueError("UKS not converged.")
-        self.dm1_dft = mdft.make_rdm1(ao_repr=True)
-        self.e_dft = mdft.e_tot
-        self.dft_dipole = pyscf.scf.hf.dip_moment(
-            mol=self.mol,
-            dm=self.dm1_dft,
-            unit="A.U.",
-        )
-        if if_grad:
-            g = mdft.nuc_grad_method()
-            self.grad_dft = g.kernel()
-        self.time_dft = timer() - time_start
-
-    def test_mol_rks_disp(self, disp, if_grad=False):
+    def test_mol_rks(self, disp=None, if_grad=False):
         """
         Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected RKS molecule.
         """
         time_start = timer()
         mdft = pyscf.scf.RKS(self.mol)
         mdft.xc = self.xc_code
-        mdft.disp = disp
+        if disp is not None:
+            mdft.disp = disp
+            name_disp = f"_{disp}"
+        else:
+            name_disp = ""
         mdft.max_cycle = 250
         mdft.kernel(dm0=self.mf_dm1)
         if mdft.converged is False:
             raise ValueError("RKS not converged.")
-        self.dm1_dft_disp = mdft.make_rdm1(ao_repr=True)
-        self.e_dft_disp = mdft.e_tot
-        self.dft_dipole_disp = pyscf.scf.hf.dip_moment(
+        dm1_dft = mdft.make_rdm1(ao_repr=True)
+        e_dft = mdft.e_tot
+        dft_dipole = pyscf.scf.hf.dip_moment(
             mol=self.mol,
-            dm=self.dm1_dft_disp,
+            dm=dm1_dft,
             unit="A.U.",
         )
         if if_grad:
             g = mdft.nuc_grad_method()
-            self.grad_dft_disp = g.kernel()
-        self.time_dft_disp = timer() - time_start
+            grad_dft = g.kernel()
+        else:
+            grad_dft = None
+        time_dft = timer() - time_start
+        return {
+            f"dm1_dft{name_disp}": dm1_dft,
+            f"e_dft{name_disp}": e_dft,
+            f"dft_dipole{name_disp}": dft_dipole,
+            f"time_dft{name_disp}": time_dft,
+            f"grad_dft{name_disp}": grad_dft,
+        }
 
-    def test_mol_uks_disp(self, disp, if_grad=False):
+    def test_mol_uks(self, disp=None, if_grad=False):
         """
         Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected UKS molecule.
         """
         time_start = timer()
         mdft = pyscf.scf.UKS(self.mol)
         mdft.xc = self.xc_code
-        mdft.disp = disp
+        if disp is not None:
+            mdft.disp = disp
+            name_disp = f"_{disp}"
+        else:
+            name_disp = ""
         mdft.max_cycle = 250
         mdft.kernel(dm0=self.mf_dm1)
         if mdft.converged is False:
             raise ValueError("UKS not converged.")
-        self.dm1_dft_disp = mdft.make_rdm1(ao_repr=True)
-        self.e_dft_disp = mdft.e_tot
-        self.dft_dipole_disp = pyscf.scf.hf.dip_moment(
+        dm1_dft = mdft.make_rdm1(ao_repr=True)
+        e_dft = mdft.e_tot
+        dft_dipole = pyscf.scf.hf.dip_moment(
             mol=self.mol,
-            dm=self.dm1_dft_disp,
+            dm=dm1_dft,
             unit="A.U.",
         )
         if if_grad:
             g = mdft.nuc_grad_method()
-            self.grad_dft_disp = g.kernel()
-        self.time_dft_disp = timer() - time_start
-
-    def test_mol_orca(self, if_grad=False, cc_triple=False):
-        """
-        Generate 1-RDM, energy, dipole, and gradient for the molecule.
-        """
-        print(f"Generate data for {self.name}")
-
-        molecular_xyz = ""
-        for atom_info in self.mol._atom:
-            molecular_xyz += (
-                f"{atom_info[0]:<6}\t{atom_info[1][0]:<16.10}\t{atom_info[1][1]:<16.10}\t{atom_info[1][2]:<16.10}"
-                + "\n"
-            )
-
-        with open(f"tmp_mol/{self.name}.inp", "w", encoding="utf-8") as f:
-            f.write(
-                f"""! DLPNO-CCSD
-        %basis
-        # read an externally specified orbital basis
-        GTOName      = "cc-pvdz.1.orca"
-        Aux "AutoAux"
-        AuxJK "AutoAux"
-        AuxC "AutoAux"
-        end
-        %method
-        WriteJSONPropertyfile True
-        end
-        %MDCI Density Unrelaxed
-        end
-        %pal nprocs {os.environ.get("OMP_NUM_THREADS")} end
-        %maxcore {os.environ.get("PYSCF_MAX_MEMORY")}
-        %coords
-        CTyp   xyz     # the type of coordinates = xyz or internal
-        Charge {self.mol.charge}       # the total charge of the molecule
-        Mult   {self.mol.spin+1}        # the multiplicity = 2S+1
-        Units  bohrs    # the unit of length = angs or bohrs
-
-        # the subblock coords is for the actual coordinates
-        # for CTyp=xyz
-        coords
-        {molecular_xyz}end
-        end
-        """
-            )
-
-        os.system(f"$(which orca) tmp_mol/{self.name}.inp > tmp_mol/{self.name}.out")
+            grad_dft = g.kernel()
+        else:
+            grad_dft = None
+        time_dft = timer() - time_start
+        return {
+            f"dm1_dft{name_disp}": dm1_dft,
+            f"e_dft{name_disp}": e_dft,
+            f"dft_dipole{name_disp}": dft_dipole,
+            f"time_dft{name_disp}": time_dft,
+            f"grad_dft{name_disp}": grad_dft,
+        }
