@@ -14,8 +14,8 @@ from pyscf.cc.ccsd_t_rdm_slow import _gamma1_intermediates
 from pyscf.cc.ccsd_t_rdm_slow import _gamma2_intermediates
 
 from cc2cc.utils import diff_rho
-from cc2cc.utils import DATA_PATH, AU2KCALMOL
-from cc2cc.zmp import RZMP
+from cc2cc.utils import RZMP, LambdaRKS
+from cc2cc.utils import DATA_PATH, AU2KCALMOL, ZMPLIST
 
 
 def get_dft_energy(
@@ -136,6 +136,7 @@ def cc(mol, grids, name, cc_triple=False, check_convergence=True):
     if check_convergence and not mdft.converged:
         raise ValueError("RKS not converged.")
     dm1_dft = mdft.make_rdm1(ao_repr=True)
+    e_dft = mdft.energy_tot(dm1_dft)
 
     mycc = pyscf.cc.CCSD(mf)
     _, t1, t2 = mycc.kernel()
@@ -159,37 +160,36 @@ def cc(mol, grids, name, cc_triple=False, check_convergence=True):
     mzmp.diis_space = 50
     mzmp.max_cycle = 1000
     mzmp.with_df = True
-    for l in [
-        8,
-        16,
-        32,
-        64,
-        128,
-        256,
-        512,
-        1024,
-        2048,
-        4096,
-        8192,
-        16384,
-        32768,
-        65536,
-        131072,
-        262144,
-        524288,
-        1048576,
-    ]:
+    for l in ZMPLIST:
         mzmp.level_shift = l * 0.25
         mzmp.zscf(l)
     dm1_zmp = mzmp.dm
+    e_zmp = mdft.energy_tot(dm1_zmp)
+
+    ldft = LambdaRKS(mol, dm1_cc, xc="b3lyp")
+    ldft.kernel(mf.make_rdm1())
+    ldft.diis_space = 50
+    ldft.max_cycle = 1000
+    for l in [2, 4, 8, 16, 32, 64]:
+        ldft.lambda_rho = 10 * l
+        ldft.lambda_dip = l
+        ldft.level_shift = l * 0.25
+        ldft.kernel(ldft.make_rdm1())
+    dm1_lam = ldft.make_rdm1(ao_repr=True)
+    e_lam = ldft.energy_tot(dm1_lam)
 
     print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} (CCSD vs DFT)")
     print(f"{diff_rho(mol, dm1_cc, dm1_zmp, grids):.6f} (CCSD vs ZMP)")
+    print(f"{diff_rho(mol, dm1_cc, dm1_lam, grids):.6f} (CCSD vs Lambda)")
     cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
     dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
     zmp_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_zmp, unit="A.U.")
+    lam_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_lam, unit="A.U.")
     print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
     print(f"{np.linalg.norm(cc_dipole - zmp_dipole)} (CCSD vs ZMP)")
+    print(f"{np.linalg.norm(cc_dipole - lam_dipole)} (CCSD vs Lambda)")
+
+    return
 
     error_energy_dft, exc_cc_grids_dft, rho_cc, rho_dft = get_dft_energy(
         mol,
@@ -197,7 +197,7 @@ def cc(mol, grids, name, cc_triple=False, check_convergence=True):
         mf.mo_coeff,
         dm1_dft,
         mdft.mo_coeff,
-        mdft.energy_tot(dm1_dft),
+        e_dft,
         dm1_cc,
         dm1_cc_mo,
         dm2_cc,
@@ -210,7 +210,20 @@ def cc(mol, grids, name, cc_triple=False, check_convergence=True):
         mf.mo_coeff,
         dm1_zmp,
         mzmp.mo_coeff,
-        mdft.energy_tot(dm1_zmp),
+        e_zmp,
+        dm1_cc,
+        dm1_cc_mo,
+        dm2_cc,
+        e_cc,
+    )
+
+    error_energy_lam, exc_cc_grids_lam, rho_cc, rho_lam = get_dft_energy(
+        mol,
+        grids,
+        mf.mo_coeff,
+        dm1_lam,
+        ldft.mo_coeff,
+        e_lam,
         dm1_cc,
         dm1_cc_mo,
         dm2_cc,
@@ -220,6 +233,7 @@ def cc(mol, grids, name, cc_triple=False, check_convergence=True):
     rho_cube_cc = grids.gen_cube_rho_rks(mol, dm1_cc, rho_cc, ni=mdft._numint)
     rho_cube_dft = grids.gen_cube_rho_rks(mol, dm1_dft, rho_dft, ni=mdft._numint)
     rho_cube_zmp = grids.gen_cube_rho_rks(mol, dm1_zmp, rho_zmp, ni=mdft._numint)
+    rho_cube_lam = grids.gen_cube_rho_rks(mol, dm1_lam, rho_lam, ni=mdft._numint)
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",
         e_cc=e_cc,
@@ -227,11 +241,14 @@ def cc(mol, grids, name, cc_triple=False, check_convergence=True):
         rho_cube_cc=rho_cube_cc,
         rho_cube_dft=rho_cube_dft,
         rho_cube_zmp=rho_cube_zmp,
+        rho_cube_lam=rho_cube_lam,
         weights=grids.weights,
         exc_cc_grids=exc_cc_grids_dft,
         error_energy=error_energy_dft,
         exc_cc_grids_zmp=exc_cc_grids_zmp,
         error_energy_zmp=error_energy_zmp,
+        exc_cc_grids_lam=exc_cc_grids_lam,
+        error_energy_lam=error_energy_lam,
         mol=mol.tostring(format="xyz"),
         charge=mol.charge,
         spin=mol.spin,
