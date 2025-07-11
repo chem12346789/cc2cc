@@ -5,7 +5,6 @@ import numpy as np
 import pyscf
 
 from cc2cc.utils import get_veff_modified_uks, diff_rho
-from cc2cc.utils import AU2KCALMOL
 from cc2cc.utils import TestData
 
 
@@ -69,9 +68,9 @@ def test_uks(
 
     dict_ = {
         "name": name,
-        "cc_ene": AU2KCALMOL * test_data.e_cc,
-        "scf_ene": AU2KCALMOL * e_scf,
-        "dft_ene": AU2KCALMOL * test_data.e_dft,
+        "cc_ene": test_data.e_cc,
+        "scf_ene": e_scf,
+        "dft_ene": test_data.e_dft,
         "error_scf_ele": error_scf_ele,
         "error_dft_ele": error_dft_ele,
         "error_scf_dip": error_scf_dip,
@@ -92,8 +91,8 @@ def test_uks(
     if args.if_disp:
         dict_.update(
             {
-                "delta_d3zero": AU2KCALMOL * test_data.delta_e["d3zero"],
-                "delta_d3bj": AU2KCALMOL * test_data.delta_e["d3bj"],
+                "delta_d3zero": test_data.delta_e["d3zero"],
+                "delta_d3bj": test_data.delta_e["d3bj"],
             }
         )
     data_record.add_data(dict_)

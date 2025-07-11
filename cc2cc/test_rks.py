@@ -5,7 +5,6 @@ import numpy as np
 import pyscf
 
 from cc2cc.utils import get_veff_modified_rks, diff_rho
-from cc2cc.utils import AU2KCALMOL
 from cc2cc.utils import TestData
 
 
@@ -76,9 +75,9 @@ def test_rks(
         "time_cc": test_data.time_cc,
         "time_dft": test_data.time_dft,
         "time_ai": time_ai,
-        "cc_ene": AU2KCALMOL * test_data.e_cc,
-        "scf_ene": AU2KCALMOL * e_scf,
-        "dft_ene": AU2KCALMOL * test_data.e_dft,
+        "cc_ene": test_data.e_cc,
+        "scf_ene": e_scf,
+        "dft_ene": test_data.e_dft,
         "cc_dipole_x": test_data.cc_dipole[0],
         "cc_dipole_y": test_data.cc_dipole[1],
         "cc_dipole_z": test_data.cc_dipole[2],
@@ -92,8 +91,8 @@ def test_rks(
     if args.if_disp:
         dict_.update(
             {
-                "delta_d3zero": AU2KCALMOL * test_data.delta_e["d3zero"],
-                "delta_d3bj": AU2KCALMOL * test_data.delta_e["d3bj"],
+                "delta_d3zero": test_data.delta_e["d3zero"],
+                "delta_d3bj": test_data.delta_e["d3bj"],
             }
         )
     data_record.add_data(dict_)

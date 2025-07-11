@@ -18,7 +18,6 @@ __all__ = [
     "train_model",
     "test_rks",
     "test_uks",
-    "extend",
     "add_args",
     #
     "MAIN_PATH",
