@@ -13,8 +13,8 @@ import pyscf.gto
 from cc2cc.utils.basis import gen_basis
 from cc2cc.utils.rotate import rotate
 
-AU2KCALMOL = 627.5096080306
-AU2DEBYE = 2.541746
+AU2KCALMOL = 627.5094733748099
+AU2DEBYE = 2.541746472
 dataset = {}
 with importlib.resources.path("cc2cc", "utils") as resource_path:
     for dataset_name in Path(os.fspath(resource_path)).rglob("*.json"):
