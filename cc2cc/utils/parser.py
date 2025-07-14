@@ -195,10 +195,11 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--rho_dft",
-        type=str2bool,
-        default=True,
-        help="Whether to use the DFT density. ",
+        "--rho_input",
+        type=str,
+        default="dft",
+        choices=["dft", "cc", "zmp"],
+        help="Type of input density. ",
     )
 
     parser.add_argument(

@@ -101,13 +101,14 @@ class TestData:
         if if_disp:
             self.delta_e = {}
             for disp in ["d3zero", "d3bj"]:
-                if not (
-                    f"dm1_dft_{disp}" in data_frame
-                    and f"e_dft_{disp}" in data_frame
-                    and f"dft_dipole_{disp}" in data_frame
-                    and f"time_dft_{disp}" in data_frame
-                    and f"grad_dft_{disp}" in data_frame
-                ):
+                # if not (
+                #     f"dm1_dft_{disp}" in data_frame
+                #     and f"e_dft_{disp}" in data_frame
+                #     and f"dft_dipole_{disp}" in data_frame
+                #     and f"time_dft_{disp}" in data_frame
+                #     and f"grad_dft_{disp}" in data_frame
+                # ):
+                if True:
                     print(f"Dispersion {disp} not found in data, generating...")
                     if mol.spin == 0:
                         data_frame_ks = self.test_mol_rks(disp=disp, if_grad=if_grad)
@@ -252,11 +253,11 @@ class TestData:
         """
         time_start = timer()
         mdft = pyscf.scf.RKS(self.mol)
-        mdft.xc = self.xc_code
         if disp is not None:
-            mdft.disp = disp
+            mdft.xc = f"{self.xc_code}-{disp}"
             name_disp = f"_{disp}"
         else:
+            mdft.xc = self.xc_code
             name_disp = ""
         mdft.max_cycle = 250
         mdft.kernel(dm0=self.mf_dm1)
@@ -289,11 +290,11 @@ class TestData:
         """
         time_start = timer()
         mdft = pyscf.scf.UKS(self.mol)
-        mdft.xc = self.xc_code
         if disp is not None:
-            mdft.disp = disp
+            mdft.xc = f"{self.xc_code}-{disp}"
             name_disp = f"_{disp}"
         else:
+            mdft.xc = self.xc_code
             name_disp = ""
         mdft.max_cycle = 250
         mdft.kernel(dm0=self.mf_dm1)

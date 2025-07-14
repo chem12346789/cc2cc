@@ -66,12 +66,6 @@ ZMPLIST = [
     4194304,
     8388608,
     16777216,
-    # 33554432,
-    # 67108864,
-    # 134217728,
-    # 268435456,
-    # 536870912,
-    # 1073741824,
 ]
 
 
@@ -212,8 +206,8 @@ def basic(mz, mol):
     mz.diis_space = 40
     mz.level_shift = 0.2
     mz.max_cycle = 400
-    mz.conv_tol_dm = 1e-7
-    mz.conv_tol_diis = 1e-5
+    mz.conv_tol_dm = 1e-8
+    mz.conv_tol_diis = 1e-6
     mz.with_df = False
     mz.verbose = mz.mol.verbose
     mz.stdout = mz.mol.stdout
@@ -471,16 +465,15 @@ class UZMP:
             self.J = self.mf.get_jk(self.mol, self.dm)[0]
 
             self.Fa = self.F0[0] + 2 * l * (self.J[0] - self.J_tar[0])
-            self.Fb = self.F0[1] + 2 * l * (self.J[1] - self.J_tar[1])
-
             self.Fa = scf.hf.level_shift(self.S, self.dm[0], self.Fa, self.level_shift)
-            self.Fb = scf.hf.level_shift(self.S, self.dm[1], self.Fb, self.level_shift)
-
             self.Fa, diis_e_a = self.zdiis_a.extrapolate(cycle, self.Fa, self.dm[0])
-            self.Fb, diis_e_b = self.zdiis_b.extrapolate(cycle, self.Fb, self.dm[1])
-
             e_a, c_a = scf.hf.eig(self.Fa, self.S)
+
+            self.Fb = self.F0[1] + 2 * l * (self.J[1] - self.J_tar[1])
+            self.Fb = scf.hf.level_shift(self.S, self.dm[1], self.Fb, self.level_shift)
+            self.Fb, diis_e_b = self.zdiis_b.extrapolate(cycle, self.Fb, self.dm[1])
             e_b, c_b = scf.hf.eig(self.Fb, self.S)
+
             self.mo_energy = np.array((e_a, e_b))
             self.mo_coeff = np.array((c_a, c_b))
 

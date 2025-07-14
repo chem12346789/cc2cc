@@ -20,7 +20,7 @@ class LambdaRKS(RKS):
     that can be used to scale the dipole potential contribution in the effective potential calculation.
     """
 
-    def __init__(self, mol, dm_tar, xc="LDA,VWN", lambda_rho=0.0, lambda_dip=0.0):
+    def __init__(self, mol, dm_tar, xc="LDA,VWN", lambda_rho=0.0):
         """
         Initialize the LambdaRKS class with a lambda parameter.
 
@@ -29,41 +29,32 @@ class LambdaRKS(RKS):
         super().__init__(mol, xc=xc)
         self.grids.build()
         self.lambda_rho = lambda_rho
-        self.lambda_dip = lambda_dip
-        self.ao_0 = pyscf.dft.numint.eval_ao(mol, self.grids.coords)
-        self.rho_tar = pyscf.dft.numint.eval_rho(mol, self.ao_0, dm_tar, xctype="LDA")
+        self.dm_tar = dm_tar
+        self.vxc = None
+
+    def reset_vxc(self):
+        """
+        Reset the xc functional to a new one.
+        """
+        self.vxc = None
 
     def get_veff(self, mol=None, dm=None, dm_last=0, vhf_last=0, hermi=1):
         """
         modified get_veff method to include a lambda parameter.
         """
-        vxc = get_veff_rks(
-            self, mol=mol, dm=dm, dm_last=dm_last, vhf_last=vhf_last, hermi=hermi
-        )
-
-        rho_dm = pyscf.dft.numint.eval_rho(mol, self.ao_0, dm, xctype="LDA")
-        rho_diff = (
-            (rho_dm - self.rho_tar) + (rho_dm - self.rho_tar) + (rho_dm - self.rho_tar)
-        )
-        dip_diff = (
-            (rho_dm - self.rho_tar) * self.grids.coords[:, 0] ** 2
-            + (rho_dm - self.rho_tar) * self.grids.coords[:, 1] ** 2
-            + (rho_dm - self.rho_tar) * self.grids.coords[:, 2] ** 2
-        )
-        v_p_rho = pyscf.dft.numint.eval_mat(
-            mol, self.ao_0, self.grids.weights, rho_diff, rho_diff
-        )
-        v_p_dip = pyscf.dft.numint.eval_mat(
-            mol, self.ao_0, self.grids.weights, dip_diff, dip_diff
-        )
-        vxc_new = vxc + self.lambda_rho * v_p_rho + self.lambda_dip * v_p_dip
+        if self.vxc is None:
+            self.vxc = get_veff_rks(
+                self, mol=mol, dm=dm, dm_last=dm_last, vhf_last=vhf_last, hermi=hermi
+            )
+        delta_j = self.get_j(mol, dm - self.dm_tar, hermi=hermi)
+        vxc_new = self.vxc + self.lambda_rho * delta_j
 
         vxc = lib.tag_array(
             vxc_new,
-            ecoul=vxc.ecoul,
-            exc=vxc.exc,
-            vj=vxc.vj,
-            vk=vxc.vk,
+            ecoul=self.vxc.ecoul,
+            exc=self.vxc.exc,
+            vj=self.vxc.vj,
+            vk=self.vxc.vk,
         )
 
         return vxc
@@ -86,69 +77,33 @@ class LambdaUKS(UKS):
         self.grids.build()
         self.lambda_rho = lambda_rho
         self.lambda_dip = lambda_dip
-        self.ao_0 = pyscf.dft.numint.eval_ao(mol, self.grids.coords)
         assert dm_tar.ndim == 3, "dm_tar must be a 3D array"
-        self.rho_a_tar = pyscf.dft.numint.eval_rho(
-            mol, self.ao_0, dm_tar[0], xctype="LDA"
-        )
-        self.rho_b_tar = pyscf.dft.numint.eval_rho(
-            mol, self.ao_0, dm_tar[1], xctype="LDA"
-        )
+        self.dm_tar = dm_tar
+        self.vxc = None
+
+    def reset_vxc(self):
+        """
+        Reset the xc functional to a new one.
+        """
+        self.vxc = None
 
     def get_veff(self, mol=None, dm=None, dm_last=0, vhf_last=0, hermi=1):
         """
         modified get_veff method to include a lambda parameter.
         """
-        vxc = get_veff_uks(
-            self, mol=mol, dm=dm, dm_last=dm_last, vhf_last=vhf_last, hermi=hermi
-        )
-
-        rho_a_dm = pyscf.dft.numint.eval_rho(mol, self.ao_0, dm[0], xctype="LDA")
-        rho_b_dm = pyscf.dft.numint.eval_rho(mol, self.ao_0, dm[1], xctype="LDA")
-        rho_a_diff = (
-            (rho_a_dm - self.rho_a_tar)
-            + (rho_a_dm - self.rho_a_tar)
-            + (rho_a_dm - self.rho_a_tar)
-        )
-        rho_b_diff = (
-            (rho_b_dm - self.rho_b_tar)
-            + (rho_b_dm - self.rho_b_tar)
-            + (rho_b_dm - self.rho_b_tar)
-        )
-        dip_a_diff = (
-            (rho_a_dm - self.rho_a_tar) * self.grids.coords[:, 0] ** 2
-            + (rho_a_dm - self.rho_a_tar) * self.grids.coords[:, 1] ** 2
-            + (rho_a_dm - self.rho_a_tar) * self.grids.coords[:, 2] ** 2
-        )
-        dip_b_diff = (
-            (rho_b_dm - self.rho_b_tar) * self.grids.coords[:, 0] ** 2
-            + (rho_b_dm - self.rho_b_tar) * self.grids.coords[:, 1] ** 2
-            + (rho_b_dm - self.rho_b_tar) * self.grids.coords[:, 2] ** 2
-        )
-        v_p_a_rho = pyscf.dft.numint.eval_mat(
-            mol, self.ao_0, self.grids.weights, rho_a_diff, rho_a_diff
-        )
-        v_p_b_rho = pyscf.dft.numint.eval_mat(
-            mol, self.ao_0, self.grids.weights, rho_b_diff, rho_b_diff
-        )
-        v_p_a_dip = pyscf.dft.numint.eval_mat(
-            mol, self.ao_0, self.grids.weights, dip_a_diff, dip_a_diff
-        )
-        v_p_b_dip = pyscf.dft.numint.eval_mat(
-            mol, self.ao_0, self.grids.weights, dip_b_diff, dip_b_diff
-        )
-        vxc_new = (
-            vxc
-            + self.lambda_rho * np.array([v_p_a_rho, v_p_b_rho])
-            + self.lambda_dip * np.array([v_p_a_dip, v_p_b_dip])
-        )
+        if self.vxc is None:
+            self.vxc = get_veff_uks(
+                self, mol=mol, dm=dm, dm_last=dm_last, vhf_last=vhf_last, hermi=hermi
+            )
+        delta_j = self.get_j(mol, dm - self.dm_tar, hermi=hermi)
+        vxc_new = self.vxc + self.lambda_rho * delta_j
 
         vxc = lib.tag_array(
             vxc_new,
-            ecoul=vxc.ecoul,
-            exc=vxc.exc,
-            vj=vxc.vj,
-            vk=vxc.vk,
+            ecoul=self.vxc.ecoul,
+            exc=self.vxc.exc,
+            vj=self.vxc.vj,
+            vk=self.vxc.vk,
         )
 
         return vxc

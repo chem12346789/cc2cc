@@ -22,21 +22,30 @@ class DataBaseCenter(DataBase):
         """
         data = np.load(DATA_PATH / f"data_{name}.npz")
 
-        if rho_dft:
-            input_mat = data["rho_cube_dft"]
-        else:
-            input_mat = data["rho_cube_cc"]
         weight_mat = data["weights"]
-        output_mat = data["exc_cc_grids"]
+        if self.rho_input == "dft":
+            input_mat = data["rho_cube_dft"]
+            output_mat = data["exc_cc_grids"]
+            error_energy = data["error_energy"]
+        elif self.rho_input == "cc":
+            input_mat = data["rho_cube_cc"]
+            output_mat = data["exc_cc_grids"]
+            error_energy = data["error_energy"]
+        elif self.rho_input == "zmp":
+            input_mat = data["rho_cube_zmp"]
+            output_mat = data["exc_cc_grids_zmp"]
+            error_energy = data["error_energy_zmp"]
+        else:
+            raise ValueError(f"Unknown rho_input: {self.rho_input}")
 
         # print(f"Total energy real: {AU2KCALMOL * data['error_energy']}")
         # print(f"Total energy: {AU2KCALMOL * np.sum(output_mat * weight_mat)}")
         if (
-            AU2KCALMOL * abs(data["error_energy"] - np.sum(output_mat * weight_mat))
+            AU2KCALMOL * abs(error_energy - np.sum(output_mat * weight_mat))
             > 0.2 * mol_info["natm"]
         ):
             print(f"Error energy is too large: {name:>40}", flush=True)
-            return 0
+            return 0, {}
 
         input_ = []
         weight_ = []
@@ -74,7 +83,7 @@ class DataBaseCenter(DataBase):
         output_ = np.array(output_).reshape((-1, 1))
 
         if num_data_used == 0:
-            return 0
+            return 0, {}
 
         print(f"Total energy used: {AU2KCALMOL * total_ene_used}")
         print(f"Total data used for {name}: {num_data_used}", flush=True)
@@ -90,7 +99,7 @@ class DataBaseCenter(DataBase):
             "name": name,
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,
-            "data_weight": 1 / num_data_used if num_data_used > 0 else 0,
+            "data_weight": np.sqrt(num_data_used) if num_data_used > 0 else 0,
         }
 
         return num_data_used, data_dict
