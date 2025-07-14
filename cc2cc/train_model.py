@@ -55,7 +55,7 @@ def train_model(train_str_dict, eval_str_dict, args):
             "load": args.load,
             "jobid": os.environ.get("SLURM_JOB_ID"),
             "pid": os.getpid(),
-            "rho_dft": args.rho_dft,
+            "rho_input": args.rho_input,
             "checkpoint": modeldict.dir_checkpoint.stem,
             "loss_multiplier_abs": modeldict.loss_multiplier_abs,
             "loss_multiplier_atomic": modeldict.loss_multiplier_atomic,

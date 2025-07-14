@@ -159,6 +159,7 @@ def cc(mol, grids, name, cc_triple=False, check_convergence=True):
     mzmp = RZMP(mol, dm1_cc)
     mzmp.diis_space = 50
     mzmp.max_cycle = 1000
+    mzmp.guide = "b3lyp"
     mzmp.with_df = True
     for l in ZMPLIST:
         mzmp.level_shift = l * 0.25
@@ -166,28 +167,32 @@ def cc(mol, grids, name, cc_triple=False, check_convergence=True):
     dm1_zmp = mzmp.dm
     e_zmp = mdft.energy_tot(dm1_zmp)
 
-    # ldft = LambdaRKS(mol, dm1_cc, xc="b3lyp")
-    # ldft.kernel(mf.make_rdm1())
-    # ldft.diis_space = 50
-    # ldft.max_cycle = 1000
-    # for l in [2, 4, 8, 16, 32, 64]:
-    #     ldft.lambda_rho = 2 * l
-    #     ldft.lambda_dip = l
-    #     ldft.level_shift = l * 0.25
-    #     ldft.kernel(ldft.make_rdm1())
-    # dm1_lam = ldft.make_rdm1(ao_repr=True)
-    # e_lam = ldft.energy_tot(dm1_lam)
+    # mzmp = LambdaRKS(mol, dm1_cc, xc="b3lyp").density_fit()
+    # mzmp.kernel(mf.make_rdm1())
+    # mzmp.max_cycle = 1000
+    # mzmp.diis_space = 50
+    # mzmp.conv_tol = 1e-8
+    # mzmp.conv_tol_grad = 1e-5
+    # for l in ZMPLIST:
+    #     mzmp.lambda_rho = l
+    #     mzmp.level_shift = l * 0.25
+    #     mzmp_old = mzmp.make_rdm1()
+    #     mzmp.reset_vxc()
+    #     mzmp.kernel(mzmp_old)
+    #     print(
+    #         f"ZMP level shift: {l}, energy: {mzmp.e_tot:.6f}, "
+    #         f"diff rho: {diff_rho(mol, mzmp_old, mzmp.make_rdm1(), grids):.6f}"
+    #     )
+    # dm1_zmp = mzmp.make_rdm1(ao_repr=True)
+    # e_zmp = mdft.energy_tot(dm1_zmp)
 
     print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} (CCSD vs DFT)")
     print(f"{diff_rho(mol, dm1_cc, dm1_zmp, grids):.6f} (CCSD vs ZMP)")
-    # print(f"{diff_rho(mol, dm1_cc, dm1_lam, grids):.6f} (CCSD vs Lambda)")
     cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
     dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
     zmp_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_zmp, unit="A.U.")
-    # lam_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_lam, unit="A.U.")
     print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
     print(f"{np.linalg.norm(cc_dipole - zmp_dipole)} (CCSD vs ZMP)")
-    # print(f"{np.linalg.norm(cc_dipole - lam_dipole)} (CCSD vs Lambda)")
 
     error_energy_dft, exc_cc_grids_dft, rho_cc, rho_dft = get_dft_energy(
         mol,
@@ -215,23 +220,9 @@ def cc(mol, grids, name, cc_triple=False, check_convergence=True):
         e_cc,
     )
 
-    # error_energy_lam, exc_cc_grids_lam, rho_cc, rho_lam = get_dft_energy(
-    #     mol,
-    #     grids,
-    #     mf.mo_coeff,
-    #     dm1_lam,
-    #     ldft.mo_coeff,
-    #     e_lam,
-    #     dm1_cc,
-    #     dm1_cc_mo,
-    #     dm2_cc,
-    #     e_cc,
-    # )
-
     rho_cube_cc = grids.gen_cube_rho_rks(mol, dm1_cc, rho_cc, ni=mdft._numint)
     rho_cube_dft = grids.gen_cube_rho_rks(mol, dm1_dft, rho_dft, ni=mdft._numint)
     rho_cube_zmp = grids.gen_cube_rho_rks(mol, dm1_zmp, rho_zmp, ni=mdft._numint)
-    # rho_cube_lam = grids.gen_cube_rho_rks(mol, dm1_lam, rho_lam, ni=mdft._numint)
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",
         e_cc=e_cc,
@@ -239,14 +230,11 @@ def cc(mol, grids, name, cc_triple=False, check_convergence=True):
         rho_cube_cc=rho_cube_cc,
         rho_cube_dft=rho_cube_dft,
         rho_cube_zmp=rho_cube_zmp,
-        # rho_cube_lam=rho_cube_lam,
         weights=grids.weights,
         exc_cc_grids=exc_cc_grids_dft,
         error_energy=error_energy_dft,
         exc_cc_grids_zmp=exc_cc_grids_zmp,
         error_energy_zmp=error_energy_zmp,
-        # exc_cc_grids_lam=exc_cc_grids_lam,
-        # error_energy_lam=error_energy_lam,
         mol=mol.tostring(format="xyz"),
         charge=mol.charge,
         spin=mol.spin,

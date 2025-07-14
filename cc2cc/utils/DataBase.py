@@ -65,7 +65,7 @@ class DataBase:
             args: Arguments containing various settings for the database.
             shuffle (bool): Whether to shuffle the dataset.
         """
-        self.rho_dft = args.rho_dft
+        self.rho_input = args.rho_input
         if args.precision == "float64":
             self.dtype = torch.float64
         else:
