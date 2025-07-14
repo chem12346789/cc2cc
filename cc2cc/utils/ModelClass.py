@@ -60,10 +60,10 @@ class ModelClass:
             dist.init_process_group(backend="nccl")
             self.local_rank = int(os.environ["LOCAL_RANK"])
             self.verbose = dist.get_rank() == 0
+            torch.cuda.set_device(self.local_rank)
         else:
             self.local_rank = 0
             self.verbose = True
-        torch.cuda.set_device(self.local_rank)
 
     def init_model(self):
         """
