@@ -101,14 +101,14 @@ class TestData:
         if if_disp:
             self.delta_e = {}
             for disp in ["d3zero", "d3bj"]:
-                # if not (
-                #     f"dm1_dft_{disp}" in data_frame
-                #     and f"e_dft_{disp}" in data_frame
-                #     and f"dft_dipole_{disp}" in data_frame
-                #     and f"time_dft_{disp}" in data_frame
-                #     and f"grad_dft_{disp}" in data_frame
-                # ):
-                if True:
+                if not (
+                    f"dm1_dft_{disp}" in data_frame
+                    and f"e_dft_{disp}" in data_frame
+                    and f"dft_dipole_{disp}" in data_frame
+                    and f"time_dft_{disp}" in data_frame
+                    and f"grad_dft_{disp}" in data_frame
+                ):
+                # if True:
                     print(f"Dispersion {disp} not found in data, generating...")
                     if mol.spin == 0:
                         data_frame_ks = self.test_mol_rks(disp=disp, if_grad=if_grad)
