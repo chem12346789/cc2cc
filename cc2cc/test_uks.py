@@ -5,7 +5,7 @@ import numpy as np
 import pyscf
 
 from cc2cc.utils import get_veff_modified_uks, diff_rho
-from cc2cc.utils import TestData
+from cc2cc.utils import TestData, AU2KCALMOL
 
 
 def test_uks(
@@ -69,16 +69,17 @@ def test_uks(
 
     dict_ = {
         "name": name,
-        "cc_ene": test_data.e_cc,
-        "scf_ene": e_scf,
-        "dft_ene": test_data.e_dft,
+        "delta_scf": AU2KCALMOL * (e_scf - test_data.e_cc),
+        "time_cc": test_data.time_cc,
+        "time_ai": time_ai,
+        "time_dft": test_data.time_dft,
         "error_scf_ele": error_scf_ele,
         "error_dft_ele": error_dft_ele,
         "error_scf_dip": error_scf_dip,
         "error_dft_dip": error_dft_dip,
-        "time_cc": test_data.time_cc,
-        "time_dft": test_data.time_dft,
-        "time_ai": time_ai,
+        "cc_ene": test_data.e_cc,
+        "scf_ene": e_scf,
+        "dft_ene": test_data.e_dft,
         "cc_dipole_x": test_data.cc_dipole[0],
         "cc_dipole_y": test_data.cc_dipole[1],
         "cc_dipole_z": test_data.cc_dipole[2],

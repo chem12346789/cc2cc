@@ -5,7 +5,7 @@ import numpy as np
 import pyscf
 
 from cc2cc.utils import get_veff_modified_rks, diff_rho
-from cc2cc.utils import TestData
+from cc2cc.utils import TestData, AU2KCALMOL
 
 
 def test_rks(
@@ -69,13 +69,14 @@ def test_rks(
 
     dict_ = {
         "name": name,
+        "delta_scf": AU2KCALMOL * (e_scf - test_data.e_cc),
+        "time_cc": test_data.time_cc,
+        "time_ai": time_ai,
+        "time_dft": test_data.time_dft,
         "error_scf_ele": error_scf_ele,
         "error_dft_ele": error_dft_ele,
         "error_scf_dip": error_scf_dip,
         "error_dft_dip": error_dft_dip,
-        "time_cc": test_data.time_cc,
-        "time_dft": test_data.time_dft,
-        "time_ai": time_ai,
         "cc_ene": test_data.e_cc,
         "scf_ene": e_scf,
         "dft_ene": test_data.e_dft,
