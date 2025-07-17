@@ -42,7 +42,7 @@ def test_uks(
         e_scf = test_data.e_cc
     else:
         mdft.max_cycle = 50
-        mdft.conv_tol = 1e-6
+        mdft.conv_tol = 1e-7
         # if mol.natm == 1:
         #     # For single atom, use the dm from the test data
         #     mdft.kernel(dm0=test_data.mf_dm1)
