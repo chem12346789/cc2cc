@@ -8,6 +8,7 @@ train_str_list = [
     "molecule0",
     "molecule1",
     "molecule2",
+    # "molecule3-ALK8",
     "molecule3-ALK8",
     "molecule3-HEAVYSB11",
     "molecule3-W4_11",
