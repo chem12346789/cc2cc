@@ -22,8 +22,9 @@ if __name__ == "__main__":
 
     # 1. Init the model
     modeldict = ModelClass(args)
-    modeldict.init_model()
-    modeldict.eval()
+    if "test" not in args.load:
+        modeldict.init_model()
+        modeldict.eval()
 
     # 2. Test loop
     if args.disp is None:

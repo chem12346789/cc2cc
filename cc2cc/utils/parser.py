@@ -483,7 +483,7 @@ def add_args(parser: argparse.ArgumentParser):
     else:
         raise ValueError(f"Invalid device: {args.device}. Please use 'cuda' or 'cpu'.")
 
-    print("Arguments:")
+    print("Arguments:", flush=True)
     print(f"Name of molecule: {args.name_mol_input}")
     print(f"Distance list: {args.distance_list}")
     print(f"Extend atom: {args.extend_atom}")
