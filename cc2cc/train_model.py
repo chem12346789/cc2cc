@@ -78,7 +78,7 @@ def train_model(train_str_dict, eval_str_dict, args):
             project="DFT2CC",
             resume="allow",
             name="dft2cc",
-            dir="/home/chenzihao/raid/tmp",
+            dir="~/wandb",
             config=experiment_dict,
             allow_val_change=True,
         )

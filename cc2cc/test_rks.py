@@ -5,7 +5,7 @@ import numpy as np
 import pyscf
 
 from cc2cc.utils import get_veff_modified_rks, diff_rho
-from cc2cc.utils import TestData
+from cc2cc.utils import TestData, AU2KCALMOL
 
 
 def test_rks(
@@ -42,12 +42,13 @@ def test_rks(
         e_scf = test_data.e_cc
     else:
         mdft.max_cycle = 50
-        mdft.conv_tol = 1e-6
-        if mol.natm == 1:
-            # For single atom, use the dm from the test data
-            mdft.kernel(dm0=test_data.mf_dm1)
-        else:
-            mdft.kernel()
+        mdft.conv_tol = 1e-7
+        # if mol.natm == 1:
+        #     # For single atom, use the dm from the test data
+        #     mdft.kernel(dm0=test_data.mf_dm1)
+        # else:
+        #     mdft.kernel()
+        mdft.kernel(dm0=test_data.dm1_dft)
         dm1_scf = mdft.make_rdm1()
         e_scf = mdft.e_tot
 
@@ -68,13 +69,14 @@ def test_rks(
 
     dict_ = {
         "name": name,
+        "delta_scf": AU2KCALMOL * (e_scf - test_data.e_cc),
+        "time_cc": test_data.time_cc,
+        "time_ai": time_ai,
+        "time_dft": test_data.time_dft,
         "error_scf_ele": error_scf_ele,
         "error_dft_ele": error_dft_ele,
         "error_scf_dip": error_scf_dip,
         "error_dft_dip": error_dft_dip,
-        "time_cc": test_data.time_cc,
-        "time_dft": test_data.time_dft,
-        "time_ai": time_ai,
         "cc_ene": test_data.e_cc,
         "scf_ene": e_scf,
         "dft_ene": test_data.e_dft,

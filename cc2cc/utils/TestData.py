@@ -101,14 +101,14 @@ class TestData:
         if if_disp:
             self.delta_e = {}
             for disp in ["d3zero", "d3bj"]:
-                # if not (
-                #     f"dm1_dft_{disp}" in data_frame
-                #     and f"e_dft_{disp}" in data_frame
-                #     and f"dft_dipole_{disp}" in data_frame
-                #     and f"time_dft_{disp}" in data_frame
-                #     and f"grad_dft_{disp}" in data_frame
-                # ):
-                if True:
+                if not (
+                    f"dm1_dft_{disp}" in data_frame
+                    and f"e_dft_{disp}" in data_frame
+                    and f"dft_dipole_{disp}" in data_frame
+                    and f"time_dft_{disp}" in data_frame
+                    and f"grad_dft_{disp}" in data_frame
+                ):
+                    # if True:
                     print(f"Dispersion {disp} not found in data, generating...")
                     if mol.spin == 0:
                         data_frame_ks = self.test_mol_rks(disp=disp, if_grad=if_grad)
@@ -139,6 +139,7 @@ class TestData:
         mf = pyscf.scf.RHF(self.mol)
         mf.max_cycle = 200
         mf.diis_space = 12
+        mf.verbose = 4
 
         if "C60ISO" in self.name or "UPU23" in self.name:
             mf = mf.density_fit().run()
@@ -155,6 +156,7 @@ class TestData:
             mycc.direct = True
             mycc.max_cycle = 200
 
+        mycc.verbose = 4
         _, t1, t2 = mycc.kernel()
         if mycc.converged is False:
             raise ValueError("CCSD not converged.")
@@ -197,6 +199,7 @@ class TestData:
         mf = pyscf.scf.UHF(self.mol)
         mf.max_cycle = 200
         mf.diis_space = 12
+        mf.verbose = 4
 
         if "C60ISO" in self.name or "UPU23" in self.name:
             mf = mf.density_fit().run()
@@ -213,6 +216,7 @@ class TestData:
             mycc.direct = True
             mycc.max_cycle = 200
 
+        mycc.verbose = 4
         _, t1, t2 = mycc.kernel()
         if mycc.converged is False:
             raise ValueError("UCCSD not converged.")
@@ -260,6 +264,7 @@ class TestData:
             mdft.xc = self.xc_code
             name_disp = ""
         mdft.max_cycle = 250
+        mdft.verbose = 4
         mdft.kernel(dm0=self.mf_dm1)
         if mdft.converged is False:
             raise ValueError("RKS not converged.")
@@ -297,6 +302,7 @@ class TestData:
             mdft.xc = self.xc_code
             name_disp = ""
         mdft.max_cycle = 250
+        mdft.verbose = 4
         mdft.kernel(dm0=self.mf_dm1)
         if mdft.converged is False:
             raise ValueError("UKS not converged.")

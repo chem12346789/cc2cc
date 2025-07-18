@@ -57,13 +57,18 @@ class ModelClass:
 
         # for distributed training
         if self.args.distributed:
-            dist.init_process_group(backend="nccl")
             self.local_rank = int(os.environ["LOCAL_RANK"])
+            torch.cuda.set_device(self.local_rank)
+            dist.init_process_group(
+                backend="nccl",
+                rank=self.local_rank,
+                world_size=torch.cuda.device_count(),
+                device_id=torch.device("cuda", self.local_rank),
+            )
             self.verbose = dist.get_rank() == 0
         else:
             self.local_rank = 0
             self.verbose = True
-        torch.cuda.set_device(self.local_rank)
 
     def init_model(self):
         """
@@ -303,14 +308,7 @@ class ModelClass:
                 self.optimizer.zero_grad(set_to_none=True)
                 self.update_counter = 0
 
-            if self.args.distributed:
-                dist.barrier()
-                output_data_record = [{} for _ in range(dist.get_world_size())]
-                dist.all_gather_object(output_data_record, data_record)
-                if self.local_rank == 0:
-                    data_record_l.extend(output_data_record)
-            else:
-                data_record_l.append(data_record)
+            data_record_l.append(data_record)
 
         return data_record_l
 
@@ -328,14 +326,7 @@ class ModelClass:
             with torch.no_grad():
                 data_record = self.loss(batch, if_train=False)
 
-            if self.args.distributed:
-                dist.barrier()
-                output_data_record = [{} for _ in range(dist.get_world_size())]
-                dist.all_gather_object(output_data_record, data_record)
-                if self.local_rank == 0:
-                    data_record_l.extend(output_data_record)
-            else:
-                data_record_l.append(data_record)
+            data_record_l.append(data_record)
 
         return data_record_l
 
