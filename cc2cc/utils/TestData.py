@@ -153,7 +153,7 @@ class TestData:
             mf.kernel()
             self.mf_dm1 = mf.make_rdm1()
             mycc = pyscf.cc.CCSD(mf)
-            mycc.direct = True
+            # mycc.direct = True
             mycc.max_cycle = 200
 
         mycc.verbose = 4
@@ -213,7 +213,7 @@ class TestData:
             mf.kernel()
             self.mf_dm1 = mf.make_rdm1()
             mycc = pyscf.cc.UCCSD(mf)
-            mycc.direct = True
+            # mycc.direct = True
             mycc.max_cycle = 200
 
         mycc.verbose = 4
