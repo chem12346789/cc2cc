@@ -96,8 +96,25 @@ def train_model(train_str_dict, eval_str_dict, args):
         train_data_record_l = modeldict.train_model()
         modeldict.scheduler.step()
 
+        if modeldict.args.distributed:
+            dist.barrier()
+            train_data_record_l_gathered = [[] for _ in range(dist.get_world_size())]
+            dist.all_gather_object(train_data_record_l_gathered, train_data_record_l)
+            if modeldict.local_rank == 0:
+                train_data_record_l = []
+                for data in train_data_record_l_gathered:
+                    train_data_record_l.extend(data)
+
         if epoch % args.eval_step == 0:
             eval_data_record_l = modeldict.eval_model()
+            if modeldict.args.distributed:
+                dist.barrier()
+                eval_data_record_l_gathered = [[] for _ in range(dist.get_world_size())]
+                dist.all_gather_object(eval_data_record_l_gathered, eval_data_record_l)
+                if modeldict.local_rank == 0:
+                    eval_data_record_l = []
+                    for data in eval_data_record_l_gathered:
+                        eval_data_record_l.extend(data)
 
         if modeldict.local_rank == 0:
             experiment_dict = {

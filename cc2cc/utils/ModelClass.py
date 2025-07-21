@@ -112,6 +112,9 @@ class ModelClass:
                 map_location=self.device,
                 weights_only=True,
             )
+            if "module" in list(state_dict.keys())[0]:
+                # For backward compatibility with old checkpoints
+                state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
             self.model.load_state_dict(state_dict)
         else:
             print(f"Model {load_path} not found, starting from scratch.")

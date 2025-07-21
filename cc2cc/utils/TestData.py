@@ -74,7 +74,6 @@ class TestData:
             data_frame.update(data_frame_ks)
 
             np.savez_compressed(path_to_data / f"{name}_cc.npz", **data_frame)
-            return
 
         print(f"Data for {name} loaded from file.")
         mol_corr = data_frame["mol_corr"]
@@ -153,7 +152,7 @@ class TestData:
             mf.kernel()
             self.mf_dm1 = mf.make_rdm1()
             mycc = pyscf.cc.CCSD(mf)
-            mycc.direct = True
+            # mycc.direct = True
             mycc.max_cycle = 200
 
         mycc.verbose = 4
@@ -213,7 +212,7 @@ class TestData:
             mf.kernel()
             self.mf_dm1 = mf.make_rdm1()
             mycc = pyscf.cc.UCCSD(mf)
-            mycc.direct = True
+            # mycc.direct = True
             mycc.max_cycle = 200
 
         mycc.verbose = 4
