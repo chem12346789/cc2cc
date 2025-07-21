@@ -74,7 +74,6 @@ class TestData:
             data_frame.update(data_frame_ks)
 
             np.savez_compressed(path_to_data / f"{name}_cc.npz", **data_frame)
-            return
 
         print(f"Data for {name} loaded from file.")
         mol_corr = data_frame["mol_corr"]
