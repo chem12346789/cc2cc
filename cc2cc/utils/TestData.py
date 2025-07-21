@@ -65,6 +65,7 @@ class TestData:
             data_frame = {"mol_corr": mol.atom_coords(), "mf_dm1": self.mf_dm1}
 
             if mol.spin == 0:
+                self.test_mol_rcc
                 data_frame_cc = self.test_mol_rcc(if_grad=if_grad, cc_triple=cc_triple)
                 data_frame_ks = self.test_mol_rks(disp=None, if_grad=if_grad)
             else:
