@@ -67,10 +67,10 @@ class TestData:
             if mol.spin == 0:
                 self.test_mol_rcc
                 data_frame_cc = self.test_mol_rcc(if_grad=if_grad, cc_triple=cc_triple)
-                data_frame_ks = self.test_mol_rks(disp=None, if_grad=if_grad)
+                data_frame_ks = self.test_mol_rks(if_grad=if_grad, disp=None)
             else:
                 data_frame_cc = self.test_mol_ucc(if_grad=if_grad, cc_triple=cc_triple)
-                data_frame_ks = self.test_mol_uks(disp=None, if_grad=if_grad)
+                data_frame_ks = self.test_mol_uks(if_grad=if_grad, disp=None)
             data_frame.update(data_frame_cc)
             data_frame.update(data_frame_ks)
 
@@ -111,9 +111,9 @@ class TestData:
                     # if True:
                     print(f"Dispersion {disp} not found in data, generating...")
                     if mol.spin == 0:
-                        data_frame_ks = self.test_mol_rks(disp=disp, if_grad=if_grad)
+                        data_frame_ks = self.test_mol_rks(if_grad=if_grad, disp=disp)
                     else:
-                        data_frame_ks = self.test_mol_uks(disp=disp, if_grad=if_grad)
+                        data_frame_ks = self.test_mol_uks(if_grad=if_grad, disp=disp)
 
                     data_frame.update(data_frame_ks)
                     np.savez_compressed(
@@ -251,7 +251,7 @@ class TestData:
             "grad_ccsd": grad_ccsd,
         }
 
-    def test_mol_rks(self, disp=None, if_grad=False):
+    def test_mol_rks(self, if_grad=False, disp=None):
         """
         Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected RKS molecule.
         """
@@ -289,7 +289,7 @@ class TestData:
             f"grad_dft{name_disp}": grad_dft,
         }
 
-    def test_mol_uks(self, disp=None, if_grad=False):
+    def test_mol_uks(self, if_grad=False, disp=None):
         """
         Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected UKS molecule.
         """
@@ -326,3 +326,49 @@ class TestData:
             f"time_dft{name_disp}": time_dft,
             f"grad_dft{name_disp}": grad_dft,
         }
+
+    def test_mol_orca(self, if_grad=False, cc_triple=False):
+        """
+        Generate 1-RDM, energy, dipole, and gradient for the molecule.
+        """
+        print(f"Generate data for {self.name}")
+
+        molecular_xyz = ""
+        for atom_info in self.mol._atom:
+            molecular_xyz += (
+                f"{atom_info[0]:<6}\t{atom_info[1][0]:<16.10}\t{atom_info[1][1]:<16.10}\t{atom_info[1][2]:<16.10}"
+                + "\n"
+            )
+
+        with open(f"tmp_mol/{self.name}.inp", "w", encoding="utf-8") as f:
+            f.write(
+                f"""! cc-pVDZ cc-pVDZ/C DLPNO-CCSD TightSCF
+        %method
+          WriteJSONPropertyfile True
+        end
+
+        %MDCI 
+          Density Unrelaxed
+        end
+
+        %pal
+          nprocs {os.environ.get("OMP_NUM_THREADS")}
+        end
+
+        %maxcore {os.environ.get("PYSCF_MAX_MEMORY")}
+
+        %coords
+        CTyp   xyz     # the type of coordinates = xyz or internal
+        Charge {self.mol.charge}       # the total charge of the molecule
+        Mult   {self.mol.spin+1}        # the multiplicity = 2S+1
+        Units  bohrs    # the unit of length = angs or bohrs
+
+        # the subblock coords is for the actual coordinates
+        # for CTyp=xyz
+        coords
+        {molecular_xyz}end
+        end
+        """
+            )
+
+        os.system(f"$(which orca) tmp_mol/{self.name}.inp > tmp_mol/{self.name}.out")
