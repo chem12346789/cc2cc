@@ -485,6 +485,7 @@ def add_args(parser: argparse.ArgumentParser):
 
     print("Arguments:", flush=True)
     print(f"Name of molecule: {args.name_mol_input}")
+    print(f"List of molecule: {args.name_mol}")
     print(f"Distance list: {args.distance_list}")
     print(f"Extend atom: {args.extend_atom}")
     print(f"Extend xyz: {args.extend_xyz}")

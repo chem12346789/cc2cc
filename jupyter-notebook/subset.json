@@ -9,9 +9,6 @@
         ]
     },
     "full_subset_dict": {
-        "test": [
-            "AHB21"
-        ],
         "sub1": [
             "W4_11",
             "G21EA",

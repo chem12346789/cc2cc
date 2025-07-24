@@ -1,6 +1,7 @@
 from timeit import default_timer as timer
 import os
 import numpy as np
+import json
 
 import pyscf
 from pyscf.grad import ccsd as ccsd_grad
@@ -56,20 +57,28 @@ class TestData:
         else:
             path_to_data = DATA_TEST_NO_GRAD_PATH
 
-        if (path_to_data / f"{name}_cc.npz").exists():
-            data_frame = dict(
-                np.load(path_to_data / f"{name}_cc.npz", allow_pickle=True).items()
-            )
-        else:
-            self.mf_dm1 = None
-            data_frame = {"mol_corr": mol.atom_coords(), "mf_dm1": self.mf_dm1}
+        if not (path_to_data / f"{name}_cc.npz").exists():
+            data_frame = {"mol_corr": mol.atom_coords()}
 
             if mol.spin == 0:
-                self.test_mol_rcc
-                data_frame_cc = self.test_mol_rcc(if_grad=if_grad, cc_triple=cc_triple)
+                if "C60ISO" in self.name or "UPU23" in self.name:
+                    data_frame_cc = self.test_mol_orca(
+                        if_grad=if_grad, cc_triple=cc_triple
+                    )
+                else:
+                    data_frame_cc = self.test_mol_rcc(
+                        if_grad=if_grad, cc_triple=cc_triple
+                    )
                 data_frame_ks = self.test_mol_rks(if_grad=if_grad, disp=None)
             else:
-                data_frame_cc = self.test_mol_ucc(if_grad=if_grad, cc_triple=cc_triple)
+                if "C60ISO" in self.name or "UPU23" in self.name:
+                    data_frame_cc = self.test_mol_orca(
+                        if_grad=if_grad, cc_triple=cc_triple
+                    )
+                else:
+                    data_frame_cc = self.test_mol_ucc(
+                        if_grad=if_grad, cc_triple=cc_triple
+                    )
                 data_frame_ks = self.test_mol_uks(if_grad=if_grad, disp=None)
             data_frame.update(data_frame_cc)
             data_frame.update(data_frame_ks)
@@ -77,6 +86,9 @@ class TestData:
             np.savez_compressed(path_to_data / f"{name}_cc.npz", **data_frame)
 
         print(f"Data for {name} loaded from file.")
+        data_frame = dict(
+            np.load(path_to_data / f"{name}_cc.npz", allow_pickle=True).items()
+        )
         mol_corr = data_frame["mol_corr"]
 
         if np.linalg.norm(mol.atom_coords() - mol_corr, ord=1) > 1e-6:
@@ -141,20 +153,11 @@ class TestData:
         mf.diis_space = 12
         mf.verbose = 4
 
-        if "C60ISO" in self.name or "UPU23" in self.name:
-            mf = mf.density_fit().run()
-            self.mf_dm1 = mf.make_rdm1()
-            mycc = pyscf.cc.CCSD(mf)
-            mycc.max_cycle = 200
-            # mycc.direct = True # This is not working for density_fit
-            mycc.set_frozen()
-            print(f"Number of core orbital frozen: {mycc.frozen}")
-        else:
-            mf.kernel()
-            self.mf_dm1 = mf.make_rdm1()
-            mycc = pyscf.cc.CCSD(mf)
-            # mycc.direct = True
-            mycc.max_cycle = 200
+        mf.kernel()
+        mf_dm1 = mf.make_rdm1()
+        mycc = pyscf.cc.CCSD(mf)
+        # mycc.direct = True
+        mycc.max_cycle = 200
 
         mycc.verbose = 4
         _, t1, t2 = mycc.kernel()
@@ -182,6 +185,7 @@ class TestData:
             grad_ccsd = None
         time_cc = timer() - time_start
         return {
+            "mf_dm1": mf_dm1,
             "dm1_cc": dm1_cc,
             "e_cc": e_cc,
             "cc_dipole": cc_dipole,
@@ -201,20 +205,11 @@ class TestData:
         mf.diis_space = 12
         mf.verbose = 4
 
-        if "C60ISO" in self.name or "UPU23" in self.name:
-            mf = mf.density_fit().run()
-            self.mf_dm1 = mf.make_rdm1()
-            mycc = pyscf.cc.UCCSD(mf)
-            mycc.max_cycle = 200
-            # mycc.direct = True # This is not working for density_fit
-            mycc.set_frozen()
-            print(f"Number of core orbital frozen: {mycc.frozen}")
-        else:
-            mf.kernel()
-            self.mf_dm1 = mf.make_rdm1()
-            mycc = pyscf.cc.UCCSD(mf)
-            # mycc.direct = True
-            mycc.max_cycle = 200
+        mf.kernel()
+        mf_dm1 = mf.make_rdm1()
+        mycc = pyscf.cc.UCCSD(mf)
+        # mycc.direct = True
+        mycc.max_cycle = 200
 
         mycc.verbose = 4
         _, t1, t2 = mycc.kernel()
@@ -244,6 +239,7 @@ class TestData:
             grad_ccsd = None
         time_cc = timer() - time_start
         return {
+            "mf_dm1": mf_dm1,
             "dm1_cc": dm1_cc,
             "e_cc": e_cc,
             "cc_dipole": cc_dipole,
@@ -265,7 +261,10 @@ class TestData:
             name_disp = ""
         mdft.max_cycle = 250
         mdft.verbose = 4
-        mdft.kernel(dm0=self.mf_dm1)
+        if len(self.mf_dm1.shape) == 2:
+            mdft.kernel(dm0=self.mf_dm1)
+        else:
+            mdft.kernel()
         if mdft.converged is False:
             raise ValueError("RKS not converged.")
         dm1_dft = mdft.make_rdm1(ao_repr=True)
@@ -303,7 +302,10 @@ class TestData:
             name_disp = ""
         mdft.max_cycle = 250
         mdft.verbose = 4
-        mdft.kernel(dm0=self.mf_dm1)
+        if len(self.mf_dm1.shape) == 3:
+            mdft.kernel(dm0=self.mf_dm1)
+        else:
+            mdft.kernel()
         if mdft.converged is False:
             raise ValueError("UKS not converged.")
         dm1_dft = mdft.make_rdm1(ao_repr=True)
@@ -327,9 +329,10 @@ class TestData:
             f"grad_dft{name_disp}": grad_dft,
         }
 
-    def test_mol_orca(self, if_grad=False, cc_triple=False):
+    def test_mol_orca(self, if_grad=False, cc_triple=False, maxcore=2000):
         """
         Generate 1-RDM, energy, dipole, and gradient for the molecule.
+        Note maxcore seem to be the memory per process/core, so it should be set to a smaller value.
         """
         print(f"Generate data for {self.name}")
 
@@ -340,22 +343,28 @@ class TestData:
                 + "\n"
             )
 
-        with open(f"tmp_mol/{self.name}.inp", "w", encoding="utf-8") as f:
+        if not os.path.exists(f"tmp_mol/{self.name}"):
+            os.makedirs(f"tmp_mol/{self.name}")
+
+        with open(f"tmp_mol/{self.name}/mol.inp", "w", encoding="utf-8") as f:
             f.write(
                 f"""! cc-pVDZ cc-pVDZ/C DLPNO-CCSD TightSCF
+
         %method
           WriteJSONPropertyfile True
+          FrozenCore FC_NONE
         end
+
+        %maxcore {maxcore}
 
         %MDCI 
           Density Unrelaxed
+          MaxCore {maxcore}
         end
 
         %pal
           nprocs {os.environ.get("OMP_NUM_THREADS")}
         end
-
-        %maxcore {os.environ.get("PYSCF_MAX_MEMORY")}
 
         %coords
         CTyp   xyz     # the type of coordinates = xyz or internal
@@ -371,4 +380,33 @@ class TestData:
         """
             )
 
-        os.system(f"$(which orca) tmp_mol/{self.name}.inp > tmp_mol/{self.name}.out")
+        time_start = timer()
+        os.system(
+            f"$(which orca) tmp_mol/{self.name}/mol.inp > tmp_mol/{self.name}/mol.out"
+        )
+        time_cc = timer() - time_start
+
+        if not (os.path.exists(f"tmp_mol/{self.name}/mol.property.json")):
+            print("ORCA calculation failed, no JSON file found.")
+            raise ValueError("ORCA calculation failed, no JSON file found.")
+            return {}
+        with open(f"tmp_mol/{self.name}/mol.property.json", "r") as f:
+            data_json = json.load(f)
+
+        # Clear the directory if it already exists to avoid disk space issues
+        for file in os.listdir(f"tmp_mol/{self.name}"):
+            os.remove(os.path.join(f"tmp_mol/{self.name}", file))
+
+        for dipole in data_json["Geometry_1"]["Dipole_Moment"]:
+            if dipole["PropertyName"] == "MDCI_Dipole_Moment":
+                cc_dipole = np.array(dipole["DIPOLETOTAL"]).reshape(3)
+                break
+
+        return {
+            "mf_dm1": None,
+            "dm1_cc": None,
+            "e_cc": data_json["Geometry_1"]["MDCI_Energies"]["TOTALENERGY"],
+            "cc_dipole": cc_dipole,
+            "time_cc": time_cc,
+            "grad_ccsd": grad_ccsd if if_grad else None,
+        }
