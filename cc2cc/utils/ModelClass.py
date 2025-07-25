@@ -114,7 +114,9 @@ class ModelClass:
             )
             if "module" in list(state_dict.keys())[0]:
                 # For backward compatibility with old checkpoints
-                state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
+                state_dict = {
+                    k.replace("module.", ""): v for k, v in state_dict.items()
+                }
             self.model.load_state_dict(state_dict)
         else:
             print(f"Model {load_path} not found, starting from scratch.")
@@ -221,10 +223,7 @@ class ModelClass:
         loss_record = np.abs(torch.sum(target - output).item())
 
         if self.loss_multiplier_abs > 1e-8:
-            tot_loss += self.loss_ene_abs(
-                self.loss_multiplier_abs * data_weight * target,
-                self.loss_multiplier_abs * data_weight * output,
-            )
+            tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(target, output)
         loss_abs_record = torch.sum(torch.abs(target - output)).item()
 
         if self.loss_multiplier_atomic > 1e-8:
@@ -269,9 +268,8 @@ class ModelClass:
             )
 
         if self.loss_multiplier_atomic > 1e-8:
-            tot_loss += self.loss_ene_atomic(
-                self.loss_multiplier_atomic * data_weight * ae_target,
-                self.loss_multiplier_atomic * data_weight * ae_output,
+            tot_loss += self.loss_multiplier_atomic * self.loss_ene_atomic(
+                data_weight * ae_target, data_weight * ae_output
             )
         loss_atomic_record = torch.abs(loss_atomic_record).item()
 
