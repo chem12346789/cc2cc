@@ -151,6 +151,7 @@ def cc(mol, grids, name, args):
         d2 = _gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
         dm2_cc = ccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
         e_cc = mycc.e_tot + e3ref
+        print(f"CCSD(T) energy: {e3ref}")
     else:
         dm1_cc = mycc.make_rdm1(ao_repr=True)
         dm1_cc_mo = mycc.make_rdm1(ao_repr=False)
