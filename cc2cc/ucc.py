@@ -148,6 +148,7 @@ def ucc(mol, grids, name, args):
         raise ValueError("UHF not converged.")
 
     mdft = pyscf.scf.UKS(mol)
+    mdft.verbose = 4
     mdft.max_cycle = 200
     mdft.xc = "b3lyp"
     mdft.kernel(mf.make_rdm1())
@@ -157,6 +158,7 @@ def ucc(mol, grids, name, args):
     e_dft = mdft.energy_tot(dm1_dft)
 
     mycc = pyscf.cc.UCCSD(mf)
+    mycc.verbose = 4
     _, t1, t2 = mycc.kernel()
     if args.cc_triple:
         eris = mycc.ao2mo()

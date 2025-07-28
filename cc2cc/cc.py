@@ -129,6 +129,7 @@ def cc(mol, grids, name, args):
         raise ValueError("RHF not converged.")
 
     mdft = pyscf.scf.RKS(mol)
+    mdft.verbose = 4
     mdft.max_cycle = 200
     mdft.xc = "b3lyp"
     mdft.kernel(mf.make_rdm1())
@@ -138,6 +139,7 @@ def cc(mol, grids, name, args):
     e_dft = mdft.energy_tot(dm1_dft)
 
     mycc = pyscf.cc.CCSD(mf)
+    mycc.verbose = 4
     _, t1, t2 = mycc.kernel()
     if args.cc_triple:
         eris = mycc.ao2mo()
