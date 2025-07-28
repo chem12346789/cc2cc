@@ -137,7 +137,7 @@ class ModelClass:
         self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer,
             T_max=self.args.eval_step * 50,
-            eta_min=self.args.lr / 100,
+            eta_min=self.args.lr / 1000,
         )
 
         if self.args.loss_ene == "L1Loss":

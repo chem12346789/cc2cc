@@ -399605,7 +399605,7 @@
         "BH76RC_1": {
             "systems": [
                 "BH76-h",
-                "BH76-n2",
+                "BH76-n2o",
                 "BH76-oh",
                 "BH76-n2"
             ],
@@ -399619,7 +399619,7 @@
         "BH76RC_2": {
             "systems": [
                 "BH76-h",
-                "BH76-ch3",
+                "BH76-ch3f",
                 "BH76-hf",
                 "BH76-ch3"
             ],
@@ -399663,7 +399663,7 @@
                 "BH76-f-",
                 "BH76-ch3cl",
                 "BH76-cl-",
-                "BH76-ch3"
+                "BH76-ch3f"
             ],
             "stoichiometry": [
                 "-1",
@@ -399675,7 +399675,7 @@
         "BH76RC_6": {
             "systems": [
                 "BH76-fch3clcomp1",
-                "BH76-f"
+                "BH76-fch3clcomp2"
             ],
             "stoichiometry": [
                 "-1",
@@ -399685,7 +399685,7 @@
         "BH76RC_7": {
             "systems": [
                 "BH76-oh-",
-                "BH76-ch3",
+                "BH76-ch3f",
                 "BH76-ch3oh",
                 "BH76-f-"
             ],
@@ -399698,7 +399698,7 @@
         },
         "BH76RC_8": {
             "systems": [
-                "BH76-h",
+                "BH76-hoch3fcomp2",
                 "BH76-hoch3fcomp1"
             ],
             "stoichiometry": [
@@ -399757,7 +399757,7 @@
         "BH76RC_13": {
             "systems": [
                 "BH76-hnc",
-                "BH76-h"
+                "BH76-hcn"
             ],
             "stoichiometry": [
                 "-1",
@@ -399782,7 +399782,7 @@
             "systems": [
                 "BH76-oh",
                 "BH76-H2",
-                "BH76-H2",
+                "BH76-H2O",
                 "BH76-h"
             ],
             "stoichiometry": [
@@ -399810,7 +399810,7 @@
             "systems": [
                 "BH76-oh",
                 "BH76-CH4",
-                "BH76-H2",
+                "BH76-H2O",
                 "BH76-ch3"
             ],
             "stoichiometry": [
@@ -399824,8 +399824,8 @@
             "systems": [
                 "BH76-oh",
                 "BH76-NH3",
-                "BH76-H2",
-                "BH76-NH"
+                "BH76-H2O",
+                "BH76-NH2"
             ],
             "stoichiometry": [
                 "-1",
@@ -399852,7 +399852,7 @@
             "systems": [
                 "BH76-oh",
                 "BH76-C2H6",
-                "BH76-H2",
+                "BH76-H2O",
                 "BH76-c2h5"
             ],
             "stoichiometry": [
@@ -399921,7 +399921,7 @@
         "BH76RC_25": {
             "systems": [
                 "BH76-h",
-                "BH76-H2",
+                "BH76-H2S",
                 "BH76-H2",
                 "BH76-HS"
             ],
@@ -399948,7 +399948,7 @@
         },
         "BH76RC_27": {
             "systems": [
-                "BH76-NH",
+                "BH76-NH2",
                 "BH76-ch3",
                 "BH76-NH",
                 "BH76-CH4"
@@ -399977,7 +399977,7 @@
         "BH76RC_29": {
             "systems": [
                 "BH76-C2H6",
-                "BH76-NH",
+                "BH76-NH2",
                 "BH76-c2h5",
                 "BH76-NH3"
             ],
@@ -399990,7 +399990,7 @@
         },
         "BH76RC_30": {
             "systems": [
-                "BH76-NH",
+                "BH76-NH2",
                 "BH76-CH4",
                 "BH76-NH3",
                 "BH76-ch3"
