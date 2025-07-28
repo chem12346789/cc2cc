@@ -429,6 +429,13 @@ def add_args(parser: argparse.ArgumentParser):
         help="Directory for saving the model. Default is empty.",
     )
 
+    parser.add_argument(
+        "--training_cycle",
+        type=int,
+        default=1,
+        help="Number of training cycles. Default is 1.",
+    )
+
     # for testing
     parser.add_argument(
         "--load_epoch",

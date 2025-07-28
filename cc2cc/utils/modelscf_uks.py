@@ -176,7 +176,7 @@ def nr_uks(
     return nelec, excsum, vmat
 
 
-def get_veff_modified(ks, modeldict):
+def get_veff_modified(ks, modeldict, lambda_rho=None, dm_tar=None):
     """
     Get the method of "Get the effective potential for the UKS method".
     """
@@ -188,6 +188,8 @@ def get_veff_modified(ks, modeldict):
         dm_last=0,
         vhf_last=0,
         hermi=1,
+        lambda_rho=lambda_rho,
+        dm_tar=dm_tar,
     ):
         # print("Using modified get_veff", flush=True)
         if mol is None:
@@ -249,6 +251,10 @@ def get_veff_modified(ks, modeldict):
             ecoul = np.einsum("ij,ji", dm[0] + dm[1], vj).real * 0.5
         else:
             ecoul = None
+
+        if lambda_rho is not None and dm_tar is not None:
+            delta_j = ks_.get_j(mol, dm - dm_tar, hermi=hermi)
+            vxc = vxc + lambda_rho * delta_j
 
         vxc = lib.tag_array(vxc, ecoul=ecoul, exc=exc, vj=vj, vk=vk)
         return vxc
