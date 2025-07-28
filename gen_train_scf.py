@@ -156,6 +156,6 @@ if __name__ == "__main__":
             print(f"Processed: {name_mol} {extend_atom} {extend_xyz} {distance}")
         print()
 
-        raise RuntimeError("Debugging: Stop after one molecule to check the results.")
+        # raise RuntimeError("Debugging: Stop after one molecule to check the results.")
 
     print(f"Error molecule: {error_molecule}")

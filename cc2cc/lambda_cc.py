@@ -52,10 +52,13 @@ def lambda_cc(mol, grids, name, modeldict, args):
     mdft.xc = "b3lyp"
     mdft.grids = grids
     mdft.verbose = 4
-    get_veff_modified_rks(mdft, modeldict, lambda_rho=None, dm_tar=None)
+    get_veff_modified_rks(mdft, modeldict, lambda_rho=1, dm_tar=dm1_cc)
     mdft.kernel(mf.make_rdm1())
     dm1_dft = mdft.make_rdm1(ao_repr=True)
-    e_dft = mdft.energy_tot(dm1_dft)
+
+    mdft_ene = pyscf.scf.RKS(mol)
+    mdft_ene.xc = "b3lyp"
+    e_dft = mdft_ene.energy_tot(dm1_dft)
 
     print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} (CCSD vs DFT)")
     cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
