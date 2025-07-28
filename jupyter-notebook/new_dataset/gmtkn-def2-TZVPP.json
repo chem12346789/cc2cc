@@ -664651,6 +664651,9 @@
         "GW100-392-56-3"
     ],
     "molecule0": [
+        "ADDON_Se",
+        "ADDON_Ge",
+        "ADDON_As"
         "RG18-ar",
         "RG18-kr",
         "RG18-ne",

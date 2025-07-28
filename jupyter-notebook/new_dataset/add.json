@@ -48,6 +48,11 @@
             0.0
         ]
     ],
+    "molecule0": [
+        "ADDON_Se",
+        "ADDON_Ge",
+        "ADDON_As"
+    ],
     "reaction-BH76RC": {
         "BH76RC_1": {
             "systems": [
