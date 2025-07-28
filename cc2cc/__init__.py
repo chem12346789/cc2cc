@@ -3,6 +3,8 @@ from cc2cc.ucc import ucc
 from cc2cc.train_model import train_model
 from cc2cc.test_rks import test_rks
 from cc2cc.test_uks import test_uks
+from cc2cc.lambda_cc import lambda_cc
+from cc2cc.lambda_ucc import lambda_ucc
 
 from cc2cc.utils.parser import add_args
 

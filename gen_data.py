@@ -62,16 +62,14 @@ if __name__ == "__main__":
                     mol,
                     grids,
                     name,
-                    cc_triple=args.cc_triple,
-                    check_convergence=args.check_convergence,
+                    args,
                 )
             else:
                 ucc(
                     mol,
                     grids,
                     name,
-                    cc_triple=args.cc_triple,
-                    check_convergence=args.check_convergence,
+                    args,
                 )
         except (ValueError, RuntimeError) as e:
             print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
