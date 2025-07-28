@@ -43,12 +43,12 @@ def test_rks(
     else:
         mdft.max_cycle = 50
         mdft.conv_tol = 1e-6
-        # if mol.natm == 1:
-        #     # For single atom, use the dm from the test data
-        #     mdft.kernel(dm0=test_data.mf_dm1)
-        # else:
-        #     mdft.kernel()
-        mdft.kernel(dm0=test_data.dm1_dft)
+        if mol.natm == 1:
+            # For single atom, use the dm from the test data
+            mdft.kernel(dm0=test_data.dm1_dft)
+        else:
+            mdft.kernel()
+        # mdft.kernel(dm0=test_data.dm1_dft)
         dm1_scf = mdft.make_rdm1()
         e_scf = mdft.e_tot
 

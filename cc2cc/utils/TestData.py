@@ -96,7 +96,7 @@ class TestData:
             print("With nothing to do, skip the test.")
             raise ValueError("Molecule coordinates are different.")
 
-        self.mf_dm1 = data_frame["mf_dm1"]
+        self.F = data_frame["mf_dm1"]
 
         self.dm1_cc = data_frame["dm1_cc"]
         self.e_cc = data_frame["e_cc"].item()
@@ -261,10 +261,7 @@ class TestData:
             name_disp = ""
         mdft.max_cycle = 250
         mdft.verbose = 4
-        if len(self.mf_dm1.shape) == 2:
-            mdft.kernel(dm0=self.mf_dm1)
-        else:
-            mdft.kernel()
+        mdft.kernel()
         if mdft.converged is False:
             raise ValueError("RKS not converged.")
         dm1_dft = mdft.make_rdm1(ao_repr=True)
@@ -302,10 +299,7 @@ class TestData:
             name_disp = ""
         mdft.max_cycle = 250
         mdft.verbose = 4
-        if len(self.mf_dm1.shape) == 3:
-            mdft.kernel(dm0=self.mf_dm1)
-        else:
-            mdft.kernel()
+        mdft.kernel()
         if mdft.converged is False:
             raise ValueError("UKS not converged.")
         dm1_dft = mdft.make_rdm1(ao_repr=True)
@@ -329,7 +323,7 @@ class TestData:
             f"grad_dft{name_disp}": grad_dft,
         }
 
-    def test_mol_orca(self, if_grad=False, cc_triple=False, maxcore=2000):
+    def test_mol_orca(self, if_grad=False, cc_triple=False, maxcore=16000):
         """
         Generate 1-RDM, energy, dipole, and gradient for the molecule.
         Note maxcore seem to be the memory per process/core, so it should be set to a smaller value.
@@ -348,7 +342,7 @@ class TestData:
 
         with open(f"tmp_mol/{self.name}/mol.inp", "w", encoding="utf-8") as f:
             f.write(
-                f"""! cc-pVDZ cc-pVDZ/C DLPNO-CCSD TightSCF
+                f"""! cc-pVDZ CCSD TightSCF
 
         %method
           WriteJSONPropertyfile True
@@ -393,9 +387,9 @@ class TestData:
         with open(f"tmp_mol/{self.name}/mol.property.json", "r") as f:
             data_json = json.load(f)
 
-        # Clear the directory if it already exists to avoid disk space issues
-        for file in os.listdir(f"tmp_mol/{self.name}"):
-            os.remove(os.path.join(f"tmp_mol/{self.name}", file))
+        # # Clear the directory if it already exists to avoid disk space issues
+        # for file in os.listdir(f"tmp_mol/{self.name}"):
+        #     os.remove(os.path.join(f"tmp_mol/{self.name}", file))
 
         for dipole in data_json["Geometry_1"]["Dipole_Moment"]:
             if dipole["PropertyName"] == "MDCI_Dipole_Moment":
