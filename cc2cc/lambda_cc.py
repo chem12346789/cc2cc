@@ -48,7 +48,8 @@ def lambda_cc(mol, grids, name, modeldict, args):
         e_cc = mycc.e_tot
 
     mdft = pyscf.scf.RKS(mol)
-    mdft.max_cycle = 200
+    mdft.conv_tol = 1e-6
+    mdft.max_cycle = 50
     mdft.xc = "b3lyp"
     mdft.grids = grids
     mdft.verbose = 4

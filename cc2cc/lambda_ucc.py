@@ -52,7 +52,8 @@ def lambda_ucc(mol, grids, name, modeldict, args):
     dm2_cc = np.array(dm2_cc)
 
     mdft = pyscf.scf.UKS(mol)
-    mdft.max_cycle = 200
+    mdft.conv_tol = 1e-6
+    mdft.max_cycle = 50
     mdft.xc = "b3lyp"
     mdft.grids = grids
     mdft.verbose = 4
