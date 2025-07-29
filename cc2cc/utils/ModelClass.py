@@ -150,7 +150,7 @@ class ModelClass:
             )
         elif self.args.loss_ene == "MSELoss":
             self.loss_ene = torch.nn.MSELoss(reduction="sum").cuda(self.local_rank)
-            self.loss_ene_abs = torch.nn.MSELoss(reduction="sum").cuda(self.local_rank)
+            self.loss_ene_abs = torch.nn.L1Loss(reduction="sum").cuda(self.local_rank)
             self.loss_ene_atomic = torch.nn.MSELoss(reduction="sum").cuda(
                 self.local_rank
             )
@@ -223,7 +223,13 @@ class ModelClass:
         loss_record = np.abs(torch.sum(target - output).item())
 
         if self.loss_multiplier_abs > 1e-8:
-            tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(target, output)
+            if self.args.loss_ene == "L1Loss":
+                tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(target, output)
+            elif self.args.loss_ene == "MSELoss":
+                tot_loss += (
+                    self.loss_multiplier_abs * self.loss_ene_abs(target, output) ** 2
+                )
+
         loss_abs_record = torch.sum(torch.abs(target - output)).item()
 
         if self.loss_multiplier_atomic > 1e-8:
