@@ -123,7 +123,7 @@ if __name__ == "__main__":
             else:
                 name = f"{name}_default"
 
-            name = f"{name}_default_scf_{args.training_cycle}"
+            name = f"{name}_scf_{args.training_cycle}"
             grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
 
             if args.if_continue:

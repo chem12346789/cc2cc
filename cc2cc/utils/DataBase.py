@@ -77,16 +77,24 @@ class DataBase:
         mol_info_dict = {}
         self.atomic_name_dict = {}
 
+        training_cycle_list = [""]
+        if args.training_cycle > 0:
+            training_cycle_list.extend(
+                [f"_scf_{i}" for i in range(1, args.training_cycle + 1)]
+            )
+
         for (
             name_mol,
             extend_atom,
             extend_xyz,
             distance,
+            training_cycle_iteration,
         ) in product(
             molecule_list,
             args.extend_atom,
             args.extend_xyz,
             args.distance_list,
+            training_cycle_list,
         ):
             name = f"{name_mol}_{args.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
 
@@ -105,6 +113,7 @@ class DataBase:
                     name = f"{name}_{args.n_rad}_{args.n_ang}"
                 else:
                     name = f"{name}_default"
+                name = f"{name}{training_cycle_iteration}"
 
                 path_name_ = DATA_PATH / f"data_{name}.npz"
                 if not (path_name_).exists():

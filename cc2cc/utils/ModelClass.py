@@ -120,6 +120,7 @@ class ModelClass:
             self.model.load_state_dict(state_dict)
         else:
             print(f"Model {load_path} not found, starting from scratch.")
+        self.model.compile(fullgraph=True)
 
         if self.args.distributed:
             print(f"Using DistributedDataParallel on rank {self.local_rank}")
