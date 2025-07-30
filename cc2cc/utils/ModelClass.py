@@ -120,7 +120,9 @@ class ModelClass:
             self.model.load_state_dict(state_dict)
         else:
             print(f"Model {load_path} not found, starting from scratch.")
-        self.model.compile(fullgraph=True)
+        self.model.compile(
+            fullgraph=True, dynamic=True, options={"triton.cudagraphs": True}
+        )
 
         if self.args.distributed:
             print(f"Using DistributedDataParallel on rank {self.local_rank}")
@@ -384,11 +386,7 @@ class ModelClass:
         input_mat.requires_grad = True
         output_mat = self.model(input_mat)[:, 0]
 
-        middle_cube = torch.autograd.grad(
-            torch.sum(output_mat),
-            input_mat,
-            create_graph=True,
-        )[0]
+        middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
 
         middle_mat = grids.get_center_density(middle_cube).detach().cpu().numpy()
         energy_den = exc_b3lyp + output_mat.detach().cpu().numpy()
@@ -440,11 +438,7 @@ class ModelClass:
         input_mat.requires_grad = True
         output_mat = self.model(input_mat)[:, 0]
 
-        middle_cube = torch.autograd.grad(
-            torch.sum(output_mat),
-            input_mat,
-            create_graph=True,
-        )[0]
+        middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
 
         middle_mat = middle_cube.detach().cpu().numpy()
         energy_den = exc_b3lyp + output_mat.detach().cpu().numpy()
