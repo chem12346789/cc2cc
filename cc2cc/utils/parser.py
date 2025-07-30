@@ -432,7 +432,7 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--training_cycle",
         type=int,
-        default=1,
+        default=0,
         help="Number of training cycles. Default is 1.",
     )
 
@@ -516,6 +516,7 @@ def add_args(parser: argparse.ArgumentParser):
     print(f"Train atom: {args.train_atom}")
     print(f"Load: {args.load}")
     print(f"Save directory: {args.save_dir}")
+    print(f"Training cycle: {args.training_cycle}")
     print(f"Load epoch: {args.load_epoch}")
     print(f"Density restriction: {args.density_restriction}")
     print(f"Continue: {args.if_continue}")
