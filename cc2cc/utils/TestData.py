@@ -323,10 +323,10 @@ class TestData:
             f"grad_dft{name_disp}": grad_dft,
         }
 
-    def test_mol_orca(self, if_grad=False, cc_triple=False, maxcore=16000):
+    def test_mol_orca(self, if_grad=False, cc_triple=False, maxcore=2000):
         """
         Generate 1-RDM, energy, dipole, and gradient for the molecule.
-        Note maxcore seem to be the memory per process/core, so it should be set to a smaller value.
+        Please note, that MaxCore is the amount of memory dedicated to each process.
         """
         print(f"Generate data for {self.name}")
 
