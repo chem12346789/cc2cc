@@ -149,7 +149,7 @@ class DataBase:
             self.dataset,
             shuffle=shuffle,
             batch_size=args.batch_size,
-            num_workers=0,
+            num_workers=int(os.environ.get("OMP_NUM_THREADS", 1)),
             pin_memory=True,
             sampler=self.sampler,
         )

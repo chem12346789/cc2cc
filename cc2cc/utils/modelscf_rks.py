@@ -88,12 +88,12 @@ def nr_rks(
 
     def block_loop(ao_deriv):
         for ao, mask, weights_, coords_ in ni.block_loop(
-            mol, grids, nao, ao_deriv, max_memory=max_memory
+            mol, grids, nao, ao_deriv, max_memory=max_memory, non0tab=grids.non0tab
         ):
             for i in range(nset):
                 rho = make_rho(i, ao, mask, xctype)
                 energy_den, vxc = modelclass.eval_xc_eff(
-                    mol, dms, rho, ni, grids, weights_, coords_
+                    mol, dms, rho, ni, grids, weights_, coords_, mask
                 )
 
                 if xctype == "LDA":

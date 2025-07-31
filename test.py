@@ -23,22 +23,19 @@ if __name__ == "__main__":
     # 1. Init the model
     modeldict = ModelClass(args)
     if "test" not in args.load:
-        modeldict.init_model()
+        modeldict.init_model(if_validate=True)
         modeldict.eval()
 
     # 2. Test loop
-    if args.disp is None:
-        file_prefix = f"validate/ccdft_{args.basis}_{args.load}"
-    else:
-        file_prefix = f"validate/ccdft_{args.basis}_{args.load}_{args.disp}"
     if len(args.name_mol_input) == 1:
         data_record = DataRecord(
-            MAIN_PATH / f"{file_prefix}_{args.dataset}_{args.name_mol_input[0]}.csv",
+            MAIN_PATH
+            / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}_{args.name_mol_input[0]}.csv",
             if_continue=args.if_continue,
         )
     else:
         data_record = DataRecord(
-            MAIN_PATH / f"{file_prefix}_{args.dataset}.csv",
+            MAIN_PATH / f"validate/ccdft_{args.basis}_{args.load}_{args.dataset}.csv",
             if_continue=args.if_continue,
         )
     error_molecule = []
