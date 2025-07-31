@@ -19,8 +19,10 @@ from pyscf.dft.numint import (
     _sparse_enough,
     _empty_aligned,
     _format_uks_dm,
+    _dot_ao_dm_sparse,
+    _contract_rho_sparse,
 )
-from pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
+from pyscf.dft.gen_grid import BLKSIZE, NBINS, CUTOFF, ALIGNMENT_UNIT
 from pyscf import __config__
 
 from cc2cc.utils.env_var import (
@@ -321,6 +323,8 @@ class Grid(dft.gen_grid.Grids):
         self.becke_scheme = dft.gen_grid.original_becke
         self.radi_method = dft.radi.gauss_chebyshev
         modified_build(self)
+        self.non0tab = self.make_mask(mol, self.coords)
+        self.screen_index = self.non0tab
 
     def gen_cube(
         self,
@@ -328,6 +332,7 @@ class Grid(dft.gen_grid.Grids):
         dm1_input,
         coords=None,
         weights=None,
+        screen_index=None,
     ):
         """
         Generate the cube coordinates for the given molecule.
@@ -336,45 +341,56 @@ class Grid(dft.gen_grid.Grids):
             mol: An instance of :class:`Mole'.
             dm1_input: Density matrix, 2D array with shape (nao, nao). The orientation of the cube is determined by the eigenvectors of the Hessian matrix(secondary derivation of the density).
         """
-        if coords is None:
-            coords = self.coords
-
-        ao_value = pyscf.dft.numint.eval_ao(mol, coords, deriv=2)
-
-        # Hessian matrix
-        shls_slice = (0, mol.nbas)
-        ao_loc = mol.ao_loc_nr()
         if mol.spin == 0:
             assert (
                 np.linalg.norm(dm1_input.conj().T - dm1_input) < 1e-10
             ), "Density matrix is not symmetric."
-            c0 = _dot_ao_dm(mol, ao_value[0], dm1_input, None, shls_slice, ao_loc)
+            dm1 = dm1_input
         else:
-            assert (
-                np.linalg.norm(dm1_input[0].conj().T - dm1_input[0]) < 1e-10
-            ), "Density matrix is not symmetric."
             assert (
                 np.linalg.norm(dm1_input[1].conj().T - dm1_input[1]) < 1e-10
             ), "Density matrix is not symmetric."
-            c0 = _dot_ao_dm(
-                mol, ao_value[0], dm1_input[0] + dm1_input[1], None, shls_slice, ao_loc
-            )
+            dm1 = dm1_input[0] + dm1_input[1]
+
+        # Hessian matrix
+        shls_slice = (0, mol.nbas)
+        ao_loc = mol.ao_loc_nr()
+        ovlp_cond = mol.get_overlap_cond()
+        cutoff = min(CUTOFF, 0.1)
+        pair_mask = np.asarray(ovlp_cond < -np.log(cutoff), dtype=np.uint8)
+        nbins = NBINS * 2 - int(NBINS * np.log(cutoff) / np.log(CUTOFF))
 
         rho_input_1 = np.zeros((3, len(coords)))
         rho_input_2 = np.zeros((3, 3, len(coords)))
+        ao = pyscf.dft.numint.eval_ao(mol, coords, deriv=2)
 
-        rho_input_1[0, :] = _contract_rho(ao_value[1], c0)
-        rho_input_1[1, :] = _contract_rho(ao_value[2], c0)
-        rho_input_1[2, :] = _contract_rho(ao_value[3], c0)
-        rho_input_2[0, 0, :] = _contract_rho(ao_value[4], c0)
-        rho_input_2[0, 1, :] = _contract_rho(ao_value[5], c0)
-        rho_input_2[0, 2, :] = _contract_rho(ao_value[6], c0)
-        rho_input_2[1, 1, :] = _contract_rho(ao_value[7], c0)
-        rho_input_2[1, 2, :] = _contract_rho(ao_value[8], c0)
-        rho_input_2[2, 2, :] = _contract_rho(ao_value[9], c0)
+        c0 = _dot_ao_dm(mol, ao[0], dm1, None, shls_slice, ao_loc)
+        rho_input_1[0, :] = _contract_rho(ao[1], c0)
+        rho_input_1[1, :] = _contract_rho(ao[2], c0)
+        rho_input_1[2, :] = _contract_rho(ao[3], c0)
+        rho_input_2[0, 0, :] = _contract_rho(ao[4], c0)
+        rho_input_2[0, 1, :] = _contract_rho(ao[5], c0)
+        rho_input_2[0, 2, :] = _contract_rho(ao[6], c0)
+        rho_input_2[1, 1, :] = _contract_rho(ao[7], c0)
+        rho_input_2[1, 2, :] = _contract_rho(ao[8], c0)
+        rho_input_2[2, 2, :] = _contract_rho(ao[9], c0)
         rho_input_2[1, 0, :] = rho_input_2[0, 1, :]
         rho_input_2[2, 0, :] = rho_input_2[0, 2, :]
         rho_input_2[2, 1, :] = rho_input_2[1, 2, :]
+
+        # c0 = _dot_ao_dm_sparse(ao[0], dm1, nbins, screen_index, pair_mask, ao_loc)
+        # rho_input_1[0, :] = _contract_rho_sparse(ao[1], c0, screen_index, ao_loc)
+        # rho_input_1[1, :] = _contract_rho_sparse(ao[2], c0, screen_index, ao_loc)
+        # rho_input_1[2, :] = _contract_rho_sparse(ao[3], c0, screen_index, ao_loc)
+        # rho_input_2[0, 0, :] = _contract_rho_sparse(ao[4], c0, screen_index, ao_loc)
+        # rho_input_2[0, 1, :] = _contract_rho_sparse(ao[5], c0, screen_index, ao_loc)
+        # rho_input_2[0, 2, :] = _contract_rho_sparse(ao[6], c0, screen_index, ao_loc)
+        # rho_input_2[1, 1, :] = _contract_rho_sparse(ao[7], c0, screen_index, ao_loc)
+        # rho_input_2[1, 2, :] = _contract_rho_sparse(ao[8], c0, screen_index, ao_loc)
+        # rho_input_2[2, 2, :] = _contract_rho_sparse(ao[9], c0, screen_index, ao_loc)
+        # rho_input_2[1, 0, :] = rho_input_2[0, 1, :]
+        # rho_input_2[2, 0, :] = rho_input_2[0, 2, :]
+        # rho_input_2[2, 1, :] = rho_input_2[1, 2, :]
 
         coor_cube = np.zeros((len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
         gen_cube_njit(rho_input_2, rho_input_1, coords, coor_cube)
@@ -395,6 +411,7 @@ class Grid(dft.gen_grid.Grids):
         ni=None,
         coords=None,
         weights=None,
+        mask=None,
         hermi=1,
         max_memory=4000,
         require_vxc=False,
@@ -404,16 +421,15 @@ class Grid(dft.gen_grid.Grids):
         """
         if coords is None:
             coords = self.coords
-
         if weights is None:
             weights = self.weights
+        if mask is None:
+            mask = self.non0tab
 
-        gridcube = self.gen_cube(mol, dms, coords, weights)
+        gridcube = self.gen_cube(mol, dms, coords, weights, mask)
 
         input_ = np.zeros((4, len(gridcube.coords)))
-
         make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, gridcube)
-
         for ao, mask, _, _, ip0, ip1 in modified_block_loop(
             ni, mol, gridcube, nao, 1, max_memory=max_memory
         ):
@@ -423,9 +439,7 @@ class Grid(dft.gen_grid.Grids):
                 exc_vwn = ni.eval_xc_eff(",VWN3", rho[0], deriv=0, xctype="LDA")[0]
                 exc_b88 = ni.eval_xc_eff("B88,", rho, deriv=0, xctype="GGA")[0]
                 exc_lyp = ni.eval_xc_eff(",LYP", rho, deriv=0, xctype="GGA")[0]
-
                 rho0 = rho[0]
-
                 input_[:, ip0:ip1] = np.array(
                     [
                         exc_lda * rho0,
@@ -465,6 +479,7 @@ class Grid(dft.gen_grid.Grids):
         ni=None,
         coords=None,
         weights=None,
+        mask=None,
         hermi=1,
         max_memory=4000,
         require_vxc=False,
@@ -474,9 +489,10 @@ class Grid(dft.gen_grid.Grids):
         """
         if coords is None:
             coords = self.coords
-
         if weights is None:
             weights = self.weights
+        if mask is None:
+            mask = self.non0tab
 
         gridcube = self.gen_cube(mol, dms, coords, weights)
 
@@ -544,6 +560,7 @@ class Grid(dft.gen_grid.Grids):
         ni=None,
         coords=None,
         weights=None,
+        mask=None,
         hermi=1,
         max_memory=2000,
         require_vxc=False,
@@ -553,9 +570,10 @@ class Grid(dft.gen_grid.Grids):
         """
         if coords is None:
             coords = self.coords
-
         if weights is None:
             weights = self.weights
+        if mask is None:
+            mask = self.non0tab
 
         rho_lda = rho_4[0]
         rho0 = rho_4[0]
@@ -596,6 +614,7 @@ class Grid(dft.gen_grid.Grids):
         ni=None,
         coords=None,
         weights=None,
+        mask=None,
         hermi=1,
         max_memory=2000,
         require_vxc=False,
@@ -605,16 +624,18 @@ class Grid(dft.gen_grid.Grids):
         """
         if coords is None:
             coords = self.coords
-
         if weights is None:
             weights = self.weights
+        if mask is None:
+            mask = self.non0tab
 
         rho_lda = (rho_4[0][0], rho_4[1][0])
         rho0 = rho_4[0][0] + rho_4[1][0]
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=1, xctype="LDA")[:2]
         exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=1, xctype="LDA")[:2]
-        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho_4, deriv=1, xctype="GGA")[:2]
+        exc_b88, vxc_b88 = ni.eval_xc_
+        mask = None, eff("B88,", rho_4, deriv=1, xctype="GGA")[:2]
         exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho_4, deriv=1, xctype="GGA")[:2]
 
         input_ = np.array(

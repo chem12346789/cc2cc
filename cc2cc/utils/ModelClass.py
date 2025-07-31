@@ -4,11 +4,11 @@ Generate list of model.
 
 from pathlib import Path
 import datetime
+import time
 import os
 import numpy as np
 import torch
 import torch.optim as optim
-from torchinfo import summary
 
 from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
@@ -70,7 +70,7 @@ class ModelClass:
             self.local_rank = 0
             self.verbose = True
 
-    def init_model(self):
+    def init_model(self, if_validate=False):
         """
         Initialize the model.
         """
@@ -120,9 +120,11 @@ class ModelClass:
             self.model.load_state_dict(state_dict)
         else:
             print(f"Model {load_path} not found, starting from scratch.")
-        self.model.compile(
-            fullgraph=True, dynamic=True, options={"triton.cudagraphs": True}
-        )
+
+        if if_validate:
+            self.model.compile(fullgraph=True, dynamic=True, mode="max-autotune")
+        else:
+            self.model.compile(dynamic=True)
 
         if self.args.distributed:
             print(f"Using DistributedDataParallel on rank {self.local_rank}")
@@ -182,19 +184,6 @@ class ModelClass:
             )
             print(f"Training on {len(self.database_train)} systems.")
             print(f"Evaluating on {len(self.database_eval)} systems.")
-            print(
-                summary(
-                    self.model,
-                    input_size=input_size,
-                    depth=10,
-                    dtypes=(
-                        [torch.float32]
-                        if self.args.precision == "float32"
-                        else [torch.float64]
-                    ),
-                    mode="train",
-                )
-            )
 
     def train(self):
         """
@@ -347,16 +336,7 @@ class ModelClass:
         state_dict = self.model.state_dict()
         torch.save(state_dict, self.dir_checkpoint / f"{epoch}.pth")
 
-    def eval_xc_eff_cube(
-        self,
-        mol,
-        dms,
-        rho,
-        ni,
-        grids,
-        weights_,
-        coords_,
-    ):
+    def eval_xc_eff_cube(self, mol, dms, rho, ni, grids, weights_, coords_, mask):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
         Args:
@@ -369,15 +349,33 @@ class ModelClass:
             exc: Exchange-correlation energy.
             vxc: Exchange-correlation potential.
         """
+        time_start = time.time()
         if mol.spin == 0:
             exc_b3lyp, rho_cube, vxc_b3lyp = grids.gen_cube_rho_rks(
-                mol, dms, rho, ni=ni, coords=coords_, weights=weights_, require_vxc=True
+                mol,
+                dms,
+                rho,
+                ni=ni,
+                coords=coords_,
+                weights=weights_,
+                mask=mask,
+                require_vxc=True,
             )
         else:
             exc_b3lyp, rho_cube, vxc_b3lyp = grids.gen_cube_rho_uks(
-                mol, dms, rho, ni=ni, coords=coords_, weights=weights_, require_vxc=True
+                mol,
+                dms,
+                rho,
+                ni=ni,
+                coords=coords_,
+                weights=weights_,
+                mask=mask,
+                require_vxc=True,
             )
+        time_end = time.time()
+        print(f"Time taken to generate cube: {time_end - time_start:.2f} seconds")
 
+        time_start = time.time()
         input_mat = torch.tensor(
             rho_cube,
             dtype=self.dtype,
@@ -385,30 +383,21 @@ class ModelClass:
         )
         input_mat.requires_grad = True
         output_mat = self.model(input_mat)[:, 0]
-
         middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
-
         middle_mat = grids.get_center_density(middle_cube).detach().cpu().numpy()
         energy_den = exc_b3lyp + output_mat.detach().cpu().numpy()
-
         vxc = (
             (0.08 + middle_mat[:, 0]) * vxc_b3lyp[0]
             + (0.19 + middle_mat[:, 1]) * vxc_b3lyp[1]
             + (0.72 + middle_mat[:, 2]) * vxc_b3lyp[2]
             + (0.81 + middle_mat[:, 3]) * vxc_b3lyp[3]
         )
+        time_end = time.time()
+        print(f"Time taken to evaluate model: {time_end - time_start:.2f} seconds")
+        print("", flush=True)
         return energy_den, vxc
 
-    def eval_xc_eff_4(
-        self,
-        mol,
-        dms,
-        rho,
-        ni,
-        grids,
-        weights_,
-        coords_,
-    ):
+    def eval_xc_eff_4(self, mol, dms, rho, ni, grids, weights_, coords_, mask):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
         Args:
@@ -451,16 +440,7 @@ class ModelClass:
         )
         return energy_den, vxc
 
-    def eval_xc_eff(
-        self,
-        mol,
-        dms,
-        rho,
-        ni,
-        grids,
-        weights_,
-        coords_,
-    ):
+    def eval_xc_eff(self, mol, dms, rho, ni, grids, weights_, coords_, mask):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
         Args:
@@ -474,8 +454,10 @@ class ModelClass:
             vxc: Exchange-correlation potential.
         """
         if self.model_type == "center_4":
-            return self.eval_xc_eff_4(mol, dms, rho, ni, grids, weights_, coords_)
+            return self.eval_xc_eff_4(mol, dms, rho, ni, grids, weights_, coords_, mask)
         elif self.model_type == "cube":
-            return self.eval_xc_eff_cube(mol, dms, rho, ni, grids, weights_, coords_)
+            return self.eval_xc_eff_cube(
+                mol, dms, rho, ni, grids, weights_, coords_, mask
+            )
         else:
             raise ValueError(f"Unknown model {self.model_name} for eval_xc_eff")
