@@ -64,6 +64,7 @@ class ModelClass:
                 rank=self.local_rank,
                 world_size=torch.cuda.device_count(),
                 device_id=torch.device("cuda", self.local_rank),
+                timeout=datetime.timedelta(hours=1),
             )
             self.verbose = dist.get_rank() == 0
         else:
