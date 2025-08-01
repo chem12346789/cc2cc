@@ -2,7 +2,7 @@ import argparse
 from itertools import product
 
 from cc2cc import add_args, lambda_cc, lambda_ucc
-from cc2cc.utils import gen_mole, print_gpu_info
+from cc2cc.utils import gen_mole, print_computer_info
 from cc2cc.utils import Grid, ModelClass
 from cc2cc.utils.parser import gen_name_args
 from cc2cc.utils.env_var import DATA_PATH
@@ -64,7 +64,7 @@ if __name__ == "__main__":
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
-    print_gpu_info(args.device)
+    print_computer_info(args.device)
 
     # 1. Init the model
     modeldict = ModelClass(args)
@@ -89,6 +89,7 @@ if __name__ == "__main__":
 
     name_mol_list = train_str_list + eval_str_list
     error_molecule = []
+    print(f"Name Molecule List: {name_mol_list}")
 
     for (
         name_mol,

@@ -6,7 +6,7 @@ Used to test the code and debug the model.
 import argparse
 
 from cc2cc import train_model
-from cc2cc.utils import add_args, print_gpu_info
+from cc2cc.utils import add_args, print_computer_info
 from cc2cc.utils.parser import gen_name_args
 
 train_str_list = [
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
-    print_gpu_info(args.device)
+    print_computer_info(args.device)
 
     train_str_list = gen_name_args(train_str_list, args)
     eval_str_list = gen_name_args(eval_str_list, args)

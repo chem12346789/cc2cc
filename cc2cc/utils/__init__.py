@@ -15,7 +15,7 @@ from cc2cc.utils.DataRecord import DataRecord
 from cc2cc.utils.TestData import TestData
 
 from cc2cc.utils.env_var import (
-    print_gpu_info,
+    print_computer_info,
     MAIN_PATH,
     DATA_PATH,
     DATA_SCF_PATH,
@@ -59,7 +59,7 @@ __all__ = [
     "get_veff_modified_rks",
     "get_veff_modified_uks",
     "rotate",
-    "print_gpu_info",
+    "print_computer_info",
     "diff_rho",
     "DataRecord",
     "TestData",

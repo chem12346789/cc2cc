@@ -22,15 +22,14 @@ def nr_uks(
     ni,
     mol,
     grids,
+    xc_code,
     dms,
-    xc_code="b3lyp",
     hermi=1,
-    max_memory=20,
-    verbose=None,
+    max_memory=800,
 ):
     """
     Obtain the nelec, excsum, and vmat.
-    Note the max_memory=20 use around 8GB gpu memory.
+    Note the max_memory=800 use around 8GB gpu memory.
     """
     xctype = ni._xc_type(xc_code)
     ao_loc = mol.ao_loc_nr()
@@ -48,14 +47,14 @@ def nr_uks(
 
     def block_loop(ao_deriv):
         for ao, mask, weights_, coords_ in ni.block_loop(
-            mol, grids, nao, ao_deriv, max_memory=max_memory
+            mol, grids, nao, ao_deriv, max_memory=max_memory, non0tab=grids.non0tab
         ):
             for i in range(nset):
                 rho_a = make_rhoa(i, ao, mask, xctype)
                 rho_b = make_rhob(i, ao, mask, xctype)
                 rho = (rho_a, rho_b)
                 energy_den, vxc = modelclass.eval_xc_eff(
-                    mol, dms, rho, ni, grids, weights_, coords_
+                    rho, ni, dms, grids, coords_, mask
                 )
 
                 if xctype == "LDA":
@@ -201,7 +200,7 @@ def get_veff_modified(ks, modeldict, lambda_rho=None, dm_tar=None):
         ground_state = dm.ndim == 3 and dm.shape[0] == 2
         ni = ks_._numint
 
-        nelec, exc, vxc = nr_uks(modeldict, ni, mol, ks_.grids, dm, ks_.xc)
+        nelec, exc, vxc = nr_uks(modeldict, ni, mol, ks_.grids, ks_.xc, dm, hermi=hermi)
 
         if not ni.libxc.is_hybrid_xc(ks_.xc):
             vk = None

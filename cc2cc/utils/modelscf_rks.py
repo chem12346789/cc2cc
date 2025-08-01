@@ -29,7 +29,11 @@ def nr_rks(
     hermi=1,
     max_memory=800,
 ):
-    """Get the effective potential for the RKS method."""
+    """
+    Get the effective potential for the RKS method.
+    Note the max_memory=800 use around 8GB gpu memory.
+    Modified from pyscf.dft.numint.nr_rks (https://github.com/pyscf/pyscf/blob/v2.9.0/pyscf/dft/numint.py)
+    """
     xctype = ni._xc_type(xc_code)
     make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, grids)
     ao_loc = mol.ao_loc_nr()

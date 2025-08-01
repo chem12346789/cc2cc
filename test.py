@@ -7,7 +7,7 @@ import argparse
 from itertools import product
 
 from cc2cc import add_args, test_rks, test_uks
-from cc2cc.utils import gen_mole, print_gpu_info
+from cc2cc.utils import gen_mole, print_computer_info
 from cc2cc.utils import Grid, ModelClass, DataRecord
 from cc2cc.utils import MAIN_PATH
 
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     )
     args = add_args(parser)
 
-    print_gpu_info(args.device)
+    print_computer_info(args.device)
 
     # 1. Init the model
     modeldict = ModelClass(args)

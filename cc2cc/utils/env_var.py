@@ -58,7 +58,7 @@ if GENERATE_DATA is None:
     GENERATE_DATA = False
 
 
-def print_gpu_info(device):
+def print_computer_info(device):
     """
     Print information about the GPU and CUDA environment.
 
@@ -72,6 +72,10 @@ def print_gpu_info(device):
     """
     # print the information of the process
     print(f"PID: {os.getpid()}")
+
+    print(f"CPU Count: {os.cpu_count()}")
+    print(f"NUMBER_OF_THREADS: {os.environ.get('NUMBER_OF_THREADS', 'Not Set')}")
+    print(f"NUMBER_OF_GPU: {os.environ.get('NUMBER_OF_GPU', 'Not Set')}")
 
     if device == "cuda":
         # print the gpu information
