@@ -125,7 +125,7 @@ class ModelClass:
         if if_validate:
             self.model.compile(fullgraph=True, dynamic=True, mode="max-autotune")
         else:
-            self.model.compile(dynamic=True)
+            self.model.compile(dynamic=True, mode="max-autotune")
 
         if self.args.distributed:
             print(f"Using DistributedDataParallel on rank {self.local_rank}")

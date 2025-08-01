@@ -83,8 +83,8 @@ def lambda_ucc(mol, grids, name, modeldict, args):
         e_cc,
     )
 
-    rho_cube_cc = grids.gen_cube_rho_uks(mol, dm1_cc, rho_cc, ni=mdft._numint)
-    rho_cube_dft = grids.gen_cube_rho_uks(mol, dm1_dft, rho_dft, ni=mdft._numint)
+    rho_cube_cc = grids.gen_cube_rho_uks(rho_cc, mdft._numint, dm1_cc)
+    rho_cube_dft = grids.gen_cube_rho_uks(rho_dft, mdft._numint, dm1_dft)
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",
         e_cc=e_cc,
