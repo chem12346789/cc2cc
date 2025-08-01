@@ -85,8 +85,7 @@ class TestData:
                         if_grad=if_grad, cc_triple=cc_triple
                     )
             data_frame.update(data_frame_cc)
-        # if "dm1_dft" not in data_frame:
-        if True:
+        if "dm1_dft" not in data_frame:
             if mol.spin == 0:
                 data_frame_ks = self.test_mol_rks(if_grad=if_grad, disp=None)
             else:
