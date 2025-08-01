@@ -337,7 +337,7 @@ class ModelClass:
         state_dict = self.model.state_dict()
         torch.save(state_dict, self.dir_checkpoint / f"{epoch}.pth")
 
-    def eval_xc_eff_cube(self, mol, dms, rho, ni, grids, weights_, coords_, mask):
+    def eval_xc_eff_cube(self, rho, ni, dms, grids, coords_, mask):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
         Args:
@@ -351,27 +351,13 @@ class ModelClass:
             vxc: Exchange-correlation potential.
         """
         time_start = time.time()
-        if mol.spin == 0:
-            exc_b3lyp, rho_cube, vxc_b3lyp = grids.gen_cube_rho_rks(
-                mol,
-                dms,
-                rho,
-                ni=ni,
-                coords=coords_,
-                weights=weights_,
-                mask=mask,
-                require_vxc=True,
+        if grids.mol.spin == 0:
+            rho_cube, exc_b3lyp, vxc_b3lyp = grids.gen_cube_rho_rks(
+                rho, ni, dms, coords=coords_, mask=mask, require_vxc=True
             )
         else:
-            exc_b3lyp, rho_cube, vxc_b3lyp = grids.gen_cube_rho_uks(
-                mol,
-                dms,
-                rho,
-                ni=ni,
-                coords=coords_,
-                weights=weights_,
-                mask=mask,
-                require_vxc=True,
+            rho_cube, exc_b3lyp, vxc_b3lyp = grids.gen_cube_rho_uks(
+                rho, ni, dms, coords=coords_, mask=mask, require_vxc=True
             )
         time_end = time.time()
         print(f"Time taken to generate cube: {time_end - time_start:.2f} seconds")
@@ -398,7 +384,7 @@ class ModelClass:
         print("", flush=True)
         return energy_den, vxc
 
-    def eval_xc_eff_4(self, mol, dms, rho, ni, grids, weights_, coords_, mask):
+    def eval_xc_eff_4(self, rho, ni, dms, grids, coords_, mask):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
         Args:
@@ -411,13 +397,13 @@ class ModelClass:
             exc: Exchange-correlation energy.
             vxc: Exchange-correlation potential.
         """
-        if mol.spin == 0:
-            exc_b3lyp, rho_b3lyp, vxc_b3lyp = grids.gen_rho_rks(
-                mol, dms, rho, ni=ni, coords=coords_, weights=weights_, require_vxc=True
+        if grids.mol.spin == 0:
+            rho_b3lyp, exc_b3lyp, vxc_b3lyp = grids.gen_rho_rks(
+                rho, ni, require_vxc=True
             )
         else:
-            exc_b3lyp, rho_b3lyp, vxc_b3lyp = grids.gen_rho_uks(
-                mol, dms, rho, ni=ni, coords=coords_, weights=weights_, require_vxc=True
+            rho_b3lyp, exc_b3lyp, vxc_b3lyp = grids.gen_rho_uks(
+                rho, ni, require_vxc=True
             )
 
         input_mat = torch.tensor(
@@ -441,7 +427,7 @@ class ModelClass:
         )
         return energy_den, vxc
 
-    def eval_xc_eff(self, mol, dms, rho, ni, grids, weights_, coords_, mask):
+    def eval_xc_eff(self, rho, ni, dms, grids, coords_, mask):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
         Args:
@@ -455,10 +441,8 @@ class ModelClass:
             vxc: Exchange-correlation potential.
         """
         if self.model_type == "center_4":
-            return self.eval_xc_eff_4(mol, dms, rho, ni, grids, weights_, coords_, mask)
+            return self.eval_xc_eff_4(rho, ni, dms, grids, coords_, mask)
         elif self.model_type == "cube":
-            return self.eval_xc_eff_cube(
-                mol, dms, rho, ni, grids, weights_, coords_, mask
-            )
+            return self.eval_xc_eff_cube(rho, ni, dms, grids, coords_, mask)
         else:
             raise ValueError(f"Unknown model {self.model_name} for eval_xc_eff")

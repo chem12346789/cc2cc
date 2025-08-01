@@ -57,9 +57,15 @@ class TestData:
         else:
             path_to_data = DATA_TEST_NO_GRAD_PATH
 
-        if not (path_to_data / f"{name}_cc.npz").exists():
+        if (path_to_data / f"{name}_cc.npz").exists():
+            print(f"Data for {name} loaded from file.")
+            data_frame = dict(
+                np.load(path_to_data / f"{name}_cc.npz", allow_pickle=True).items()
+            )
+        else:
             data_frame = {"mol_corr": mol.atom_coords()}
 
+        if "dm1_cc" not in data_frame:
             if mol.spin == 0:
                 if "C60ISO" in self.name or "UPU23" in self.name:
                     data_frame_cc = self.test_mol_orca(
@@ -69,7 +75,6 @@ class TestData:
                     data_frame_cc = self.test_mol_rcc(
                         if_grad=if_grad, cc_triple=cc_triple
                     )
-                data_frame_ks = self.test_mol_rks(if_grad=if_grad, disp=None)
             else:
                 if "C60ISO" in self.name or "UPU23" in self.name:
                     data_frame_cc = self.test_mol_orca(
@@ -79,35 +84,42 @@ class TestData:
                     data_frame_cc = self.test_mol_ucc(
                         if_grad=if_grad, cc_triple=cc_triple
                     )
-                data_frame_ks = self.test_mol_uks(if_grad=if_grad, disp=None)
             data_frame.update(data_frame_cc)
+        # if "dm1_dft" not in data_frame:
+        if True:
+            if mol.spin == 0:
+                data_frame_ks = self.test_mol_rks(if_grad=if_grad, disp=None)
+            else:
+                data_frame_ks = self.test_mol_uks(if_grad=if_grad, disp=None)
             data_frame.update(data_frame_ks)
 
-            np.savez_compressed(path_to_data / f"{name}_cc.npz", **data_frame)
+        np.savez_compressed(path_to_data / f"{name}_cc.npz", **data_frame)
 
-        print(f"Data for {name} loaded from file.")
-        data_frame = dict(
-            np.load(path_to_data / f"{name}_cc.npz", allow_pickle=True).items()
-        )
         mol_corr = data_frame["mol_corr"]
-
         if np.linalg.norm(mol.atom_coords() - mol_corr, ord=1) > 1e-6:
             print("Molecule coordinates are different.")
             print("With nothing to do, skip the test.")
             raise ValueError("Molecule coordinates are different.")
 
-        self.F = data_frame["mf_dm1"]
-
+        self.mf_dm1 = data_frame["mf_dm1"]
         self.dm1_cc = data_frame["dm1_cc"]
-        self.e_cc = data_frame["e_cc"].item()
+        self.e_cc = data_frame["e_cc"]
+        if isinstance(self.e_cc, np.ndarray):
+            self.e_cc = self.e_cc.item()
         self.cc_dipole = data_frame["cc_dipole"]
-        self.time_cc = data_frame["time_cc"].item()
+        self.time_cc = data_frame["time_cc"]
+        if isinstance(self.time_cc, np.ndarray):
+            self.time_cc = self.time_cc.item()
         self.grad_ccsd = data_frame["grad_ccsd"]
 
         self.dm1_dft = data_frame["dm1_dft"]
-        self.e_dft = data_frame["e_dft"].item()
+        self.e_dft = data_frame["e_dft"]
+        if isinstance(self.e_dft, np.ndarray):
+            self.e_dft = self.e_dft.item()
         self.dft_dipole = data_frame["dft_dipole"]
-        self.time_dft = data_frame["time_dft"].item()
+        self.time_dft = data_frame["time_dft"]
+        if isinstance(self.time_dft, np.ndarray):
+            self.time_dft = self.time_dft.item()
         self.grad_dft = data_frame["grad_dft"]
 
         if if_disp:
