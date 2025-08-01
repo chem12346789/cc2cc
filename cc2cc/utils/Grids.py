@@ -338,8 +338,6 @@ class Grid(dft.gen_grid.Grids):
         """
         if getattr(dms, "mo_coeff", None) is None:
             print("Warning: dms.mo_coeff is None.")
-        mo_coeff = dms.mo_coeff
-        mo_occ = dms.mo_occ
 
         if mol.spin == 0:
             assert (
