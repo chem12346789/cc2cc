@@ -407,27 +407,21 @@ class Grid(dft.gen_grid.Grids):
         if mask is None:
             mask = self.non0tab
 
-        t0 = lib.logger.perf_counter()
         gridcube = self.gen_cube(self.mol, dms, coords, mask)
-        print(f"    gen_cube time: {lib.logger.perf_counter() - t0:.2f} s")
 
-        t0 = lib.logger.perf_counter()
         input_ = np.zeros((4, len(coords) * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
         make_rho, nset, nao = ni._gen_rho_evaluator(
             self.mol, dms, hermi, False, gridcube
         )
-        print(f"        prepare time: {lib.logger.perf_counter() - t0:.2f} s")
         for ao, mask, ip0, ip1 in modified_block_loop(
             ni, self.mol, gridcube, nao, deriv=1, non0tab=gridcube.non0tab
         ):
             for i in range(nset):
                 rho = make_rho(i, ao, mask, ni._xc_type("b3lyp"))
-                print(f"        gen rho time: {lib.logger.perf_counter() - t0:.2f} s")
                 exc_lda = ni.eval_xc_eff("LDA,", rho[0], deriv=0, xctype="LDA")[0]
                 exc_vwn = ni.eval_xc_eff(",VWN3", rho[0], deriv=0, xctype="LDA")[0]
                 exc_b88 = ni.eval_xc_eff("B88,", rho, deriv=0, xctype="GGA")[0]
                 exc_lyp = ni.eval_xc_eff(",LYP", rho, deriv=0, xctype="GGA")[0]
-                print(f"        gen exc time: {lib.logger.perf_counter() - t0:.2f} s")
                 rho0 = rho[0]
                 input_[0, ip0:ip1] = exc_lda * rho0
                 input_[1, ip0:ip1] = exc_vwn * rho0
@@ -435,11 +429,8 @@ class Grid(dft.gen_grid.Grids):
                 input_[3, ip0:ip1] = exc_lyp * rho0
         input_ = input_.reshape((4, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
         input_ = input_.transpose(1, 0, 2, 3, 4)
-        print(f"        reshape time: {lib.logger.perf_counter() - t0:.2f} s")
-        print(f"    gen input time: {lib.logger.perf_counter() - t0:.2f} s")
 
         if require_vxc:
-            t0 = lib.logger.perf_counter()
             e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_input[0], deriv=1, xctype="LDA")[
                 :2
             ]
@@ -456,7 +447,6 @@ class Grid(dft.gen_grid.Grids):
             vxc_b3lyp[1, 0:1, :] = v_vwn
             vxc_b3lyp[2, :, :] = v_b88
             vxc_b3lyp[3, :, :] = v_lyp
-            print(f"    gen vxc time: {lib.logger.perf_counter() - t0:.2f} s")
             return input_, exc_b3lyp * rho_input[0], vxc_b3lyp
         return input_
 
