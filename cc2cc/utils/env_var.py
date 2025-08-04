@@ -10,7 +10,6 @@ import torch
 
 
 # set the environment variable
-
 LEVEL = 3
 PERIOD = 2
 

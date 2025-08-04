@@ -18,6 +18,8 @@ from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBaseCube import DataBaseCube
 from cc2cc.utils.DataBaseCenter import DataBaseCenter
 
+IGNORE_MULTIPLIER = 1e-12
+
 
 class ModelClass:
     """
@@ -210,12 +212,11 @@ class ModelClass:
         output = self.model(input_) * weight
 
         tot_loss = self.loss_ene(
-            data_weight * torch.sum(target),
-            data_weight * torch.sum(output),
+            data_weight * torch.sum(target), data_weight * torch.sum(output)
         )
         loss_record = np.abs(torch.sum(target - output).item())
 
-        if self.loss_multiplier_abs > 1e-12:
+        if self.loss_multiplier_abs > IGNORE_MULTIPLIER:
             if self.args.loss_ene == "L1Loss":
                 tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(target, output)
             elif self.args.loss_ene == "MSELoss":
@@ -225,7 +226,7 @@ class ModelClass:
 
         loss_abs_record = torch.sum(torch.abs(target - output)).item()
 
-        if self.loss_multiplier_atomic > 1e-12:
+        if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
             ae_target = torch.sum(target)
             ae_output = torch.sum(output)
         loss_atomic_record = torch.sum(target - output)
@@ -239,7 +240,7 @@ class ModelClass:
                     f"Warning: {system_atom} not found in atomic_name_dict, "
                     "skipping atomic energy calculation."
                 )
-                if self.loss_multiplier_atomic > 1e-8:
+                if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
                     ae_target = torch.zeros_like(ae_target)
                     ae_output = torch.zeros_like(ae_output)
                 break
@@ -254,7 +255,7 @@ class ModelClass:
             atomic_target = atomic_batch["output"] * atomic_weight
             atomic_output = self.model(atomic_input_) * atomic_weight
 
-            if self.loss_multiplier_atomic > 1e-8:
+            if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
                 ae_target -= (
                     torch.sum(atomic_target) * batch["atomic_stoichiometry"][i_system]
                 )
@@ -266,7 +267,7 @@ class ModelClass:
                 * batch["atomic_stoichiometry"][i_system]
             )
 
-        if self.loss_multiplier_atomic > 1e-8:
+        if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
             tot_loss += self.loss_multiplier_atomic * self.loss_ene_atomic(
                 data_weight * ae_target, data_weight * ae_output
             )

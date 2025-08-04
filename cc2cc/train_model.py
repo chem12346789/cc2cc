@@ -2,7 +2,6 @@
 
 import os
 import random
-import time
 import numpy as np
 import torch
 from torch import distributed as dist
@@ -11,6 +10,7 @@ import wandb
 
 from cc2cc.utils import DataRecord
 from cc2cc.utils import ModelClass
+from cc2cc.utils.timer import Timer
 
 
 def train_model(train_str_dict, eval_str_dict, args):
@@ -41,6 +41,9 @@ def train_model(train_str_dict, eval_str_dict, args):
     modeldict.init_model()
     modeldict.init_train()
     modeldict.init_database(train_str_dict, eval_str_dict)
+
+    if modeldict.args.distributed:
+        dist.barrier()
 
     if modeldict.local_rank == 0:
         experiment_dict = {
@@ -84,10 +87,10 @@ def train_model(train_str_dict, eval_str_dict, args):
         )
         wandb.define_metric("*", step_metric="global_step")
 
+        timer = Timer()
+
     if modeldict.args.distributed:
         dist.barrier()
-
-    time_start = time.time()
 
     for epoch in range(args.epoch + 1):
         if modeldict.args.distributed:
@@ -167,9 +170,6 @@ def train_model(train_str_dict, eval_str_dict, args):
                 }
                 run.log(experiment_dict)
 
-            time_end = time.time()
-            time_elapsed = time_end - time_start
-
             print(
                 f"Local_rank {modeldict.local_rank:>2}, "
                 f"Epoch: {epoch:>5}, "
@@ -178,7 +178,7 @@ def train_model(train_str_dict, eval_str_dict, args):
                 f"Loss: {np.mean([data["loss_ene"] for data in train_data_record_l]):>5.2f}, "
                 f"Eval: {np.mean([data["loss_ene"] for data in eval_data_record_l]):>5.2f}, "
                 f"lr: {experiment_dict["lr"]:>5.2e}, "
-                f"Speed: {time_elapsed / (epoch + 1):>5.2f}s/epoch",
+                f"{timer.measure()}",
                 flush=True,
             )
 
