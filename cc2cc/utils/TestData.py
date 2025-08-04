@@ -65,6 +65,7 @@ class TestData:
         else:
             data_frame = {"mol_corr": mol.atom_coords()}
 
+        if_update = False
         if "dm1_cc" not in data_frame:
             if mol.spin == 0:
                 if "C60ISO" in self.name or "UPU23" in self.name:
@@ -85,14 +86,17 @@ class TestData:
                         if_grad=if_grad, cc_triple=cc_triple
                     )
             data_frame.update(data_frame_cc)
+            if_update = True
         if "dm1_dft" not in data_frame:
             if mol.spin == 0:
                 data_frame_ks = self.test_mol_rks(if_grad=if_grad, disp=None)
             else:
                 data_frame_ks = self.test_mol_uks(if_grad=if_grad, disp=None)
             data_frame.update(data_frame_ks)
+            if_update = True
 
-        np.savez_compressed(path_to_data / f"{name}_cc.npz", **data_frame)
+        if if_update:
+            np.savez_compressed(path_to_data / f"{name}_cc.npz", **data_frame)
 
         mol_corr = data_frame["mol_corr"]
         if np.linalg.norm(mol.atom_coords() - mol_corr, ord=1) > 1e-6:
