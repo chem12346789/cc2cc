@@ -215,7 +215,7 @@ class ModelClass:
         )
         loss_record = np.abs(torch.sum(target - output).item())
 
-        if self.loss_multiplier_abs > 1e-8:
+        if self.loss_multiplier_abs > 1e-12:
             if self.args.loss_ene == "L1Loss":
                 tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(target, output)
             elif self.args.loss_ene == "MSELoss":
@@ -225,7 +225,7 @@ class ModelClass:
 
         loss_abs_record = torch.sum(torch.abs(target - output)).item()
 
-        if self.loss_multiplier_atomic > 1e-8:
+        if self.loss_multiplier_atomic > 1e-12:
             ae_target = torch.sum(target)
             ae_output = torch.sum(output)
         loss_atomic_record = torch.sum(target - output)
