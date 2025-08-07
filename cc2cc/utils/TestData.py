@@ -2,6 +2,7 @@ from timeit import default_timer as timer
 import os
 import numpy as np
 import json
+import warnings
 
 import pyscf
 from pyscf.grad import ccsd as ccsd_grad
@@ -101,8 +102,15 @@ class TestData:
         mol_corr = data_frame["mol_corr"]
         if np.linalg.norm(mol.atom_coords() - mol_corr, ord=1) > 1e-6:
             print("Molecule coordinates are different.")
-            print("With nothing to do, skip the test.")
-            raise ValueError("Molecule coordinates are different.")
+            warnings.warn(
+                f"Coordinates of {name} are different from the saved data. "
+                "Please check the coordinates or regenerate the data."
+            )
+            if mol.spin == 0:
+                data_frame_ks = self.test_mol_rks(if_grad=if_grad, disp=None)
+            else:
+                data_frame_ks = self.test_mol_uks(if_grad=if_grad, disp=None)
+            data_frame.update(data_frame_ks)
 
         self.mf_dm1 = data_frame["mf_dm1"]
         self.dm1_cc = data_frame["dm1_cc"]

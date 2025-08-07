@@ -125,6 +125,68 @@ def train_model(train_str_dict, eval_str_dict, args):
                 "global_step": epoch,
                 "lr": modeldict.optimizer.param_groups[0]["lr"],
             }
+
+            train_data_name = []
+            train_data_record_new_l = {}
+            for data in train_data_record_l:
+                if data["name"] in train_data_name:
+                    train_data_record_new_l[data["name"]].update(
+                        {
+                            key: train_data_record_new_l[data["name"]][key]
+                            + [data[key]]
+                            for key in data.keys()
+                            if key.startswith("loss_")
+                        }
+                    )
+                else:
+                    train_data_name.append(data["name"])
+                    train_data_record_new_l[data["name"]] = {
+                        key: [data[key]]
+                        for key in data.keys()
+                        if key.startswith("loss_")
+                    }
+            train_data_record_l = []
+            for name in train_data_name:
+                train_data_record_l.append(
+                    {
+                        "name": name,
+                        **{
+                            key: np.mean(train_data_record_new_l[name][key])
+                            for key in train_data_record_new_l[name].keys()
+                        },
+                    }
+                )
+
+            eval_data_name = []
+            eval_data_record_new_l = {}
+            for data in eval_data_record_l:
+                if data["name"] in eval_data_name:
+                    eval_data_record_new_l[data["name"]].update(
+                        {
+                            key: eval_data_record_new_l[data["name"]][key] + [data[key]]
+                            for key in data.keys()
+                            if key.startswith("loss_")
+                        }
+                    )
+                else:
+                    eval_data_name.append(data["name"])
+                    eval_data_record_new_l[data["name"]] = {
+                        key: [data[key]]
+                        for key in data.keys()
+                        if key.startswith("loss_")
+                    }
+            eval_data_record_l = []
+            for name in eval_data_name:
+                eval_data_record_l.append(
+                    {
+                        "name": name,
+                        **{
+                            key: np.mean(eval_data_record_new_l[name][key])
+                            for key in eval_data_record_new_l[name].keys()
+                        },
+                    }
+                )
+
             experiment_dict.update(
                 {
                     f"train_{key}": np.mean([data[key] for data in train_data_record_l])

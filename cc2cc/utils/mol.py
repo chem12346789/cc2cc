@@ -33,6 +33,7 @@ def extend(
     distance: float,
     dataset_name: str = "Mol",
     verbose=4,
+    if_rotate=False,
 ) -> tuple:
     """
     Function to extend the molecule
@@ -66,10 +67,8 @@ def extend(
         molecule[extend_atom][extend_xyz] += distance
     if verbose > 3:
         print("extend mol", molecule)
-    # rotate(
-    #     molecule,
-    #     # rotation="random",
-    # )
+    if if_rotate:
+        rotate(molecule, rotation="random")
     return list(molecule)
 
 
@@ -82,6 +81,7 @@ def gen_mole(
     if_basis_str: bool,
     dataset_name: str = "Mol",
     verbose=0,
+    if_rotate=False,
 ) -> pyscf.gto.Mole:
     """
     Function to generate the molecule
@@ -93,6 +93,7 @@ def gen_mole(
         distance,
         dataset_name,
         verbose=verbose,
+        if_rotate=if_rotate,
     )
 
     mol = pyscf.M(

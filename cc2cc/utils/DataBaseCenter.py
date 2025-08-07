@@ -16,10 +16,11 @@ class DataBaseCenter(DataBase):
     def __init__(self, molecule_list, args, shuffle=True):
         super().__init__(molecule_list, args, shuffle=shuffle)
 
-    def load_data(self, mol_info, name, rho_dft=True):
+    def load_data(self, mol_info, name):
         """
         Load the data.
         """
+        print("", flush=True)
         data = np.load(DATA_PATH / f"data_{name}.npz")
 
         weight_mat = data["weights"]
@@ -57,7 +58,7 @@ class DataBaseCenter(DataBase):
         total_ene_used = 0
         data_length = len(input_mat) // mol_info["natm"]
         for i_atom in range(mol_info["natm"]):
-            atom_name = mol_info["atom_pure_symbol"][i_atom]
+            atom_name = mol_info["elements"][i_atom]
             if self.train_atom not in ["all", "All", "ALL"]:
                 if atom_name != self.train_atom:
                     print(

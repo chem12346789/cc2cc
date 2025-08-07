@@ -34,7 +34,11 @@ def test_uks(
     mdft.xc = test_data.xc_code
     mdft.grids = grids
     mdft.verbose = 4
-    get_veff_modified_uks(mdft, modeldict)
+
+    if modeldict.model_type == "center_4":
+        get_veff_modified_uks(mdft, modeldict, max_memory=8000)
+    elif modeldict.model_type == "cube":
+        get_veff_modified_uks(mdft, modeldict, max_memory=800)
 
     if "test" in args.load:
         dm1_scf = test_data.dm1_cc.copy()

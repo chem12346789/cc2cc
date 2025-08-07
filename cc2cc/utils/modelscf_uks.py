@@ -24,8 +24,8 @@ def nr_uks(
     grids,
     xc_code,
     dms,
+    max_memory,
     hermi=1,
-    max_memory=800,
 ):
     """
     Obtain the nelec, excsum, and vmat.
@@ -175,7 +175,13 @@ def nr_uks(
     return nelec, excsum, vmat
 
 
-def get_veff_modified(ks, modeldict, lambda_rho=None, dm_tar=None):
+def get_veff_modified(
+    ks,
+    modeldict,
+    lambda_rho=None,
+    dm_tar=None,
+    max_memory=800,
+):
     """
     Get the method of "Get the effective potential for the UKS method".
     """
@@ -200,7 +206,16 @@ def get_veff_modified(ks, modeldict, lambda_rho=None, dm_tar=None):
         ground_state = dm.ndim == 3 and dm.shape[0] == 2
         ni = ks_._numint
 
-        nelec, exc, vxc = nr_uks(modeldict, ni, mol, ks_.grids, ks_.xc, dm, hermi=hermi)
+        nelec, exc, vxc = nr_uks(
+            modeldict,
+            ni,
+            mol,
+            ks_.grids,
+            ks_.xc,
+            dm,
+            max_memory=max_memory,
+            hermi=hermi,
+        )
 
         if not ni.libxc.is_hybrid_xc(ks_.xc):
             vk = None

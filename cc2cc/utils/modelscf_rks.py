@@ -26,8 +26,8 @@ def nr_rks(
     grids,
     xc_code,
     dms,
+    max_memory,
     hermi=1,
-    max_memory=800,
 ):
     """
     Get the effective potential for the RKS method.
@@ -50,6 +50,7 @@ def nr_rks(
         ):
             for i in range(nset):
                 rho = make_rho(i, ao, mask, xctype)
+                print(f"rho shape: {rho.shape}")
                 energy_den, vxc = modelclass.eval_xc_eff(
                     rho, ni, dms, grids, coords_, mask
                 )
@@ -136,7 +137,13 @@ def nr_rks(
     return nelec, excsum, vmat
 
 
-def get_veff_modified(ks, modeldict, lambda_rho=None, dm_tar=None):
+def get_veff_modified(
+    ks,
+    modeldict,
+    lambda_rho=None,
+    dm_tar=None,
+    max_memory=800,
+):
     """
     Get the method of "Get the effective potential for the RKS method".
     """
@@ -201,7 +208,16 @@ def get_veff_modified(ks, modeldict, lambda_rho=None, dm_tar=None):
         if hermi == 2:  # because rho = 0
             n, exc, vxc = 0, 0, 0
         else:
-            n, exc, vxc = nr_rks(modeldict, ni, mol, ks_.grids, ks_.xc, dm, hermi=hermi)
+            n, exc, vxc = nr_rks(
+                modeldict,
+                ni,
+                mol,
+                ks_.grids,
+                ks_.xc,
+                dm,
+                max_memory=max_memory,
+                hermi=hermi,
+            )
             logger.debug(ks_, "nelec by numeric integration = %s", n)
             t0 = logger.timer(ks_, "vxc", *t0)
 

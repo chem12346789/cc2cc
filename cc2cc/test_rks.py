@@ -35,7 +35,10 @@ def test_rks(
     mdft.grids = grids
     mdft.verbose = 4
 
-    get_veff_modified_rks(mdft, modeldict)
+    if modeldict.model_type == "center_4":
+        get_veff_modified_rks(mdft, modeldict, max_memory=8000)
+    elif modeldict.model_type == "cube":
+        get_veff_modified_rks(mdft, modeldict, max_memory=800)
 
     if "test" in args.load:
         dm1_scf = test_data.dm1_cc.copy()
@@ -70,6 +73,7 @@ def test_rks(
     dict_ = {
         "name": name,
         "delta_scf": AU2KCALMOL * (e_scf - test_data.e_cc),
+        "delta_dft": AU2KCALMOL * (test_data.e_dft - test_data.e_cc),
         "time_cc": test_data.time_cc,
         "time_ai": time_ai,
         "time_dft": test_data.time_dft,

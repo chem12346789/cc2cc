@@ -10,8 +10,8 @@ import torch
 
 
 # set the environment variable
-LEVEL = 3
-PERIOD = 2
+LEVEL = 4
+PERIOD = 3
 
 CUBE_SIZE = os.environ.get("DFT2CC_CUBE_SIZE")
 if CUBE_SIZE is None:

@@ -124,9 +124,9 @@ class ModelClass:
         else:
             print(f"Model {load_path} not found, starting from scratch.")
 
-        if if_validate:
-            self.model.compile(fullgraph=True, dynamic=True, mode="max-autotune")
-        else:
+        if not if_validate:
+            #     self.model.compile(fullgraph=True, dynamic=True, mode="max-autotune")
+            # else:
             self.model.compile(dynamic=True, mode="max-autotune")
 
         if self.args.distributed:
@@ -406,6 +406,12 @@ class ModelClass:
             rho_b3lyp, exc_b3lyp, vxc_b3lyp = grids.gen_rho_uks(
                 rho, ni, require_vxc=True
             )
+        return exc_b3lyp, (
+            0.08 * vxc_b3lyp[0]
+            + 0.19 * vxc_b3lyp[1]
+            + 0.72 * vxc_b3lyp[2]
+            + 0.81 * vxc_b3lyp[3]
+        )
 
         input_mat = torch.tensor(
             rho_b3lyp,
@@ -416,7 +422,6 @@ class ModelClass:
         output_mat = self.model(input_mat)[:, 0]
 
         middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
-
         middle_mat = middle_cube.detach().cpu().numpy()
         energy_den = exc_b3lyp + output_mat.detach().cpu().numpy()
 

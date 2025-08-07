@@ -12,15 +12,15 @@ from torch import nn
 ANG = 302
 RAD = 75
 
-D_MODEL = RAD
-SEQ_LEN = 4
-DEPTH_TRANSFORMER = 5
+D_MODEL = 4 * ANG
+SEQ_LEN = RAD
+DEPTH_TRANSFORMER = 7
 QKV_BIAS = False
 DROP_RATE_TRANSFORMER = 0
 NUM_HEADS = 1
 
 MLP_DENSE = 108
-DEPTH_DENSE = 7
+DEPTH_DENSE = 9
 IF_SKIP_CONNECTION_DENSE = 1
 DROP_RATE_DENSE = 0
 
@@ -200,7 +200,7 @@ class DenseNet(nn.Module):
 
     def __init__(self, **kwargs):
         super(DenseNet, self).__init__()
-        self.d_model = kwargs.get("seq_len", SEQ_LEN)
+        self.d_model = kwargs.get("seq_len", 4)
         self.mlp = kwargs.get("mlp", MLP_DENSE)
         self.depth = kwargs.get("depth_dense", DEPTH_DENSE)
         self.drop_rate = kwargs.get("drop_rate", DROP_RATE_DENSE)
@@ -257,17 +257,7 @@ class Model(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
 
-        # print all contain in this file, for debugging and logging
-        with importlib.resources.files("cc2cc").joinpath(
-            "utils/model"
-        ) as resource_path:
-            file_path = Path(os.fspath(resource_path)) / "transformer_c_ang.py"
-            with open(file_path, "r", encoding="utf-8") as finput:
-                print(f"#INFO: **** input file is {file_path} ****\n")
-                print(finput.read())
-                print("#INFO: ****************** input file end ******************\n")
-                print("\n")
-
+        self.model_type = "center_4"
         self.predictor = Extractor(**kwargs)
         self.densenet = DenseNet(**kwargs)
 
@@ -275,25 +265,31 @@ class Model(nn.Module):
         """
         Standard forward function, required for all nn.Module classes
         """
-        t = x[:, [0]]
+        b3lyp_ene = (
+            0.08 * x[:, [0]] + 0.19 * x[:, [1]] + 0.72 * x[:, [2]] + 0.81 * x[:, [3]]
+        )
 
         # SHAPE: x = (batch, 4)
         x = x.reshape(-1, ANG, RAD, 4)
         # SHAPE: x = (N_ATOM, ANG, RAD, 4)
-        x = x.reshape(-1, RAD, 4)
-        # SHAPE: x = (N_ATOM * ANG, RAD, 4)
-        x = torch.permute(x, (0, 2, 1))
-        # SHAPE: x = (N_ATOM * ANG, 4, RAD)
+        x = torch.permute(x, (0, 2, 3, 1))
+        # SHAPE: x = (N_ATOM, RAD, 4, ANG)
+        x = x.reshape(-1, RAD, 4 * ANG)
+        # SHAPE: x = (N_ATOM, RAD, 4 * ANG)
 
         # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
         x = self.predictor(x)
         # x.shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
 
-        x = torch.permute(x, (0, 2, 1))
-        # x.shape = (N_ATOM * ANG, D_MODEL, SEQ_LEN)
+        # SHAPE: x = (N_ATOM, RAD, 4 * ANG)
+        x = x.reshape(-1, RAD, 4, ANG)
+        # SHAPE: x = (N_ATOM, RAD, 4, ANG)
+        x = torch.permute(x, (0, 3, 1, 2))
+        # SHAPE: x = (N_ATOM, ANG, RAD, 4)
         x = x.reshape(-1, 4)
-        # x.shape = (batch, 4)
+        # SHAPE: x = (N_ATOM * ANG * RAD, 4)
         x = self.densenet(x)
-        # x.shape = (batch, 1)
-        x = x * t
+        # SHAPE: x = (N_ATOM * ANG * RAD, 1)
+        x = x * b3lyp_ene
+        # SHAPE: x = (batch, 1)
         return x
