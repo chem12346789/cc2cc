@@ -55,7 +55,7 @@ class ModelClass:
         self.update_counter = 0
 
         self.dir_checkpoint = None
-        self.checkpointer = None
+        self.state_dict = None
 
         # for distributed training
         if self.args.distributed:
@@ -77,6 +77,8 @@ class ModelClass:
         """
         Initialize the model.
         """
+        self.load_model()
+
         if (MAIN_PATH / f"cc2cc/utils/model/{self.args.model}.py").exists():
             model = getattr(
                 __import__(f"cc2cc.utils.model.{self.args.model}", fromlist=["Model"]),
@@ -106,27 +108,12 @@ class ModelClass:
                 / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
             ).resolve()
 
-        load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.load}/").resolve()
-        load_path = load_checkpoint / f"{self.args.load_epoch}.pth"
-        if load_path.exists():
-            print(f"Loading model from {load_path}")
-            state_dict = torch.load(
-                load_path,
-                map_location=self.device,
-                weights_only=True,
-            )
-            if "module" in list(state_dict.keys())[0]:
-                # For backward compatibility with old checkpoints
-                state_dict = {
-                    k.replace("module.", ""): v for k, v in state_dict.items()
-                }
-            self.model.load_state_dict(state_dict)
-        else:
-            print(f"Model {load_path} not found, starting from scratch.")
+        if self.state_dict is not None:
+            self.model.load_state_dict(self.state_dict)
 
-        if not if_validate:
-            #     self.model.compile(fullgraph=True, dynamic=True, mode="max-autotune")
-            # else:
+        if if_validate:
+            self.model.compile(fullgraph=True, dynamic=True, mode="max-autotune")
+        else:
             self.model.compile(dynamic=True, mode="max-autotune")
 
         if self.args.distributed:
@@ -134,6 +121,35 @@ class ModelClass:
             self.model = DistributedDataParallel(
                 self.model, device_ids=[self.local_rank]
             )
+
+    def load_model(self):
+        load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.load}/").resolve()
+        load_path = load_checkpoint / f"{self.args.load_epoch}.pth"
+        if load_path.exists():
+            print(f"Loading model from {load_path}")
+            checkpoint = torch.load(
+                load_path, map_location=self.device, weights_only=True
+            )
+            state_dict = checkpoint["state_dict"]
+            if "module" in list(state_dict.keys())[0]:
+                # For backward compatibility with old checkpoints
+                state_dict = {
+                    k.replace("module.", ""): v for k, v in state_dict.items()
+                }
+            self.state_dict = state_dict
+            self.args.model = checkpoint["model"]
+        else:
+            print(f"Model {load_path} not found, starting from scratch.")
+
+    def save_model(self, epoch):
+        """
+        Save the model to the checkpoint.
+        """
+        state_dict = self.model.state_dict()
+        torch.save(
+            {"state_dict": state_dict, "model": self.args.model},
+            self.dir_checkpoint / f"{epoch}.pth",
+        )
 
     def init_train(self):
         """
@@ -144,11 +160,16 @@ class ModelClass:
             lr=self.args.lr,
             weight_decay=self.args.weight_decay,
         )
-        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
-            self.optimizer,
-            T_max=self.args.eval_step * 50,
-            eta_min=self.args.lr / 1000,
-        )
+        if self.args.scheduler == "cosine":
+            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
+                self.optimizer,
+                T_max=self.args.eval_step * 50,
+                eta_min=self.args.lr / 1000,
+            )
+        elif self.args.scheduler == "constant":
+            self.scheduler = optim.lr_scheduler.ConstantLR(self.optimizer)
+        else:
+            raise ValueError(f"Unknown scheduler {self.args.scheduler}")
 
         if self.args.loss_ene == "L1Loss":
             self.loss_ene = torch.nn.L1Loss(reduction="sum").cuda(self.local_rank)
@@ -331,13 +352,6 @@ class ModelClass:
 
         return data_record_l
 
-    def save_model(self, epoch):
-        """
-        Save the model to the checkpoint.
-        """
-        state_dict = self.model.state_dict()
-        torch.save(state_dict, self.dir_checkpoint / f"{epoch}.pth")
-
     def eval_xc_eff_cube(self, rho, ni, dms, grids, coords_, mask):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
@@ -406,12 +420,6 @@ class ModelClass:
             rho_b3lyp, exc_b3lyp, vxc_b3lyp = grids.gen_rho_uks(
                 rho, ni, require_vxc=True
             )
-        return exc_b3lyp, (
-            0.08 * vxc_b3lyp[0]
-            + 0.19 * vxc_b3lyp[1]
-            + 0.72 * vxc_b3lyp[2]
-            + 0.81 * vxc_b3lyp[3]
-        )
 
         input_mat = torch.tensor(
             rho_b3lyp,
@@ -422,6 +430,7 @@ class ModelClass:
         output_mat = self.model(input_mat)[:, 0]
 
         middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
+
         middle_mat = middle_cube.detach().cpu().numpy()
         energy_den = exc_b3lyp + output_mat.detach().cpu().numpy()
 

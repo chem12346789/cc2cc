@@ -88,6 +88,7 @@ def train_model(train_str_dict, eval_str_dict, args):
         wandb.define_metric("*", step_metric="global_step")
 
         timer = Timer()
+        best_loss = np.inf
 
     if modeldict.args.distributed:
         dist.barrier()
@@ -187,39 +188,7 @@ def train_model(train_str_dict, eval_str_dict, args):
                     }
                 )
 
-            experiment_dict.update(
-                {
-                    f"train_{key}": np.mean([data[key] for data in train_data_record_l])
-                    for key in train_data_record_l[0].keys()
-                    if key.startswith("loss_")
-                }
-            )
-            experiment_dict.update(
-                {
-                    f"eval_{key}": np.mean([data[key] for data in eval_data_record_l])
-                    for key in eval_data_record_l[0].keys()
-                    if key.startswith("loss_")
-                }
-            )
-            run.log(experiment_dict)
-
-            if epoch % args.eval_step == 0 and epoch % (args.eval_step * 50) == 0:
-                modeldict.save_model(epoch)
-
-                data_record_train = DataRecord(
-                    modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}"
-                )
-                for data in train_data_record_l:
-                    data_record_train.add_data(data)
-                data_record_train.save_csv()
-
-                data_record_eval = DataRecord(
-                    modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}"
-                )
-                for data in eval_data_record_l:
-                    data_record_eval.add_data(data)
-                data_record_eval.save_csv()
-
+            if epoch % args.eval_step == 0:
                 experiment_dict = {
                     "epoch_eval": epoch,
                     "train_loss_ene_epoch_eval": np.mean(
@@ -231,6 +200,49 @@ def train_model(train_str_dict, eval_str_dict, args):
                     "lr": modeldict.optimizer.param_groups[0]["lr"],
                 }
                 run.log(experiment_dict)
+
+                epoch_loss = np.mean(
+                    [data["loss_ene"] for data in eval_data_record_l]
+                    + [data["loss_ene"] for data in train_data_record_l]
+                )
+                if epoch_loss < best_loss:
+                    print(f"Loss improved: {best_loss:.4f} -> {epoch_loss:.4f}!")
+                    best_loss = epoch_loss
+                    modeldict.save_model(epoch)
+
+                    data_record_train = DataRecord(
+                        modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}"
+                    )
+                    for data in train_data_record_l:
+                        data_record_train.add_data(data)
+                    data_record_train.save_csv()
+
+                    data_record_eval = DataRecord(
+                        modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}"
+                    )
+                    for data in eval_data_record_l:
+                        data_record_eval.add_data(data)
+                    data_record_eval.save_csv()
+
+                    experiment_dict.update(
+                        {
+                            f"train_{key}": np.mean(
+                                [data[key] for data in train_data_record_l]
+                            )
+                            for key in train_data_record_l[0].keys()
+                            if key.startswith("loss_")
+                        }
+                    )
+                    experiment_dict.update(
+                        {
+                            f"eval_{key}": np.mean(
+                                [data[key] for data in eval_data_record_l]
+                            )
+                            for key in eval_data_record_l[0].keys()
+                            if key.startswith("loss_")
+                        }
+                    )
+                    run.log(experiment_dict)
 
             print(
                 f"Local_rank {modeldict.local_rank:>2}, "
