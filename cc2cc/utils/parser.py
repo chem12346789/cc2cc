@@ -360,6 +360,14 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--scheduler",
+        type=str,
+        default="constant",
+        choices=["cosine", "constant"],
+        help="Learning rate scheduler. Default is constant.",
+    )
+
+    parser.add_argument(
         "--iters_to_accumulate",
         type=int,
         default=1,

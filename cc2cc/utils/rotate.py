@@ -223,10 +223,10 @@ def rotate(molecule, rotation=None, degree=None, verbose=False):
                 mol[2] = x_array[1]
                 mol[3] = x_array[2]
 
-        for mol in molecule:
-            x_array = np.array(mol[1:])
-            index_ = np.argsort(np.abs(x_array))[-1]
-            mol[1] = x_array[index_]
+        # for mol in molecule:
+        #     x_array = np.array(mol[1:])
+        #     index_ = np.argsort(np.abs(x_array))[-1]
+        #     mol[1] = x_array[index_]
 
     I = get_inertia_moment(molecule)
     eig_val, eig_vec = np.linalg.eig(I)

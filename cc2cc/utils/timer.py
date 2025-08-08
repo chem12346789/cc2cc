@@ -13,6 +13,7 @@ class Timer:
     def __init__(self):
         self.start_time = time.time()
         self.latest_time = self.start_time
+        self.step = 0
 
     def measure(self):
         """Measure the elapsed time since the timer was started."""
@@ -21,4 +22,5 @@ class Timer:
         elapsed_time = time.time() - self.start_time
         elapsed_time_latest = time.time() - self.latest_time
         self.latest_time = time.time()
-        return f"Speed: {elapsed_time:.1f} s/E, Latest: {elapsed_time_latest:.1f} s"
+        self.step += 1
+        return f"Speed: {(elapsed_time / self.step):.1f} s/E, Latest: {elapsed_time_latest:.1f} s"

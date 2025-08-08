@@ -5,25 +5,20 @@ Generate list of model.
 import torch
 from torch import nn
 
-from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
-
 ANG = 302
 RAD = 75
 
-D_MODEL = CUBE_SIZE**3
+D_MODEL = 1
 SEQ_LEN = 4
 DEPTH_TRANSFORMER = 7
 QKV_BIAS = False
-TRANSFORMER_BIAS = True
-NUM_HEADS = 1
 DROP_RATE_TRANSFORMER = 0
+NUM_HEADS = 1
 
-MLP_DENSE = 108
-DENSE_BIAS = True
+MLP_DENSE = 128
 DEPTH_DENSE = 9
 IF_SKIP_CONNECTION_DENSE = 1
 DROP_RATE_DENSE = 0
-
 
 # ATTE_ACTV = "relu"
 # ATTE_NORMAL = "layer"
@@ -104,12 +99,8 @@ class ABlock(nn.Module):
         self.mlp_ratio = kwargs.get("mlp_ratio", 1)
         self.drop_rate = kwargs.get("drop_rate", DROP_RATE_TRANSFORMER)
 
-        self.dense1 = nn.Linear(
-            self.d_model, self.d_model * self.mlp_ratio, bias=TRANSFORMER_BIAS
-        )
-        self.dense2 = nn.Linear(
-            self.d_model * self.mlp_ratio, self.d_model, bias=TRANSFORMER_BIAS
-        )
+        self.dense1 = nn.Linear(self.d_model, self.d_model * self.mlp_ratio)
+        self.dense2 = nn.Linear(self.d_model * self.mlp_ratio, self.d_model)
         if ATTE_ACTV == "relu":
             self.actv_fn = nn.ReLU()
         elif ATTE_ACTV == "gelu":
@@ -168,13 +159,13 @@ class Extractor(nn.Module):
         elif ATTE_ACTV == "gelu":
             self.actv_fn = nn.GELU()
 
-        self.dense1 = nn.Linear(self.d_model, self.d_model, bias=TRANSFORMER_BIAS)
+        self.dense1 = nn.Linear(self.d_model, self.d_model)
         self.dropout1 = nn.Dropout(self.drop_rate)
         self.layer_blocks = nn.ModuleList(
             [ABlock(**kwargs) for _ in range(self.num_layer)]
         )
-        self.dense2 = nn.Linear(self.d_model, self.d_model, bias=TRANSFORMER_BIAS)
-        self.head = nn.Linear(self.d_model, self.d_model, bias=TRANSFORMER_BIAS)
+        self.dense2 = nn.Linear(self.d_model, self.d_model)
+        self.head = nn.Linear(self.d_model, self.d_model)
 
     def forward(self, inputs):
         """
@@ -214,7 +205,7 @@ class DenseNet(nn.Module):
 
         self.layers = nn.ModuleList(
             [
-                nn.Linear(input_size, output_size, bias=DENSE_BIAS)
+                nn.Linear(input_size, output_size)
                 for input_size, output_size in zip(self.sizes, self.sizes[1:])
             ]
         )
@@ -262,7 +253,7 @@ class Model(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
 
-        self.model_type = "cube"
+        self.model_type = "center_4"
 
         self.predictor = Extractor(**kwargs)
         self.densenet = DenseNet(**kwargs)
@@ -273,22 +264,19 @@ class Model(nn.Module):
         """
         # Extract the central values for each channel
         b3lyp_ene = (
-            0.08 * x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.19 * x[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.72 * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.81 * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            0.08 * x[:, [0]] + 0.19 * x[:, [1]] + 0.72 * x[:, [2]] + 0.81 * x[:, [3]]
         )
-        # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        # b3lyp_ene = x[:, [0]]
 
-        # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-        x = x.reshape(-1, 4, CUBE_SIZE**3)
+        # SHAPE x = (batch, 4)
+        x = x.reshape(-1, 4, 1)
         # SHAPE x = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
         x = self.predictor(x)
         # SHAPE shape = (N_ATOM * ANG, SEQ_LEN, D_MODEL)
 
-        # SHAPE x = (batch, 4, CUBE_SIZE**3)
-        x = x.reshape(-1, 4 * CUBE_SIZE**3)
-        # SHAPE x = (batch, 4 * CUBE_SIZE**3)
+        # SHAPE x = (batch, 4, 1)
+        x = x.reshape(-1, 4 * 1)
+        # SHAPE x = (batch, 4 * 1)
         x = self.densenet(x)
         # SHAPE x = (batch, 1)
         x = x * b3lyp_ene
