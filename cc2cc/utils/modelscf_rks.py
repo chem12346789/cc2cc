@@ -50,7 +50,6 @@ def nr_rks(
         ):
             for i in range(nset):
                 rho = make_rho(i, ao, mask, xctype)
-                print(f"rho shape: {rho.shape}")
                 energy_den, vxc = modelclass.eval_xc_eff(
                     rho, ni, dms, grids, coords_, mask
                 )

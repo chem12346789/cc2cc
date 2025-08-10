@@ -66,7 +66,6 @@ class ModelClass:
                 rank=self.local_rank,
                 world_size=torch.cuda.device_count(),
                 device_id=torch.device("cuda", self.local_rank),
-                timeout=datetime.timedelta(hours=1),
             )
             self.verbose = dist.get_rank() == 0
         else:
@@ -94,6 +93,7 @@ class ModelClass:
         self.device = next(self.model.parameters()).device
         self.dtype = next(self.model.parameters()).dtype
         self.model_type = self.model.model_type
+        print(f"Model type: {self.model_type}")
 
         if self.args.save_dir is not None and self.args.save_dir != "":
             self.dir_checkpoint = (
@@ -111,9 +111,7 @@ class ModelClass:
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict)
 
-        if if_validate:
-            self.model.compile(fullgraph=True, dynamic=True, mode="max-autotune")
-        else:
+        if not if_validate:
             self.model.compile(dynamic=True, mode="max-autotune")
 
         if self.args.distributed:
@@ -123,12 +121,16 @@ class ModelClass:
             )
 
     def load_model(self):
+        """
+        Load the model from the checkpoint.
+        """
         load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.load}/").resolve()
         load_path = load_checkpoint / f"{self.args.load_epoch}.pth"
+        print(f"Checking path {load_path}")
         if load_path.exists():
-            print(f"Loading model from {load_path}")
+            print("Loading model from path")
             checkpoint = torch.load(
-                load_path, map_location=self.device, weights_only=True
+                load_path, map_location=self.args.device, weights_only=True
             )
             state_dict = checkpoint["state_dict"]
             if "module" in list(state_dict.keys())[0]:
@@ -139,7 +141,7 @@ class ModelClass:
             self.state_dict = state_dict
             self.args.model = checkpoint["model"]
         else:
-            print(f"Model {load_path} not found, starting from scratch.")
+            print("Model not found, starting from scratch.")
 
     def save_model(self, epoch):
         """
@@ -331,7 +333,6 @@ class ModelClass:
                 self.update_counter = 0
 
             data_record_l.append(data_record)
-
         return data_record_l
 
     def eval_model(self):
@@ -349,7 +350,6 @@ class ModelClass:
                 data_record = self.loss(batch, if_train=False)
 
             data_record_l.append(data_record)
-
         return data_record_l
 
     def eval_xc_eff_cube(self, rho, ni, dms, grids, coords_, mask):
@@ -365,7 +365,6 @@ class ModelClass:
             exc: Exchange-correlation energy.
             vxc: Exchange-correlation potential.
         """
-        time_start = time.time()
         if grids.mol.spin == 0:
             rho_cube, exc_b3lyp, vxc_b3lyp = grids.gen_cube_rho_rks(
                 rho, ni, dms, coords=coords_, mask=mask, require_vxc=True
@@ -374,10 +373,7 @@ class ModelClass:
             rho_cube, exc_b3lyp, vxc_b3lyp = grids.gen_cube_rho_uks(
                 rho, ni, dms, coords=coords_, mask=mask, require_vxc=True
             )
-        time_end = time.time()
-        print(f"Time taken to generate cube: {time_end - time_start:.2f} seconds")
 
-        time_start = time.time()
         input_mat = torch.tensor(
             rho_cube,
             dtype=self.dtype,
@@ -394,9 +390,6 @@ class ModelClass:
             + (0.72 + middle_mat[:, 2]) * vxc_b3lyp[2]
             + (0.81 + middle_mat[:, 3]) * vxc_b3lyp[3]
         )
-        time_end = time.time()
-        print(f"Time taken to evaluate model: {time_end - time_start:.2f} seconds")
-        print("", flush=True)
         return energy_den, vxc
 
     def eval_xc_eff_4(self, rho, ni, dms, grids, coords_, mask):
