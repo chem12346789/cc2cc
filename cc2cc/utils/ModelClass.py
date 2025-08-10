@@ -93,6 +93,7 @@ class ModelClass:
         self.device = next(self.model.parameters()).device
         self.dtype = next(self.model.parameters()).dtype
         self.model_type = self.model.model_type
+        print(f"Model type: {self.model_type}")
 
         if self.args.save_dir is not None and self.args.save_dir != "":
             self.dir_checkpoint = (
@@ -110,9 +111,7 @@ class ModelClass:
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict)
 
-        if if_validate:
-            self.model.compile(fullgraph=True, dynamic=True, mode="max-autotune")
-        else:
+        if not if_validate:
             self.model.compile(dynamic=True, mode="max-autotune")
 
         if self.args.distributed:
@@ -122,10 +121,14 @@ class ModelClass:
             )
 
     def load_model(self):
+        """
+        Load the model from the checkpoint.
+        """
         load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.load}/").resolve()
         load_path = load_checkpoint / f"{self.args.load_epoch}.pth"
+        print(f"Checking path {load_path}")
         if load_path.exists():
-            print(f"Loading model from {load_path}")
+            print("Loading model from path")
             checkpoint = torch.load(
                 load_path, map_location=self.args.device, weights_only=True
             )
@@ -138,7 +141,7 @@ class ModelClass:
             self.state_dict = state_dict
             self.args.model = checkpoint["model"]
         else:
-            print(f"Model {load_path} not found, starting from scratch.")
+            print("Model not found, starting from scratch.")
 
     def save_model(self, epoch):
         """
