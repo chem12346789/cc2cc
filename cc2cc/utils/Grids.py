@@ -374,21 +374,13 @@ class Grid(dft.gen_grid.Grids):
         c2 = _dot_ao_dm(mol, ao[2], dm, screen_index, shls_slice, ao_loc)
         c3 = _dot_ao_dm(mol, ao[3], dm, screen_index, shls_slice, ao_loc)
 
-        rho_input_2[0, 0, :] = _contract_rho(ao[4], c0)  #  + _contract_rho(ao[1], c1)
-        rho_input_2[0, 1, :] = _contract_rho(ao[5], c0)  #  + _contract_rho(ao[1], c2)
-        rho_input_2[0, 2, :] = _contract_rho(ao[6], c0)  #  + _contract_rho(ao[1], c3)
-        rho_input_2[1, 1, :] = _contract_rho(ao[7], c0)  #  + _contract_rho(ao[2], c2)
-        rho_input_2[1, 2, :] = _contract_rho(ao[8], c0)  #  + _contract_rho(ao[2], c3)
-        rho_input_2[2, 2, :] = _contract_rho(ao[9], c0)  #  + _contract_rho(ao[3], c3)
-        assert (
-            np.linalg.norm(_contract_rho(ao[1], c2) - _contract_rho(ao[2], c1)) < 1e-10
-        ), "Density matrix is not symmetric."
-        assert (
-            np.linalg.norm(_contract_rho(ao[3], c2) - _contract_rho(ao[2], c3)) < 1e-10
-        ), "Density matrix is not symmetric."
-        assert (
-            np.linalg.norm(_contract_rho(ao[3], c1) - _contract_rho(ao[1], c3)) < 1e-10
-        ), "Density matrix is not symmetric."
+        rho_input_2[0, 0, :] = _contract_rho(ao[4], c0) + _contract_rho(ao[1], c1)
+        rho_input_2[0, 1, :] = _contract_rho(ao[5], c0) + _contract_rho(ao[1], c2)
+        rho_input_2[0, 2, :] = _contract_rho(ao[6], c0) + _contract_rho(ao[1], c3)
+        rho_input_2[1, 1, :] = _contract_rho(ao[7], c0) + _contract_rho(ao[2], c2)
+        rho_input_2[1, 2, :] = _contract_rho(ao[8], c0) + _contract_rho(ao[2], c3)
+        rho_input_2[2, 2, :] = _contract_rho(ao[9], c0) + _contract_rho(ao[3], c3)
+
         rho_input_2[1, 0, :] = rho_input_2[0, 1, :]
         rho_input_2[2, 0, :] = rho_input_2[0, 2, :]
         rho_input_2[2, 1, :] = rho_input_2[1, 2, :]

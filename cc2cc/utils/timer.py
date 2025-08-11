@@ -24,3 +24,9 @@ class Timer:
         self.latest_time = time.time()
         self.step += 1
         return f"Speed: {(elapsed_time / self.step):.1f} s/E, Latest: {elapsed_time_latest:.1f} s"
+
+    def reset(self):
+        """Reset the timer."""
+        self.start_time = time.time()
+        self.latest_time = self.start_time
+        self.step = 0

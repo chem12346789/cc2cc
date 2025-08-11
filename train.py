@@ -41,6 +41,7 @@ train_str_exclude_list = [
     "molecule4-S30L",
 ]
 eval_str_list = [
+    "W4_11-propane",  # 3
     "ADIM6-AD2",  # 4
     "molecule5-ALK8",
     "molecule5-BSR36",

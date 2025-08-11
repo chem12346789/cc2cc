@@ -189,16 +189,24 @@ def train_model(train_str_dict, eval_str_dict, args):
                 )
 
             if epoch % args.eval_step == 0:
-                experiment_dict = {
-                    "epoch_eval": epoch,
-                    "train_loss_ene_epoch_eval": np.mean(
-                        [data["loss_ene"] for data in train_data_record_l]
-                    ),
-                    "eval_loss_ene_epoch_eval": np.mean(
-                        [data["loss_ene"] for data in eval_data_record_l]
-                    ),
-                    "lr": modeldict.optimizer.param_groups[0]["lr"],
-                }
+                experiment_dict.update(
+                    {
+                        f"train_{key}": np.mean(
+                            [data[key] for data in train_data_record_l]
+                        )
+                        for key in train_data_record_l[0].keys()
+                        if key.startswith("loss_")
+                    }
+                )
+                experiment_dict.update(
+                    {
+                        f"eval_{key}": np.mean(
+                            [data[key] for data in eval_data_record_l]
+                        )
+                        for key in eval_data_record_l[0].keys()
+                        if key.startswith("loss_")
+                    }
+                )
                 run.log(experiment_dict)
 
                 epoch_loss = np.mean(
@@ -224,25 +232,17 @@ def train_model(train_str_dict, eval_str_dict, args):
                         data_record_eval.add_data(data)
                     data_record_eval.save_csv()
 
-                    experiment_dict.update(
+                    run.log(
                         {
-                            f"train_{key}": np.mean(
-                                [data[key] for data in train_data_record_l]
-                            )
-                            for key in train_data_record_l[0].keys()
-                            if key.startswith("loss_")
+                            "epoch_eval": epoch,
+                            "train_loss_ene_epoch_eval": np.mean(
+                                [data["loss_ene"] for data in train_data_record_l]
+                            ),
+                            "eval_loss_ene_epoch_eval": np.mean(
+                                [data["loss_ene"] for data in eval_data_record_l]
+                            ),
                         }
                     )
-                    experiment_dict.update(
-                        {
-                            f"eval_{key}": np.mean(
-                                [data[key] for data in eval_data_record_l]
-                            )
-                            for key in eval_data_record_l[0].keys()
-                            if key.startswith("loss_")
-                        }
-                    )
-                    run.log(experiment_dict)
 
             print(
                 f"Local_rank {modeldict.local_rank:>2}, "
