@@ -11,7 +11,7 @@ import torch
 
 # set the environment variable
 LEVEL = 3
-PERIOD = 2
+PERIOD = 3
 
 CUBE_SIZE = os.environ.get("DFT2CC_CUBE_SIZE")
 if CUBE_SIZE is None:
@@ -19,7 +19,7 @@ if CUBE_SIZE is None:
 else:
     CUBE_SIZE = int(CUBE_SIZE)
 CUBE_MIDDLE = CUBE_SIZE // 2
-CUBE_LEN = 0.01
+CUBE_LEN = 0.001
 
 TEST = os.environ.get("DFT2CC_TEST")
 if TEST is None:

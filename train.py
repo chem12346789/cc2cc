@@ -7,15 +7,15 @@ from cc2cc.utils.parser import gen_name_args
 train_str_list = [
     "molecule0",
     "molecule1",
-    "molecule2",
+    # "molecule2",
+    # # "molecule3-ALK8",
     # "molecule3-ALK8",
-    "molecule3-ALK8",
-    "molecule3-HEAVYSB11",
-    "molecule3-W4_11",
-    "molecule3-AL2X6",
-    "molecule4-ALK8",
-    "molecule4-W4_11",
-    "BH9-08_9R2",  # 5
+    # "molecule3-HEAVYSB11",
+    # "molecule3-W4_11",
+    # "molecule3-AL2X6",
+    # "molecule4-ALK8",
+    # "molecule4-W4_11",
+    # "BH9-08_9R2",  # 5
 ]
 train_str_exclude_list = [
     "W4_11-propane",  # 3
