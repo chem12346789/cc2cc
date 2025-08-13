@@ -125,6 +125,7 @@ def train_model(train_str_dict, eval_str_dict, args):
                 "epoch": epoch,
                 "global_step": epoch,
                 "lr": modeldict.optimizer.param_groups[0]["lr"],
+                "time_elapsed": timer.elapsed(),
             }
 
             train_data_name = []
@@ -213,9 +214,15 @@ def train_model(train_str_dict, eval_str_dict, args):
                     [data["loss_ene"] for data in eval_data_record_l]
                     + [data["loss_ene"] for data in train_data_record_l]
                 )
-                if epoch_loss < best_loss:
-                    print(f"Loss improved: {best_loss:.4f} -> {epoch_loss:.4f}!")
-                    best_loss = epoch_loss
+                if (epoch_loss < best_loss) or (epoch % (args.eval_step * 50) == 0):
+                    if epoch_loss < best_loss:
+                        print(f"Loss improved: {best_loss:.4f} -> {epoch_loss:.4f}!")
+                        best_loss = epoch_loss
+                    else:
+                        print(
+                            f"Loss not improved: {best_loss:.4f} -> {epoch_loss:.4f}."
+                        )
+
                     modeldict.save_model(epoch)
 
                     data_record_train = DataRecord(

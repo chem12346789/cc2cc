@@ -30,3 +30,9 @@ class Timer:
         self.start_time = time.time()
         self.latest_time = self.start_time
         self.step = 0
+
+    def elapsed(self):
+        """Get the elapsed time."""
+        if self.start_time is None:
+            raise RuntimeError("Timer has not been started. Call start() first.")
+        return time.time() - self.start_time

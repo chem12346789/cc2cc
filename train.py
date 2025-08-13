@@ -8,14 +8,6 @@ train_str_list = [
     "molecule0",
     "molecule1",
     # "molecule2",
-    # # "molecule3-ALK8",
-    # "molecule3-ALK8",
-    # "molecule3-HEAVYSB11",
-    # "molecule3-W4_11",
-    # "molecule3-AL2X6",
-    # "molecule4-ALK8",
-    # "molecule4-W4_11",
-    # "BH9-08_9R2",  # 5
 ]
 train_str_exclude_list = [
     "W4_11-propane",  # 3
@@ -41,8 +33,15 @@ train_str_exclude_list = [
     "molecule4-S30L",
 ]
 eval_str_list = [
-    "W4_11-propane",  # 3
-    "ADIM6-AD2",  # 4
+    # "molecule3-ALK8",
+    # "molecule3-HEAVYSB11",
+    # "molecule3-W4_11",
+    # "molecule3-AL2X6",
+    # "molecule4-ALK8",
+    # "molecule4-W4_11",
+    # "BH9-08_9R2",  # 5
+    # "W4_11-propane",  # 3
+    # "ADIM6-AD2",  # 4
     "molecule5-ALK8",
     "molecule5-BSR36",
     "molecule5-W4_11",
