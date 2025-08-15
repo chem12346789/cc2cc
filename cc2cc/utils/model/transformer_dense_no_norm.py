@@ -28,7 +28,7 @@ class Model(nn.Module):
             mlp_ratio=1,
             drop_rate=0,
             atte_actv="gelu",
-            # atte_normal="rms",
+            atte_normal="rms",
         )
 
         self.densenet = DenseNet(
@@ -50,7 +50,7 @@ class Model(nn.Module):
             mlp_ratio=1,
             drop_rate=0,
             atte_actv="gelu",
-            # atte_normal="rms",
+            atte_normal="rms",
         )
 
         self.densenet_center = DenseNet(
@@ -101,4 +101,4 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
         # SHAPE x_center = (batch, 1)
 
-        return b3lyp_ene * (x / CUBE_SIZE**3 + x_center)
+        return b3lyp_ene * (x + x_center)
