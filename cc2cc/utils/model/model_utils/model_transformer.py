@@ -77,7 +77,7 @@ class ABlock(nn.Module):
         elif self.atte_actv == "gelu":
             self.actv_fn = nn.GELU()
         else:
-            raise ValueError(f"Unknown activation function: {self.atte_actv}")
+            raise ValueError(f"Unknown activation function: {self.actv_fn}")
 
         self.atten = Attention(**kwargs)
 
@@ -92,7 +92,8 @@ class ABlock(nn.Module):
             self.layernorm1 = nn.RMSNorm(self.d_model)
             self.layernorm2 = nn.RMSNorm(self.d_model)
         else:
-            raise ValueError(f"Unknown normalization method: {self.atte_normal}")
+            self.layernorm1 = nn.Identity()
+            self.layernorm2 = nn.Identity()
 
     def forward(self, x_inp):
         """
@@ -133,11 +134,13 @@ class Extractor(nn.Module):
         self.atte_normal = kwargs.get("atte_normal")
 
         if self.atte_actv == "relu":
-            self.actv_fn = nn.ReLU()
+            self.actv_fn1 = nn.ReLU()
+            self.actv_fn2 = nn.ReLU()
         elif self.atte_actv == "gelu":
-            self.actv_fn = nn.GELU()
+            self.actv_fn1 = nn.GELU()
+            self.actv_fn2 = nn.GELU()
         else:
-            raise ValueError(f"Unknown activation function: {self.atte_actv}")
+            raise ValueError(f"Unknown activation function: {self.actv_fn}")
 
         self.dense1 = nn.Linear(self.d_model, self.d_model)
         self.dropout1 = nn.Dropout(self.drop_rate)
@@ -153,7 +156,7 @@ class Extractor(nn.Module):
         """
         # SHAPE inputs = (batch, seq_len, d_model)
         results = self.dense1(inputs)
-        results = self.actv_fn(results)
+        results = self.actv_fn1(results)
         results = self.dropout1(results)
         # SHAPE results = (batch, seq_len, d_model)
 
@@ -163,7 +166,7 @@ class Extractor(nn.Module):
         # SHAPE results = (batch, seq_len, d_model)
 
         results = self.dense2(results)
-        results = self.actv_fn(results)
+        results = self.actv_fn2(results)
         results = self.head(results)
         # SHAPE results = (batch, seq_len, d_model)
         return results

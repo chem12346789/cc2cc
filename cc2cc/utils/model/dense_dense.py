@@ -93,12 +93,6 @@ class Model(nn.Module):
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 
         # # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-        # x = x.reshape(-1, 4, CUBE_SIZE**3)
-        # # SHAPE x = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
-        # x = self.predictor(x)
-        # # SHAPE shape = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
-
-        # SHAPE x = (batch, 4, CUBE_SIZE**3)
         x = x.reshape(-1, 4 * CUBE_SIZE**3)
         # SHAPE x = (batch, 4 * CUBE_SIZE**3)
         x = self.densenet(x)

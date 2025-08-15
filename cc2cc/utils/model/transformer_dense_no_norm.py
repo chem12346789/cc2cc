@@ -22,13 +22,13 @@ class Model(nn.Module):
         self.predictor = Extractor(
             d_model=CUBE_SIZE**3,
             seq_len=4,
-            num_layer=5,
+            num_layer=3,
             qkv_bias=False,
             num_heads=1,
             mlp_ratio=1,
             drop_rate=0,
             atte_actv="gelu",
-            atte_normal="rms",
+            # atte_normal="rms",
         )
 
         self.densenet = DenseNet(
@@ -38,7 +38,7 @@ class Model(nn.Module):
             drop_rate=0,
             if_skip_connection_dense=1,
             dense_actv="gelu",
-            dense_normal="rms",
+            # dense_normal="rms",
         )
 
         self.predictor_center = Extractor(
@@ -50,7 +50,7 @@ class Model(nn.Module):
             mlp_ratio=1,
             drop_rate=0,
             atte_actv="gelu",
-            atte_normal="rms",
+            # atte_normal="rms",
         )
 
         self.densenet_center = DenseNet(
@@ -60,7 +60,7 @@ class Model(nn.Module):
             if_skip_connection_dense=1,
             drop_rate=0,
             dense_actv="gelu",
-            dense_normal="rms",
+            # dense_normal="rms",
         )
 
     def forward(self, x):

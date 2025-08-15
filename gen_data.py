@@ -9,10 +9,9 @@ from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.parser import gen_name_args
 
 train_str_list = [
-    "molecule0",
-    "molecule1",
+    # "molecule0",
+    # "molecule1",
     "molecule2",
-    # "molecule3-ALK8",
     "molecule3-ALK8",
     "molecule3-HEAVYSB11",
     "molecule3-W4_11",
@@ -84,8 +83,8 @@ if __name__ == "__main__":
     # remove the same name in eval and eval_str_exclude_list
     eval_str_list = [mol for mol in eval_str_list if mol not in eval_str_exclude_list]
 
-    name_mol_list = train_str_list
-    # name_mol_list = eval_str_list
+    # name_mol_list = train_str_list
+    name_mol_list = eval_str_list
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
 

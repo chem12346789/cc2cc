@@ -8,21 +8,6 @@ from torch import nn
 from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
 from cc2cc.utils.model.model_utils import Extractor, DenseNet
 
-ANG = 302
-RAD = 75
-
-# ATTE_ACTV = "relu"
-# ATTE_NORMAL = "layer"
-
-ATTE_ACTV = "gelu"
-ATTE_NORMAL = "rms"
-
-# DENSE_ACTV = "relu"
-# DENSE_NORMAL = "layer"
-
-DENSE_ACTV = "gelu"
-DENSE_NORMAL = "rms"
-
 
 class Model(nn.Module):
     """

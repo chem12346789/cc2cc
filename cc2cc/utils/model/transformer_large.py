@@ -38,7 +38,7 @@ class Model(nn.Module):
             drop_rate=0,
             if_skip_connection_dense=1,
             dense_actv="gelu",
-            dense_normal="rms",
+            dense_normal="layer",
         )
 
     def forward(self, x):

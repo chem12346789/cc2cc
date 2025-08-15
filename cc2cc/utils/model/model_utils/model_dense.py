@@ -30,7 +30,7 @@ class DenseNet(nn.Module):
         elif self.dense_actv == "gelu":
             self.actv_fn = nn.GELU()
         else:
-            raise ValueError(f"Unknown activation function: {self.dense_actv}")
+            raise ValueError(f"Unknown activation function: {self.actv_fn}")
 
         if self.dense_normal == "layer":
             self.norm = nn.ModuleList(
@@ -41,7 +41,7 @@ class DenseNet(nn.Module):
                 [nn.RMSNorm(i_size) for i_size in self.sizes[:-2]]
             )
         else:
-            raise ValueError(f"Unknown normalization method: {self.dense_normal}")
+            self.norm = nn.ModuleList([nn.Identity() for _ in self.sizes[:-2]])
 
         self.dropout = nn.Dropout(self.drop_rate)
 

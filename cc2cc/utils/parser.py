@@ -368,6 +368,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--cosine_eta_min",
+        type=float,
+        default=1e-8,
+        help="Minimum learning rate for cosine scheduler. Default is 1e-8.",
+    )
+
+    parser.add_argument(
         "--iters_to_accumulate",
         type=int,
         default=1,

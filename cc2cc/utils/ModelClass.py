@@ -109,7 +109,7 @@ class ModelClass:
             ).resolve()
 
         if self.state_dict is not None:
-            self.model.load_state_dict(self.state_dict)
+            self.model.load_state_dict(self.state_dict, strict=False)
 
         if not if_validate:
             self.model.compile(dynamic=True, mode="max-autotune")
@@ -166,7 +166,7 @@ class ModelClass:
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
                 T_max=self.args.eval_step * 50,
-                eta_min=self.args.lr / 1000,
+                eta_min=self.args.cosine_eta_min,
             )
         elif self.args.scheduler == "constant":
             self.scheduler = optim.lr_scheduler.ConstantLR(self.optimizer)
