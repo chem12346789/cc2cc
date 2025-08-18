@@ -63,12 +63,14 @@ if __name__ == "__main__":
     args = add_args(parser)
     print_computer_info(args.device)
 
-    train_str_list = gen_name_args(train_str_list, args)
+    train_str_list = gen_name_args(train_str_list, args.dataset, args.name_mol_reverse)
     train_str_exclude_list = gen_name_args(
-        train_str_exclude_list, args, if_exclude=True
+        train_str_exclude_list, args.dataset, args.name_mol_reverse, if_exclude=True
     )
-    eval_str_list = gen_name_args(eval_str_list, args)
-    eval_str_exclude_list = gen_name_args(eval_str_exclude_list, args, if_exclude=True)
+    eval_str_list = gen_name_args(eval_str_list, args.dataset, args.name_mol_reverse)
+    eval_str_exclude_list = gen_name_args(
+        eval_str_exclude_list, args.dataset, args.name_mol_reverse, if_exclude=True
+    )
 
     # remove the same name in train and train_str_exclude_list
     train_str_list = [

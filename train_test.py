@@ -52,6 +52,6 @@ if __name__ == "__main__":
     args = add_args(parser)
     print_computer_info(args.device)
 
-    train_str_list = gen_name_args(train_str_list, args)
-    eval_str_list = gen_name_args(eval_str_list, args)
+    train_str_list = gen_name_args(train_str_list, args.dataset, args.name_mol_reverse)
+    eval_str_list = gen_name_args(eval_str_list, args.dataset, args.name_mol_reverse)
     train_model(train_str_list, eval_str_list, args)

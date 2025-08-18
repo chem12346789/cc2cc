@@ -98,11 +98,11 @@ def get_distance(distance_list):
     return distance_l
 
 
-def gen_name_args(name_args, args, if_exclude=False):
+def gen_name_args(name_args, args_dataset, args_name_mol_reverse=False, if_exclude=False):
     """
     Function to generate name args
     """
-    dataset_dict = dataset[args.dataset]
+    dataset_dict = dataset[args_dataset]
 
     if name_args is None:
         name_mol_new = dataset_dict["molecule"]
@@ -141,7 +141,7 @@ def gen_name_args(name_args, args, if_exclude=False):
     # sort the name_mol_new by the length of the molecule then by the name
     # this is to ensure that the training process will be reproducible
     name_mol_new.sort(key=lambda x: (len(dataset_dict[x]), x))
-    if args.name_mol_reverse:
+    if args_name_mol_reverse:
         name_mol_new = name_mol_new[::-1]
 
     return name_mol_new

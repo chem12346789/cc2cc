@@ -113,18 +113,37 @@ MASS = {
 }
 
 
-def get_barycenter(molecule):
+def get_barycenter(molecule, extra_mass=False):
     """
     Get the barycenter
     """
     barycenter = np.array([0, 0, 0], dtype=np.float64)
     mass = 0.0
-    for mol in molecule:
-        mass += MASS[mol[0].lower()]
+    for i, mol in enumerate(molecule):
+        mass += MASS[mol[0].lower()] + (1 if extra_mass else 0) * i
         barycenter[0] += mol[1] * MASS[mol[0].lower()]
         barycenter[1] += mol[2] * MASS[mol[0].lower()]
         barycenter[2] += mol[3] * MASS[mol[0].lower()]
     return barycenter / mass
+
+
+def get_inertia_moment(molecule, extra_mass=False):
+    """
+    Get the moment of inertia
+    """
+    I = np.zeros((3, 3), dtype=np.float64)
+    for i, mol in enumerate(molecule):
+        mass = MASS[mol[0].lower()] + (1 if extra_mass else 0) * i
+        I[0, 0] += mass * (mol[2] ** 2 + mol[3] ** 2)
+        I[1, 1] += mass * (mol[1] ** 2 + mol[3] ** 2)
+        I[2, 2] += mass * (mol[1] ** 2 + mol[2] ** 2)
+        I[0, 1] -= mass * mol[1] * mol[2]
+        I[0, 2] -= mass * mol[1] * mol[3]
+        I[1, 2] -= mass * mol[2] * mol[3]
+        I[1, 0] = I[0, 1]
+        I[2, 0] = I[0, 2]
+        I[2, 1] = I[1, 2]
+    return I
 
 
 def rotation_matrix_from_vectors(vec1, vec2):
@@ -146,92 +165,81 @@ def rotation_matrix_from_vectors(vec1, vec2):
     return rotation_matrix
 
 
-def get_inertia_moment(molecule):
-    """
-    Get the moment of inertia
-    """
-    I = np.zeros((3, 3), dtype=np.float64)
-    for mol in molecule:
-        I[0, 0] += MASS[mol[0].lower()] * (mol[2] ** 2 + mol[3] ** 2)
-        I[1, 1] += MASS[mol[0].lower()] * (mol[1] ** 2 + mol[3] ** 2)
-        I[2, 2] += MASS[mol[0].lower()] * (mol[1] ** 2 + mol[2] ** 2)
-        I[0, 1] -= MASS[mol[0].lower()] * mol[1] * mol[2]
-        I[0, 2] -= MASS[mol[0].lower()] * mol[1] * mol[3]
-        I[1, 2] -= MASS[mol[0].lower()] * mol[2] * mol[3]
-        I[1, 0] = I[0, 1]
-        I[2, 0] = I[0, 2]
-        I[2, 1] = I[1, 2]
-    return I
-
-
-def rotate(molecule, rotation=None, degree=None, verbose=False):
+def rotate(
+    molecule, test_rotation=None, degree=None, solve_symmetry=False, verbose=False
+):
     """
     Rotate the molecule to certain direction, center of mass is at the origin, and the (three) principal axis of charge is along the x, y, z axis.
+    Note the molecule is sorted by mass.
     """
-    if rotation is not None:
+    if test_rotation is not None:
         verbose = True
+
+    extra_mass = False
 
     if verbose:
         print("Rotate the molecule to certain direction")
         print(f"before rotation {molecule}")
+
+    molecule = sorted(
+        molecule,
+        key=lambda sl: (MASS[sl[0].lower()]),
+    )
+
     # Get the barycenter
     barycenter = get_barycenter(molecule)
-
     for mol in molecule:
         mol[1] -= barycenter[0]
         mol[2] -= barycenter[1]
         mol[3] -= barycenter[2]
 
-    I = get_inertia_moment(molecule)
-    eig_val, eig_vec = np.linalg.eig(I)
-    index1 = np.argsort(eig_val)[2]
-    index2 = np.argsort(eig_val)[1]
-    if np.abs((eig_val[index1] - eig_val[index2])) > 1e-12:
-        list_max_eig = eig_vec[:, index1]
-        rotation_matrix = rotation_matrix_from_vectors(list_max_eig, [0, 0, 1])
-        # rotate the molecule
-        for mol in molecule:
-            x_array = np.array(mol[1:])
-            x_array = rotation_matrix @ x_array
-            mol[1] = x_array[0]
-            mol[2] = x_array[1]
-            mol[3] = x_array[2]
-
+    if solve_symmetry:
         I = get_inertia_moment(molecule)
         eig_val, eig_vec = np.linalg.eig(I)
-        index2 = np.argsort(eig_val)[1]
-        list_max_eig = eig_vec[:, index2]
-        rotation_matrix = rotation_matrix_from_vectors(list_max_eig, [0, 1, 0])
-        for mol in molecule:
-            x_array = np.array(mol[1:])
-            x_array = rotation_matrix @ x_array
-            mol[1] = x_array[0]
-            mol[2] = x_array[1]
-            mol[3] = x_array[2]
+        eig_val_sort = np.sort(eig_val, kind="stable")
+        if (np.abs(eig_val_sort[0] - eig_val_sort[1]) < 1e-1) or (
+            np.abs(eig_val_sort[1] - eig_val_sort[2]) < 1e-1
+        ):
+            extra_mass = True
+        else:
+            extra_mass = False
+        print("DEBUG", extra_mass)
+        print("DEBUG", molecule)
     else:
-        index1 = np.argsort(eig_val)[0]
-        list_max_eig = eig_vec[:, index1]
+        extra_mass = False
 
-        if (np.sqrt(list_max_eig[1] ** 2 + list_max_eig[2] ** 2)) > 1e-6:
-            rotation_matrix = rotation_matrix_from_vectors(list_max_eig, [1, 0, 0])
-
-            # rotate the molecule
-            for mol in molecule:
-                x_array = np.array(mol[1:])
-                x_array = rotation_matrix @ x_array
-                mol[1] = x_array[0]
-                mol[2] = x_array[1]
-                mol[3] = x_array[2]
-
-        # for mol in molecule:
-        #     x_array = np.array(mol[1:])
-        #     index_ = np.argsort(np.abs(x_array))[-1]
-        #     mol[1] = x_array[index_]
-
-    I = get_inertia_moment(molecule)
+    I = get_inertia_moment(molecule, extra_mass=extra_mass)
     eig_val, eig_vec = np.linalg.eig(I)
-    index2 = np.argsort(eig_val)[0]
+    print("DEBUG", eig_val, eig_vec)
+    index1 = np.argsort(eig_val, kind="stable")[2]
+    list_max_eig = eig_vec[:, index1]
+    rotation_matrix = rotation_matrix_from_vectors(list_max_eig, [0, 0, 1])
+    # rotate the molecule
+    for mol in molecule:
+        x_array = np.array(mol[1:])
+        x_array = rotation_matrix @ x_array
+        mol[1] = x_array[0]
+        mol[2] = x_array[1]
+        mol[3] = x_array[2]
+
+    I = get_inertia_moment(molecule, extra_mass=extra_mass)
+    eig_val, eig_vec = np.linalg.eig(I)
+    print("DEBUG", eig_val, eig_vec)
+    index2 = np.argsort(eig_val, kind="stable")[1]
     list_max_eig = eig_vec[:, index2]
+    rotation_matrix = rotation_matrix_from_vectors(list_max_eig, [0, 1, 0])
+    for mol in molecule:
+        x_array = np.array(mol[1:])
+        x_array = rotation_matrix @ x_array
+        mol[1] = x_array[0]
+        mol[2] = x_array[1]
+        mol[3] = x_array[2]
+
+    I = get_inertia_moment(molecule, extra_mass=extra_mass)
+    eig_val, eig_vec = np.linalg.eig(I)
+    print("DEBUG", eig_val, eig_vec)
+    index3 = np.argsort(eig_val, kind="stable")[0]
+    list_max_eig = eig_vec[:, index3]
     rotation_matrix = rotation_matrix_from_vectors(list_max_eig, [1, 0, 0])
     for mol in molecule:
         x_array = np.array(mol[1:])
@@ -239,13 +247,36 @@ def rotate(molecule, rotation=None, degree=None, verbose=False):
         mol[1] = x_array[0]
         mol[2] = x_array[1]
         mol[3] = x_array[2]
+
+    if solve_symmetry:
+        total_xyz = np.zeros(3, dtype=np.float64)
+        for i, mol in enumerate(molecule):
+            total_xyz += np.array(mol[1:], dtype=np.float64) * (i + 1)
+        for mol in molecule:
+            if total_xyz[0] < 0:
+                mol[1] = mol[1] * -1
+            if total_xyz[1] < 0:
+                mol[2] = mol[2] * -1
+            if total_xyz[2] < 0:
+                mol[3] = mol[3] * -1
+
+        molecule = sorted(
+            molecule,
+            key=lambda sl: (
+                MASS[sl[0].lower()],
+                (4 if sl[1] > 1e-6 else 0)
+                + (2 if sl[2] > 1e-6 else 0)
+                + (1 if sl[3] > 1e-6 else 0),
+            ),
+        )
+
     if verbose:
         print(f"after rotation {molecule}")
 
-    if rotation is not None:
+    if test_rotation is not None:
         if degree is None:
             degree = np.pi / 2
-        if rotation == "x":
+        if test_rotation == "x":
             rotation = np.array(
                 [
                     [1, 0, 0],
@@ -253,7 +284,7 @@ def rotate(molecule, rotation=None, degree=None, verbose=False):
                     [0, np.sin(degree), np.cos(degree)],
                 ]
             )
-        elif rotation == "y":
+        elif test_rotation == "y":
             rotation = np.array(
                 [
                     [np.cos(degree), 0, np.sin(degree)],
@@ -261,7 +292,7 @@ def rotate(molecule, rotation=None, degree=None, verbose=False):
                     [-np.sin(degree), 0, np.cos(degree)],
                 ]
             )
-        elif rotation == "z":
+        elif test_rotation == "z":
             rotation = np.array(
                 [
                     [np.cos(degree), -np.sin(degree), 0],
@@ -284,5 +315,5 @@ def rotate(molecule, rotation=None, degree=None, verbose=False):
             mol[3] = x_array[2]
         if verbose:
             print(f"after test rotation {molecule}")
-        return rotation
-    return np.eye(3)
+        return molecule, rotation
+    return molecule, np.eye(3)
