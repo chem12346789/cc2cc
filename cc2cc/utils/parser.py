@@ -486,7 +486,7 @@ def add_args(parser: argparse.ArgumentParser):
 
     args.distance_list = get_distance(args.distance_list)
     args.name_mol_input = args.name_mol.copy()
-    args.name_mol = gen_name_args(args.name_mol, args)
+    args.name_mol = gen_name_args(args.name_mol, args.dataset, args.name_mol_reverse)
 
     if args.train_atom not in periodic_table:
         raise ValueError(
