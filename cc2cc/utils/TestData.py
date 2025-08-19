@@ -69,7 +69,14 @@ class TestData:
         if_update = False
         if "dm1_cc" not in data_frame:
             if mol.spin == 0:
-                if "C60ISO" in self.name or "UPU23" in self.name:
+                if (
+                    "C60ISO" in self.name
+                    or "UPU23" in self.name
+                    or "ISOL24-i1e" in self.name
+                    or "ISOL24-i1p" in self.name
+                    or "ISOL24-i4e" in self.name
+                    or "ISOL24-i4p" in self.name
+                ):
                     data_frame_cc = self.test_mol_orca(
                         if_grad=if_grad, cc_triple=cc_triple
                     )
@@ -78,7 +85,14 @@ class TestData:
                         if_grad=if_grad, cc_triple=cc_triple
                     )
             else:
-                if "C60ISO" in self.name or "UPU23" in self.name:
+                if (
+                    "C60ISO" in self.name
+                    or "UPU23" in self.name
+                    or "ISOL24-i1e" in self.name
+                    or "ISOL24-i1p" in self.name
+                    or "ISOL24-i4e" in self.name
+                    or "ISOL24-i4p" in self.name
+                ):
                     data_frame_cc = self.test_mol_orca(
                         if_grad=if_grad, cc_triple=cc_triple
                     )
