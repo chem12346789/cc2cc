@@ -28,7 +28,7 @@ class Model(nn.Module):
             mlp_ratio=1,
             drop_rate=0,
             atte_actv="gelu",
-            # atte_normal="rms",
+            atte_normal="rms",
         )
 
         self.densenet = DenseNet(
@@ -38,7 +38,7 @@ class Model(nn.Module):
             drop_rate=0,
             if_skip_connection_dense=1,
             dense_actv="gelu",
-            # dense_normal="layer",
+            dense_normal="layer",
         )
 
     def forward(self, x):
