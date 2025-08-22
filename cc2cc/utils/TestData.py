@@ -309,7 +309,7 @@ class TestData:
             unit="A.U.",
         )
         if if_grad:
-            g = mdft.nuc_grad_method()
+            g = mdft.Gradients()
             grad_dft = g.kernel()
         else:
             grad_dft = None
@@ -347,7 +347,7 @@ class TestData:
             unit="A.U.",
         )
         if if_grad:
-            g = mdft.nuc_grad_method()
+            g = mdft.Gradients()
             grad_dft = g.kernel()
         else:
             grad_dft = None
