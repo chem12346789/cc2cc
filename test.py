@@ -60,7 +60,7 @@ if __name__ == "__main__":
             args.basis,
             args.if_basis_str,
             args.dataset,
-            if_rotate=True,
+            # if_rotate=True,
         )
 
         if mol is None:
