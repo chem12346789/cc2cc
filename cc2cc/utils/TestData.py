@@ -68,40 +68,22 @@ class TestData:
 
         if_update = False
         if "dm1_cc" not in data_frame:
-            if mol.spin == 0:
-                if (
-                    "C60ISO" in self.name
-                    or "UPU23" in self.name
-                    or "ISOL24-i1e" in self.name
-                    or "ISOL24-i1p" in self.name
-                    or "ISOL24-i4e" in self.name
-                    or "ISOL24-i4p" in self.name
-                ):
-                    data_frame_cc = self.test_mol_orca(
-                        if_grad=if_grad, cc_triple=cc_triple
-                    )
-                else:
-                    data_frame_cc = self.test_mol_rcc(
-                        if_grad=if_grad, cc_triple=cc_triple
-                    )
+            if (
+                "C60ISO" in self.name
+                or "UPU23" in self.name
+                or "ISOL24-i1e" in self.name
+                or "ISOL24-i1p" in self.name
+                or "ISOL24-i4e" in self.name
+                or "ISOL24-i4p" in self.name
+            ):
+                data_frame_cc = self.test_mol_orca(if_grad=if_grad, cc_triple=cc_triple)
+            elif mol.spin == 0:
+                data_frame_cc = self.test_mol_rcc(if_grad=if_grad, cc_triple=cc_triple)
             else:
-                if (
-                    "C60ISO" in self.name
-                    or "UPU23" in self.name
-                    or "ISOL24-i1e" in self.name
-                    or "ISOL24-i1p" in self.name
-                    or "ISOL24-i4e" in self.name
-                    or "ISOL24-i4p" in self.name
-                ):
-                    data_frame_cc = self.test_mol_orca(
-                        if_grad=if_grad, cc_triple=cc_triple
-                    )
-                else:
-                    data_frame_cc = self.test_mol_ucc(
-                        if_grad=if_grad, cc_triple=cc_triple
-                    )
+                data_frame_cc = self.test_mol_ucc(if_grad=if_grad, cc_triple=cc_triple)
             data_frame.update(data_frame_cc)
             if_update = True
+
         if "dm1_dft" not in data_frame:
             if mol.spin == 0:
                 data_frame_ks = self.test_mol_rks(if_grad=if_grad, disp=None)

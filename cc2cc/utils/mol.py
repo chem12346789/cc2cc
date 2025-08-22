@@ -75,12 +75,6 @@ def extend(
             solve_symmetry=solve_symmetry,
             verbose=verbose,
         )
-    else:
-        molecule, _ = rotate(
-            molecule,
-            solve_symmetry=solve_symmetry,
-            verbose=verbose,
-        )
     return list(molecule)
 
 
