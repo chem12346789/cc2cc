@@ -112,7 +112,7 @@ class ModelClass:
             self.model.load_state_dict(self.state_dict, strict=False)
 
         if not if_validate:
-            self.model.compile(dynamic=True, mode="max-autotune")
+            self.model.compile(dynamic=True)
 
         if self.args.distributed:
             print(f"Using DistributedDataParallel on rank {self.local_rank}")

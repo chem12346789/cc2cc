@@ -2,6 +2,7 @@
 Generate list of model.
 """
 
+import torch
 from torch import nn
 
 from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
@@ -21,12 +22,13 @@ class Model(nn.Module):
         self.predictor = Extractor(
             d_model=CUBE_SIZE**3,
             seq_len=4,
-            num_layer=7,
+            num_layer=3,
             qkv_bias=False,
             num_heads=1,
             mlp_ratio=1,
             drop_rate=0,
             atte_actv="gelu",
+            # atte_normal="rms",
         )
 
         self.densenet = DenseNet(
@@ -36,6 +38,29 @@ class Model(nn.Module):
             drop_rate=0,
             if_skip_connection_dense=1,
             dense_actv="gelu",
+            # dense_normal="rms",
+        )
+
+        self.predictor_center = Extractor(
+            d_model=1,
+            seq_len=4,
+            num_layer=7,
+            qkv_bias=False,
+            num_heads=1,
+            mlp_ratio=1,
+            drop_rate=0,
+            atte_actv="gelu",
+            # atte_normal="rms",
+        )
+
+        self.densenet_center = DenseNet(
+            d_model=4,
+            mlp=128,
+            depth=9,
+            if_skip_connection_dense=1,
+            drop_rate=0,
+            dense_actv="gelu",
+            # dense_normal="rms",
         )
 
     def forward(self, x):
@@ -50,6 +75,7 @@ class Model(nn.Module):
             + 0.81 * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         )
         # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
@@ -62,5 +88,17 @@ class Model(nn.Module):
         # SHAPE x = (batch, 4 * CUBE_SIZE**3)
         x = self.densenet(x)
         # SHAPE x = (batch, 1)
-        x = b3lyp_ene * x
-        return x
+
+        # SHAPE x_center = (batch, 4)
+        x_center = x_center.reshape(-1, 4, 1)
+        # SHAPE x_center = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
+        x_center = self.predictor_center(x_center)
+        # SHAPE shape = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
+
+        # SHAPE x_center = (batch, 4, 1)
+        x_center = x_center.reshape(-1, 4 * 1)
+        # SHAPE x_center = (batch, 4 * 1)
+        x_center = self.densenet_center(x_center)
+        # SHAPE x_center = (batch, 1)
+
+        return b3lyp_ene * (x + x_center)
