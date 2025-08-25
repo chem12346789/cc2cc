@@ -34,6 +34,7 @@ def extend(
     dataset_name: str = "Mol",
     verbose=4,
     if_rotate=False,
+    if_rotate_random=False,
     solve_symmetry=False,
 ) -> tuple:
     """
@@ -69,12 +70,19 @@ def extend(
     if verbose > 3:
         print("extend mol", molecule)
     if if_rotate:
-        molecule, _ = rotate(
-            molecule,
-            test_rotation="random",
-            solve_symmetry=solve_symmetry,
-            verbose=verbose,
-        )
+        if if_rotate_random:
+            molecule, _ = rotate(
+                molecule,
+                test_rotation="random",
+                solve_symmetry=solve_symmetry,
+                verbose=verbose,
+            )
+        else:
+            molecule, _ = rotate(
+                molecule,
+                solve_symmetry=solve_symmetry,
+                verbose=verbose,
+            )
     return list(molecule)
 
 
@@ -88,6 +96,7 @@ def gen_mole(
     dataset_name: str = "Mol",
     verbose=0,
     if_rotate=False,
+    if_rotate_random=False,
     solve_symmetry=False,
 ) -> pyscf.gto.Mole:
     """
@@ -101,6 +110,7 @@ def gen_mole(
         dataset_name,
         verbose=verbose,
         if_rotate=if_rotate,
+        if_rotate_random=if_rotate_random,
         solve_symmetry=solve_symmetry,
     )
 
