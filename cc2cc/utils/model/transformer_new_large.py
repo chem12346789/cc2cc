@@ -20,15 +20,14 @@ class Model(nn.Module):
         self.model_type = "cube"
 
         self.predictor = Extractor(
-            d_model=CUBE_SIZE**3,
-            seq_len=4,
-            num_layer=5,
+            d_model=4,
+            seq_len=CUBE_SIZE**3,
+            num_layer=7,
             qkv_bias=False,
             num_heads=1,
             mlp_ratio=1,
             drop_rate=0,
             atte_actv="gelu",
-            # atte_normal="rms",
         )
 
         self.densenet = DenseNet(
@@ -38,7 +37,6 @@ class Model(nn.Module):
             drop_rate=0,
             if_skip_connection_dense=1,
             dense_actv="gelu",
-            # dense_normal="layer",
         )
 
     def forward(self, x):
@@ -56,9 +54,11 @@ class Model(nn.Module):
 
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
+        x = torch.permute(x, (0, 2, 1))
         # SHAPE x = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
         x = self.predictor(x)
         # SHAPE shape = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
+        x = torch.permute(x, (0, 2, 1))
 
         # SHAPE x = (batch, 4, CUBE_SIZE**3)
         x = x.reshape(-1, 4 * CUBE_SIZE**3)

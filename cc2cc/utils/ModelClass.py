@@ -4,11 +4,12 @@ Generate list of model.
 
 from pathlib import Path
 import datetime
-import time
 import os
 import numpy as np
+
 import torch
 import torch.optim as optim
+import torch._functorch.config
 
 from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
@@ -112,7 +113,8 @@ class ModelClass:
             self.model.load_state_dict(self.state_dict, strict=False)
 
         if not if_validate:
-            self.model.compile(dynamic=True, mode="max-autotune")
+            torch._functorch.config.activation_memory_budget = 0.8
+            self.model.compile(dynamic=True)
 
         if self.args.distributed:
             print(f"Using DistributedDataParallel on rank {self.local_rank}")
