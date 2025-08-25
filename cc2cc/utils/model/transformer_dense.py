@@ -28,7 +28,6 @@ class Model(nn.Module):
             mlp_ratio=1,
             drop_rate=0,
             atte_actv="gelu",
-            atte_normal="rms",
         )
 
         self.densenet = DenseNet(
@@ -38,7 +37,6 @@ class Model(nn.Module):
             drop_rate=0,
             if_skip_connection_dense=1,
             dense_actv="gelu",
-            dense_normal="rms",
         )
 
         self.predictor_center = Extractor(
@@ -50,7 +48,6 @@ class Model(nn.Module):
             mlp_ratio=1,
             drop_rate=0,
             atte_actv="gelu",
-            atte_normal="rms",
         )
 
         self.densenet_center = DenseNet(
@@ -60,7 +57,15 @@ class Model(nn.Module):
             if_skip_connection_dense=1,
             drop_rate=0,
             dense_actv="gelu",
-            dense_normal="rms",
+        )
+
+        self.densenet_out = DenseNet(
+            d_model=2,
+            mlp=2,
+            depth=2,
+            if_skip_connection_dense=1,
+            drop_rate=0,
+            dense_actv="gelu",
         )
 
     def forward(self, x):
@@ -101,4 +106,7 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
         # SHAPE x_center = (batch, 1)
 
-        return b3lyp_ene * (x / CUBE_SIZE**3 + x_center)
+        x_in = torch.cat((x, x_center), dim=-1)
+        x = self.densenet_out(x_in)
+
+        return b3lyp_ene * x
