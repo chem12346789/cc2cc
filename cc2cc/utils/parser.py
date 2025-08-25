@@ -480,6 +480,13 @@ def add_args(parser: argparse.ArgumentParser):
         help="Weather to use dispersion correction. Default is True.",
     )
 
+    parser.add_argument(
+        "--if_rotate",
+        type=str2bool,
+        default=False,
+        help="Weather to use rotation. Default is False.",
+    )
+
     args = parser.parse_args()
     for i in range(len(args.extend_xyz)):
         args.extend_xyz[i] += 1
