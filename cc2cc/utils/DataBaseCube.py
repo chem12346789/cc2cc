@@ -39,8 +39,6 @@ class DataBaseCube(DataBase):
         else:
             raise ValueError(f"Unknown rho_input: {self.rho_input}")
 
-        # print(f"Total energy real: {AU2KCALMOL * data['error_energy']}")
-        # print(f"Total energy: {AU2KCALMOL * np.sum(output_mat * weight_mat)}")
         if (
             AU2KCALMOL * abs(error_energy - np.sum(output_mat * weight_mat))
             > 0.2 * mol_info["natm"]
@@ -56,6 +54,8 @@ class DataBaseCube(DataBase):
 
         num_data_used = 0
         total_ene_used = 0
+        total_ene_used_abs = 0
+        max_ene_den = 0
         data_length = len(input_mat) // mol_info["natm"]
         for i_atom in range(mol_info["natm"]):
             atom_name = mol_info["elements"][i_atom]
@@ -79,6 +79,12 @@ class DataBaseCube(DataBase):
             weight_.append(weight_mat[slice_])
             output_.append(output_mat[slice_])
             total_ene_used += np.sum(output_mat[slice_] * weight_mat[slice_])
+            total_ene_used_abs += np.sum(
+                np.abs(output_mat[slice_] * weight_mat[slice_])
+            )
+            max_ene_den = max(
+                max_ene_den, np.max(output_mat[slice_] * weight_mat[slice_])
+            )
         input_ = np.array(input_).reshape((-1, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
         weight_ = np.array(weight_).reshape((-1, 1))
         output_ = np.array(output_).reshape((-1, 1))
@@ -87,6 +93,8 @@ class DataBaseCube(DataBase):
             return 0, {}
 
         print(f"Total energy used: {AU2KCALMOL * total_ene_used}")
+        print(f"Total abs energy used: {AU2KCALMOL * total_ene_used_abs}")
+        print(f"Max energy density: {AU2KCALMOL * max_ene_den}")
         print(f"Total data used for {name}: {num_data_used}", flush=True)
         print(
             f"Atomic systems: {atomic_systems}, Stoichiometry: {atomic_stoichiometry}",
