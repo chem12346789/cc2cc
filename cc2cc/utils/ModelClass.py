@@ -183,7 +183,7 @@ class ModelClass:
             )
         elif self.args.loss_ene == "MSELoss":
             self.loss_ene = torch.nn.MSELoss(reduction="sum").cuda(self.local_rank)
-            self.loss_ene_abs = torch.nn.L1Loss(reduction="sum").cuda(self.local_rank)
+            self.loss_ene_abs = torch.nn.MSELoss(reduction="sum").cuda(self.local_rank)
             self.loss_ene_atomic = torch.nn.MSELoss(reduction="sum").cuda(
                 self.local_rank
             )
@@ -242,20 +242,13 @@ class ModelClass:
         loss_record = np.abs(torch.sum(target - output).item())
 
         if self.loss_multiplier_abs > IGNORE_MULTIPLIER:
-            if self.args.loss_ene == "L1Loss":
-                tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(target, output)
-            elif self.args.loss_ene == "MSELoss":
-                tot_loss += (
-                    self.loss_multiplier_abs * self.loss_ene_abs(target, output) ** 2
-                )
-
+            tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(target, output)
         loss_abs_record = torch.sum(torch.abs(target - output)).item()
 
         if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
             ae_target = torch.sum(target)
             ae_output = torch.sum(output)
         loss_atomic_record = torch.sum(target - output)
-
         for i_system in range(len(batch["atomic_systems"])):
             system_atom = batch["atomic_systems"][i_system]
             if system_atom in self.database_train.atomic_name_dict:

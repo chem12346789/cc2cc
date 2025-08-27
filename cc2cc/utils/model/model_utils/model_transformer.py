@@ -11,8 +11,8 @@ class Attention(nn.Module):
         super(Attention, self).__init__()
         self.d_model = kwargs.get("d_model")
         self.num_heads = kwargs.get("num_heads")
-        self.qkv_bias = kwargs.get("qkv_bias")
-        self.drop_rate = kwargs.get("drop_rate")
+        self.qkv_bias = kwargs.get("qkv_bias", False)
+        self.drop_rate = kwargs.get("drop_rate", 0)
         self.sqrt_d = self.d_model**0.5
 
         self.dense1 = nn.Linear(self.d_model, self.d_model * 3, bias=self.qkv_bias)
@@ -65,8 +65,8 @@ class ABlock(nn.Module):
     def __init__(self, **kwargs):
         super(ABlock, self).__init__()
         self.d_model = kwargs.get("d_model")
-        self.mlp_ratio = kwargs.get("mlp_ratio")
-        self.drop_rate = kwargs.get("drop_rate")
+        self.mlp_ratio = kwargs.get("mlp_ratio", 1)
+        self.drop_rate = kwargs.get("drop_rate", 0)
         self.atte_actv = kwargs.get("atte_actv")
         self.atte_normal = kwargs.get("atte_normal")
 

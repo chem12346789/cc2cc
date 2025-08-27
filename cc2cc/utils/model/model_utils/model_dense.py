@@ -11,16 +11,17 @@ class DenseNet(nn.Module):
         self.d_model = kwargs.get("d_model")
         self.mlp = kwargs.get("mlp")
         self.depth = kwargs.get("depth")
-        self.drop_rate = kwargs.get("drop_rate")
-        self.if_skip_connection_dense = kwargs.get("if_skip_connection_dense")
-        self.dense_actv = kwargs.get("dense_actv")
-        self.dense_normal = kwargs.get("dense_normal")
+        self.drop_rate = kwargs.get("drop_rate", 0.0)
+        self.dense_bias = kwargs.get("dense_bias", True)
+        self.dense_actv = kwargs.get("dense_actv", "gelu")
+        self.dense_normal = kwargs.get("dense_normal", "")
+        self.if_skip_connection_dense = kwargs.get("if_skip_connection_dense", True)
 
         self.sizes = [self.d_model] + [self.mlp] * (self.depth - 1) + [1]
 
         self.layers = nn.ModuleList(
             [
-                nn.Linear(input_size, output_size)
+                nn.Linear(input_size, output_size, bias=self.dense_bias)
                 for input_size, output_size in zip(self.sizes, self.sizes[1:])
             ]
         )
