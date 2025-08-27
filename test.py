@@ -61,6 +61,7 @@ if __name__ == "__main__":
             args.if_basis_str,
             args.dataset,
             if_rotate=args.if_rotate,
+            if_rotate_random=args.if_rotate_random,
         )
 
         if mol is None:
