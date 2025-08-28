@@ -27,13 +27,12 @@ class Model(nn.Module):
             mlp_ratio=1,
             drop_rate=0,
             atte_actv="gelu",
-            atte_normal="rms",
         )
 
         self.densenet = DenseNet(
             d_model=4 * CUBE_SIZE**3,
             mlp=108,
-            depth=9,
+            depth=5,
             drop_rate=0,
             if_skip_connection_dense=1,
             dense_actv="gelu",
