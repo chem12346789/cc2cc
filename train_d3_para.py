@@ -1,5 +1,6 @@
 import json
 from itertools import product
+import argparse
 
 import numpy as np
 import pandas as pd
@@ -140,7 +141,19 @@ class Model(nn.Module):
         return batch_dicts
 
 
-data_path = "/home/dhem/workspace/2025.1/validate/ccdft_cc-pVDZ_atom-1-1513512_gmtkn-cc-pVDZ.csv"
+parser = argparse.ArgumentParser(
+    description="Generate the inversed potential and energy."
+)
+parser.add_argument(
+    "--load", type=str, default="", help="Name of csv file, <csv_file_name>"
+)
+args = parser.parse_args()
+data_path = f"validate_hkqai/ccdft_cc-pVDZ_{args.load}_gmtkn-cc-pVDZ.csv"
+save_para = {}
+save_para_path = f"validate_hkqai/ccdft_cc-pVDZ_{args.load}_gmtkn-cc-pVDZ.json"
+
+device = "cuda"
+
 data = pd.read_csv(data_path)
 batch_subset = [
     "W4_11",
@@ -212,7 +225,7 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
     name_batch_list = {}
     weight_batch_list = {}
     mean_absolute_deviation = []
-    model = Model(device="cuda", damping=damping)
+    model = Model(device=device, damping=damping)
     model.compile(mode="max-autotune-no-cudagraphs")
     for name_mol in data_name_list:
         for i_subset in batch_subset:
@@ -274,7 +287,7 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
         reaction_dict = json_data[f"reaction-{i_subset}"]
 
         energy_batch_target[i_subset] = torch.zeros(
-            len(reaction_dict), dtype=torch.float64
+            len(reaction_dict), dtype=torch.float64, device=device
         )
         weight_batch = np.zeros(len(reaction_dict), dtype=np.float64)
         for i_reaction_name, (i_reaction_keys, i_reaction) in enumerate(
@@ -303,16 +316,29 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
         weight_batch_list[i_subset] = 1 / np.mean(np.abs(weight_batch))
 
     print(
-        f"mean_absolute_deviation: {np.mean(mean_absolute_deviation) / len(mean_absolute_deviation)}"
+        f"mean_absolute_deviation: {np.mean(mean_absolute_deviation) / len(mean_absolute_deviation)}",
+        flush=True,
     )
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.0001, weight_decay=1e-8)
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=1e-4,
+        weight_decay=1e-12,
+    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer,
+        T_max=200,
+        eta_min=1e-8,
+    )
     loss_function = torch.nn.L1Loss(reduction="sum")
     torch.set_printoptions(precision=5, sci_mode=False)
     energy_batch_output = {}
     print("start training...")
 
-    for epoch in tqdm.tqdm(range(7501)):
+    parameter_list = []
+    wtmad_2_list = []
+
+    for epoch in tqdm.tqdm(range(15001)):
         loss_batch = []
         wtmad_2 = 0
         optimizer.zero_grad()
@@ -321,7 +347,7 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
 
             reaction_dict = json_data[f"reaction-{i_subset}"]
             energy_batch_output[i_subset] = torch.zeros(
-                len(reaction_dict), dtype=torch.float64
+                len(reaction_dict), dtype=torch.float64, device=device
             )
             for i_reaction_name, (i_reaction_keys, i_reaction) in enumerate(
                 reaction_dict.items()
@@ -375,22 +401,33 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             loss.backward()
         optimizer.step()
+        scheduler.step()
 
         if epoch % 100 == 0:
+            parameter_list.append(model.param_vector.data)
+            wtmad_2_list.append(wtmad_2)
             print(
-                f"Epoch: {epoch}, wtmad_2: {wtmad_2 * np.mean(mean_absolute_deviation) / len(mean_absolute_deviation)}, loss: {loss_batch}"
+                f"Epoch: {epoch}, wtmad_2: {wtmad_2 * np.mean(mean_absolute_deviation) / len(mean_absolute_deviation)}, loss: {loss_batch}",
+                flush=True,
             )
 
+    best_epoch = np.argmin(wtmad_2_list)
+    print(f"Best epoch: {best_epoch}, wtmad_2: {wtmad_2_list[best_epoch]}")
+    model.param_vector.data = parameter_list[best_epoch]
+    save_para[f"{"ai" if dft_type == "scf" else dft_type}_d3{damping}"] = (
+        parameter_list[best_epoch]
+    )
     data_dft_disp = []
-
     for name_mol in data_name_list:
         mol = gen_mole(name_mol, 0, 1, 0, "cc-pVDZ", True, "gmtkn-cc-pVDZ")
         atoms = Atoms(symbols=mol.elements, positions=mol.atom_coords() * units.Bohr)
         energy = model(model.obtain_batch_dicts([atoms]))
-        print(f"{name_mol}: {energy.item():.10f} kcal/mol")
         data_dft_disp.append(energy.item() / AU2KCALMOL)
 
     data[f"modified_{"ai" if dft_type == "scf" else dft_type}_d3{damping}"] = (
         data_dft_disp
     )
+
 data.to_csv(data_path, index=False)
+with open(save_para_path, "w", encoding="utf-8") as f:
+    json.dump(save_para, f)
