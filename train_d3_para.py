@@ -149,6 +149,9 @@ parser.add_argument(
 )
 args = parser.parse_args()
 data_path = f"validate_hkqai/ccdft_cc-pVDZ_{args.load}_gmtkn-cc-pVDZ.csv"
+save_para = {}
+save_para_path = f"validate_hkqai/ccdft_cc-pVDZ_{args.load}_gmtkn-cc-pVDZ.json"
+
 device = "cuda"
 
 data = pd.read_csv(data_path)
@@ -317,13 +320,25 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
         flush=True,
     )
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-8)
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=1e-4,
+        weight_decay=1e-12,
+    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer,
+        T_max=200,
+        eta_min=1e-8,
+    )
     loss_function = torch.nn.L1Loss(reduction="sum")
     torch.set_printoptions(precision=5, sci_mode=False)
     energy_batch_output = {}
     print("start training...")
 
-    for epoch in tqdm.tqdm(range(7501)):
+    parameter_list = []
+    wtmad_2_list = []
+
+    for epoch in tqdm.tqdm(range(15001)):
         loss_batch = []
         wtmad_2 = 0
         optimizer.zero_grad()
@@ -386,15 +401,23 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             loss.backward()
         optimizer.step()
+        scheduler.step()
 
         if epoch % 100 == 0:
+            parameter_list.append(model.param_vector.data)
+            wtmad_2_list.append(wtmad_2)
             print(
                 f"Epoch: {epoch}, wtmad_2: {wtmad_2 * np.mean(mean_absolute_deviation) / len(mean_absolute_deviation)}, loss: {loss_batch}",
                 flush=True,
             )
 
+    best_epoch = np.argmin(wtmad_2_list)
+    print(f"Best epoch: {best_epoch}, wtmad_2: {wtmad_2_list[best_epoch]}")
+    model.param_vector.data = parameter_list[best_epoch]
+    save_para[f"{"ai" if dft_type == "scf" else dft_type}_d3{damping}"] = (
+        parameter_list[best_epoch]
+    )
     data_dft_disp = []
-
     for name_mol in data_name_list:
         mol = gen_mole(name_mol, 0, 1, 0, "cc-pVDZ", True, "gmtkn-cc-pVDZ")
         atoms = Atoms(symbols=mol.elements, positions=mol.atom_coords() * units.Bohr)
@@ -404,4 +427,7 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
     data[f"modified_{"ai" if dft_type == "scf" else dft_type}_d3{damping}"] = (
         data_dft_disp
     )
+
 data.to_csv(data_path, index=False)
+with open(save_para_path, "w", encoding="utf-8") as f:
+    json.dump(save_para, f)
