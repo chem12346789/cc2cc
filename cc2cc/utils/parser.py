@@ -363,7 +363,7 @@ def add_args(parser: argparse.ArgumentParser):
         "--scheduler",
         type=str,
         default="constant",
-        choices=["cosine", "constant"],
+        choices=["cosine", "constant", "cosine_warn"],
         help="Learning rate scheduler. Default is constant.",
     )
 
