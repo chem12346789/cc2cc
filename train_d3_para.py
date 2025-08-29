@@ -338,7 +338,7 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
     parameter_list = []
     wtmad_2_list = []
 
-    for epoch in tqdm.tqdm(range(15001)):
+    for epoch in tqdm.tqdm(range(10001)):
         loss_batch = []
         wtmad_2 = 0
         optimizer.zero_grad()
@@ -404,7 +404,7 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
         scheduler.step()
 
         if epoch % 100 == 0:
-            parameter_list.append(model.param_vector.data)
+            parameter_list.append(model.calc.dftd_module.params)
             wtmad_2_list.append(wtmad_2)
             print(
                 f"Epoch: {epoch}, wtmad_2: {wtmad_2 * np.mean(mean_absolute_deviation) / len(mean_absolute_deviation)}, loss: {loss_batch}",
@@ -413,7 +413,7 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
 
     best_epoch = np.argmin(wtmad_2_list)
     print(f"Best epoch: {best_epoch}, wtmad_2: {wtmad_2_list[best_epoch]}")
-    model.param_vector.data = parameter_list[best_epoch]
+    model.calc.dftd_module.params = parameter_list[best_epoch]
     save_para[f"{"ai" if dft_type == "scf" else dft_type}_d3{damping}"] = (
         parameter_list[best_epoch]
     )
