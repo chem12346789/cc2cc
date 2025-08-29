@@ -214,7 +214,7 @@ def train_model(train_str_dict, eval_str_dict, args):
                     [data["loss_ene"] for data in eval_data_record_l]
                     + [data["loss_ene"] for data in train_data_record_l]
                 )
-                if (epoch_loss < best_loss) or (epoch % (args.eval_step * 50) == 0):
+                if (epoch_loss < best_loss) or (epoch % (args.eval_step * 64) == 0):
                     if epoch_loss < best_loss:
                         print(f"Loss improved: {best_loss:.4f} -> {epoch_loss:.4f}!")
                         best_loss = epoch_loss
