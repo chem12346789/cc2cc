@@ -11,12 +11,14 @@ import numpy as np
 
 from pyscf import lib
 from pyscf.lib import logger
+from pyscf.dft import numint
 from pyscf.dft.numint import (
     _scale_ao_sparse,
     _dot_ao_ao_sparse,
     # _tau_dot_sparse,
 )
 from pyscf.dft.gen_grid import NBINS
+from pyscf.grad.rks import _d1_dot_, _gga_grad_sum_
 
 
 def nr_rks(
@@ -162,35 +164,6 @@ def get_veff_modified(
         # This function is used to get the effective potential for the RKS method.
         # Modified from pyscf.dft.rks.get_veff; See
         # https://github.com/pyscf/pyscf/blob/v2.9.0/pyscf/dft/rks.py
-
-        Coulomb + XC functional
-
-        .. note::
-            This function will modify the input ks object.
-
-        Args:
-            ks : an instance of :class:`RKS`
-                XC functional are controlled by ks.xc attribute.  Attribute
-                ks.grids might be initialized.
-            dm : ndarray or list of ndarrays
-                A density matrix or a list of density matrices
-
-        Kwargs:
-            dm_last : ndarray or a list of ndarrays or 0
-                The density matrix baseline.  If not 0, this function computes the
-                increment of HF potential w.r.t. the reference HF potential matrix.
-            vhf_last : ndarray or a list of ndarrays or 0
-                The reference Vxc potential matrix.
-            hermi : int
-                Whether J, K matrix is hermitian
-
-                | 0 : no hermitian or symmetric
-                | 1 : hermitian
-                | 2 : anti-hermitian
-
-        Returns:
-            matrix Veff = J + Vxc.  Veff can be a list matrices, if the input
-            dm is a list of density matrices.
         """
         # print("Using modified get_veff", flush=True)
         if mol is None:
@@ -199,6 +172,7 @@ def get_veff_modified(
         if dm is None:
             dm = ks_.make_rdm1()
 
+        # ks_.initialize_grids(mol, dm)
         t0 = (logger.process_clock(), logger.perf_counter())
 
         ground_state = isinstance(dm, np.ndarray) and dm.ndim == 2
@@ -276,3 +250,172 @@ def get_veff_modified(
         return vxc
 
     ks.get_veff = types.MethodType(get_veff, ks)
+
+
+def get_veff_grad_modified(
+    ks_grad,
+    modeldict,
+    lambda_rho=None,
+    dm_tar=None,
+    max_memory=800,
+):
+    """
+    Get the method of "Get the effective potential for the RKS method".
+    """
+
+    def get_vxc(
+        ni,
+        mol,
+        grids,
+        xc_code,
+        dms,
+        relativity=0,
+        hermi=1,
+        max_memory=2000,
+        verbose=None,
+    ):
+        xctype = ni._xc_type(xc_code)
+        make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, grids)
+        ao_loc = mol.ao_loc_nr()
+
+        vmat = np.zeros((nset, 3, nao, nao))
+        # if xctype == "LDA":
+        #     ao_deriv = 1
+        #     for ao, mask, weight, coords in ni.block_loop(
+        #         mol, grids, nao, ao_deriv, max_memory
+        #     ):
+        #         for idm in range(nset):
+        #             rho = make_rho(idm, ao[0], mask, xctype)
+        #             vxc = ni.eval_xc_eff(xc_code, rho, 1, xctype=xctype)[1]
+        #             wv = weight * vxc[0]
+        #             aow = numint._scale_ao(ao[0], wv)
+        #             _d1_dot_(vmat[idm], mol, ao[1:4], aow, mask, ao_loc, True)
+
+        if xctype == "GGA":
+            ao_deriv = 2
+            for ao, mask, weight, coords in ni.block_loop(
+                mol, grids, nao, ao_deriv, max_memory
+            ):
+                for idm in range(nset):
+                    rho = make_rho(idm, ao[:4], mask, xctype)
+                    vxc = ni.eval_xc_eff(xc_code, rho, 1, xctype=xctype)[1]
+                    wv = weight * vxc
+                    wv[0] *= 0.5
+                    _gga_grad_sum_(vmat[idm], mol, ao, wv, mask, ao_loc)
+
+        # elif xctype == "MGGA":
+        #     ao_deriv = 2
+        #     for ao, mask, weight, coords in ni.block_loop(
+        #         mol, grids, nao, ao_deriv, max_memory
+        #     ):
+        #         for idm in range(nset):
+        #             rho = make_rho(idm, ao[:10], mask, xctype)
+        #             vxc = ni.eval_xc_eff(xc_code, rho, 1, xctype=xctype)[1]
+        #             wv = weight * vxc
+        #             wv[0] *= 0.5
+        #             wv[4] *= 0.5  # for the factor 1/2 in tau
+        #             _gga_grad_sum_(vmat[idm], mol, ao, wv, mask, ao_loc)
+        #             _tau_grad_dot_(vmat[idm], mol, ao, wv[4], mask, ao_loc, True)
+
+        exc = None
+        if nset == 1:
+            vmat = vmat[0]
+        # - sign because nabla_X = -nabla_x
+        return exc, -vmat
+
+    def get_veff(ks_grad_, mol=None, dm=None):
+        """
+        First order derivative of DFT effective potential matrix (wrt electron coordinates)
+
+        Args:
+            ks_grad_ : grad.uhf.Gradients or grad.uks.Gradients object
+        """
+        if mol is None:
+            mol = ks_grad_.mol
+        if dm is None:
+            dm = ks_grad_.base.make_rdm1()
+        t0 = (logger.process_clock(), logger.perf_counter())
+
+        mf = ks_grad_.base
+        ni = mf._numint
+        # grids, nlcgrids = _initialize_grids(ks_grad_)
+
+        mem_now = lib.current_memory()[0]
+        max_memory = max(2000, ks_grad_.max_memory * 0.9 - mem_now)
+        exc, vxc = get_vxc(
+            ni,
+            mol,
+            ks_grad_.grids,
+            mf.xc,
+            dm,
+            max_memory=max_memory,
+            verbose=ks_grad_.verbose,
+        )
+        # if ks_grad_.grid_response:
+        #     exc, vxc = get_vxc_full_response(
+        #         ni,
+        #         mol,
+        #         grids,
+        #         mf.xc,
+        #         dm,
+        #         max_memory=max_memory,
+        #         verbose=ks_grad_.verbose,
+        #     )
+        #     if mf.do_nlc():
+        #         if ni.libxc.is_nlc(mf.xc):
+        #             xc = mf.xc
+        #         else:
+        #             xc = mf.nlc
+        #         enlc, vnlc = get_nlc_vxc_full_response(
+        #             ni,
+        #             mol,
+        #             nlcgrids,
+        #             xc,
+        #             dm,
+        #             max_memory=max_memory,
+        #             verbose=ks_grad_.verbose,
+        #         )
+        #         exc += enlc
+        #         vxc += vnlc
+        #     logger.debug1(ks_grad_, "sum(grids response) %s", exc.sum(axis=0))
+        # else:
+        #     exc, vxc = get_vxc(
+        #         ni,
+        #         mol,
+        #         grids,
+        #         mf.xc,
+        #         dm,
+        #         max_memory=max_memory,
+        #         verbose=ks_grad_.verbose,
+        #     )
+        #     if mf.do_nlc():
+        #         if ni.libxc.is_nlc(mf.xc):
+        #             xc = mf.xc
+        #         else:
+        #             xc = mf.nlc
+        #         enlc, vnlc = get_nlc_vxc(
+        #             ni,
+        #             mol,
+        #             nlcgrids,
+        #             xc,
+        #             dm,
+        #             max_memory=max_memory,
+        #             verbose=ks_grad_.verbose,
+        #         )
+        #         vxc += vnlc
+        t0 = logger.timer(ks_grad_, "vxc", *t0)
+
+        if not ni.libxc.is_hybrid_xc(mf.xc):
+            vj = ks_grad_.get_j(mol, dm)
+            vxc += vj
+        else:
+            omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mf.xc, spin=mol.spin)
+            vj, vk = ks_grad_.get_jk(mol, dm)
+            vk *= hyb
+            if omega != 0:
+                vk += ks_grad_.get_k(mol, dm, omega=omega) * (alpha - hyb)
+            vxc += vj - vk * 0.5
+
+        return lib.tag_array(vxc, exc1_grid=exc)
+
+    ks_grad.get_veff = types.MethodType(get_veff, ks_grad)
