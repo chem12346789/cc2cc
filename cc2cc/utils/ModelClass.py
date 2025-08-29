@@ -167,11 +167,18 @@ class ModelClass:
         if self.args.scheduler == "cosine":
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
-                T_max=self.args.eval_step * 50,
+                T_max=self.args.eval_step * 64,
                 eta_min=self.args.cosine_eta_min,
             )
         elif self.args.scheduler == "constant":
             self.scheduler = optim.lr_scheduler.ConstantLR(self.optimizer)
+        elif self.args.scheduler == "cosine_warn":
+            self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                self.optimizer,
+                T_0=self.args.eval_step * 5,
+                T_mult=2,
+                eta_min=self.args.cosine_eta_min,
+            )
         else:
             raise ValueError(f"Unknown scheduler {self.args.scheduler}")
 
