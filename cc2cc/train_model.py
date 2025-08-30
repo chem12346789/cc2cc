@@ -88,7 +88,8 @@ def train_model(train_str_dict, eval_str_dict, args):
         wandb.define_metric("*", step_metric="global_step")
 
         timer = Timer()
-        best_loss = np.inf
+        best_tot_loss = np.inf
+        best_train_loss = np.inf
 
     if modeldict.args.distributed:
         dist.barrier()
@@ -210,17 +211,31 @@ def train_model(train_str_dict, eval_str_dict, args):
                 )
                 run.log(experiment_dict)
 
-                epoch_loss = np.mean(
+                epoch_train_loss = np.mean(
+                    [data["loss_ene"] for data in eval_data_record_l]
+                )
+                epoch_tot_loss = np.mean(
                     [data["loss_ene"] for data in eval_data_record_l]
                     + [data["loss_ene"] for data in train_data_record_l]
                 )
-                if (epoch_loss < best_loss) or (epoch % (args.eval_step * 64) == 0):
-                    if epoch_loss < best_loss:
-                        print(f"Loss improved: {best_loss:.4f} -> {epoch_loss:.4f}!")
-                        best_loss = epoch_loss
+                if (
+                    (epoch_train_loss < best_train_loss)
+                    or (epoch_tot_loss < best_tot_loss)
+                    or (epoch % (args.eval_step * 64) == 0)
+                ):
+                    if epoch_tot_loss < best_tot_loss:
+                        print(
+                            f"Total loss improved: {best_tot_loss:.4f} -> {epoch_tot_loss:.4f}!"
+                        )
+                        best_tot_loss = epoch_tot_loss
+                    elif epoch_train_loss < best_train_loss:
+                        print(
+                            f"Train loss improved: {best_train_loss:.4f} -> {epoch_train_loss:.4f}!"
+                        )
+                        best_train_loss = epoch_train_loss
                     else:
                         print(
-                            f"Loss not improved: {best_loss:.4f} -> {epoch_loss:.4f}."
+                            f"Loss not improved: {best_tot_loss:.4f} -> {epoch_tot_loss:.4f}."
                         )
 
                     modeldict.save_model(epoch)
