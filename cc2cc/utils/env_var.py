@@ -19,7 +19,12 @@ if CUBE_SIZE is None:
 else:
     CUBE_SIZE = int(CUBE_SIZE)
 CUBE_MIDDLE = CUBE_SIZE // 2
-CUBE_LEN = 1e-2
+
+CUBE_LEN = os.environ.get("DFT2CC_CUBE_LEN")
+if CUBE_LEN is None:
+    CUBE_LEN = 1e-2
+else:
+    CUBE_LEN = float(CUBE_LEN)
 
 TEST = os.environ.get("DFT2CC_TEST")
 if TEST is None:
