@@ -1,6 +1,7 @@
 import json
 from itertools import product
 import argparse
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
@@ -404,7 +405,13 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
         scheduler.step()
 
         if epoch % 100 == 0:
-            parameter_list.append(model.calc.dftd_module.params)
+            parameter_dict = {}
+            for key, item in model.calc.dftd_module.params.items():
+                if isinstance(item, torch.Tensor):
+                    parameter_dict[key] = item.detach().cpu().numpy().item()
+                else:
+                    parameter_dict[key] = item
+            parameter_list.append(deepcopy(parameter_dict))
             wtmad_2_list.append(wtmad_2)
             print(
                 f"Epoch: {epoch}, wtmad_2: {wtmad_2 * np.mean(mean_absolute_deviation) / len(mean_absolute_deviation)}, loss: {loss_batch}",
@@ -413,7 +420,7 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
 
     best_epoch = np.argmin(wtmad_2_list)
     print(f"Best epoch: {best_epoch}, wtmad_2: {wtmad_2_list[best_epoch]}")
-    model.calc.dftd_module.params = parameter_list[best_epoch]
+    model_new = Model(device="cuda", damping="bj", **parameter_list[best_epoch])
     save_para[f"{"ai" if dft_type == "scf" else dft_type}_d3{damping}"] = (
         parameter_list[best_epoch]
     )
@@ -421,7 +428,7 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
     for name_mol in data_name_list:
         mol = gen_mole(name_mol, 0, 1, 0, "cc-pVDZ", True, "gmtkn-cc-pVDZ")
         atoms = Atoms(symbols=mol.elements, positions=mol.atom_coords() * units.Bohr)
-        energy = model(model.obtain_batch_dicts([atoms]))
+        energy = model_new(model_new.obtain_batch_dicts([atoms]))
         data_dft_disp.append(energy.item() / AU2KCALMOL)
 
     data[f"modified_{"ai" if dft_type == "scf" else dft_type}_d3{damping}"] = (

@@ -3,6 +3,8 @@
 import argparse
 from itertools import product
 
+import numpy as np
+
 from cc2cc import add_args, cc, ucc
 from cc2cc.utils import Grid, gen_mole, print_computer_info
 from cc2cc.utils.env_var import DATA_PATH
@@ -1151,6 +1153,9 @@ eval_str_list = [
     "ADIM6-AD3",
 ]
 
+train_str_exclude_list = []
+eval_str_exclude_list = []
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -1221,6 +1226,13 @@ if __name__ == "__main__":
             if args.if_continue:
                 if (DATA_PATH / f"data_{name}.npz").exists():
                     print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+                    # refresh modified time of the file
+                    data_frame = dict(
+                        np.load(
+                            DATA_PATH / f"data_{name}.npz", allow_pickle=True
+                        ).items()
+                    )
+                    np.savez_compressed(DATA_PATH / f"data_{name}.npz", **data_frame)
                     continue
 
             if mol.spin == 0:
