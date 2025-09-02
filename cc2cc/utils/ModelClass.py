@@ -114,7 +114,7 @@ class ModelClass:
 
         if not if_validate:
             torch._functorch.config.activation_memory_budget = 1
-            self.model.compile(dynamic=True)
+            self.model.compile(dynamic=True, mode="reduce-overhead")
 
         if self.args.distributed:
             print(f"Using DistributedDataParallel on rank {self.local_rank}")
@@ -167,7 +167,7 @@ class ModelClass:
         if self.args.scheduler == "cosine":
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
-                T_max=self.args.eval_step * 64,
+                T_max=self.args.eval_step * 32 * 32,
                 eta_min=self.args.cosine_eta_min,
             )
         elif self.args.scheduler == "constant":
@@ -175,7 +175,7 @@ class ModelClass:
         elif self.args.scheduler == "cosine_warn":
             self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
                 self.optimizer,
-                T_0=self.args.eval_step * 5,
+                T_0=self.args.eval_step * 32,
                 T_mult=2,
                 eta_min=self.args.cosine_eta_min,
             )

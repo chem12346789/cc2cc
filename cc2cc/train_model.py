@@ -88,8 +88,7 @@ def train_model(train_str_dict, eval_str_dict, args):
         wandb.define_metric("*", step_metric="global_step")
 
         timer = Timer()
-        best_tot_loss = np.inf
-        best_train_loss = np.inf
+        best_tot_loss, best_train_loss, best_eval_loss = np.inf, np.inf, np.inf
 
     if modeldict.args.distributed:
         dist.barrier()
@@ -190,6 +189,16 @@ def train_model(train_str_dict, eval_str_dict, args):
                     }
                 )
 
+            epoch_train_loss = np.mean(
+                [data["loss_ene"] for data in train_data_record_l]
+            )
+            epoch_eval_loss = np.mean([data["loss_ene"] for data in eval_data_record_l])
+            epoch_tot_loss = np.mean(
+                [data["loss_ene"] for data in eval_data_record_l]
+                + [data["loss_ene"] for data in train_data_record_l]
+            )
+            epoch_lr = experiment_dict["lr"]
+
             if epoch % args.eval_step == 0:
                 experiment_dict.update(
                     {
@@ -211,15 +220,9 @@ def train_model(train_str_dict, eval_str_dict, args):
                 )
                 run.log(experiment_dict)
 
-                epoch_train_loss = np.mean(
-                    [data["loss_ene"] for data in eval_data_record_l]
-                )
-                epoch_tot_loss = np.mean(
-                    [data["loss_ene"] for data in eval_data_record_l]
-                    + [data["loss_ene"] for data in train_data_record_l]
-                )
                 if (
                     (epoch_train_loss < best_train_loss)
+                    or (epoch_eval_loss < best_eval_loss)
                     or (epoch_tot_loss < best_tot_loss)
                     or (epoch % (args.eval_step * 64) == 0)
                 ):
@@ -233,6 +236,11 @@ def train_model(train_str_dict, eval_str_dict, args):
                             f"Train loss improved: {best_train_loss:.4f} -> {epoch_train_loss:.4f}!"
                         )
                         best_train_loss = epoch_train_loss
+                    elif epoch_eval_loss < best_eval_loss:
+                        print(
+                            f"Eval loss improved: {best_eval_loss:.4f} -> {epoch_eval_loss:.4f}!"
+                        )
+                        best_eval_loss = epoch_eval_loss
                     else:
                         print(
                             f"Loss not improved: {best_tot_loss:.4f} -> {epoch_tot_loss:.4f}."
@@ -271,9 +279,9 @@ def train_model(train_str_dict, eval_str_dict, args):
                 f"Epoch: {epoch:>5}, "
                 f"Train: {len(train_data_record_l)}, "
                 f"Eval: {len(eval_data_record_l)}, "
-                f"Loss: {np.mean([data["loss_ene"] for data in train_data_record_l]):>5.2f}, "
-                f"Eval: {np.mean([data["loss_ene"] for data in eval_data_record_l]):>5.2f}, "
-                f"lr: {experiment_dict["lr"]:>5.2e}, "
+                f"Loss: {epoch_train_loss:>5.2f}, "
+                f"Eval: {epoch_eval_loss:>5.2f}, "
+                f"lr: {epoch_lr:>5.2e}, "
                 f"{timer.measure()}",
                 flush=True,
             )
