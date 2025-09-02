@@ -1,0 +1,175 @@
+\documentclass[%
+% jmp,
+% bmf,
+% sd,
+% rsi,
+twocolumn,
+amsmath,amssymb,
+groupedaddress,
+% preprint,%
+reprint,%
+% author-year,%
+% author-numerical,%
+% Conference Proceedings
+]{revtex4-2}
+
+\usepackage{bm}
+\usepackage{listings}
+\usepackage{subcaption}
+
+\lstset{language=Python,keywordstyle={\bfseries \color{blue}}}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,
+	chains,
+	matrix,
+  decorations,
+	positioning,
+  calc,
+  decorations.pathmorphing,
+  shapes.geometric}
+
+\definecolor{b0}{HTML}{6200EA}
+\definecolor{b1}{HTML}{651FFF}
+\definecolor{b2}{HTML}{7C4DFF}
+\definecolor{b3}{HTML}{B388FF}
+\definecolor{g0}{HTML}{B9F6CA}
+\definecolor{g1}{HTML}{69F0AE}
+\definecolor{g2}{HTML}{00E676}
+\definecolor{g3}{HTML}{00C853}
+\definecolor{r0}{HTML}{FF8A80}
+\definecolor{r1}{HTML}{FF5252}
+\definecolor{r2}{HTML}{FF1744}
+\definecolor{r3}{HTML}{C51162}
+\definecolor{lr0}{HTML}{FF9E80}
+\definecolor{lr1}{HTML}{FF6E40}
+\definecolor{lr2}{HTML}{FF3D00}
+\definecolor{lr3}{HTML}{DD2C00}
+\definecolor{y0}{HTML}{FFE57F}
+\definecolor{y1}{HTML}{FFD740}
+\definecolor{y2}{HTML}{FFC400}
+\definecolor{y3}{HTML}{FFAB00}
+
+
+\renewcommand{\d}{{\rm d}}
+\newcommand{\w}{\omega}
+\newcommand{\wti}{\widetilde}
+\newcommand{\ti}{\tilde}
+\newcommand{\B}{\mathrm{B}}
+\newcommand{\D}{\mathrm{D}}
+\newcommand{\Bs}{\mathrm{Bose}}
+\newcommand{\s}{\mathrm{S}}
+\newcommand{\tT}{\mathrm{T}}
+\newcommand{\tB}{\mathrm{B}}
+\newcommand{\tW}{\mathrm{W}}
+\newcommand{\tS}{\mathrm{S}}
+\newcommand{\st}{\mathrm{st}}
+\newcommand{\te}{\mathrm{e}}
+\newcommand{\tg}{\mathrm{g}}
+\newcommand{\T}{\mathrm{T}}
+\newcommand{\tR}{\mathrm{R}}
+\newcommand{\tL}{\mathrm{L}}
+\newcommand{\tM}{\mathrm{M}}
+\newcommand{\tc}{\mathrm{c}}
+\newcommand{\app}{\mathrm{app}}
+\newcommand{\tot}{\mathrm{tot}}
+\newcommand{\SB}{\mathrm{SB}}
+\newcommand{\tr}{\mathrm{tr}}
+\newcommand{\Tr}{\mathrm{Tr}}
+\newcommand{\dg}{\dagger}
+\newcommand{\la}{\langle}
+\newcommand{\ra}{\rangle}
+\renewcommand{\>}{\rangle}
+\newcommand{\<}{\langle}
+\newcommand{\lla}{\langle\langle}
+\newcommand{\rra}{\rangle\rangle}
+\newcommand{\La}{\big\la}
+\newcommand{\Ra}{\big\ra}
+\newcommand{\BO}{\mathrm{BO}}
+\newcommand{\cm}{\mathrm{cm}^{\mathrm{-1}}}
+% \newcommand{\Ref}[1]{Ref.\,\onlinecite{#1}}
+\newcommand{\Sec}[1]{Sec.\,\ref{#1}}
+\newcommand{\nl}{\nonumber \\}
+\newcommand{\be}{\begin{equation}}
+\newcommand{\ee}{\end{equation}}
+\newcommand{\bsube}{\begin{subequations}}
+\newcommand{\esube}{\end{subequations}}
+\newcommand{\Eq}[1]{Equation \,(\ref{#1})}
+\newcommand{\eq}[1]{Eq.\,(\ref{#1})}
+\newcommand{\Eqs}[1]{Equations .\,(\ref{#1})}
+\newcommand{\eqs}[1]{Equations .\,(\ref{#1})}
+\newcommand{\Fig}[1]{Fig.\,\ref{#1}}
+\newcommand{\Tab}[1]{Table \ref{#1}}
+\newcommand{\obarplus}{\mbox{\tiny$\oplus$}}
+\newcommand{\obarminus}{\mbox{\tiny$\ominus$}}
+\newcommand{\greater}{\mathrm{$>$}}
+\newcommand{\lesser}{\mathrm{$<$}}
+\newcommand{\lgter}{\mathrm{$\lessgtr$}}
+\newcommand{\gler}{\mathrm{$\gtrless$}}
+\newcommand{\WF}{\mathrm{WF}}
+\newcommand{\KS}{\mathrm{KS}}
+\newcommand{\XC}{\mathrm{XC}}
+\renewcommand{\L}{\mathrm{L}}
+\renewcommand{\P}{\mathrm{P}}
+\newcommand{\lyp}{\mathrm{b3lyp}}
+\newcommand{\LDA}{\mathrm{LDA}}
+\newcommand{\brm}[1]{\bm{\mathrm{#1}}}
+
+\newcommand{\blue}[1]{\textcolor{blue}{#1}}
+\newcommand{\red}[1]{\textcolor{red}{#1}}
+
+
+\begin{document}
+
+
+\title{
+	A molecule is a paragraph and an atom is a word
+}
+\author{XX}
+
+\date{\today}
+
+\begin{abstract}
+	%%
+	{
+		TODO
+	}
+\end{abstract}
+
+\maketitle
+
+\allowdisplaybreaks
+
+\section{Introduction}
+The well-known Kohn--Sham equation \cite{Koh65A1133} is
+\begin{align}
+	\label{eq:KS}
+	\Big( - \frac{1}{2} \nabla^{2} + v_{\mathrm{ext}} + v_{\mathrm{H}} + v_{\mathrm{XC}}\Big) \phi_{i} = \epsilon_{i} \phi_{i}.
+\end{align}
+% 
+Where $\phi_{i}$ is the Kohn--Sham orbital, $\epsilon_{i}$ is the Kohn--Sham orbital energy, $v_{\mathrm{ext}}$ is the external potential (such as the electrostatic potential of nuclei), $v_{\mathrm{H}}$ is the electrostatic potential of the electron, and $v_{\mathrm{XC}}$ is the exchange-correlation potential.
+% 
+According to the Hohenberg-Kohn theorem \cite{Hoh64B864}, the external potential, $v_{\mathrm{ext}}$ is the unique functional of the ground-state electron density, $\rho = n_{i} \vert \phi_{i} \vert^{2}$, where $n_{i}$ is the occupation number of the Kohn-Sham orbital.
+% 
+So, once this unique functional is obtained, the Kohn-Sham equation can be solved iteratively to obtain the electron density and the other properties of the molecule.
+
+One of the challenging tasks of the DFT calculation is to find the unique functional between the exact potential $v_{\mathrm{XC}}$ and the electron density $\rho$.
+% 
+In this article, we combine the machine learning (ML) method and density functional theory (DFT) to predict the properties of the molecules such as the energy, the dipole, the bond length, the bond dissociation energy, the band gap, and so on.
+
+\section{The NEURAL NETWORK}
+
+\subsection{DATASET AND THE LOSS FUNCTION}
+
+The loss function of $E_{\mathrm{target}}$ is defined as
+\begin{align}
+	\label{eq:loss}
+	L_{e} = & \frac{1}{N} \sum_{i}^{N} \Big| E_{\mathrm{target}}(\brm{r}_{i}) - E_{\mathrm{predict}}(\brm{r}_{i}) \Big| \nl
+	        & \quad + \Big| E_{\mathrm{target}} - E_{\mathrm{predict}} \Big|.
+\end{align}
+
+\subsection{Result}
+
+\bibliography{./ref}
+
+\end{document}

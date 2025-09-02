@@ -39,7 +39,6 @@ PlotNeuralNet/
 *.log
 *.out
 *.synctex.gz
-manu/*
 
 # ignore jupyter notebook checkpoints
 .ipynb_checkpoints

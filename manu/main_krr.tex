@@ -1,0 +1,334 @@
+\documentclass[%
+% jmp,
+% bmf,
+% sd,
+% rsi,
+twocolumn,
+amsmath,amssymb,
+groupedaddress,
+% preprint,%
+reprint,%
+% author-year,%
+% author-numerical,%
+% Conference Proceedings
+]{revtex4-2}
+
+\usepackage{bm}
+\usepackage{listings}
+\usepackage{subcaption}
+\usepackage{siunitx}
+\lstset{language=Python,keywordstyle={\bfseries \color{blue}}}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,
+	chains,
+	matrix,
+  decorations,
+	positioning,
+  calc,
+  decorations.pathmorphing,
+  shapes.geometric}
+
+\definecolor{b0}{HTML}{6200EA}
+\definecolor{b1}{HTML}{651FFF}
+\definecolor{b2}{HTML}{7C4DFF}
+\definecolor{b3}{HTML}{B388FF}
+\definecolor{g0}{HTML}{B9F6CA}
+\definecolor{g1}{HTML}{69F0AE}
+\definecolor{g2}{HTML}{00E676}
+\definecolor{g3}{HTML}{00C853}
+\definecolor{r0}{HTML}{FF8A80}
+\definecolor{r1}{HTML}{FF5252}
+\definecolor{r2}{HTML}{FF1744}
+\definecolor{r3}{HTML}{C51162}
+\definecolor{lr0}{HTML}{FF9E80}
+\definecolor{lr1}{HTML}{FF6E40}
+\definecolor{lr2}{HTML}{FF3D00}
+\definecolor{lr3}{HTML}{DD2C00}
+\definecolor{y0}{HTML}{FFE57F}
+\definecolor{y1}{HTML}{FFD740}
+\definecolor{y2}{HTML}{FFC400}
+\definecolor{y3}{HTML}{FFAB00}
+
+
+\renewcommand{\d}{{\rm d}}
+\newcommand{\w}{\omega}
+\newcommand{\wti}{\widetilde}
+\newcommand{\ti}{\tilde}
+\newcommand{\B}{\mathrm{B}}
+\newcommand{\D}{\mathrm{D}}
+\newcommand{\Bs}{\mathrm{Bose}}
+\newcommand{\s}{\mathrm{S}}
+\newcommand{\tT}{\mathrm{T}}
+\newcommand{\tB}{\mathrm{B}}
+\newcommand{\tW}{\mathrm{W}}
+\newcommand{\tS}{\mathrm{S}}
+\newcommand{\st}{\mathrm{st}}
+\newcommand{\te}{\mathrm{e}}
+\newcommand{\tg}{\mathrm{g}}
+\newcommand{\T}{\mathrm{T}}
+\newcommand{\tR}{\mathrm{R}}
+\newcommand{\tL}{\mathrm{L}}
+\newcommand{\tM}{\mathrm{M}}
+\newcommand{\tc}{\mathrm{c}}
+\newcommand{\app}{\mathrm{app}}
+\newcommand{\tot}{\mathrm{tot}}
+\newcommand{\SB}{\mathrm{SB}}
+\newcommand{\tr}{\mathrm{tr}}
+\newcommand{\Tr}{\mathrm{Tr}}
+\newcommand{\dg}{\dagger}
+\newcommand{\la}{\langle}
+\newcommand{\ra}{\rangle}
+\renewcommand{\>}{\rangle}
+\newcommand{\<}{\langle}
+\newcommand{\lla}{\langle\langle}
+\newcommand{\rra}{\rangle\rangle}
+\newcommand{\La}{\big\la}
+\newcommand{\Ra}{\big\ra}
+\newcommand{\BO}{\mathrm{BO}}
+\newcommand{\cm}{\mathrm{cm}^{\mathrm{-1}}}
+% \newcommand{\Ref}[1]{Ref.\,\onlinecite{#1}}
+\newcommand{\Sec}[1]{Sec.\,\ref{#1}}
+\newcommand{\nl}{\nonumber \\}
+\newcommand{\be}{\begin{equation}}
+\newcommand{\ee}{\end{equation}}
+\newcommand{\bsube}{\begin{subequations}}
+\newcommand{\esube}{\end{subequations}}
+\newcommand{\Eq}[1]{Equation \,(\ref{#1})}
+\newcommand{\eq}[1]{Eq.\,(\ref{#1})}
+\newcommand{\Eqs}[1]{Equations .\,(\ref{#1})}
+\newcommand{\eqs}[1]{Equations .\,(\ref{#1})}
+\newcommand{\Fig}[1]{Fig.\,\ref{#1}}
+\newcommand{\Tab}[1]{Table \ref{#1}}
+\newcommand{\ohatplus}{\mbox{\tiny$\oplus$}}
+\newcommand{\ohatminus}{\mbox{\tiny$\ominus$}}
+\newcommand{\greater}{\mathrm{$>$}}
+\newcommand{\lesser}{\mathrm{$<$}}
+\newcommand{\lgter}{\mathrm{$\lessgtr$}}
+\newcommand{\gler}{\mathrm{$\gtrless$}}
+\newcommand{\WF}{\mathrm{WF}}
+\newcommand{\KS}{\mathrm{KS}}
+\newcommand{\XC}{\mathrm{XC}}
+\renewcommand{\L}{\mathrm{L}}
+\renewcommand{\P}{\mathrm{P}}
+\newcommand{\lyp}{\mathrm{b3lyp}}
+\newcommand{\LDA}{\mathrm{LDA}}
+\newcommand{\brm}[1]{\bm{\mathrm{#1}}}
+
+\newcommand{\blue}[1]{\textcolor{blue}{#1}}
+\newcommand{\red}[1]{\textcolor{red}{#1}}
+
+
+\begin{document}
+
+
+\title{
+	% 
+	Approaching the precision energy surface in the local density approximation level density functional theory
+	% 
+}
+\author{XX}
+
+\date{\today}
+
+\begin{abstract}
+	%%
+	{
+		TODO
+	}
+\end{abstract}
+
+\maketitle
+
+\allowdisplaybreaks
+
+\section{Introduction}
+The well-known Kohn--Sham equation \cite{Koh65A1133} is
+\begin{align}
+	\label{eq:KS}
+	\Big( - \frac{1}{2} \nabla^{2} + v_{\mathrm{ext}} + v_{\mathrm{H}} + v_{\mathrm{XC}}\Big) \phi_{i} = \epsilon_{i} \phi_{i}.
+\end{align}
+
+The density functional theory (DFT) is a powerful method for solving the many-body problem in quantum mechanics.
+% 
+The main part of DFT is mapping the density to the energy, which is the exchange-correlation (XC) functional.
+% 
+Then the functional derivation of the energy with respect to the density gives the potential.
+% 
+Using the Kohn--Sham equation, \eq{eq:KS}, we can obtain the energy of the system.
+% 
+Then we can minimize the energy with respect to the density to obtain the ground state energy.
+% 
+The ground state energy is relate to barrier heights, reaction energies, and so on.
+
+\section{Kernel ridge regression}
+Kernel ridge regression (KRR) is a machine learning method used to approximate the unknown function $f(\bm{x}; \bm{w})$ from the training data
+% 
+\begin{equation}
+	(\bm{\widehat{X}}, \widehat{Y}) = \{(\bm{\hat{x}}_{j}, \hat{y}_{j})\}_{j=1}^{M}
+\end{equation}
+% 
+, where $\bm{x}_{j} \in \mathbb{R}^{d}$ and $y_{j} \in \mathbb{R}$, and $\bm{w} = [w_{1}, \cdots, w_{M}]^{\mathtt{T}}$ is a learning parameter.
+% 
+For the predicted data,
+% 
+\begin{equation}
+	(\bm{X}, Y) = \{(\bm{x}_{i}, y_{i})\}_{i=1}^{N},
+\end{equation}
+% 
+we can define the approximate function $f(\bm{x}; \bm{w})$, which can be expressed as a linear combination of the kernel functions.
+% 
+\begin{align}
+	\label{eq:KRR_f}
+	y_{i} \approx f(\bm{x}_{i}; \bm{w}) = \sum_{j=1}^{M} w_{j} K(\bm{x}_{i}, \bm{\hat{x}}_{j}),
+\end{align}
+% 
+where $\bm{\hat{x}}_{j}$ is the training data, and $K(\bm{x}, \bm{\hat{x}}_{j})$ is the kernel function,
+% 
+\begin{align}
+	\label{eq:KRR_kernel}
+	K(\bm{x}, \bm{\hat{x}}_{j}) = \exp{(-\gamma \|\bm{x} - \bm{\hat{x}}_{j}\|^{2})}.
+\end{align}
+% 
+We can define the kernel matrix $\bm{K}$ as
+% 
+\begin{align}
+	\label{eq:KRR_K}
+	\bm{K} (\bm{X}, \bm{\widehat{X}}) = \begin{pmatrix}
+		                                    K(\bm{x}_{1}, \bm{\hat{x}}_{1}) & \cdots & K(\bm{x}_{1}, \bm{\hat{x}}_{M}) \\
+		                                    \vdots                          & \ddots & \vdots                          \\
+		                                    K(\bm{x}_{N}, \bm{\hat{x}}_{1}) & \cdots & K(\bm{x}_{N}, \bm{\hat{x}}_{M})
+	                                    \end{pmatrix}.
+\end{align}
+Then the KRR approximate function , \eq{eq:KRR_f}, can be rewritten as
+\begin{align}
+	\label{eq:KRR_f_K}
+	Y \approx f(\bm{X}; \bm{w}) = \bm{w}^{\mathtt{T}} \bm{K}(\bm{X}, \bm{\widehat{X}}).
+\end{align}
+
+In the training process, we using the training data $(\bm{\widehat{X}}, \widehat{Y})$ to minimize the cost function $\mathcal{L}$, which is defined as
+\begin{align}
+	\label{eq:KRR_cost}
+	\mathcal{L}(\bm{\widehat{X}}, \widehat{Y}) = \big\|\widehat{Y} - \bm{w}^{\mathtt{T}} \bm{K}(\bm{\widehat{X}}, \bm{\widehat{X}}) \big\|^{2} + \lambda \bm{w}^{\mathtt{T}} \bm{K}(\bm{\widehat{X}}, \bm{\widehat{X}}) \bm{w},
+\end{align}
+where $\lambda$ is a scalar regularization parameter.
+% 
+One can easily obtain the optimal $\bm{w}$ using
+\begin{align}
+	\label{eq:KRR_w}
+	\bm{w} = \big(\bm{K}(\bm{\widehat{X}}, \bm{\widehat{X}}) + \lambda \bm{I}\big)^{-1} \widehat{Y},
+\end{align}
+and the predict value $Y$ can be calculated by
+\begin{align}
+	\label{eq:KRR_Y}
+	Y = \bm{K}(\bm{X}, \bm{\widehat{X}}) \bm{w}.
+\end{align}
+
+In particular, the training data must be large enough to cover the entire space of the probability input data, but the inversion of the kernel matrix is computationally expensive.
+% 
+So we only use one part (50 samples) of the training data to train the model, and use the other part of the training data to test the model. If the predicted error of the other part is large, we add those samples to the training data and repeat the process until the predicted error is small enough.
+% 
+We can futher reduce the computational cost by classification of the training data, that is, we can divide the training data into several classes, and then train the model for each class.
+% TODO 
+In this work, we use the electron density and the density derivatives of the center of the cube to classify the training data.
+%
+The number of classes is around $8000$, and most of the data concentrate on few classes.
+% 
+We set different $\gamma$ in different class.
+
+\section{Results and discussion}
+\begin{table}[h!]
+	\centering
+	\begin{tabular}{|c|c|c|c|c|c|c|c|}
+		\hline
+		Distance           & -0.2   & -0.1   & -0.05  & 0      & 0.05   & 0.1    & 0.2    \\ \hline
+		$\Delta E$ KRR     & 0.07   & 0.21   & 62.58  & 0.31   & 21.39  & 0.40   & 0.57   \\ \hline
+		$\Delta E$ B3LYP   & -14.45 & -15.72 & -16.17 & -16.52 & -16.79 & -17.00 & -17.31 \\ \hline
+		$\Delta E$ CNN     & 0.57   & 1.72   & 1.02   & 0.57   & -0.08  & -0.56  & -1.25  \\ \hline
+		$|\Delta E|$ KRR   & 1.17   & 1.00   & 75.04  & 1.02   & 32.33  & 1.12   & 1.15   \\ \hline
+		$|\Delta E|$ B3LYP & 177.15 & 177.75 & 177.96 & 178.08 & 178.14 & 178.16 & 178.12 \\ \hline
+		$|\Delta E|$ CNN   & 8.44   & 8.56   & 8.02   & 8.45   & 7.91   & 8.29   & 9.12   \\ \hline
+	\end{tabular}
+	\caption{Comparison of $\Delta E$ and $|\Delta E|$ for KRR, B3LYP, and CNN at different distances.}
+	\label{table:comparison}
+\end{table}
+
+We use five different configurations (distances of $-0.2$, $-0.1$, $0.0$, $0.1$, and $0.2$) of the methane molecule to train the KRR model, and use two different configurations (distances of $-0.05$ and $0.05$) of the methane molecule as the test set.
+% 
+We use the so called quasi-local electron density \cite{Zho197264}, which require the electron density of the cube around the grid point.
+% 
+The input of training data, $\hat X$, is defined as the electron density of the cube, and the output of training data, $\hat Y$, is defined as the energy density of the center of the cube.
+% 
+For example, we set the grid point as $\{\mathbf{r}_{i}\}$, the cube size as $5 \times 5 \times 5$, and cube length as $0.1$, then we take the electron density of the cube around the grid point,
+
+\begin{widetext}
+	\begin{align*}
+		\{ & \rho(\mathbf{r}_{i}), \rho_{x} (\mathbf{r}_{i}), \rho_{y} (\mathbf{r}_{i}), \rho_{z} (\mathbf{r}_{i}); \nl
+		   & \rho(\mathbf{r}_{i} + (-0.2, -0.2, -0.2)), \rho_{x} (\mathbf{r}_{i} + (-0.2, -0.2, -0.2)), \rho_{y} (\mathbf{r}_{i} + (-0.2, -0.2, -0.2)), \rho_{z} (\mathbf{r}_{i} + (-0.2, -0.2, -0.2)), \nl
+		   & \cdots, \nl
+		   & \rho(\mathbf{r}_{i} + (0.2, 0.2, 0.2)), \rho_{x} (\mathbf{r}_{i} + (0.2, 0.2, 0.2)), \rho_{y} (\mathbf{r}_{i} + (0.2, 0.2, 0.2)), \rho_{z} (\mathbf{r}_{i} + (0.2, 0.2, 0.2))\}.
+	\end{align*}
+\end{widetext}
+
+But the $\rho_{x} (\mathbf{r}_{i})$, $\rho_{y} (\mathbf{r}_{i})$, $\rho_{z} (\mathbf{r}_{i})$ are not rotate invariant, so we use the square norm of the gradient of the density: $\rho_{x}^{2} (\mathbf{r}_{i}) + \rho_{y}^{2} (\mathbf{r}_{i}) + \rho_{z}^{2} (\mathbf{r}_{i})$.
+
+The comparison of $\Delta E$ and $|\Delta E|$ for KRR, density functional theory (B3LYP), and convolutional neural network (CNN) at different distances is shown in \Tab{table:comparison}.
+% 
+We can see that the KRR method has a large error in the test set (distances of $-0.05$ and $0.05$), which is 62.58, while the B3LYP and CNN methods have small errors at the same distances, which are -16.17 and 1.02, respectively.
+% 
+This indicates that there are singularities in the KRR method, and the CNN method may obscure this problem.
+
+We will further investigate the singularity of the KRR method by analyzing a larger dataset.
+% 
+The dataset contains 11 different configurations (stretching from equilibrium with distances ranging from $-0.5$ to $0.5$ in steps of $0.1$) of the methane, ethane, ethylene, and acetylene molecules.
+% 
+We will show evidence of the singularity of the KRR method by analyzing the distribution of the energy density response to the distance of electron density in the cubes.
+% 
+The distance between two cubes is defined as
+\begin{align}
+	D                  & = \sum_{i}^{N} \rho(\mathbf{r} + \mathbf{r}_{i}) - \rho(\mathbf{r}' + \mathbf{r}_{i}), \nl
+	\mathbf{r}_{i} \in & \{(-0.2, -0.2, -0.2), \cdots, (0.2, 0.2, 0.2)\}.
+\end{align}
+% 
+The $D$ value is exactly $\|\bm{x} - \bm{\hat{x}}_{j}\|$ in the kernel function, \eq{eq:KRR_kernel}.
+% 
+If we can find many different energy density values around small $D$, then the KRR method exhibits singularity.
+% 
+For example, if we can find many different energy density values around $D = \num{4e-08}$, then the KRR kernel with $\lambda = \num{1e2}$ will be almost $1$ for all the training data.
+% 
+This means that the KRR method will give the same energy density value for all the training data, but the energy density values are different, which is a singularity.
+% 
+To remove the influence of the size of the cube, we use the normalized distance, which is defined as
+\begin{align}
+	\overline{D} = \sqrt{\frac{D}{N}}.
+\end{align}
+% 
+We will show the distribution of the energy density response to the normalized distance of electron density in the cubes in \Fig{fig:distance}. The sizes of the cubes are $1 \times 1 \times 1$, $3 \times 3 \times 3$, and $5 \times 5 \times 5$.
+% 
+The left panel of \Fig{fig:distance} shows the B3LYP energy density (without the exchange term) response to the normalized distance, and the right panel of \Fig{fig:distance} shows the KRR energy density response to the normalized distance.
+% 
+We first analyze the single point method, which is the $1 \times 1 \times 1$ cube, then the cube method, which includes the $3 \times 3 \times 3$ and $5 \times 5 \times 5$ cubes. Once the singularity disappears, the $\gamma$ value can be obtained by the corresponding normalized distance.
+% 
+
+The error for methane is small enough, which means that the KRR method shows transferability to the same carbon-hydrogen molecules.
+% 
+The error for propane is large. This means that the KRR method does not show transferability to other carbon-hydrogen molecules.
+% 
+This indicates that we may need to add more data to the training set to improve the transferability of the KRR method.
+
+The cube method does not show a significant improvement over the single point method.
+
+
+SCF:
+\begin{equation}
+	F^{\ast} = F + \frac{\delta D[\rho, \rho_{CC}]}{\delta \rho}
+\end{equation}
+
+Loss:
+\begin{equation}
+	\mathcal{L} = \lambda \sum_{i}^{N} \big| E_{\mathrm{target}}(\rho_{i}) - E(\rho_{i}) \big| + \Big| \sum_{i}^{N} \big( E_{\mathrm{target}}(\rho_{i}) - E(\rho_{i}) \big) \Big|
+\end{equation}
+
+Making Target Similar to CCSD
+
+\end{document}
