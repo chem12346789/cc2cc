@@ -13,6 +13,9 @@ validate
 /gen_data_script/
 /test_script/
 /train_script/
+/log_backup
+/tmp_mol
+
 *.zip
 *map
 submit*
