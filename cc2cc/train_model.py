@@ -224,7 +224,7 @@ def train_model(train_str_dict, eval_str_dict, args):
                     (epoch_train_loss < best_train_loss)
                     or (epoch_eval_loss < best_eval_loss)
                     or (epoch_tot_loss < best_tot_loss)
-                    or (epoch % (args.eval_step * 64) == 0)
+                    or (epoch % (args.eval_step * 32) == 0)
                 ):
                     if epoch_tot_loss < best_tot_loss:
                         print(
