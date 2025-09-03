@@ -22,15 +22,9 @@ else
 
     # echo backup grids_dft
 
-    # check if the directory exists
-    if [ ! -d "/media/dhem/Elements/data/grids_dft" ]; then
-        echo "Directory /media/dhem/Elements/data/grids_dft does not exist. Perhaps you need to mount the Elements drive?"
-        exit 1
-    else
-        echo "Directory /media/dhem/Elements/data/grids_dft exists. Proceeding with rsync."
-        rsync -Pauv dgx1:/home/chenzihao/workspace/cc2cc_test5/data/grids_dft/ /media/dhem/Elements/data/grids_dft
-        rsync -Pauv hkqai:/home/chenzihao/workspace/cc2cc_test5/data/grids_dft/ /media/dhem/Elements/data/grids_dft
-        rsync -Pauv /media/dhem/Elements/data/grids_dft/ dgx1:/home/chenzihao/workspace/cc2cc_test5/data/grids_dft
-        rsync -Pauv /media/dhem/Elements/data/grids_dft/ hkqai:/home/chenzihao/workspace/cc2cc_test5/data/grids_dft
-    fi
+    echo "Directory ~/workspace/2025.1/data/grids_dft exists. Proceeding with rsync."
+    rsync -Pauv dgx1:/home/chenzihao/workspace/cc2cc_test5/data/grids_dft/ ~/workspace/2025.1/data/grids_dft
+    rsync -Pauv hkqai:/home/chenzihao/workspace/cc2cc_test5/data/grids_dft/ ~/workspace/2025.1/data/grids_dft
+    rsync -Pauv ~/workspace/2025.1/data/grids_dft/ dgx1:/home/chenzihao/workspace/cc2cc_test5/data/grids_dft
+    rsync -Pauv ~/workspace/2025.1/data/grids_dft/ hkqai:/home/chenzihao/workspace/cc2cc_test5/data/grids_dft
 fi
