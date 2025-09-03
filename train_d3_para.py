@@ -2,6 +2,9 @@ import json
 from itertools import product
 import argparse
 from copy import deepcopy
+from pathlib import Path
+import random
+import os
 
 import numpy as np
 import pandas as pd
@@ -148,10 +151,28 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "--load", type=str, default="", help="Name of csv file, <csv_file_name>"
 )
+parser.add_argument(
+    "--epochs", type=int, default=10000, help="Number of training epochs"
+)
+parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
+parser.add_argument("--seed", type=int, default=42, help="Random seed")
 args = parser.parse_args()
 data_path = f"validate_hkqai/ccdft_cc-pVDZ_{args.load}_gmtkn-cc-pVDZ.csv"
 save_para = {}
 save_para_path = f"validate_hkqai/ccdft_cc-pVDZ_{args.load}_gmtkn-cc-pVDZ.json"
+
+
+# Set the random seed for reproducibility
+random.seed(args.seed)
+os.environ["PYTHONHASHSEED"] = str(args.seed)
+np.random.seed(args.seed)
+torch.manual_seed(args.seed)
+torch.cuda.manual_seed(args.seed)
+torch.cuda.manual_seed_all(args.seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.enabled = False
+print("Warning: Using deterministic mode, which may slow down training.")
 
 device = "cuda"
 
@@ -214,6 +235,12 @@ batch_subset = [
     "BUT14DIOL",
 ]
 
+if Path(save_para_path).exists():
+    with open(save_para_path, "r", encoding="utf-8") as f:
+        load_para = json.load(f)
+else:
+    load_para = None
+
 for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
     data_name_list = (data["name"].str.split("_cc-pVDZ").str[0]).to_numpy()
     data_cc_ene = data["cc_ene"].to_numpy() * AU2KCALMOL
@@ -226,7 +253,14 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
     name_batch_list = {}
     weight_batch_list = {}
     mean_absolute_deviation = []
-    model = Model(device=device, damping=damping)
+
+    if load_para is not None:
+        load_para_disp = load_para[
+            f"{"ai" if dft_type == "scf" else dft_type}_d3{damping}"
+        ]
+    else:
+        load_para_disp = {}
+    model = Model(device=device, damping=damping, **load_para_disp)
     model.compile(mode="max-autotune-no-cudagraphs")
     for name_mol in data_name_list:
         for i_subset in batch_subset:
@@ -323,7 +357,7 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
 
     optimizer = torch.optim.AdamW(
         model.parameters(),
-        lr=1e-4,
+        lr=args.lr,
         weight_decay=1e-12,
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -339,7 +373,7 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
     parameter_list = []
     wtmad_2_list = []
 
-    for epoch in tqdm.tqdm(range(10001)):
+    for epoch in tqdm.tqdm(range(args.epochs)):
         loss_batch = []
         wtmad_2 = 0
         optimizer.zero_grad()
@@ -420,7 +454,7 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
 
     best_epoch = np.argmin(wtmad_2_list)
     print(f"Best epoch: {best_epoch}, wtmad_2: {wtmad_2_list[best_epoch]}")
-    model_new = Model(device="cuda", damping="bj", **parameter_list[best_epoch])
+    model_new = Model(device=device, damping=damping, **parameter_list[best_epoch])
     save_para[f"{"ai" if dft_type == "scf" else dft_type}_d3{damping}"] = (
         parameter_list[best_epoch]
     )
@@ -436,5 +470,6 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
     )
 
 data.to_csv(data_path, index=False)
+
 with open(save_para_path, "w", encoding="utf-8") as f:
     json.dump(save_para, f)
