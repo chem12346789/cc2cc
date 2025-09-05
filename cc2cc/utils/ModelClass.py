@@ -164,10 +164,11 @@ class ModelClass:
             lr=self.args.lr,
             weight_decay=self.args.weight_decay,
         )
+
         if self.args.scheduler == "cosine":
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
-                T_max=self.args.eval_step * 32 * 32,
+                T_max=self.args.eval_step * 32 * self.args.cosine_T,
                 eta_min=self.args.cosine_eta_min,
             )
         elif self.args.scheduler == "constant":
