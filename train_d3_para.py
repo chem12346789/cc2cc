@@ -373,7 +373,7 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
     parameter_list = []
     wtmad_2_list = []
 
-    for epoch in tqdm.tqdm(range(args.epochs)):
+    for epoch in tqdm.tqdm(range(args.epochs + 1)):
         loss_batch = []
         wtmad_2 = 0
         optimizer.zero_grad()

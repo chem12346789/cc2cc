@@ -98,7 +98,9 @@ def get_distance(distance_list):
     return distance_l
 
 
-def gen_name_args(name_args, args_dataset, args_name_mol_reverse=False, if_exclude=False):
+def gen_name_args(
+    name_args, args_dataset, args_name_mol_reverse=False, if_exclude=False
+):
     """
     Function to generate name args
     """
@@ -375,6 +377,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--cosine_T",
+        type=int,
+        default=16,
+        help="Number of periods for the cosine scheduler. Default is 16.",
+    )
+
+    parser.add_argument(
         "--iters_to_accumulate",
         type=int,
         default=1,
@@ -540,6 +549,8 @@ def add_args(parser: argparse.ArgumentParser):
     print(f"Iterations to accumulate: {args.iters_to_accumulate}")
     print(f"Max norm: {args.max_norm}")
     print(f"Eval step: {args.eval_step}")
+    print(f"Weight decay: {args.weight_decay}")
+    print(f"Scheduler: {args.scheduler}")
     print(f"Loss multiplier abs: {args.loss_multiplier_abs}")
     print(f"Loss multiplier atomic: {args.loss_multiplier_atomic}")
     print(f"Train atom: {args.train_atom}")
@@ -549,5 +560,6 @@ def add_args(parser: argparse.ArgumentParser):
     print(f"Load epoch: {args.load_epoch}")
     print(f"Density restriction: {args.density_restriction}")
     print(f"Continue: {args.if_continue}")
+    print("", flush=True)
 
     return args
