@@ -6,6 +6,7 @@ import numpy as np
 import torch
 
 from pyscf import lib
+from pyscf.lib import logger
 from pyscf.dft.numint import (
     _dot_ao_ao,
     _scale_ao_sparse,
@@ -15,164 +16,7 @@ from pyscf.dft.numint import (
     MGGA_DENSITY_LAPL,
 )
 from pyscf.dft.gen_grid import NBINS
-
-
-def nr_uks(
-    modelclass,
-    ni,
-    mol,
-    grids,
-    xc_code,
-    dms,
-    max_memory,
-    hermi=1,
-):
-    """
-    Obtain the nelec, excsum, and vmat.
-    Note the max_memory=800 use around 8GB gpu memory.
-    """
-    xctype = ni._xc_type(xc_code)
-    ao_loc = mol.ao_loc_nr()
-    cutoff = grids.cutoff * 1e2
-    nbins = NBINS * 2 - int(NBINS * np.log(cutoff) / np.log(grids.cutoff))
-
-    dma, dmb = _format_uks_dm(dms)
-    nao = dma.shape[-1]
-    make_rhoa, nset = ni._gen_rho_evaluator(mol, dma, hermi, False, grids)[:2]
-    make_rhob = ni._gen_rho_evaluator(mol, dmb, hermi, False, grids)[0]
-
-    nelec = np.zeros((2, nset))
-    excsum = np.zeros(nset)
-    vmat = np.zeros((2, nset, nao, nao))
-
-    def block_loop(ao_deriv):
-        for ao, mask, weights_, coords_ in ni.block_loop(
-            mol, grids, nao, ao_deriv, max_memory=max_memory, non0tab=grids.non0tab
-        ):
-            for i in range(nset):
-                rho_a = make_rhoa(i, ao, mask, xctype)
-                rho_b = make_rhob(i, ao, mask, xctype)
-                rho = (rho_a, rho_b)
-                energy_den, vxc = modelclass.eval_xc_eff(
-                    rho, ni, dms, grids, coords_, mask
-                )
-
-                if xctype == "LDA":
-                    den_a = rho_a * weights_
-                    den_b = rho_b * weights_
-                else:
-                    den_a = rho_a[0] * weights_
-                    den_b = rho_b[0] * weights_
-
-                nelec[0, i] += den_a.sum()
-                nelec[1, i] += den_b.sum()
-                excsum[i] += np.dot(weights_, energy_den)
-                wv = weights_ * vxc
-                yield i, ao, mask, wv
-
-    pair_mask = mol.get_overlap_cond() < -np.log(ni.cutoff)
-    aow = None
-    # if xctype == "LDA":
-    #     ao_deriv = 0
-    #     for i, ao, mask, wv in block_loop(ao_deriv):
-    #         _dot_ao_ao_sparse(
-    #             ao, ao, wv[0, 0], nbins, mask, pair_mask, ao_loc, hermi, vmat[0, i]
-    #         )
-    #         _dot_ao_ao_sparse(
-    #             ao, ao, wv[1, 0], nbins, mask, pair_mask, ao_loc, hermi, vmat[1, i]
-    #         )
-
-    if xctype == "GGA":
-        ao_deriv = 1
-        for i, ao, mask, wv in block_loop(ao_deriv):
-            wv[:, 0] *= 0.5
-            wva, wvb = wv
-            aow = _scale_ao_sparse(ao, wva, mask, ao_loc, out=aow)
-            _dot_ao_ao_sparse(
-                ao[0],
-                aow,
-                None,
-                nbins,
-                mask,
-                pair_mask,
-                ao_loc,
-                hermi=0,
-                out=vmat[0, i],
-            )
-            aow = _scale_ao_sparse(ao, wvb, mask, ao_loc, out=aow)
-            _dot_ao_ao_sparse(
-                ao[0],
-                aow,
-                None,
-                nbins,
-                mask,
-                pair_mask,
-                ao_loc,
-                hermi=0,
-                out=vmat[1, i],
-            )
-        vmat = lib.hermi_sum(vmat.reshape((-1, nao, nao)), axes=(0, 2, 1)).reshape(
-            2, nset, nao, nao
-        )
-
-    # elif xctype == "MGGA":
-    #     if any(x in xc_code.upper() for x in ("CC06", "CS", "BR89", "MK00")):
-    #         raise NotImplementedError("laplacian in meta-GGA method")
-    #     assert not MGGA_DENSITY_LAPL
-    #     ao_deriv = 1
-    #     v1 = np.zeros_like(vmat)
-    #     for i, ao, mask, wv in block_loop(ao_deriv):
-    #         wv[:, 0] *= 0.5
-    #         wv[:, 4] *= 0.5
-    #         wva, wvb = wv
-    #         aow = _scale_ao_sparse(ao[:4], wva[:4], mask, ao_loc, out=aow)
-    #         _dot_ao_ao_sparse(
-    #             ao[0],
-    #             aow,
-    #             None,
-    #             nbins,
-    #             mask,
-    #             pair_mask,
-    #             ao_loc,
-    #             hermi=0,
-    #             out=vmat[0, i],
-    #         )
-    #         _tau_dot_sparse(
-    #             ao, ao, wva[4], nbins, mask, pair_mask, ao_loc, out=v1[0, i]
-    #         )
-    #         aow = _scale_ao_sparse(ao[:4], wvb[:4], mask, ao_loc, out=aow)
-    #         _dot_ao_ao_sparse(
-    #             ao[0],
-    #             aow,
-    #             None,
-    #             nbins,
-    #             mask,
-    #             pair_mask,
-    #             ao_loc,
-    #             hermi=0,
-    #             out=vmat[1, i],
-    #         )
-    #         _tau_dot_sparse(
-    #             ao, ao, wvb[4], nbins, mask, pair_mask, ao_loc, out=v1[1, i]
-    #         )
-    #     vmat = lib.hermi_sum(vmat.reshape((-1, nao, nao)), axes=(0, 2, 1)).reshape(
-    #         2, nset, nao, nao
-    #     )
-    #     vmat += v1
-    # elif xctype == "HF":
-    #     pass
-    else:
-        raise NotImplementedError(f"numint.nr_uks for functional {xc_code}")
-
-    if isinstance(dma, np.ndarray) and dma.ndim == 2:
-        vmat = vmat[:, 0]
-        nelec = nelec.reshape(2)
-        excsum = excsum[0]
-
-    dtype = np.result_type(dma, dmb)
-    if vmat.dtype != dtype:
-        vmat = np.asarray(vmat, dtype=dtype)
-    return nelec, excsum, vmat
+from pyscf.grad.rks import _d1_dot_, _gga_grad_sum_
 
 
 def get_veff_modified(
@@ -184,7 +28,164 @@ def get_veff_modified(
 ):
     """
     Get the method of "Get the effective potential for the UKS method".
+    Note the max_memory=800 use around 8GB gpu memory.
     """
+
+    def nr_uks(
+        modeldict,
+        ni,
+        mol,
+        grids,
+        xc_code,
+        dms,
+        max_memory,
+        hermi=1,
+    ):
+        """
+        Obtain the nelec, excsum, and vmat.
+        """
+        xctype = ni._xc_type(xc_code)
+        ao_loc = mol.ao_loc_nr()
+        cutoff = grids.cutoff * 1e2
+        nbins = NBINS * 2 - int(NBINS * np.log(cutoff) / np.log(grids.cutoff))
+
+        dma, dmb = _format_uks_dm(dms)
+        nao = dma.shape[-1]
+        make_rhoa, nset = ni._gen_rho_evaluator(mol, dma, hermi, False, grids)[:2]
+        make_rhob = ni._gen_rho_evaluator(mol, dmb, hermi, False, grids)[0]
+
+        nelec = np.zeros((2, nset))
+        excsum = np.zeros(nset)
+        vmat = np.zeros((2, nset, nao, nao))
+
+        def block_loop(ao_deriv):
+            for ao, mask, weights_, coords_ in ni.block_loop(
+                mol, grids, nao, ao_deriv, max_memory=max_memory, non0tab=grids.non0tab
+            ):
+                for i in range(nset):
+                    rho_a = make_rhoa(i, ao, mask, xctype)
+                    rho_b = make_rhob(i, ao, mask, xctype)
+                    rho = (rho_a, rho_b)
+                    energy_den, vxc = modeldict.eval_xc_eff(
+                        rho, ni, dms, grids, coords_, mask
+                    )
+
+                    if xctype == "LDA":
+                        den_a = rho_a * weights_
+                        den_b = rho_b * weights_
+                    else:
+                        den_a = rho_a[0] * weights_
+                        den_b = rho_b[0] * weights_
+
+                    nelec[0, i] += den_a.sum()
+                    nelec[1, i] += den_b.sum()
+                    excsum[i] += np.dot(weights_, energy_den)
+                    wv = weights_ * vxc
+                    yield i, ao, mask, wv
+
+        pair_mask = mol.get_overlap_cond() < -np.log(ni.cutoff)
+        aow = None
+        # if xctype == "LDA":
+        #     ao_deriv = 0
+        #     for i, ao, mask, wv in block_loop(ao_deriv):
+        #         _dot_ao_ao_sparse(
+        #             ao, ao, wv[0, 0], nbins, mask, pair_mask, ao_loc, hermi, vmat[0, i]
+        #         )
+        #         _dot_ao_ao_sparse(
+        #             ao, ao, wv[1, 0], nbins, mask, pair_mask, ao_loc, hermi, vmat[1, i]
+        #         )
+
+        if xctype == "GGA":
+            ao_deriv = 1
+            for i, ao, mask, wv in block_loop(ao_deriv):
+                wv[:, 0] *= 0.5
+                wva, wvb = wv
+                aow = _scale_ao_sparse(ao, wva, mask, ao_loc, out=aow)
+                _dot_ao_ao_sparse(
+                    ao[0],
+                    aow,
+                    None,
+                    nbins,
+                    mask,
+                    pair_mask,
+                    ao_loc,
+                    hermi=0,
+                    out=vmat[0, i],
+                )
+                aow = _scale_ao_sparse(ao, wvb, mask, ao_loc, out=aow)
+                _dot_ao_ao_sparse(
+                    ao[0],
+                    aow,
+                    None,
+                    nbins,
+                    mask,
+                    pair_mask,
+                    ao_loc,
+                    hermi=0,
+                    out=vmat[1, i],
+                )
+            vmat = lib.hermi_sum(vmat.reshape((-1, nao, nao)), axes=(0, 2, 1)).reshape(
+                2, nset, nao, nao
+            )
+
+        # elif xctype == "MGGA":
+        #     if any(x in xc_code.upper() for x in ("CC06", "CS", "BR89", "MK00")):
+        #         raise NotImplementedError("laplacian in meta-GGA method")
+        #     assert not MGGA_DENSITY_LAPL
+        #     ao_deriv = 1
+        #     v1 = np.zeros_like(vmat)
+        #     for i, ao, mask, wv in block_loop(ao_deriv):
+        #         wv[:, 0] *= 0.5
+        #         wv[:, 4] *= 0.5
+        #         wva, wvb = wv
+        #         aow = _scale_ao_sparse(ao[:4], wva[:4], mask, ao_loc, out=aow)
+        #         _dot_ao_ao_sparse(
+        #             ao[0],
+        #             aow,
+        #             None,
+        #             nbins,
+        #             mask,
+        #             pair_mask,
+        #             ao_loc,
+        #             hermi=0,
+        #             out=vmat[0, i],
+        #         )
+        #         _tau_dot_sparse(
+        #             ao, ao, wva[4], nbins, mask, pair_mask, ao_loc, out=v1[0, i]
+        #         )
+        #         aow = _scale_ao_sparse(ao[:4], wvb[:4], mask, ao_loc, out=aow)
+        #         _dot_ao_ao_sparse(
+        #             ao[0],
+        #             aow,
+        #             None,
+        #             nbins,
+        #             mask,
+        #             pair_mask,
+        #             ao_loc,
+        #             hermi=0,
+        #             out=vmat[1, i],
+        #         )
+        #         _tau_dot_sparse(
+        #             ao, ao, wvb[4], nbins, mask, pair_mask, ao_loc, out=v1[1, i]
+        #         )
+        #     vmat = lib.hermi_sum(vmat.reshape((-1, nao, nao)), axes=(0, 2, 1)).reshape(
+        #         2, nset, nao, nao
+        #     )
+        #     vmat += v1
+        # elif xctype == "HF":
+        #     pass
+        else:
+            raise NotImplementedError(f"numint.nr_uks for functional {xc_code}")
+
+        if isinstance(dma, np.ndarray) and dma.ndim == 2:
+            vmat = vmat[:, 0]
+            nelec = nelec.reshape(2)
+            excsum = excsum[0]
+
+        dtype = np.result_type(dma, dmb)
+        if vmat.dtype != dtype:
+            vmat = np.asarray(vmat, dtype=dtype)
+        return nelec, excsum, vmat
 
     def get_veff(
         ks_,
@@ -274,3 +275,178 @@ def get_veff_modified(
         return vxc
 
     ks.get_veff = types.MethodType(get_veff, ks)
+
+
+def get_veff_grad_modified(
+    ks_grad,
+    modeldict,
+    max_memory=800,
+):
+    """
+    Get the method of "Get the effective potential for the UKS Gradients method".
+    """
+
+    def get_vxc(
+        ni,
+        mol,
+        grids,
+        xc_code,
+        dms,
+        relativity=0,
+        hermi=1,
+        max_memory=max_memory,
+        verbose=None,
+    ):
+        xctype = ni._xc_type(xc_code)
+        make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, grids)
+        ao_loc = mol.ao_loc_nr()
+
+        vmat = np.zeros((2, 3, nao, nao))
+        # if xctype == "LDA":
+        #     ao_deriv = 1
+        #     for ao, mask, weight, coords in ni.block_loop(
+        #         mol, grids, nao, ao_deriv, max_memory
+        #     ):
+        #         rho_a = make_rho(0, ao[0], mask, xctype)
+        #         rho_b = make_rho(1, ao[0], mask, xctype)
+        #         vxc = ni.eval_xc_eff(xc_code, (rho_a, rho_b), 1, xctype=xctype)[1]
+        #         wv = weight * vxc[:, 0]
+        #         aow = numint._scale_ao(ao[0], wv[0])
+        #         _d1_dot_(vmat[0], mol, ao[1:4], aow, mask, ao_loc, True)
+        #         aow = numint._scale_ao(ao[0], wv[1])
+        #         _d1_dot_(vmat[1], mol, ao[1:4], aow, mask, ao_loc, True)
+
+        if xctype == "GGA":
+            ao_deriv = 2
+            for ao, mask, weight, coords_ in ni.block_loop(
+                mol, grids, nao, ao_deriv, max_memory
+            ):
+                rho_a = make_rho(0, ao[:4], mask, xctype)
+                rho_b = make_rho(1, ao[:4], mask, xctype)
+                rho = (rho_a, rho_b)
+                _, vxc = modeldict.eval_xc_eff(rho, ni, dms, grids, coords_, mask)
+                wv = weight * vxc
+                wv[:, 0] *= 0.5
+                _gga_grad_sum_(vmat[0], mol, ao, wv[0], mask, ao_loc)
+                _gga_grad_sum_(vmat[1], mol, ao, wv[1], mask, ao_loc)
+
+        # elif xctype == "NLC":
+        #     raise NotImplementedError("NLC")
+
+        # elif xctype == "MGGA":
+        #     ao_deriv = 2
+        #     for ao, mask, weight, coords in ni.block_loop(
+        #         mol, grids, nao, ao_deriv, max_memory
+        #     ):
+        #         rho_a = make_rho(0, ao[:10], mask, xctype)
+        #         rho_b = make_rho(1, ao[:10], mask, xctype)
+        #         vxc = ni.eval_xc_eff(xc_code, (rho_a, rho_b), 1, xctype=xctype)[1]
+        #         wv = weight * vxc
+        #         wv[:, 0] *= 0.5
+        #         wv[:, 4] *= 0.5
+        #         rks_grad._gga_grad_sum_(vmat[0], mol, ao, wv[0], mask, ao_loc)
+        #         rks_grad._gga_grad_sum_(vmat[1], mol, ao, wv[1], mask, ao_loc)
+        #         rks_grad._tau_grad_dot_(vmat[0], mol, ao, wv[0, 4], mask, ao_loc, True)
+        #         rks_grad._tau_grad_dot_(vmat[1], mol, ao, wv[1, 4], mask, ao_loc, True)
+
+        exc = np.zeros((mol.natm, 3))
+        # - sign because nabla_X = -nabla_x
+        return exc, -vmat
+
+    def get_veff(ks_grad_, mol=None, dm=None):
+        """
+        First order derivative of DFT effective potential matrix (wrt electron coordinates)
+
+        Args:
+            ks_grad_ : grad.uhf.Gradients or grad.uks.Gradients object
+        """
+        if mol is None:
+            mol = ks_grad_.mol
+        if dm is None:
+            dm = ks_grad_.base.make_rdm1()
+        t0 = (logger.process_clock(), logger.perf_counter())
+
+        mf = ks_grad_.base
+        ni = mf._numint
+        # grids, nlcgrids = rks_grad._initialize_grids(ks_grad_)
+
+        ni = mf._numint
+        mem_now = lib.current_memory()[0]
+        max_memory = max(2000, ks_grad_.max_memory * 0.9 - mem_now)
+        exc, vxc = get_vxc(
+            ni,
+            mol,
+            ks_grad_.grids,
+            mf.xc,
+            dm,
+            max_memory=max_memory,
+            verbose=ks_grad_.verbose,
+        )
+        # if ks_grad_.grid_response:
+        #     exc, vxc = get_vxc_full_response(
+        #         ni,
+        #         mol,
+        #         grids,
+        #         mf.xc,
+        #         dm,
+        #         max_memory=max_memory,
+        #         verbose=ks_grad_.verbose,
+        #     )
+        #     if mf.do_nlc():
+        #         if ni.libxc.is_nlc(mf.xc):
+        #             xc = mf.xc
+        #         else:
+        #             xc = mf.nlc
+        #         enlc, vnlc = rks_grad.get_nlc_vxc_full_response(
+        #             ni,
+        #             mol,
+        #             nlcgrids,
+        #             xc,
+        #             dm[0] + dm[1],
+        #             max_memory=max_memory,
+        #             verbose=ks_grad_.verbose,
+        #         )
+        #         exc += enlc
+        #         vxc += vnlc
+        #     logger.debug1(ks_grad_, "sum(grids response) %s", exc.sum(axis=0))
+        # else:
+        #     exc, vxc = get_vxc(
+        #         ni,
+        #         mol,
+        #         grids,
+        #         mf.xc,
+        #         dm,
+        #         max_memory=max_memory,
+        #         verbose=ks_grad_.verbose,
+        #     )
+        #     if mf.do_nlc():
+        #         if ni.libxc.is_nlc(mf.xc):
+        #             xc = mf.xc
+        #         else:
+        #             xc = mf.nlc
+        #         enlc, vnlc = rks_grad.get_nlc_vxc(
+        #             ni,
+        #             mol,
+        #             nlcgrids,
+        #             xc,
+        #             dm[0] + dm[1],
+        #             max_memory=max_memory,
+        #             verbose=ks_grad_.verbose,
+        #         )
+        #         vxc += vnlc
+        t0 = logger.timer(ks_grad_, "vxc", *t0)
+
+        if not ni.libxc.is_hybrid_xc(mf.xc):
+            vj = ks_grad_.get_j(mol, dm)
+            vxc += vj[0] + vj[1]
+        else:
+            omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mf.xc, spin=mol.spin)
+            vj, vk = ks_grad_.get_jk(mol, dm)
+            vk *= hyb
+            if omega != 0:
+                vk += ks_grad_.get_k(mol, dm, omega=omega) * (alpha - hyb)
+            vxc += vj[0] + vj[1] - vk
+
+        return lib.tag_array(vxc, exc1_grid=exc)
+
+    ks_grad.get_veff = types.MethodType(get_veff, ks_grad)

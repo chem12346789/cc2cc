@@ -9,7 +9,13 @@ from cc2cc.utils.DataBaseCenter import DataBaseCenter
 from cc2cc.utils.DataBaseCube import DataBaseCube
 from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.modelscf_rks import get_veff_modified as get_veff_modified_rks
+from cc2cc.utils.modelscf_rks import (
+    get_veff_grad_modified as get_veff_grad_modified_rks,
+)
 from cc2cc.utils.modelscf_uks import get_veff_modified as get_veff_modified_uks
+from cc2cc.utils.modelscf_uks import (
+    get_veff_grad_modified as get_veff_grad_modified_uks,
+)
 from cc2cc.utils.rotate import rotate
 from cc2cc.utils.DataRecord import DataRecord
 from cc2cc.utils.TestData import TestData

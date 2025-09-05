@@ -4,7 +4,7 @@ import numpy as np
 
 import pyscf
 
-from cc2cc.utils import get_veff_modified_rks, diff_rho
+from cc2cc.utils import get_veff_modified_rks, get_veff_grad_modified_rks, diff_rho
 from cc2cc.utils import TestData, AU2KCALMOL
 
 
@@ -35,15 +35,16 @@ def test_rks(
     mdft.grids = grids
     mdft.verbose = 4
 
-    if modeldict.model_type == "center_4":
-        get_veff_modified_rks(mdft, modeldict, max_memory=8000)
-    elif modeldict.model_type == "cube":
-        get_veff_modified_rks(mdft, modeldict, max_memory=800)
-
     if "test" in args.load:
         dm1_scf = test_data.dm1_cc.copy()
         e_scf = test_data.e_cc
+        grad_mdft = None
     else:
+        if modeldict.model_type == "center_4":
+            get_veff_modified_rks(mdft, modeldict, max_memory=8000)
+        elif modeldict.model_type == "cube":
+            get_veff_modified_rks(mdft, modeldict, max_memory=800)
+
         mdft.max_cycle = 50
         mdft.conv_tol = 1e-6
         if mol.natm == 1:
@@ -55,20 +56,20 @@ def test_rks(
         dm1_scf = mdft.make_rdm1()
         e_scf = mdft.e_tot
 
-        # mdft.max_cycle = -1
-        # mdft.kernel(dm0=test_data.dm1_cc)
-        # dm1_scf = test_data.dm1_cc.copy()
-        # e_scf = mdft.e_tot
+        if args.if_grad:
+            g = mdft.Gradients()
+            if modeldict.model_type == "center_4":
+                get_veff_grad_modified_rks(g, modeldict, max_memory=8000)
+            elif modeldict.model_type == "cube":
+                get_veff_grad_modified_rks(g, modeldict, max_memory=800)
+            grad_mdft = g.kernel()
+        else:
+            grad_mdft = None
 
+    scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
     time_ai = timer() - time_ai_start
 
     # 3.0 Collect data
-    scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
-    error_dft_dip = np.linalg.norm(test_data.cc_dipole - test_data.dft_dipole)
-    error_scf_dip = np.linalg.norm(test_data.cc_dipole - scf_dipole)
-
-    error_scf_ele = diff_rho(mol, test_data.dm1_cc, dm1_scf, grids)
-    error_dft_ele = diff_rho(mol, test_data.dm1_cc, test_data.dm1_dft, grids)
 
     dict_ = {
         "name": name,
@@ -77,10 +78,10 @@ def test_rks(
         "time_cc": test_data.time_cc,
         "time_ai": time_ai,
         "time_dft": test_data.time_dft,
-        "error_scf_ele": error_scf_ele,
-        "error_dft_ele": error_dft_ele,
-        "error_scf_dip": error_scf_dip,
-        "error_dft_dip": error_dft_dip,
+        "error_scf_ele": diff_rho(mol, test_data.dm1_cc, dm1_scf, grids),
+        "error_dft_ele": diff_rho(mol, test_data.dm1_cc, test_data.dm1_dft, grids),
+        "error_scf_dip": np.linalg.norm(test_data.cc_dipole - scf_dipole),
+        "error_dft_dip": np.linalg.norm(test_data.cc_dipole - test_data.dft_dipole),
         "cc_ene": test_data.e_cc,
         "scf_ene": e_scf,
         "dft_ene": test_data.e_dft,
@@ -101,5 +102,26 @@ def test_rks(
                 "delta_d3bj": test_data.delta_e["d3bj"],
             }
         )
+    if args.if_grad:
+        if (
+            grad_mdft is not None
+            and test_data.grad_ccsd is not None
+            and test_data.grad_dft is not None
+        ):
+            dict_.update(
+                {
+                    "delta_grad_scf": np.linalg.norm(grad_mdft - test_data.grad_ccsd),
+                    "delta_grad_dft": np.linalg.norm(
+                        test_data.grad_dft - test_data.grad_ccsd
+                    ),
+                }
+            )
+        else:
+            dict_.update(
+                {
+                    "delta_grad_scf": 0,
+                    "delta_grad_dft": 0,
+                }
+            )
     data_record.add_data(dict_)
     data_record.save_csv()
