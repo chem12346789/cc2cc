@@ -58,6 +58,8 @@ def test_rks(
 
         if args.if_grad:
             g = mdft.Gradients()
+            g.xc = test_data.xc_code
+            g.grids = grids
             if modeldict.model_type == "center_4":
                 get_veff_grad_modified_rks(g, modeldict, max_memory=8000)
             elif modeldict.model_type == "cube":
