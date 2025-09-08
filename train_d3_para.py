@@ -157,9 +157,9 @@ parser.add_argument(
 parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--seed", type=int, default=42, help="Random seed")
 args = parser.parse_args()
-data_path = f"validate_hkqai/ccdft_cc-pVDZ_{args.load}_gmtkn-cc-pVDZ.csv"
+data_path = f"validate_hkqai_done/ccdft_cc-pVDZ_{args.load}_gmtkn-cc-pVDZ.csv"
 save_para = {}
-save_para_path = f"validate_hkqai/ccdft_cc-pVDZ_{args.load}_gmtkn-cc-pVDZ.json"
+save_para_path = f"validate_hkqai_done/ccdft_cc-pVDZ_{args.load}_gmtkn-cc-pVDZ.json"
 
 
 # Set the random seed for reproducibility
@@ -446,7 +446,11 @@ for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
                 else:
                     parameter_dict[key] = item
             parameter_list.append(deepcopy(parameter_dict))
-            wtmad_2_list.append(wtmad_2)
+            wtmad_2_list.append(
+                wtmad_2
+                * np.mean(mean_absolute_deviation)
+                / len(mean_absolute_deviation)
+            )
             print(
                 f"Epoch: {epoch}, wtmad_2: {wtmad_2 * np.mean(mean_absolute_deviation) / len(mean_absolute_deviation)}, loss: {loss_batch}",
                 flush=True,
