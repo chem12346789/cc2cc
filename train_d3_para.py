@@ -241,7 +241,16 @@ if Path(save_para_path).exists():
 else:
     load_para = None
 
-for damping, dft_type in product(["bj", "zero"], ["scf", "dft"]):
+for damping, dft_type in product(
+    [
+        "bj",
+        "zero",
+    ],
+    [
+        "scf",
+        # "dft",
+    ],
+):
     data_name_list = (data["name"].str.split("_cc-pVDZ").str[0]).to_numpy()
     data_cc_ene = data["cc_ene"].to_numpy() * AU2KCALMOL
     data_dft_ene = data[f"{dft_type}_ene"].to_numpy() * AU2KCALMOL

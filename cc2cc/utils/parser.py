@@ -340,6 +340,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--activation_memory_budget",
+        type=float,
+        default=1.0,
+        help="Activation memory budget in GB for training. Default is 1.",
+    )
+
+    parser.add_argument(
         "--batch_size",
         type=int,
         default=1,

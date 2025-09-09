@@ -113,7 +113,9 @@ class ModelClass:
             self.model.load_state_dict(self.state_dict, strict=False)
 
         if not if_validate:
-            torch._functorch.config.activation_memory_budget = 1
+            torch._functorch.config.activation_memory_budget = (
+                self.args.activation_memory_budget
+            )
             self.model.compile(dynamic=True, mode="reduce-overhead")
 
         if self.args.distributed:
