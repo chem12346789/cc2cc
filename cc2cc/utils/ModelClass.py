@@ -379,6 +379,13 @@ class ModelClass:
                 rho, ni, dms, coords=coords_, mask=mask, require_vxc=True
             )
 
+        # return exc_b3lyp, (
+        #     0.08 * vxc_b3lyp[0]
+        #     + 0.19 * vxc_b3lyp[1]
+        #     + 0.72 * vxc_b3lyp[2]
+        #     + 0.81 * vxc_b3lyp[3]
+        # )
+
         input_mat = torch.tensor(
             rho_cube,
             dtype=self.dtype,
