@@ -203,14 +203,11 @@ def rotate(
             extra_mass = True
         else:
             extra_mass = False
-        print("DEBUG", extra_mass)
-        print("DEBUG", molecule)
     else:
         extra_mass = False
 
     I = get_inertia_moment(molecule, extra_mass=extra_mass)
     eig_val, eig_vec = np.linalg.eig(I)
-    print("DEBUG", eig_val, eig_vec)
     index1 = np.argsort(eig_val, kind="stable")[2]
     list_max_eig = eig_vec[:, index1]
     rotation_matrix = rotation_matrix_from_vectors(list_max_eig, [0, 0, 1])
@@ -224,7 +221,6 @@ def rotate(
 
     I = get_inertia_moment(molecule, extra_mass=extra_mass)
     eig_val, eig_vec = np.linalg.eig(I)
-    print("DEBUG", eig_val, eig_vec)
     index2 = np.argsort(eig_val, kind="stable")[1]
     list_max_eig = eig_vec[:, index2]
     rotation_matrix = rotation_matrix_from_vectors(list_max_eig, [0, 1, 0])
@@ -237,7 +233,6 @@ def rotate(
 
     I = get_inertia_moment(molecule, extra_mass=extra_mass)
     eig_val, eig_vec = np.linalg.eig(I)
-    print("DEBUG", eig_val, eig_vec)
     index3 = np.argsort(eig_val, kind="stable")[0]
     list_max_eig = eig_vec[:, index3]
     rotation_matrix = rotation_matrix_from_vectors(list_max_eig, [1, 0, 0])
