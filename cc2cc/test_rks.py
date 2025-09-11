@@ -51,8 +51,8 @@ def test_rks(
             # For single atom, use the dm from the test data
             mdft.kernel(dm0=test_data.dm1_dft)
         else:
-            mdft.kernel()
-        # mdft.kernel(dm0=test_data.dm1_dft)
+            # mdft.kernel()
+            mdft.kernel(dm0=test_data.dm1_dft)
         dm1_scf = mdft.make_rdm1()
         e_scf = mdft.e_tot
 
@@ -61,9 +61,19 @@ def test_rks(
             g.xc = test_data.xc_code
             g.grids = grids
             if modeldict.model_type == "center_4":
-                get_veff_grad_modified_rks(g, modeldict, max_memory=8000)
+                get_veff_grad_modified_rks(
+                    g,
+                    modeldict,
+                    max_memory=8000,
+                    # dm_ks=test_data.dm1_dft,
+                )
             elif modeldict.model_type == "cube":
-                get_veff_grad_modified_rks(g, modeldict, max_memory=800)
+                get_veff_grad_modified_rks(
+                    g,
+                    modeldict,
+                    max_memory=800,
+                    # dm_ks=test_data.dm1_dft,
+                )
             grad_mdft = g.kernel()
         else:
             grad_mdft = None

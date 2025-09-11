@@ -141,7 +141,7 @@ def ucc(mol, grids, name, args):
     """
     print(f"Generate data for {name}, spin {mol.spin}")
 
-    mf = pyscf.scf.UHF(mol)
+    mf = pyscf.scf.UHF(mol).newton()
     mf.max_cycle = 200
     mf.kernel()
     if args.check_convergence and not mf.converged:

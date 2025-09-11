@@ -15,6 +15,7 @@ validate
 /train_script/
 /log_backup
 /tmp_mol
+/work_script/
 
 *.zip
 *map

@@ -1,2 +1,0 @@
-/bin/top -u chenzihao -o %MEM -bn1 -c -w250 | grep "multiprocessing" | awk '{print $1}' | xargs -I {} sh -c 'echo "Killing process {}"; kill -9 {}'
-/bin/top -u chenzihao -o %MEM -bn1 -c -w250 | grep "pickler=torch" | awk '{print $1}' | xargs -I {} sh -c 'echo "Killing process {}"; kill -9 {}'
