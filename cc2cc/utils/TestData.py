@@ -169,10 +169,13 @@ class TestData:
         time_start = timer()
         mf = pyscf.scf.RHF(self.mol)
         mf.max_cycle = 200
-        mf.diis_space = 12
         mf.verbose = 4
-
         mf.kernel()
+
+        if mf.converged is False:
+            mf = mf.newton()
+            mf.kernel()
+
         mf_dm1 = mf.make_rdm1()
         mycc = pyscf.cc.CCSD(mf)
         # mycc.direct = True
@@ -221,10 +224,13 @@ class TestData:
         time_start = timer()
         mf = pyscf.scf.UHF(self.mol)
         mf.max_cycle = 200
-        mf.diis_space = 12
         mf.verbose = 4
-
         mf.kernel()
+
+        if mf.converged is False:
+            mf = mf.newton()
+            mf.kernel()
+
         mf_dm1 = mf.make_rdm1()
         mycc = pyscf.cc.UCCSD(mf)
         # mycc.direct = True

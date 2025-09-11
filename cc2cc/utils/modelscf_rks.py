@@ -8,16 +8,19 @@ The ``uncommment commment'' is the original docstring.
 import types
 
 import numpy as np
+import torch
 
+import pyscf
 from pyscf import lib
 from pyscf.lib import logger
 from pyscf.dft.numint import (
+    _scale_ao,
     _scale_ao_sparse,
     _dot_ao_ao_sparse,
     # _tau_dot_sparse,
 )
 from pyscf.dft.gen_grid import NBINS
-from pyscf.grad.rks import _d1_dot_, _gga_grad_sum_
+from pyscf.grad.rks import _d1_dot_, _gga_grad_sum_, _make_dR_dao_w
 
 
 def get_veff_modified(
@@ -254,6 +257,7 @@ def get_veff_grad_modified(
     ks_grad,
     modeldict,
     max_memory=800,
+    dm_ks=None,
 ):
     """
     Get the method of "Get the effective potential for the RKS Gradients method".
@@ -294,12 +298,34 @@ def get_veff_grad_modified(
             ):
                 for idm in range(nset):
                     rho = make_rho(idm, ao[:4], mask, xctype)
-                    _, vxc = modeldict.eval_xc_eff(
-                        rho, ni, dms, grids, coords_, mask
-                    )
+                    _, vxc = modeldict.eval_xc_eff(rho, ni, dms, grids, coords_, mask)
                     wv = weight * vxc
                     wv[0] *= 0.5
-                    _gga_grad_sum_(vmat[idm], mol, ao, wv, mask, ao_loc)
+                    # _gga_grad_sum_(vmat[idm], mol, ao, wv, mask, ao_loc)
+
+                    # # aow = _scale_ao(ao[:4], wv[:4])
+                    # # _d1_dot_(vmat[idm], mol, ao[1:4], aow, mask, ao_loc, True)
+                    # # # ##### in np.einsum #####
+                    # vmat[idm] += np.einsum(
+                    #     "np,p,xpi,npj->xij",
+                    #     vxc,
+                    #     weight,
+                    #     ao[1:4],
+                    #     ao_array,
+                    #     optimize=True,
+                    # )
+
+                    # # aow = _make_dR_dao_w(ao, wv[:4])
+                    # # _d1_dot_(vmat[idm], mol, aow, ao[0], mask, ao_loc, True)
+                    # # # ##### in np.einsum #####
+                    # vmat[idm] += np.einsum(
+                    #     "np,p,nxpi,pj->xij",
+                    #     vxc,
+                    #     weight,
+                    #     ao_mat,
+                    #     ao[0],
+                    #     optimize=True,
+                    # )
 
         # elif xctype == "MGGA":
         #     ao_deriv = 2
@@ -416,4 +442,110 @@ def get_veff_grad_modified(
 
         return lib.tag_array(vxc, exc1_grid=exc)
 
+    def extra_force(ks_grad_, atom_id, envs):
+        """
+        First order derivative of DFT effective potential matrix (wrt electron coordinates)
+
+        Args:
+            ks_grad_ : grad.uhf.Gradients or grad.uks.Gradients object
+        """
+        mol = ks_grad_.base.mol
+
+        if dm_ks is None:
+            dm = ks_grad_.base.make_rdm1()
+        else:
+            dm = dm_ks
+
+        t0 = (logger.process_clock(), logger.perf_counter())
+
+        mf = ks_grad_.base
+        ni = mf._numint
+
+        mem_now = lib.current_memory()[0]
+        max_memory = max(2000, ks_grad_.max_memory * 0.9 - mem_now)
+
+        xctype = ni._xc_type(mf.xc)
+
+        ao_loc = mol.ao_loc_nr()
+
+        force = np.zeros((3))
+        aoslices = mol.aoslice_by_atom()
+        p0, p1 = aoslices[atom_id, 2:]
+
+        ao_deriv = 2
+
+        weight = ks_grad_.grids.weights
+        coords_ = ks_grad_.grids.coords
+        mask = ks_grad_.grids.non0tab
+
+        ao = pyscf.dft.numint.eval_ao(mol, coords_, deriv=ao_deriv)
+        rho = pyscf.dft.numint.eval_rho(mol, ao[:4], dm, xctype=xctype)
+
+        rho_cube, _, vxc_b3lyp = ks_grad_.grids.gen_cube_rho_rks(
+            rho, ni, dm, coords=coords_, mask=mask, require_vxc=True
+        )
+        input_mat = torch.tensor(
+            rho_cube,
+            dtype=modeldict.dtype,
+            device=modeldict.device,
+        )
+        input_mat.requires_grad = True
+        output_mat = modeldict.model(input_mat)[:, 0]
+        middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
+        middle_mat = (
+            ks_grad_.grids.get_center_density(middle_cube).detach().cpu().numpy()
+        )
+        grad_mat = np.array(
+            [
+                0.08 + middle_mat[:, 0],
+                0.19 + middle_mat[:, 1],
+                0.72 + middle_mat[:, 2],
+                0.81 + middle_mat[:, 3],
+            ]
+        )
+
+        wv = weight * vxc_b3lyp
+        wv[:, 0, :] *= 0.5
+
+        # # dX, dY, dZ = 1, 2, 3
+        # # XX, XY, XZ = 4, 5, 6
+        # # YX, YY, YZ = 5, 7, 8
+        # # ZX, ZY, ZZ = 6, 8, 9
+        ao_array = np.array([ao[0], ao[1], ao[2], ao[3]])
+        ao_mat = np.array(
+            [
+                [ao[1], ao[2], ao[3]],
+                [ao[4], ao[5], ao[6]],
+                [ao[5], ao[7], ao[8]],
+                [ao[6], ao[8], ao[9]],
+            ]
+        )
+
+        # summation of above three parts
+        grad2force = np.einsum(
+            "mnp,xpi,npj,ij->mpx",
+            wv,
+            ao[1:4, :, p0:p1],
+            ao_array,
+            dm[p0:p1],
+            optimize=True,
+        ) + np.einsum(
+            "mnp,nxpi,pj,ij->mpx",
+            wv,
+            ao_mat[:, :, :, p0:p1],
+            ao[0],
+            dm[p0:p1],
+            optimize=True,
+        )
+        grad2force = -grad2force * 2
+        force = np.einsum(
+            "mp,mpx->x",
+            grad_mat,
+            grad2force,
+            optimize=True,
+        )
+
+        return force
+
     ks_grad.get_veff = types.MethodType(get_veff, ks_grad)
+    ks_grad.extra_force = types.MethodType(extra_force, ks_grad)
