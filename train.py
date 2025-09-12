@@ -270,6 +270,7 @@ train_str_list = [
     # "SIE4x4-nh32+_1.5",
     # "SIE4x4-nh32+_1.75",
     # "PA26-si2h6p",
+    # ######## 7 H ########
     # "BHDIV10-ed5",
     # "BHDIV10-ts5",
     # "NBPRC-K_H",
