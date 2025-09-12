@@ -4,11 +4,11 @@ import numpy as np
 
 import pyscf
 
-from cc2cc.utils import get_veff_modified_rks, get_veff_grad_modified_rks, diff_rho
+from cc2cc.utils import get_veff_modified_uks, get_veff_grad_modified_uks, diff_rho
 from cc2cc.utils import TestData, AU2KCALMOL
 
 
-def test_rks(
+def test_uks(
     mol,
     grids,
     name,
@@ -30,21 +30,22 @@ def test_rks(
     )
 
     time_ai_start = timer()
-    mdft = pyscf.dft.RKS(mol)
-    mdft.xc = test_data.xc_code
+    mdft = pyscf.dft.UKS(mol)
+    mdft.xc = "b3lyp"
     mdft.grids = grids
     mdft.verbose = 4
 
+    if modeldict.model_type == "center_4":
+        get_veff_modified_uks(mdft, modeldict, max_memory=8000)
+    elif modeldict.model_type == "cube":
+        get_veff_modified_uks(mdft, modeldict, max_memory=800)
+
     if "test" in args.load:
-        dm1_scf = test_data.dm1_cc.copy()
-        e_scf = test_data.e_cc
+        dm1_scf = test_data.dm1_dft.copy()
+        e_scf = test_data.e_dft
+
         grad_mdft = None
     else:
-        if modeldict.model_type == "center_4":
-            get_veff_modified_rks(mdft, modeldict, max_memory=8000)
-        elif modeldict.model_type == "cube":
-            get_veff_modified_rks(mdft, modeldict, max_memory=800)
-
         mdft.max_cycle = 50
         mdft.conv_tol = 1e-6
         if mol.natm == 1:
@@ -61,14 +62,14 @@ def test_rks(
             g.xc = test_data.xc_code
             g.grids = grids
             if modeldict.model_type == "center_4":
-                get_veff_grad_modified_rks(
+                get_veff_grad_modified_uks(
                     g,
                     modeldict,
                     max_memory=8000,
                     # dm_ks=test_data.dm1_dft,
                 )
             elif modeldict.model_type == "cube":
-                get_veff_grad_modified_rks(
+                get_veff_grad_modified_uks(
                     g,
                     modeldict,
                     max_memory=800,
@@ -78,10 +79,10 @@ def test_rks(
         else:
             grad_mdft = None
 
-    scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
     time_ai = timer() - time_ai_start
 
     # 3.0 Collect data
+    scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
 
     dict_ = {
         "name": name,
@@ -90,16 +91,9 @@ def test_rks(
         "time_cc": test_data.time_cc,
         "time_ai": time_ai,
         "time_dft": test_data.time_dft,
-        "error_scf_ele": diff_rho(mol, test_data.dm1_cc, dm1_scf, grids),
-        "error_dft_ele": diff_rho(mol, test_data.dm1_cc, test_data.dm1_dft, grids),
-        "error_scf_dip": np.linalg.norm(test_data.cc_dipole - scf_dipole),
-        "error_dft_dip": np.linalg.norm(test_data.cc_dipole - test_data.dft_dipole),
         "cc_ene": test_data.e_cc,
         "scf_ene": e_scf,
         "dft_ene": test_data.e_dft,
-        "cc_dipole_x": test_data.cc_dipole[0],
-        "cc_dipole_y": test_data.cc_dipole[1],
-        "cc_dipole_z": test_data.cc_dipole[2],
         "scf_dipole_x": scf_dipole[0],
         "scf_dipole_y": scf_dipole[1],
         "scf_dipole_z": scf_dipole[2],

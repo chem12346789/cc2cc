@@ -1,8 +1,10 @@
 from cc2cc.cc import cc
 from cc2cc.ucc import ucc
 from cc2cc.train_model import train_model
-from cc2cc.test_rks import test_rks
-from cc2cc.test_uks import test_uks
+from cc2cc.benchmark_rks import benchmark_rks
+from cc2cc.benchmark_uks import benchmark_uks
+from cc2cc.test_model_rks import test_model_rks
+from cc2cc.test_model_uks import test_model_uks
 from cc2cc.lambda_cc import lambda_cc
 from cc2cc.lambda_ucc import lambda_ucc
 
@@ -18,8 +20,12 @@ __all__ = [
     "cc",
     "ucc",
     "train_model",
-    "test_rks",
-    "test_uks",
+    "benchmark_rks",
+    "benchmark_uks",
+    "test_model_rks",
+    "test_model_uks",
+    "lambda_cc",
+    "lambda_ucc",
     "add_args",
     #
     "MAIN_PATH",

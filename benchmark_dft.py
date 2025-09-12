@@ -6,9 +6,9 @@ Other parameter are from the argparse.
 import argparse
 from itertools import product
 
-from cc2cc import add_args, test_model_rks, test_model_uks
+from cc2cc import add_args, benchmark_rks, benchmark_uks
 from cc2cc.utils import gen_mole, print_computer_info
-from cc2cc.utils import Grid, ModelClass, DataRecord
+from cc2cc.utils import DataRecord
 from cc2cc.utils import MAIN_PATH
 
 if __name__ == "__main__":
@@ -20,13 +20,7 @@ if __name__ == "__main__":
 
     print_computer_info(args.device)
 
-    # 1. Init the model
-    modeldict = ModelClass(args)
-    if "test" not in args.load:
-        modeldict.init_model(if_validate=True)
-        modeldict.eval()
-
-    # 2. Test loop
+    # 1. Test loop
     if len(args.name_mol_input) == 1:
         data_record = DataRecord(
             MAIN_PATH
@@ -60,8 +54,8 @@ if __name__ == "__main__":
             args.basis,
             args.if_basis_str,
             args.dataset,
-            if_rotate=args.if_rotate,
-            if_rotate_random=args.if_rotate_random,
+            if_rotate=True,
+            if_rotate_random=False,
         )
 
         if mol is None:
@@ -75,27 +69,11 @@ if __name__ == "__main__":
                 print(f"SKIP: {name}")
                 continue
 
-        grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
-
         try:
             if mol.spin == 0:
-                test_model_rks(
-                    mol,
-                    grids,
-                    name,
-                    modeldict,
-                    data_record,
-                    args,
-                )
+                benchmark_rks(mol, name, data_record)
             else:
-                test_model_uks(
-                    mol,
-                    grids,
-                    name,
-                    modeldict,
-                    data_record,
-                    args,
-                )
+                benchmark_uks(mol, name, data_record)
         except (ValueError, RuntimeError) as e:
             print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
             print(e)

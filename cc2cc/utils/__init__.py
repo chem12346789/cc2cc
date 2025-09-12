@@ -18,7 +18,7 @@ from cc2cc.utils.modelscf_uks import (
 )
 from cc2cc.utils.rotate import rotate
 from cc2cc.utils.DataRecord import DataRecord
-from cc2cc.utils.TestData import TestData
+from cc2cc.utils.TestDataDFT import TestDataDFT
 
 from cc2cc.utils.env_var import (
     print_computer_info,
@@ -56,10 +56,6 @@ __all__ = [
     "DataBaseCube",
     "Grid",
     "ModelClass",
-    "RZMP",
-    "UZMP",
-    "LambdaRKS",
-    "LambdaUKS",
     "add_args",
     "gen_mole",
     "get_veff_modified_rks",
@@ -68,8 +64,7 @@ __all__ = [
     "print_computer_info",
     "diff_rho",
     "DataRecord",
-    "TestData",
-    "ZMPLIST",
+    "TestDataDFT",
     "MAIN_PATH",
     "DATA_PATH",
     "DATA_SCF_PATH",
