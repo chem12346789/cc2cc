@@ -66,14 +66,14 @@ def test_uks(
                     g,
                     modeldict,
                     max_memory=8000,
-                    dm_ks=test_data.dm1_dft,
+                    # dm_ks=test_data.dm1_dft,
                 )
             elif modeldict.model_type == "cube":
                 get_veff_grad_modified_uks(
                     g,
                     modeldict,
                     max_memory=800,
-                    dm_ks=test_data.dm1_dft,
+                    # dm_ks=test_data.dm1_dft,
                 )
             grad_mdft = g.kernel()
         else:

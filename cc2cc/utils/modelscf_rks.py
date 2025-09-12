@@ -301,7 +301,7 @@ def get_veff_grad_modified(
                     _, vxc = modeldict.eval_xc_eff(rho, ni, dms, grids, coords_, mask)
                     wv = weight * vxc
                     wv[0] *= 0.5
-                    # _gga_grad_sum_(vmat[idm], mol, ao, wv, mask, ao_loc)
+                    _gga_grad_sum_(vmat[idm], mol, ao, wv, mask, ao_loc)
 
                     # # aow = _scale_ao(ao[:4], wv[:4])
                     # # _d1_dot_(vmat[idm], mol, ao[1:4], aow, mask, ao_loc, True)
@@ -548,4 +548,4 @@ def get_veff_grad_modified(
         return force
 
     ks_grad.get_veff = types.MethodType(get_veff, ks_grad)
-    ks_grad.extra_force = types.MethodType(extra_force, ks_grad)
+    # ks_grad.extra_force = types.MethodType(extra_force, ks_grad)

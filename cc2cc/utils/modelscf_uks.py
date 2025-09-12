@@ -329,8 +329,33 @@ def get_veff_grad_modified(
                 _, vxc = modeldict.eval_xc_eff(rho, ni, dms, grids, coords_, mask)
                 wv = weight * vxc
                 wv[:, 0] *= 0.5
-                # _gga_grad_sum_(vmat[0], mol, ao, wv[0], mask, ao_loc)
-                # _gga_grad_sum_(vmat[1], mol, ao, wv[1], mask, ao_loc)
+                _gga_grad_sum_(vmat[0], mol, ao, wv[0], mask, ao_loc)
+                _gga_grad_sum_(vmat[1], mol, ao, wv[1], mask, ao_loc)
+
+                # # aow = _scale_ao(ao[:4], wv[:4])
+                # # _d1_dot_(vmat[idm], mol, ao[1:4], aow, mask, ao_loc, True)
+                # # # ##### in np.einsum #####
+                # vmat[:, idm] += np.einsum(
+                #     "snp,p,xpi,npj->sxij",
+                #     vxc,
+                #     weight,
+                #     ao[1:4],
+                #     ao_array,
+                #     optimize=True,
+                # )
+
+                # # aow = _make_dR_dao_w(ao, wv[:4])
+                # # _d1_dot_(vmat[idm], mol, aow, ao[0], mask, ao_loc, True)
+                # # # ##### in np.einsum #####
+                # vmat[:, idm] += np.einsum(
+                #     "snp,p,nxpi,pj->sxij",
+                #     vxc,
+                #     weight,
+                #     ao_mat,
+                #     ao[0],
+                #     optimize=True,
+                # )
+                # de = numpy.einsum("sxij,sij->x", vhf[:, :, p0:p1], dm0[:, p0:p1]) * 2
 
         # elif xctype == "NLC":
         #     raise NotImplementedError("NLC")
@@ -486,80 +511,77 @@ def get_veff_grad_modified(
         weight = ks_grad_.grids.weights
         coords_ = ks_grad_.grids.coords
         mask = ks_grad_.grids.non0tab
-        # for ao, mask, weight, coords_ in ni.block_loop(
-        #     mol, ks_grad_.grids, nao, ao_deriv, max_memory
-        # ):
-        #     for idm in range(nset):
 
         ao = pyscf.dft.numint.eval_ao(mol, coords_, deriv=ao_deriv)
-        rho = pyscf.dft.numint.eval_rho(mol, ao[:4], dm, xctype=xctype)
-        _, vxc = modeldict.eval_xc_eff(rho, ni, dm, ks_grad_.grids, coords_, mask)
-        wv = weight * vxc
-        wv[0] *= 0.5
+        rho_a = pyscf.dft.numint.eval_rho(mol, ao[:4], dm[0], xctype=xctype)
+        rho_b = pyscf.dft.numint.eval_rho(mol, ao[:4], dm[1], xctype=xctype)
+        rho = (rho_a, rho_b)
+
+        rho_cube, _, vxc_b3lyp = ks_grad_.grids.gen_cube_rho_uks(
+            rho, ni, dm, coords=coords_, mask=mask, require_vxc=True
+        )
+        input_mat = torch.tensor(
+            rho_cube,
+            dtype=modeldict.dtype,
+            device=modeldict.device,
+        )
+        input_mat.requires_grad = True
+        output_mat = modeldict.model(input_mat)[:, 0]
+        middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
+        middle_mat = (
+            ks_grad_.grids.get_center_density(middle_cube).detach().cpu().numpy()
+        )
+        grad_mat = np.array(
+            [
+                0.08 + middle_mat[:, 0],
+                0.19 + middle_mat[:, 1],
+                0.72 + middle_mat[:, 2],
+                0.81 + middle_mat[:, 3],
+            ]
+        )
+
+        wv = weight * vxc_b3lyp
+        wv[:, :, 0, :] *= 0.5
 
         # # dX, dY, dZ = 1, 2, 3
         # # XX, XY, XZ = 4, 5, 6
         # # YX, YY, YZ = 5, 7, 8
         # # ZX, ZY, ZZ = 6, 8, 9
-        ao_array = np.array([0.5 * ao[0], ao[1], ao[2], ao[3]])
+        ao_array = np.array([ao[0], ao[1], ao[2], ao[3]])
         ao_mat = np.array(
             [
-                [0.5 * ao[1], 0.5 * ao[2], 0.5 * ao[3]],
+                [ao[1], ao[2], ao[3]],
                 [ao[4], ao[5], ao[6]],
                 [ao[5], ao[7], ao[8]],
                 [ao[6], ao[8], ao[9]],
             ]
         )
 
-        # # aow = _scale_ao(ao[:4], wv[:4])
-        # # _d1_dot_(vmat[idm], mol, ao[1:4], aow, mask, ao_loc, True)
-        # # # ##### in np.einsum #####
-        # vmat[idm] += np.einsum(
-        #     "np,p,xpi,npj->xij",
-        #     vxc,
-        #     weight,
-        #     ao[1:4],
-        #     ao_array,
-        #     optimize=True,
-        # )
-
-        # # aow = _make_dR_dao_w(ao, wv[:4])
-        # # _d1_dot_(vmat[idm], mol, aow, ao[0], mask, ao_loc, True)
-        # # # ##### in np.einsum #####
-        # vmat[idm] += np.einsum(
-        #     "np,p,nxpi,pj->xij",
-        #     vxc,
-        #     weight,
-        #     ao_mat,
-        #     ao[0],
-        #     optimize=True,
-        # )
-
         # summation of above three parts
-        vxc2force = np.einsum(
-            "p,xpi,npj,ij->npx",
-            weight,
+        grad2force = np.einsum(
+            "msnp,xpi,npj,sij->mpx",
+            wv,
             ao[1:4, :, p0:p1],
             ao_array,
-            dm[p0:p1],
+            dm[:, p0:p1],
             optimize=True,
         ) + np.einsum(
-            "p,nxpi,pj,ij->npx",
-            weight,
+            "msnp,nxpi,pj,sij->mpx",
+            wv,
             ao_mat[:, :, :, p0:p1],
             ao[0],
-            dm[p0:p1],
+            dm[:, p0:p1],
             optimize=True,
         )
-        vxc2force = -vxc2force * 2
+        grad2force = -grad2force * 2
         force = np.einsum(
-            "np,npx->x",
-            vxc,
-            vxc2force,
+            "mp,mpx->x",
+            grad_mat,
+            grad2force,
             optimize=True,
         )
 
         return force
 
     ks_grad.get_veff = types.MethodType(get_veff, ks_grad)
-    ks_grad.extra_force = types.MethodType(extra_force, ks_grad)
+    # ks_grad.extra_force = types.MethodType(extra_force, ks_grad)
