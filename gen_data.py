@@ -1185,7 +1185,8 @@ if __name__ == "__main__":
     eval_str_list = [mol for mol in eval_str_list if mol not in eval_str_exclude_list]
 
     # name_mol_list = train_str_list
-    name_mol_list = eval_str_list
+    # name_mol_list = eval_str_list
+    name_mol_list = ["W4_11-cn"]
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
 
