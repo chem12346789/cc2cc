@@ -105,14 +105,9 @@ class DataBase:
                     extend_xyz,
                     distance,
                     args.basis,
-                    args.if_basis_str,
                     args.dataset,
                     verbose=-1,
                 )
-                if args.n_rad is not None and args.n_ang is not None:
-                    name = f"{name}_{args.n_rad}_{args.n_ang}"
-                else:
-                    name = f"{name}_default"
                 name = f"{name}{training_cycle_iteration}"
 
                 path_name_ = DATA_PATH / f"data_{name}.npz"

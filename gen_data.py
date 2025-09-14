@@ -1210,7 +1210,6 @@ if __name__ == "__main__":
                 extend_xyz,
                 distance,
                 args.basis,
-                args.if_basis_str,
                 args.dataset,
             )
 
@@ -1218,12 +1217,7 @@ if __name__ == "__main__":
                 print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
                 continue
 
-            if args.n_rad is not None and args.n_ang is not None:
-                name = f"{name}_{args.n_rad}_{args.n_ang}"
-            else:
-                name = f"{name}_default"
-
-            grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
+            grids = Grid(mol, args.grid_level)
 
             if args.if_continue:
                 if (DATA_PATH / f"data_{name}.npz").exists():

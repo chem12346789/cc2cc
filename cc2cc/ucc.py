@@ -55,6 +55,10 @@ def get_dft_energy(
         + 0.1 * oe.contract("pr,qs->pqrs", dm1_dft[0], dm1_dft[0])
         + 0.1 * oe.contract("pr,qs->pqrs", dm1_dft[1], dm1_dft[1])
     )
+    # exchange part
+    # + 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_cc[0], dm1_cc[0])
+    # + 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_cc[1], dm1_cc[1])
+    # alpha is 0.2 in b3lyp
 
     expr_rinv_dm2_r = oe.contract_expression(
         "ijkl,i,j,kl->",

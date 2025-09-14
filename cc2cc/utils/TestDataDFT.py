@@ -10,7 +10,7 @@ import pyscf
 from cc2cc.utils.env_var import DATA_TEST_PATH
 
 
-class TestData:
+class TestDataDFT:
     """
     Class to generate and store test data for DFT calculations.
     It generates 1-RDM, energy, dipole, and gradient for a given molecule.
@@ -32,11 +32,12 @@ class TestData:
         self,
         mol: pyscf.M,
         name: str,
-        xc_code: str = "b3lyp",
-        disp: str = None,
+        xc_code: str,
+        disp: str,
     ) -> None:
         self.mol = mol
         xc_code_disp = xc_code if disp is None else f"{xc_code}-{disp}"
+        print(f"Testing DFT {xc_code_disp} for {name}")
         path_to_data = DATA_TEST_PATH / f"{name}_cc.npz"
 
         if (path_to_data).exists():
@@ -85,6 +86,8 @@ class TestData:
         mdft = pyscf.scf.RKS(self.mol)
         mdft.xc = xc_code_disp
         mdft.verbose = 4
+        mdft.grids.level = 4
+        mdft.level_shift = 0.1
         mdft.kernel()
         if mdft.converged is False:
             raise ValueError("RKS not converged.")
@@ -117,6 +120,8 @@ class TestData:
         mdft = pyscf.scf.UKS(self.mol)
         mdft.xc = xc_code_disp
         mdft.verbose = 4
+        mdft.grids.level = 4
+        mdft.level_shift = 0.1
         mdft.kernel()
         if mdft.converged is False:
             raise ValueError("UKS not converged.")

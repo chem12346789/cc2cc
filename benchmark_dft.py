@@ -52,10 +52,7 @@ if __name__ == "__main__":
             extend_xyz,
             distance,
             args.basis,
-            args.if_basis_str,
             args.dataset,
-            if_rotate=True,
-            if_rotate_random=False,
         )
 
         if mol is None:

@@ -58,7 +58,6 @@ if __name__ == "__main__":
             extend_xyz,
             distance,
             args.basis,
-            args.if_basis_str,
             args.dataset,
             if_rotate=args.if_rotate,
             if_rotate_random=args.if_rotate_random,
@@ -75,7 +74,7 @@ if __name__ == "__main__":
                 print(f"SKIP: {name}")
                 continue
 
-        grids = Grid(mol, n_rad=args.n_rad, n_ang=args.n_ang)
+        grids = Grid(mol, args.grid_level)
 
         try:
             if mol.spin == 0:

@@ -12,6 +12,7 @@ from pyscf.cc import ccsd_t_slow as ccsd_t
 from pyscf.cc import ccsd_rdm
 from pyscf.cc.ccsd_t_rdm_slow import _gamma1_intermediates
 from pyscf.cc.ccsd_t_rdm_slow import _gamma2_intermediates
+from pyscf.grad import ccsd_t as ccsd_t_grad
 
 from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
@@ -24,95 +25,164 @@ def get_dft_energy(
     dm1_dft,
     dft_mo_coeff,
     e_dft,
+    grad_dft,
     dm1_cc,
     dm1_cc_mo,
     dm2_cc,
     e_cc,
+    grad_cc,
+    evaluate=False,
 ):
     """
     Calculate the (exchange-correlation energy - DFT energy) on the grids.
     """
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+    ao_array = np.array([ao_value[0], ao_value[1], ao_value[2], ao_value[3]])
+    ao_mat = np.array(
+        [
+            [ao_value[1], ao_value[2], ao_value[3]],
+            [ao_value[4], ao_value[5], ao_value[6]],
+            [ao_value[5], ao_value[7], ao_value[8]],
+            [ao_value[6], ao_value[8], ao_value[9]],
+        ]
+    )
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
     ao_value = ao_value[:4]
 
     rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
     rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
 
-    expr_rinv_dm2_r = oe.contract_expression(
-        "ijkl,i,j,kl->",
-        0.5 * dm2_cc
-        - 0.5 * oe.contract("pq,rs->pqrs", dm1_dft, dm1_dft)
-        + 0.05 * oe.contract("pr,qs->pqrs", dm1_dft, dm1_dft),
+    v_lda = pyscf.dft.libxc.eval_xc("LDA,", rho_dft[0], deriv=1)[1]
+    v_vwn = pyscf.dft.libxc.eval_xc(",VWN3", rho_dft[0], deriv=1)[1]
+    v_b88 = pyscf.dft.libxc.eval_xc("B88,", rho_dft, deriv=1)[1]
+    v_lyp = pyscf.dft.libxc.eval_xc(",LYP", rho_dft, deriv=1)[1]
+
+    vxc_b3lyp = np.zeros((4, 4, len(grids.coords)))
+    vxc_b3lyp[0, 0:1, :] = v_lda
+    vxc_b3lyp[1, 0:1, :] = v_vwn
+    vxc_b3lyp[2, :, :] = v_b88
+    vxc_b3lyp[3, :, :] = v_lyp
+
+    wv = grids.weight * vxc_b3lyp
+    wv[:, 0, :] *= 0.5
+
+    atmlst = range(mol.natm)
+    grad2force = np.zeros((len(atmlst), 4, len(grids.coords), 3))
+    for k, ia in enumerate(atmlst):
+        p0, p1 = mol.aoslice_by_atom()[ia, 2:]
+        grad2force[k] = np.einsum(
+            "mnp,xpi,npj,ij->mpx",
+            wv,
+            ao_value[1:4, :, p0:p1],
+            ao_array,
+            dm1_dft[p0:p1],
+            optimize=True,
+        ) + np.einsum(
+            "mnp,nxpi,pj,ij->mpx",
+            wv,
+            ao_mat[:, :, :, p0:p1],
+            ao_value[0],
+            dm1_dft[p0:p1],
+            optimize=True,
+        )
+    grad2force = -grad2force * 2
+    grad_mat = np.array(
+        [
+            0.08 * np.ones(len(grids.coords)),
+            0.19 * np.ones(len(grids.coords)),
+            0.72 * np.ones(len(grids.coords)),
+            0.81 * np.ones(len(grids.coords)),
+        ]
+    )
+    force = np.einsum(
+        "mp,impx->ix",
+        grad_mat,
+        grad2force,
+        optimize=True,
+    )
+    print("Force DFT: ", np.linalg.norm(force - grad_dft))
+
+    if evaluate:
+        return None, None, rho_cc, rho_dft, grad2force
+    else:
+        dm12 = (
+            0.5 * dm2_cc
+            - 0.5 * oe.contract("pq,rs->pqrs", dm1_dft, dm1_dft)
+            + 0.05 * oe.contract("pr,qs->pqrs", dm1_dft, dm1_dft)
+        )
         # exchange part
         # + 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_cc * 0.5, dm1_cc * 0.5)
         # + 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_cc * 0.5, dm1_cc * 0.5)
         # alpha is 0.2 in b3lyp
-        (mol.nao,),
-        (mol.nao,),
-        (mol.nao, mol.nao),
-        constants=[0],
-        optimize="optimal",
-    )
 
-    exc_cc_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0]
-
-    for i, coord in enumerate(grids.coords):
-        if i * 10 % len(grids.coords) == 0:
-            print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
-        with mol.with_rinv_origin(coord):
-            rinv = mol.intor("int1e_rinv")
-            exc_cc_grids[i] += expr_rinv_dm2_r(
-                ao_value[0][i],
-                ao_value[0][i],
-                rinv,
-                backend="torch",
-            )
-
-    eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo)
-    eigs_v_dm1 = mf_mo_coeff @ eigs_v_dm1
-    for i in range(np.shape(eigs_v_dm1)[1]):
-        part = oe.contract(
-            "pm,m,n,pn->p",
-            ao_value[0],
-            eigs_v_dm1[:, i],
-            eigs_v_dm1[:, i],
-            ao_2_diag,
+        expr_rinv_dm2_r = oe.contract_expression(
+            "ijkl,i,j,kl->",
+            dm12,
+            (mol.nao,),
+            (mol.nao,),
+            (mol.nao, mol.nao),
+            constants=[0],
+            optimize="optimal",
         )
-        exc_cc_grids -= part * eigs_e_dm1[i] / 2
 
-    for i in range(mol.nelec[0]):
-        part = oe.contract(
-            "pm,m,n,pn->p",
-            ao_value[0],
-            dft_mo_coeff[:, i],
-            dft_mo_coeff[:, i],
-            ao_2_diag,
-        )
-        exc_cc_grids += part
+        exc_cc_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0]
 
-    for i, coord in enumerate(grids.coords):
-        for i_atom in range(mol.natm):
-            distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
-            if distance > 1e-3:
-                exc_cc_grids[i] -= (
-                    (rho_cc[0][i] - rho_dft[0][i])
-                    * mol.atom_charges()[i_atom]
-                    / distance
+        for i, coord in enumerate(grids.coords):
+            if i * 10 % len(grids.coords) == 0:
+                print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
+            with mol.with_rinv_origin(coord):
+                rinv = mol.intor("int1e_rinv")
+                exc_cc_grids[i] += expr_rinv_dm2_r(
+                    ao_value[0][i],
+                    ao_value[0][i],
+                    rinv,
+                    backend="torch",
                 )
 
-    error_energy = e_cc - e_dft
-    error = np.sum(exc_cc_grids * grids.weights) - error_energy
-    print(
-        "exc_cc_grids: ",
-        f"max exc_cc_grids: {np.max(exc_cc_grids)}",
-        f"min exc_cc_grids: {np.min(exc_cc_grids)}",
-        f"mean exc_cc_grids: {np.mean(exc_cc_grids)}",
-        f"std exc_cc_grids: {np.std(exc_cc_grids)}",
-        f"error_energy: {AU2KCALMOL * error_energy},",
-        f"Error: {AU2KCALMOL * error},",
-    )
-    return error_energy, exc_cc_grids, rho_cc, rho_dft
+        eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo)
+        eigs_v_dm1 = mf_mo_coeff @ eigs_v_dm1
+        for i in range(np.shape(eigs_v_dm1)[1]):
+            part = oe.contract(
+                "pm,m,n,pn->p",
+                ao_value[0],
+                eigs_v_dm1[:, i],
+                eigs_v_dm1[:, i],
+                ao_2_diag,
+            )
+            exc_cc_grids -= part * eigs_e_dm1[i] / 2
+
+        for i in range(mol.nelec[0]):
+            part = oe.contract(
+                "pm,m,n,pn->p",
+                ao_value[0],
+                dft_mo_coeff[:, i],
+                dft_mo_coeff[:, i],
+                ao_2_diag,
+            )
+            exc_cc_grids += part
+
+        for i, coord in enumerate(grids.coords):
+            for i_atom in range(mol.natm):
+                distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
+                if distance > 1e-3:
+                    exc_cc_grids[i] -= (
+                        (rho_cc[0][i] - rho_dft[0][i])
+                        * mol.atom_charges()[i_atom]
+                        / distance
+                    )
+
+        error_energy = e_cc - e_dft
+        error = np.sum(exc_cc_grids * grids.weights) - error_energy
+        print(
+            "exc_cc_grids: ",
+            f"max exc_cc_grids: {np.max(exc_cc_grids)}",
+            f"min exc_cc_grids: {np.min(exc_cc_grids)}",
+            f"mean exc_cc_grids: {np.mean(exc_cc_grids)}",
+            f"std exc_cc_grids: {np.std(exc_cc_grids)}",
+            f"error_energy: {AU2KCALMOL * error_energy},",
+            f"Error: {AU2KCALMOL * error},",
+        )
+        return error_energy, exc_cc_grids, rho_cc, rho_dft, grad2force
 
 
 def cc(mol, grids, name, args):
@@ -137,6 +207,8 @@ def cc(mol, grids, name, args):
         raise ValueError("RKS not converged.")
     dm1_dft = mdft.make_rdm1(ao_repr=True)
     e_dft = mdft.energy_tot(dm1_dft)
+    gdft = mdft.Gradients()
+    grad_dft = gdft.kernel()
 
     mycc = pyscf.cc.CCSD(mf)
     mycc.verbose = 4
@@ -152,6 +224,7 @@ def cc(mol, grids, name, args):
         dm2_cc = ccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
         e_cc = mycc.e_tot + e3ref
         print(f"CCSD(T) energy: {e3ref}")
+        grad_cc = ccsd_t_grad.Gradients(mycc).kernel()
     else:
         dm1_cc = mycc.make_rdm1(ao_repr=True)
         dm1_cc_mo = mycc.make_rdm1(ao_repr=False)
@@ -163,17 +236,19 @@ def cc(mol, grids, name, args):
     dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
     print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
-    error_energy_dft, exc_cc_grids_dft, rho_cc, rho_dft = get_dft_energy(
+    error_energy_dft, exc_cc_grids_dft, rho_cc, rho_dft, grad2force = get_dft_energy(
         mol,
         grids,
         mf.mo_coeff,
         dm1_dft,
         mdft.mo_coeff,
         e_dft,
+        grad_dft,
         dm1_cc,
         dm1_cc_mo,
         dm2_cc,
         e_cc,
+        grad_cc,
     )
 
     rho_cube_cc = grids.gen_cube_rho_rks(rho_cc, mdft._numint, dm1_cc)

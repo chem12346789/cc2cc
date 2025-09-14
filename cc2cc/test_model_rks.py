@@ -1,11 +1,9 @@
+"""Test the model. Restrict Khon-Sham (no spin)."""
 from timeit import default_timer as timer
-
-import numpy as np
 
 import pyscf
 
 from cc2cc.utils import get_veff_modified_rks, get_veff_grad_modified_rks
-from cc2cc.utils import TestData
 
 
 def test_model_rks(

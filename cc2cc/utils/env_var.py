@@ -8,11 +8,7 @@ import os
 
 import torch
 
-
 # set the environment variable
-LEVEL = 3
-PERIOD = 3
-
 CUBE_SIZE = os.environ.get("DFT2CC_CUBE_SIZE")
 if CUBE_SIZE is None:
     CUBE_SIZE = 3
@@ -47,12 +43,6 @@ if DATA_TEST_DIR is None:
     DATA_TEST_PATH = MAIN_PATH / "data" / "test"
 else:
     DATA_TEST_PATH = MAIN_PATH / "data" / DATA_TEST_DIR
-
-DATA_TEST_NO_GRAD_DIR = os.environ.get("DFT2CC_DATA_TEST_NO_GRAD_DIR")
-if DATA_TEST_NO_GRAD_DIR is None:
-    DATA_TEST_NO_GRAD_PATH = MAIN_PATH / "data" / "test_no_grad"
-else:
-    DATA_TEST_NO_GRAD_PATH = MAIN_PATH / "data" / DATA_TEST_NO_GRAD_DIR
 
 DATA_SCF_PATH = MAIN_PATH / "data" / "grids_scf"
 CHECKPOINTS_PATH = MAIN_PATH / "checkpoints"
@@ -89,8 +79,6 @@ def print_computer_info(device):
         print(f"Current Device: {torch.cuda.current_device()}")
         print(f"Number of Devices: {torch.cuda.device_count()}")
 
-    print(f"LEVEL: {LEVEL}")
-    print(f"PERIOD: {PERIOD}")
     print(f"CUBE_SIZE: {CUBE_SIZE}")
     print(f"CUBE_MIDDLE: {CUBE_MIDDLE}")
     print(f"CUBE_LEN: {CUBE_LEN}")
@@ -98,7 +86,6 @@ def print_computer_info(device):
     print(f"MAIN_PATH: {MAIN_PATH.resolve()}")
     print(f"DATA_PATH: {DATA_PATH.resolve()}")
     print(f"DATA_TEST_PATH: {DATA_TEST_PATH.resolve()}")
-    print(f"DATA_TEST_NO_GRAD_PATH: {DATA_TEST_NO_GRAD_PATH.resolve()}")
     print(f"DATA_SCF_PATH: {DATA_SCF_PATH.resolve()}")
     print(f"CHECKPOINTS_PATH: {CHECKPOINTS_PATH.resolve()}")
     print(f"GENERATE_DATA: {GENERATE_DATA}", flush=True)

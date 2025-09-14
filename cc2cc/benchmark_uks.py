@@ -1,4 +1,4 @@
-"""Test the model. Unrestrict Khon-Sham (with spin)."""
+"""Benchmark dft. Unrestrict Khon-Sham (with spin)."""
 
 from itertools import product
 

@@ -10,7 +10,6 @@ import numpy as np
 
 import pyscf.gto
 
-from cc2cc.utils.basis import gen_basis
 from cc2cc.utils.rotate import rotate
 
 AU2KCALMOL = 627.5094733748099
@@ -92,7 +91,6 @@ def gen_mole(
     extend_xyz: int,
     distance: float,
     basis: str,
-    if_basis_str: bool,
     dataset_name: str = "Mol",
     verbose=0,
     if_rotate=False,
@@ -116,11 +114,8 @@ def gen_mole(
 
     mol = pyscf.M(
         atom=molecule,
-        basis=gen_basis(
-            molecule,
-            basis,
-            if_basis_str,
-        ),
+        basis=basis,
+        ecp=basis,
         verbose=verbose,
         spin=dataset[dataset_name]["spin"][name_mol],
         charge=dataset[dataset_name]["charge"][name_mol],

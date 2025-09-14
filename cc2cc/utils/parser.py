@@ -223,17 +223,10 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--n_rad",
+        "--grid_level",
         type=int,
-        default=None,
-        help="Number of radial points. Default is None.",
-    )
-
-    parser.add_argument(
-        "--n_ang",
-        type=int,
-        default=None,
-        help="Number of angular points. Default is None.",
+        default=4,
+        help="Grid level for the calculation.",
     )
 
     parser.add_argument(
@@ -241,14 +234,6 @@ def add_args(parser: argparse.ArgumentParser):
         type=str,
         default="cc-pVDZ",
         help="Basis set for the calculation.",
-    )
-
-    parser.add_argument(
-        "--if_basis_str",
-        type=str2bool,
-        default=True,
-        help="Whether to use the basis set from basissetexchange. "
-        "See https://www.basissetexchange.org. Default is True.",
     )
 
     parser.add_argument(
@@ -541,10 +526,7 @@ def add_args(parser: argparse.ArgumentParser):
     print(f"Distance list: {args.distance_list}")
     print(f"Extend atom: {args.extend_atom}")
     print(f"Extend xyz: {args.extend_xyz}")
-    print(f"Number of radial points: {args.n_rad}")
-    print(f"Number of angular points: {args.n_ang}")
     print(f"Basis set: {args.basis}")
-    print(f"Use basis set from basissetexchange: {args.if_basis_str}")
     print(f"Dataset: {args.dataset}")
     print(f"CCSD(T): {args.cc_triple}")
     print(f"Gradient: {args.if_grad}")
