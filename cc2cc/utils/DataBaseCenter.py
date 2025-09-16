@@ -13,8 +13,8 @@ from cc2cc.utils.DataBase import DataBase
 class DataBaseCenter(DataBase):
     """Documentation for a class."""
 
-    def __init__(self, molecule_list, args, shuffle=True):
-        super().__init__(molecule_list, args, shuffle=shuffle)
+    def __init__(self, molecule_list, args, shuffle=True, if_eval=False):
+        super().__init__(molecule_list, args, shuffle=shuffle, if_eval=if_eval)
 
     def load_data(self, mol_info, name):
         """
@@ -41,12 +41,13 @@ class DataBaseCenter(DataBase):
 
         # print(f"Total energy real: {AU2KCALMOL * data['error_energy']}")
         # print(f"Total energy: {AU2KCALMOL * np.sum(output_mat * weight_mat)}")
-        if (
-            AU2KCALMOL * abs(error_energy - np.sum(output_mat * weight_mat))
-            > 0.2 * mol_info["natm"]
-        ):
-            print(f"Error energy is too large: {name:>40}", flush=True)
-            return 0, {}
+        if not self.if_eval:
+            if (
+                AU2KCALMOL * abs(error_energy - np.sum(output_mat * weight_mat))
+                > 0.2 * mol_info["natm"]
+            ):
+                print(f"Error energy is too large: {name:>40}", flush=True)
+                return 0, {}
 
         input_ = []
         weight_ = []
@@ -77,11 +78,13 @@ class DataBaseCenter(DataBase):
             slice_ = slice(data_length * i_atom, data_length * (i_atom + 1))
             input_.append(input_mat[slice_, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE])
             weight_.append(weight_mat[slice_])
-            output_.append(output_mat[slice_])
-            total_ene_used += np.sum(output_mat[slice_] * weight_mat[slice_])
+            if not self.if_eval:
+                output_.append(output_mat[slice_])
+                total_ene_used += np.sum(output_mat[slice_] * weight_mat[slice_])
         input_ = np.array(input_).reshape((-1, 4))
         weight_ = np.array(weight_).reshape((-1, 1))
-        output_ = np.array(output_).reshape((-1, 1))
+        if not self.if_eval:
+            output_ = np.array(output_).reshape((-1, 1))
 
         if num_data_used == 0:
             return 0, {}
@@ -96,7 +99,7 @@ class DataBaseCenter(DataBase):
         data_dict = {
             "input": torch.tensor(input_, dtype=self.dtype),
             "weight": torch.tensor(weight_, dtype=self.dtype),
-            "output": torch.tensor(output_, dtype=self.dtype),
+            "output": None if self.if_eval else torch.tensor(output_, dtype=self.dtype),
             "name": name,
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,

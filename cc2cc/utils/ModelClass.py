@@ -206,11 +206,11 @@ class ModelClass:
         """
         if self.model_type == "center_4":
             input_size = (1, 4)
-            self.database_eval = DataBaseCenter(eval_str_dict, self.args, shuffle=False)
+            self.database_eval = DataBaseCenter(eval_str_dict, self.args, shuffle=False, eval=True)
             self.database_train = DataBaseCenter(train_str_dict, self.args)
         elif self.model_type == "cube":
             input_size = (1, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-            self.database_eval = DataBaseCube(eval_str_dict, self.args, shuffle=False)
+            self.database_eval = DataBaseCube(eval_str_dict, self.args, shuffle=False, eval=True)
             self.database_train = DataBaseCube(train_str_dict, self.args)
         else:
             raise ValueError(f"Unknown model type: {self.model_type}")
