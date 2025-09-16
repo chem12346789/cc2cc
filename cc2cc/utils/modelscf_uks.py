@@ -585,3 +585,43 @@ def get_veff_grad_modified(
 
     ks_grad.get_veff = types.MethodType(get_veff, ks_grad)
     # ks_grad.extra_force = types.MethodType(extra_force, ks_grad)
+
+
+def get_veff_grad_modified_zeros(ks_grad):
+    """
+    Get the method of "Get the effective potential for the UKS Gradients method".
+    """
+
+    def get_veff(ks_grad_, mol=None, dm=None):
+        """
+        First order derivative of DFT effective potential matrix (wrt electron coordinates)
+
+        Args:
+            ks_grad_ : grad.uhf.Gradients or grad.uks.Gradients object
+        """
+        if mol is None:
+            mol = ks_grad_.mol
+        if dm is None:
+            dm = ks_grad_.base.make_rdm1()
+        t0 = (logger.process_clock(), logger.perf_counter())
+
+        mf = ks_grad_.base
+        ni = mf._numint
+
+        ni = mf._numint
+        t0 = logger.timer(ks_grad_, "vxc", *t0)
+
+        if not ni.libxc.is_hybrid_xc(mf.xc):
+            vj = ks_grad_.get_j(mol, dm)
+            vxc = vj[0] + vj[1]
+        else:
+            omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mf.xc, spin=mol.spin)
+            vj, vk = ks_grad_.get_jk(mol, dm)
+            vk *= hyb
+            if omega != 0:
+                vk += ks_grad_.get_k(mol, dm, omega=omega) * (alpha - hyb)
+            vxc = vj[0] + vj[1] - vk
+
+        return lib.tag_array(vxc, exc1_grid=None)
+
+    ks_grad.get_veff = types.MethodType(get_veff, ks_grad)

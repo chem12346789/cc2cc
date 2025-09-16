@@ -301,7 +301,7 @@ def get_veff_grad_modified(
                     _, vxc = modeldict.eval_xc_eff(rho, ni, dms, grids, coords_, mask)
                     wv = weight * vxc
                     wv[0] *= 0.5
-                    _gga_grad_sum_(vmat[idm], mol, ao, wv, mask, ao_loc)
+                    # _gga_grad_sum_(vmat[idm], mol, ao, wv, mask, ao_loc)
 
                     # # aow = _scale_ao(ao[:4], wv[:4])
                     # # _d1_dot_(vmat[idm], mol, ao[1:4], aow, mask, ao_loc, True)
@@ -546,6 +546,48 @@ def get_veff_grad_modified(
         )
 
         return force
+
+    ks_grad.get_veff = types.MethodType(get_veff, ks_grad)
+    # ks_grad.extra_force = types.MethodType(extra_force, ks_grad)
+
+
+def get_veff_grad_modified_zeros(ks_grad):
+    """
+    Get the method of "Get the effective potential for the RKS Gradients method".
+    This will reurn force without contribution from the DFT functional.
+    """
+
+    def get_veff(ks_grad_, mol=None, dm=None):
+        """
+        First order derivative of DFT effective potential matrix (wrt electron coordinates)
+
+        Args:
+            ks_grad_ : grad.uhf.Gradients or grad.uks.Gradients object
+        """
+        if mol is None:
+            mol = ks_grad_.mol
+        if dm is None:
+            dm = ks_grad_.base.make_rdm1()
+        t0 = (logger.process_clock(), logger.perf_counter())
+
+        mf = ks_grad_.base
+        ni = mf._numint
+
+        mem_now = lib.current_memory()[0]
+        t0 = logger.timer(ks_grad_, "vxc", *t0)
+
+        if not ni.libxc.is_hybrid_xc(mf.xc):
+            vj = ks_grad_.get_j(mol, dm)
+            vxc = vj
+        else:
+            omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mf.xc, spin=mol.spin)
+            vj, vk = ks_grad_.get_jk(mol, dm)
+            vk *= hyb
+            if omega != 0:
+                vk += ks_grad_.get_k(mol, dm, omega=omega) * (alpha - hyb)
+            vxc = vj - vk * 0.5
+
+        return lib.tag_array(vxc, exc1_grid=None)
 
     ks_grad.get_veff = types.MethodType(get_veff, ks_grad)
     # ks_grad.extra_force = types.MethodType(extra_force, ks_grad)

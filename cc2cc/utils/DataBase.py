@@ -171,7 +171,6 @@ class DataBase:
     def process_batch_dataset(self, batch, device="cuda"):
         """
         Load the batch data to the GPU.
-        Note all data is in the list ([data]), so we need to access the first element.
         """
         batch_gpu = {}
         for key, val in batch.items():
