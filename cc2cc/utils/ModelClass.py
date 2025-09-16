@@ -243,20 +243,23 @@ class ModelClass:
         input_ = batch["input"]
         weight = batch["weight"]
         target = batch["output"] * weight
+        sum_target = batch["error_energy"]
         data_weight = batch["data_weight"]
         output = self.model(input_) * weight
 
         tot_loss = self.loss_ene(
-            data_weight * torch.sum(target), data_weight * torch.sum(output)
+            data_weight * sum_target, data_weight * torch.sum(output)
         )
-        loss_record = np.abs(torch.sum(target - output).item())
+        loss_record = np.abs(sum_target - torch.sum(output).item())
 
         if self.loss_multiplier_abs > IGNORE_MULTIPLIER:
-            tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(target, output)
+            tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(
+                data_weight * target, data_weight * output
+            )
         loss_abs_record = torch.sum(torch.abs(target - output)).item()
 
         if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
-            ae_target = torch.sum(target)
+            ae_target = sum_target
             ae_output = torch.sum(output)
         loss_atomic_record = torch.sum(target - output)
         for i_system in range(len(batch["atomic_systems"])):
@@ -280,16 +283,12 @@ class ModelClass:
 
             atomic_input_ = atomic_batch["input"]
             atomic_weight = atomic_batch["weight"]
-            atomic_target = atomic_batch["output"] * atomic_weight
-            atomic_output = self.model(atomic_input_) * atomic_weight
+            atomic_target = atomic_batch["error_energy"]
+            atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
 
             if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
-                ae_target -= (
-                    torch.sum(atomic_target) * batch["atomic_stoichiometry"][i_system]
-                )
-                ae_output -= (
-                    torch.sum(atomic_output) * batch["atomic_stoichiometry"][i_system]
-                )
+                ae_target -= atomic_target * batch["atomic_stoichiometry"][i_system]
+                ae_output -= atomic_output * batch["atomic_stoichiometry"][i_system]
             loss_atomic_record -= (
                 torch.sum(atomic_target - atomic_output)
                 * batch["atomic_stoichiometry"][i_system]
