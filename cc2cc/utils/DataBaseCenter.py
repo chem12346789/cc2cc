@@ -97,6 +97,7 @@ class DataBaseCenter(DataBase):
             "input": torch.tensor(input_, dtype=self.dtype),
             "weight": torch.tensor(weight_, dtype=self.dtype),
             "output": torch.tensor(output_, dtype=self.dtype),
+            "error_energy": error_energy,
             "name": name,
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,

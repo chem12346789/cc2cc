@@ -179,12 +179,14 @@ def cc(mol, grids, name, args, evaluate=False):
 
     print(f"Generate data for {name}")
 
+    # RHF calculation
     mf = pyscf.scf.RHF(mol).newton()
     mf.max_cycle = 200
     mf.kernel()
     if args.check_convergence and not mf.converged:
         raise ValueError("RHF not converged.")
 
+    # DFT calculation
     mdft = pyscf.scf.RKS(mol)
     mdft.verbose = 4
     mdft.max_cycle = 200
@@ -197,18 +199,28 @@ def cc(mol, grids, name, args, evaluate=False):
     gdft = mdft.Gradients()
     grad_dft = gdft.kernel()
 
+    # CCSD calculation
     mycc = pyscf.cc.CCSD(mf)
     mycc.verbose = 4
     _, t1, t2 = mycc.kernel()
     if args.cc_triple:
         eris = mycc.ao2mo()
         e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
-        l1, l2 = ccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
-        dm1_cc = ccsd_t_rdm.make_rdm1(mycc, t1, t2, l1, l2, eris=eris, ao_repr=True)
-        dm1_cc_mo = ccsd_t_rdm.make_rdm1(mycc, t1, t2, l1, l2, eris=eris, ao_repr=False)
-        d1 = _gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
-        d2 = _gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
-        dm2_cc = ccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
+
+        if evaluate:
+            dm1_cc = None
+            dm1_cc_mo = None
+            dm2_cc = None
+        else:
+            l1, l2 = ccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
+            dm1_cc = ccsd_t_rdm.make_rdm1(mycc, t1, t2, l1, l2, eris=eris, ao_repr=True)
+            dm1_cc_mo = ccsd_t_rdm.make_rdm1(
+                mycc, t1, t2, l1, l2, eris=eris, ao_repr=False
+            )
+            d1 = _gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
+            d2 = _gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
+            dm2_cc = ccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
+
         e_cc = mycc.e_tot + e3ref
         print(f"CCSD(T) energy: {e3ref}")
         if mol.natm == 1:
@@ -221,9 +233,13 @@ def cc(mol, grids, name, args, evaluate=False):
         dm1_cc_mo = mycc.make_rdm1(ao_repr=False)
         dm2_cc = mycc.make_rdm2(ao_repr=True)
         e_cc = mycc.e_tot
-        gcc = ccsd_grad.Gradients(mycc)
-        grad_cc = gcc.kernel()
+        if mol.natm == 1:
+            grad_cc = np.zeros((mol.natm, 3))
+        else:
+            gcc = ccsd_grad.Gradients(mycc)
+            grad_cc = gcc.kernel()
 
+    # Compare CCSD and DFT
     energy_train = e_cc - e_dft
     grad_cc_train = grad_cc - grad_dft
     print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} (CCSD vs DFT)")
@@ -231,6 +247,7 @@ def cc(mol, grids, name, args, evaluate=False):
     dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
     print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
+    # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
     error_energy_dft, exc_cc_grids_dft, rho_cc, rho_dft, grad2force = get_dft_energy(
         mol,
         grids,
@@ -245,6 +262,7 @@ def cc(mol, grids, name, args, evaluate=False):
         evaluate=evaluate,
     )
 
+    # Test force
     grad_mat = np.array(
         [
             0.08 * np.ones(len(grids.coords)),
@@ -261,9 +279,9 @@ def cc(mol, grids, name, args, evaluate=False):
     )
     get_veff_grad_modified_zeros(gdft)
     grad_dft_zeros = gdft.kernel()
-
     print("Error force DFT: ", np.linalg.norm(force - (grad_dft - grad_dft_zeros)))
 
+    # Generate input data
     rho_cube_cc = grids.gen_cube_rho_rks(rho_cc, mdft._numint, dm1_cc)
     rho_cube_dft = grids.gen_cube_rho_rks(rho_dft, mdft._numint, dm1_dft)
     np.savez_compressed(

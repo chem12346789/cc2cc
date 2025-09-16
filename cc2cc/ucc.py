@@ -202,12 +202,14 @@ def ucc(mol, grids, name, args, evaluate=False):
     """
     print(f"Generate data for {name}, spin {mol.spin}")
 
+    # UHF calculation
     mf = pyscf.scf.UHF(mol).newton()
     mf.max_cycle = 200
     mf.kernel()
     if args.check_convergence and not mf.converged:
         raise ValueError("UHF not converged.")
 
+    # DFT calculation
     mdft = pyscf.scf.UKS(mol)
     mdft.verbose = 4
     mdft.max_cycle = 200
@@ -220,35 +222,52 @@ def ucc(mol, grids, name, args, evaluate=False):
     gdft = mdft.Gradients()
     grad_dft = gdft.kernel()
 
-    mycc = pyscf.cc.UCCSD(mf)
-    mycc.verbose = 4
-    _, t1, t2 = mycc.kernel()
+    # UCCSD calculation
     if args.cc_triple:
-        eris = mycc.ao2mo()
-        e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
-        l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
-        dm1_cc = uccsd_t_rdm.make_rdm1(mycc, t1, t2, l1, l2, eris=eris, ao_repr=True)
-        dm1_cc_mo = uccsd_t_rdm.make_rdm1(
-            mycc, t1, t2, l1, l2, eris=eris, ao_repr=False
-        )
-        d1 = u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
-        d2 = u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
-        dm2_cc = uccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
-        del d1, d2
-        e_cc = mycc.e_tot + e3ref
-        print(f"UCCSD(T) energy: {e3ref}")
-        if mol.natm == 1:
+        if evaluate:
+            e_cc = 0
             grad_cc = np.zeros((mol.natm, 3))
+            dm1_cc = None
+            dm1_cc_mo = None
+            dm2_cc = None
         else:
-            gcc = uccsd_t_grad.Gradients(mycc)
-            grad_cc = gcc.kernel()
+            mycc = pyscf.cc.UCCSD(mf)
+            mycc.verbose = 4
+            _, t1, t2 = mycc.kernel()
+            eris = mycc.ao2mo()
+            e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
+            l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
+            dm1_cc = uccsd_t_rdm.make_rdm1(
+                mycc, t1, t2, l1, l2, eris=eris, ao_repr=True
+            )
+            dm1_cc_mo = uccsd_t_rdm.make_rdm1(
+                mycc, t1, t2, l1, l2, eris=eris, ao_repr=False
+            )
+            d1 = u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
+            d2 = u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
+            dm2_cc = uccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
+            del d1, d2
+
+            e_cc = mycc.e_tot + e3ref
+            print(f"UCCSD(T) energy: {e3ref}")
+            if mol.natm == 1:
+                grad_cc = np.zeros((mol.natm, 3))
+            else:
+                gcc = uccsd_t_grad.Gradients(mycc)
+                grad_cc = gcc.kernel()
     else:
+        mycc = pyscf.cc.UCCSD(mf)
+        mycc.verbose = 4
+        _, t1, t2 = mycc.kernel()
         dm1_cc = mycc.make_rdm1(ao_repr=True)
         dm1_cc_mo = mycc.make_rdm1(ao_repr=False)
         dm2_cc = mycc.make_rdm2(ao_repr=True)
         e_cc = mycc.e_tot
-        gcc = uccsd_grad.Gradients(mycc)
-        grad_cc = gcc.kernel()
+        if mol.natm == 1:
+            grad_cc = np.zeros((mol.natm, 3))
+        else:
+            gcc = uccsd_grad.Gradients(mycc)
+            grad_cc = gcc.kernel()
     dm1_cc = np.array(dm1_cc)
     dm2_cc = np.array(dm2_cc)
 

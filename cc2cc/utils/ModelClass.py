@@ -252,16 +252,19 @@ class ModelClass:
         )
         loss_record = np.abs(sum_target - torch.sum(output).item())
 
-        if self.loss_multiplier_abs > IGNORE_MULTIPLIER:
-            tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(
-                data_weight * target, data_weight * output
-            )
-        loss_abs_record = torch.sum(torch.abs(target - output)).item()
+        if if_train:
+            if self.loss_multiplier_abs > IGNORE_MULTIPLIER:
+                tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(
+                    data_weight * target, data_weight * output
+                )
+            loss_abs_record = torch.sum(torch.abs(target - output)).item()
+        else:
+            loss_abs_record = 0.0
 
         if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
             ae_target = sum_target
             ae_output = torch.sum(output)
-        loss_atomic_record = torch.sum(target - output)
+        loss_atomic_record = sum_target - torch.sum(output)
         for i_system in range(len(batch["atomic_systems"])):
             system_atom = batch["atomic_systems"][i_system]
             if system_atom in self.database_train.atomic_name_dict:
@@ -287,11 +290,10 @@ class ModelClass:
             atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
 
             if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
-                ae_target -= atomic_target * batch["atomic_stoichiometry"][i_system]
-                ae_output -= atomic_output * batch["atomic_stoichiometry"][i_system]
-            loss_atomic_record -= (
-                torch.sum(atomic_target - atomic_output)
-                * batch["atomic_stoichiometry"][i_system]
+                ae_target -= batch["atomic_stoichiometry"][i_system] * atomic_target
+                ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
+            loss_atomic_record -= batch["atomic_stoichiometry"][i_system] * (
+                atomic_target - atomic_output
             )
 
         if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
