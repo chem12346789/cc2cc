@@ -18,7 +18,7 @@ class BasicDataset(Dataset):
     Documentation for a class.
     """
 
-    def __init__(self, name_list, mol_info_dict, load_data):
+    def __init__(self, name_list, mol_info_dict, load_data, eval=False):
         super(BasicDataset, self).__init__()
         self.data = {}
         self.name_list = []
@@ -52,12 +52,7 @@ class BasicDataset(Dataset):
 class DataBase:
     """Documentation for a class."""
 
-    def __init__(
-        self,
-        molecule_list,
-        args,
-        shuffle=True,
-    ):
+    def __init__(self, molecule_list, args, shuffle=True, if_eval=False):
         """
         Initialize the DataBase with a list of molecules and arguments.
         Args:
@@ -71,6 +66,7 @@ class DataBase:
         else:
             self.dtype = torch.float32
         self.train_atom = args.train_atom
+        self.if_eval = if_eval
 
         name_list = []
         error_molecule = []
@@ -171,7 +167,6 @@ class DataBase:
     def process_batch_dataset(self, batch, device="cuda"):
         """
         Load the batch data to the GPU.
-        Note all data is in the list ([data]), so we need to access the first element.
         """
         batch_gpu = {}
         for key, val in batch.items():

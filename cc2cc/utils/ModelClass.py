@@ -206,11 +206,15 @@ class ModelClass:
         """
         if self.model_type == "center_4":
             input_size = (1, 4)
-            self.database_eval = DataBaseCenter(eval_str_dict, self.args, shuffle=False)
+            self.database_eval = DataBaseCenter(
+                eval_str_dict, self.args, shuffle=False, if_eval=True
+            )
             self.database_train = DataBaseCenter(train_str_dict, self.args)
         elif self.model_type == "cube":
             input_size = (1, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-            self.database_eval = DataBaseCube(eval_str_dict, self.args, shuffle=False)
+            self.database_eval = DataBaseCube(
+                eval_str_dict, self.args, shuffle=False, if_eval=True
+            )
             self.database_train = DataBaseCube(train_str_dict, self.args)
         else:
             raise ValueError(f"Unknown model type: {self.model_type}")
@@ -242,23 +246,29 @@ class ModelClass:
         """
         input_ = batch["input"]
         weight = batch["weight"]
-        target = batch["output"] * weight
+        sum_target = batch["energy_train"].cuda(self.local_rank)
         data_weight = batch["data_weight"]
         output = self.model(input_) * weight
 
         tot_loss = self.loss_ene(
-            data_weight * torch.sum(target), data_weight * torch.sum(output)
+            data_weight * sum_target, data_weight * torch.sum(output)
         )
-        loss_record = np.abs(torch.sum(target - output).item())
+        loss_record = np.abs((sum_target - torch.sum(output)).item())
 
-        if self.loss_multiplier_abs > IGNORE_MULTIPLIER:
-            tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(target, output)
-        loss_abs_record = torch.sum(torch.abs(target - output)).item()
+        if if_train:
+            target = batch["output"] * weight
+            if self.loss_multiplier_abs > IGNORE_MULTIPLIER:
+                tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(
+                    data_weight * target, data_weight * output
+                )
+            loss_abs_record = torch.sum(torch.abs(target - output)).item()
+        else:
+            loss_abs_record = 0.0
 
         if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
-            ae_target = torch.sum(target)
+            ae_target = sum_target
             ae_output = torch.sum(output)
-        loss_atomic_record = torch.sum(target - output)
+        loss_atomic_record = sum_target - torch.sum(output)
         for i_system in range(len(batch["atomic_systems"])):
             system_atom = batch["atomic_systems"][i_system]
             if system_atom in self.database_train.atomic_name_dict:
@@ -280,19 +290,16 @@ class ModelClass:
 
             atomic_input_ = atomic_batch["input"]
             atomic_weight = atomic_batch["weight"]
-            atomic_target = atomic_batch["output"] * atomic_weight
-            atomic_output = self.model(atomic_input_) * atomic_weight
+            atomic_target = torch.tensor(atomic_batch["energy_train"]).cuda(
+                self.local_rank
+            )
+            atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
 
             if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
-                ae_target -= (
-                    torch.sum(atomic_target) * batch["atomic_stoichiometry"][i_system]
-                )
-                ae_output -= (
-                    torch.sum(atomic_output) * batch["atomic_stoichiometry"][i_system]
-                )
-            loss_atomic_record -= (
-                torch.sum(atomic_target - atomic_output)
-                * batch["atomic_stoichiometry"][i_system]
+                ae_target -= batch["atomic_stoichiometry"][i_system] * atomic_target
+                ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
+            loss_atomic_record -= batch["atomic_stoichiometry"][i_system] * (
+                atomic_target - atomic_output
             )
 
         if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:

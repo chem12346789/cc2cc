@@ -31,6 +31,7 @@ from cc2cc.utils.env_var import (
     CUBE_LEN,
     TEST,
     GENERATE_DATA,
+    ORCA_AVAILABLE,
 )
 from cc2cc.utils.mol import AU2KCALMOL, AU2DEBYE
 
@@ -76,4 +77,5 @@ __all__ = [
     "GENERATE_DATA",
     "AU2KCALMOL",
     "AU2DEBYE",
+    "ORCA_AVAILABLE",
 ]

@@ -526,6 +526,7 @@ def add_args(parser: argparse.ArgumentParser):
     print(f"Distance list: {args.distance_list}")
     print(f"Extend atom: {args.extend_atom}")
     print(f"Extend xyz: {args.extend_xyz}")
+    print(f"Grid_level: {args.grid_level}")
     print(f"Basis set: {args.basis}")
     print(f"Dataset: {args.dataset}")
     print(f"CCSD(T): {args.cc_triple}")
