@@ -40,12 +40,13 @@ class DataBaseCube(DataBase):
             raise ValueError(f"Unknown rho_input: {self.rho_input}")
 
         if not self.if_eval:
-            if (
-                AU2KCALMOL * abs(energy_train - np.sum(output_mat * weight_mat))
-                > 0.2 * mol_info["natm"]
-            ):
-                print(f"Error energy is too large: {name:>40}", flush=True)
-                return 0, {}
+            error_energy = AU2KCALMOL * abs(
+                energy_train - np.sum(output_mat * weight_mat)
+            )
+            if error_energy > 0.2 * mol_info["natm"]:
+                print(
+                    f"Error energy {error_energy} is too large: {name:>40}", flush=True
+                )
 
         input_ = []
         weight_ = []
@@ -107,7 +108,11 @@ class DataBaseCube(DataBase):
         data_dict = {
             "input": torch.tensor(input_, dtype=self.dtype),
             "weight": torch.tensor(weight_, dtype=self.dtype),
-            "output": None if self.if_eval else torch.tensor(output_, dtype=self.dtype),
+            "output": (
+                torch.tensor(0)
+                if self.if_eval
+                else torch.tensor(output_, dtype=self.dtype)
+            ),
             "energy_train": energy_train,
             "name": name,
             "atomic_systems": atomic_systems,
