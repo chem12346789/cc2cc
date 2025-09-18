@@ -2,12 +2,6 @@ if [[ -n $SSH_CONNECTION ]]; then
     rsync -Pauv --exclude 'trash' --exclude 'backup' --exclude 'saved' dgx1:/home/chenzihao/workspace/cc2cc_test5/checkpoints/ /home/chenzihao/workspace/cc2cc_test5/checkpoints
     rsync -Pauv --exclude 'trash' --exclude 'backup' --exclude 'saved' /home/chenzihao/workspace/cc2cc_test5/checkpoints/ dgx1:/home/chenzihao/workspace/cc2cc_test5/checkpoints
 else
-    echo backup test_no_grad
-    rsync -Pauv hkqai:/home/chenzihao/workspace/cc2cc_test5/data/test_no_grad/ ~/workspace/2025.1/data/test_no_grad
-    rsync -Pauv dgx1:/home/chenzihao/workspace/cc2cc_test5/data/test_no_grad/ ~/workspace/2025.1/data/test_no_grad
-    rsync -Pauv ~/workspace/2025.1/data/test_no_grad/ hkqai:/home/chenzihao/workspace/cc2cc_test5/data/test_no_grad
-    rsync -Pauv ~/workspace/2025.1/data/test_no_grad/ dgx1:/home/chenzihao/workspace/cc2cc_test5/data/test_no_grad
-
     echo backup test
     rsync -Pauv hkqai:/home/chenzihao/workspace/cc2cc_test5/data/test/ ~/workspace/2025.1/data/test
     rsync -Pauv dgx1:/home/chenzihao/workspace/cc2cc_test5/data/test/ ~/workspace/2025.1/data/test
