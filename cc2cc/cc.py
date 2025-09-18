@@ -50,7 +50,7 @@ def get_dft_energy(
     ao_value = ao_value[:4]
 
     rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
-    rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
+    rho_cc = np.zeros_like(rho_dft)  # dummy
 
     ni = mdft._numint
     dft_mo_coeff = mdft.mo_coeff
@@ -94,6 +94,8 @@ def get_dft_energy(
     if evaluate:
         return None, None, rho_cc, rho_dft, grad2force
     else:
+        rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
+
         dm12 = (
             0.5 * dm2_cc
             - 0.5 * oe.contract("pq,rs->pqrs", dm1_dft, dm1_dft)
