@@ -1,9 +1,10 @@
 # pylint: disable=W0212
 
+import os
 import numpy as np
 import pyscf
+import json
 
-# from pyscf.grad import ccsd as ccsd_grad
 import opt_einsum as oe
 
 from pyscf.cc import uccsd_t_lambda
@@ -15,7 +16,7 @@ from pyscf.cc.uccsd_t_rdm import _gamma2_intermediates as u_gamma2_intermediates
 from pyscf.grad import uccsd as uccsd_grad, uccsd_t as uccsd_t_grad
 
 from cc2cc.utils import diff_rho
-from cc2cc.utils import DATA_PATH, AU2KCALMOL
+from cc2cc.utils import DATA_PATH, AU2KCALMOL, ORCA_AVAILABLE
 from cc2cc.utils.modelscf_uks import get_veff_grad_modified_zeros
 
 
@@ -223,17 +224,94 @@ def ucc(mol, grids, name, args, evaluate=False):
     grad_dft = gdft.kernel()
 
     # UCCSD calculation
-    if args.cc_triple:
-        if evaluate:
-            e_cc = 0
+    if evaluate:
+        if ORCA_AVAILABLE:
+            maxcore = 2000  # in MB (each core! not total)
+            molecular_xyz = ""
+            for atom_info in mol._atom:
+                molecular_xyz += (
+                    f"{atom_info[0]:<6}\t{atom_info[1][0]:<16.10}\t{atom_info[1][1]:<16.10}\t{atom_info[1][2]:<16.10}"
+                    + "\n"
+                )
+
+            if not os.path.exists(f"tmp_mol/{name}"):
+                os.makedirs(f"tmp_mol/{name}")
+
+            with open(f"tmp_mol/{name}/mol.inp", "w", encoding="utf-8") as f:
+                f.write(
+                    f"""! {args.basis} CCSD(T) TightSCF PrintBasis
+
+                %method
+                    WriteJSONPropertyfile True
+                    FrozenCore FC_NONE
+                end
+
+                %maxcore {maxcore}
+
+                %MDCI
+                    MaxCore {maxcore}
+                end
+
+                %pal
+                    nprocs {os.environ.get("OMP_NUM_THREADS")}
+                end
+
+                %coords
+                CTyp   xyz     # the type of coordinates = xyz or internal
+                Charge {mol.charge}       # the total charge of the molecule
+                Mult   {mol.spin+1}        # the multiplicity = 2S+1
+                Units  bohrs    # the unit of length = angs or bohrs
+
+                # the subblock coords is for the actual coordinates
+                # for CTyp=xyz
+                coords
+                {molecular_xyz}end
+                end
+                """
+                )
+
+            os.system(f"$(which orca) tmp_mol/{name}/mol.inp > tmp_mol/{name}/mol.out")
+
+            if not (os.path.exists(f"tmp_mol/{name}/mol.property.json")):
+                print("ORCA calculation failed, no JSON file found.")
+                # # Clear the directory if it already exists to avoid disk space issues
+                for file in os.listdir(f"tmp_mol/{name}"):
+                    os.remove(os.path.join(f"tmp_mol/{name}", file))
+                raise ValueError("ORCA calculation failed, no JSON file found.")
+
+            with open(f"tmp_mol/{name}/mol.property.json", "r", encoding="UTF-8") as f:
+                data_json = json.load(f)
+                print(data_json)
+
+            e_cc = data_json["Geometry_1"]["MDCI_Energies"]["TOTALENERGY"]
             grad_cc = np.zeros((mol.natm, 3))
             dm1_cc = None
-            dm1_cc_mo = None
-            dm2_cc = None
         else:
             mycc = pyscf.cc.UCCSD(mf)
             mycc.verbose = 4
+            mycc.direct = True
             _, t1, t2 = mycc.kernel()
+            eris = mycc.ao2mo()
+            e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
+            l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
+            dm1_cc = uccsd_t_rdm.make_rdm1(
+                mycc, t1, t2, l1, l2, eris=eris, ao_repr=True
+            )
+            e_cc = mycc.e_tot + e3ref
+            print(f"UCCSD(T) energy: {e_cc}")
+            if mol.natm == 1:
+                grad_cc = np.zeros((mol.natm, 3))
+            else:
+                gcc = uccsd_t_grad.Gradients(mycc)
+                grad_cc = gcc.kernel()
+
+        dm1_cc_mo = None
+        dm2_cc = None
+    else:
+        mycc = pyscf.cc.UCCSD(mf)
+        mycc.verbose = 4
+        _, t1, t2 = mycc.kernel()
+        if args.cc_triple:
             eris = mycc.ao2mo()
             e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
             l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
@@ -246,37 +324,35 @@ def ucc(mol, grids, name, args, evaluate=False):
             d1 = u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
             d2 = u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
             dm2_cc = uccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
-            del d1, d2
+            del t1, t2, l1, l2, d1, d2
 
             e_cc = mycc.e_tot + e3ref
-            print(f"UCCSD(T) energy: {e3ref}")
+            print(f"UCCSD(T) energy: {e_cc}")
             if mol.natm == 1:
                 grad_cc = np.zeros((mol.natm, 3))
             else:
                 gcc = uccsd_t_grad.Gradients(mycc)
                 grad_cc = gcc.kernel()
-    else:
-        mycc = pyscf.cc.UCCSD(mf)
-        mycc.verbose = 4
-        _, t1, t2 = mycc.kernel()
-        dm1_cc = mycc.make_rdm1(ao_repr=True)
-        dm1_cc_mo = mycc.make_rdm1(ao_repr=False)
-        dm2_cc = mycc.make_rdm2(ao_repr=True)
-        e_cc = mycc.e_tot
-        if mol.natm == 1:
-            grad_cc = np.zeros((mol.natm, 3))
         else:
-            gcc = uccsd_grad.Gradients(mycc)
-            grad_cc = gcc.kernel()
-    dm1_cc = np.array(dm1_cc)
-    dm2_cc = np.array(dm2_cc)
+            dm1_cc = mycc.make_rdm1(ao_repr=True)
+            dm1_cc_mo = mycc.make_rdm1(ao_repr=False)
+            dm2_cc = mycc.make_rdm2(ao_repr=True)
+            e_cc = mycc.e_tot
+            if mol.natm == 1:
+                grad_cc = np.zeros((mol.natm, 3))
+            else:
+                gcc = uccsd_grad.Gradients(mycc)
+                grad_cc = gcc.kernel()
+        dm1_cc = np.array(dm1_cc)
+        dm2_cc = np.array(dm2_cc)
+
+        print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} (CCSD vs DFT)")
+        cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
+        dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
+        print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
     energy_train = e_cc - e_dft
     grad_cc_train = grad_cc - grad_dft
-    print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} (CCSD vs DFT)")
-    cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
-    dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
-    print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
     error_energy_dft, exc_cc_grids_dft, rho_cc, rho_dft, grad2force = get_dft_energy(
         mol,
