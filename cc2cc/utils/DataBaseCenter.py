@@ -27,26 +27,28 @@ class DataBaseCenter(DataBase):
         if self.rho_input == "dft":
             input_mat = data["rho_cube_dft"]
             output_mat = data["exc_cc_grids"]
-            error_energy = data["error_energy"]
+            energy_train = data["energy_train"]
         elif self.rho_input == "cc":
             input_mat = data["rho_cube_cc"]
             output_mat = data["exc_cc_grids"]
-            error_energy = data["error_energy"]
+            energy_train = data["energy_train"]
         elif self.rho_input == "zmp":
             input_mat = data["rho_cube_zmp"]
             output_mat = data["exc_cc_grids_zmp"]
-            error_energy = data["error_energy_zmp"]
+            energy_train = data["energy_train_zmp"]
         else:
             raise ValueError(f"Unknown rho_input: {self.rho_input}")
 
         # print(f"Total energy real: {AU2KCALMOL * data['error_energy']}")
         # print(f"Total energy: {AU2KCALMOL * np.sum(output_mat * weight_mat)}")
         if not self.if_eval:
-            if (
-                AU2KCALMOL * abs(error_energy - np.sum(output_mat * weight_mat))
-                > 0.2 * mol_info["natm"]
-            ):
-                print(f"Error energy is too large: {name:>40}", flush=True)
+            error_energy = AU2KCALMOL * abs(
+                energy_train - np.sum(output_mat * weight_mat)
+            )
+            if error_energy > 0.2 * mol_info["natm"]:
+                print(
+                    f"Error energy {error_energy} is too large: {name:>40}", flush=True
+                )
                 return 0, {}
 
         input_ = []
@@ -99,8 +101,12 @@ class DataBaseCenter(DataBase):
         data_dict = {
             "input": torch.tensor(input_, dtype=self.dtype),
             "weight": torch.tensor(weight_, dtype=self.dtype),
-            "output": None if self.if_eval else torch.tensor(output_, dtype=self.dtype),
-            "error_energy": error_energy,
+            "output": (
+                torch.tensor(0)
+                if self.if_eval
+                else torch.tensor(output_, dtype=self.dtype)
+            ),
+            "energy_train": energy_train,
             "name": name,
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,
