@@ -1,4 +1,6 @@
 if [[ -n $SSH_CONNECTION ]]; then
+    rsync -Pauv dgx1:/home/chenzihao/workspace/cc2cc_test5/data/grids_dft/ /home/chenzihao/workspace/cc2cc_test5/data/grids_dft/
+    rsync -Pauv /home/chenzihao/workspace/cc2cc_test5/data/grids_dft/ dgx1:/home/chenzihao/workspace/cc2cc_test5/data/grids_dft
     rsync -Pauv --exclude 'trash' --exclude 'backup' --exclude 'saved' dgx1:/home/chenzihao/workspace/cc2cc_test5/checkpoints/ /home/chenzihao/workspace/cc2cc_test5/checkpoints
     rsync -Pauv --exclude 'trash' --exclude 'backup' --exclude 'saved' /home/chenzihao/workspace/cc2cc_test5/checkpoints/ dgx1:/home/chenzihao/workspace/cc2cc_test5/checkpoints
 else
