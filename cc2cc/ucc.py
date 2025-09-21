@@ -276,9 +276,10 @@ def ucc(mol, grids, name, args, evaluate=False):
 
             if not (os.path.exists(f"tmp_mol/{name}/mol.property.json")):
                 print("ORCA calculation failed, no JSON file found.")
-                # # Clear the directory if it already exists to avoid disk space issues
+                # # Clear the directory tmp files if it already exists to avoid disk space issues
                 for file in os.listdir(f"tmp_mol/{name}"):
-                    os.remove(os.path.join(f"tmp_mol/{name}", file))
+                    if "tmp" in file:
+                        os.remove(os.path.join(f"tmp_mol/{name}", file))
                 raise ValueError("ORCA calculation failed, no JSON file found.")
 
             with open(f"tmp_mol/{name}/mol.property.json", "r", encoding="UTF-8") as f:
@@ -291,7 +292,6 @@ def ucc(mol, grids, name, args, evaluate=False):
         else:
             mycc = pyscf.cc.UCCSD(mf)
             mycc.verbose = 4
-            mycc.direct = True
             _, t1, t2 = mycc.kernel()
             eris = mycc.ao2mo()
             e3ref = uccsd_t.kernel(mycc, eris, t1, t2)

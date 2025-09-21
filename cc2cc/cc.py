@@ -7,12 +7,12 @@ import json
 
 import opt_einsum as oe
 
-from pyscf.cc import ccsd_t_lambda_slow as ccsd_t_lambda
-from pyscf.cc import ccsd_t_rdm_slow as ccsd_t_rdm
-from pyscf.cc import ccsd_t_slow as ccsd_t
+from pyscf.cc import ccsd_t_lambda
+from pyscf.cc import ccsd_t_rdm
+from pyscf.cc import ccsd_t
 from pyscf.cc import ccsd_rdm
-from pyscf.cc.ccsd_t_rdm_slow import _gamma1_intermediates
-from pyscf.cc.ccsd_t_rdm_slow import _gamma2_intermediates
+from pyscf.cc.ccsd_t_rdm import _gamma1_intermediates
+from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
 from pyscf.grad import ccsd_t as ccsd_t_grad, ccsd as ccsd_grad
 
 from cc2cc.utils import diff_rho
@@ -320,7 +320,8 @@ def cc(mol, grids, name, args, evaluate=False):
                 print("ORCA calculation failed, no JSON file found.")
                 # # Clear the directory if it already exists to avoid disk space issues
                 for file in os.listdir(f"tmp_mol/{name}"):
-                    os.remove(os.path.join(f"tmp_mol/{name}", file))
+                    if "tmp" in file:
+                        os.remove(os.path.join(f"tmp_mol/{name}", file))
                 raise ValueError("ORCA calculation failed, no JSON file found.")
 
             with open(f"tmp_mol/{name}/mol.property.json", "r", encoding="UTF-8") as f:
@@ -333,7 +334,6 @@ def cc(mol, grids, name, args, evaluate=False):
         else:
             mycc = pyscf.cc.CCSD(mf)
             mycc.verbose = 4
-            mycc.direct = True
             _, t1, t2 = mycc.kernel()
             eris = mycc.ao2mo()
             e3ref = ccsd_t.kernel(mycc, eris, t1, t2)

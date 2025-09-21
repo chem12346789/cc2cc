@@ -895,6 +895,7 @@ eval_str_list = [
     # "RC21-6p3",
 ]
 
+
 train_str_exclude_list = []
 eval_str_exclude_list = []
 
@@ -925,8 +926,8 @@ if __name__ == "__main__":
     # remove the same name in eval and eval_str_exclude_list
     eval_str_list = [mol for mol in eval_str_list if mol not in eval_str_exclude_list]
 
-    # name_mol_list, evaluate = train_str_list, False
-    name_mol_list, evaluate = eval_str_list, True
+    name_mol_list, evaluate = train_str_list, False
+    # name_mol_list, evaluate = eval_str_list, True
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
 
@@ -962,13 +963,13 @@ if __name__ == "__main__":
             if args.if_continue:
                 if (DATA_PATH / f"data_{name}.npz").exists():
                     print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
-                    # refresh modified time of the file
-                    data_frame = dict(
-                        np.load(
-                            DATA_PATH / f"data_{name}.npz", allow_pickle=True
-                        ).items()
-                    )
-                    np.savez_compressed(DATA_PATH / f"data_{name}.npz", **data_frame)
+                    # # refresh modified time of the file
+                    # data_frame = dict(
+                    #     np.load(
+                    #         DATA_PATH / f"data_{name}.npz", allow_pickle=True
+                    #     ).items()
+                    # )
+                    # np.savez_compressed(DATA_PATH / f"data_{name}.npz", **data_frame)
                     continue
 
             if mol.spin == 0:
