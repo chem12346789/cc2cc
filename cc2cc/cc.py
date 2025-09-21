@@ -246,7 +246,7 @@ def cc(mol, grids, name, args, evaluate=False):
 
     print(f"Generate data for {name}")
     # RHF calculation
-    mf = pyscf.scf.RHF(mol).newton()
+    mf = pyscf.scf.RHF(mol)
     mf.max_cycle = 200
     mf.kernel()
     if args.check_convergence and not mf.converged:

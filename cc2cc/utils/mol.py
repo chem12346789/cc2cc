@@ -25,45 +25,52 @@ with importlib.resources.path("cc2cc", "utils") as resource_path:
             dataset[dataset_name.stem] = json.load(f)
 
 
-def return_def2_ecp(basis: str) -> dict:
-    return {
-        "Rb": basis,
-        "Sr": basis,
-        "Y": basis,
-        "Zr": basis,
-        "Nb": basis,
-        "Mo": basis,
-        "Tc": basis,
-        "Ru": basis,
-        "Rh": basis,
-        "Pd": basis,
-        "Ag": basis,
-        "Cd": basis,
-        "In": basis,
-        "Sn": basis,
-        "Sb": basis,
-        "Te": basis,
-        "I": basis,
-        "Xe": basis,
-        "Cs": basis,
-        "Ba": basis,
-        "La": basis,
-        "Hf": basis,
-        "Ta": basis,
-        "W": basis,
-        "Re": basis,
-        "Os": basis,
-        "Ir": basis,
-        "Pt": basis,
-        "Au": basis,
-        "Hg": basis,
-        "Tl": basis,
-        "Pb": basis,
-        "Bi": basis,
-        "Po": basis,
-        "At": basis,
-        "Rn": basis,
-    }
+def2_ecp_basis = {
+    "Rb": "def2-ECP",
+    "Sr": "def2-ECP",
+    "Y": "def2-ECP",
+    "Zr": "def2-ECP",
+    "Nb": "def2-ECP",
+    "Mo": "def2-ECP",
+    "Tc": "def2-ECP",
+    "Ru": "def2-ECP",
+    "Rh": "def2-ECP",
+    "Pd": "def2-ECP",
+    "Ag": "def2-ECP",
+    "Cd": "def2-ECP",
+    "In": "def2-ECP",
+    "Sn": "def2-ECP",
+    "Sb": "def2-ECP",
+    "Te": "def2-ECP",
+    "I": "def2-ECP",
+    "Xe": "def2-ECP",
+    "Cs": "def2-ECP",
+    "Ba": "def2-ECP",
+    "La": "def2-ECP",
+    "Hf": "def2-ECP",
+    "Ta": "def2-ECP",
+    "W": "def2-ECP",
+    "Re": "def2-ECP",
+    "Os": "def2-ECP",
+    "Ir": "def2-ECP",
+    "Pt": "def2-ECP",
+    "Au": "def2-ECP",
+    "Hg": "def2-ECP",
+    "Tl": "def2-ECP",
+    "Pb": "def2-ECP",
+    "Bi": "def2-ECP",
+    "Po": "def2-ECP",
+    "At": "def2-ECP",
+    "Rn": "def2-ECP",
+}
+
+ma_basis = {
+    "def2-svpd": "madef2svp",
+    "def2-tzvppd": "madef2tzvpp",
+    "def2-tzvpd": "madef2tzvp",
+    "def2-qzvppd": "madef2qzvpp",
+    "def2-qzvpd": "madef2qzvp",
+}
 
 
 def extend(
@@ -91,24 +98,23 @@ def extend(
         print("original mol", molecule)
 
     if len(molecule) == 1:
-        if abs(distance) < 1e-5:
-            return list(molecule)
-        else:
+        if abs(distance) > 1e-12:
             raise ValueError("Distance is not allowed in single atom")
-
-    if "-" in extend_atom:
-        atom_list_1 = np.array(extend_atom.split("-")[0].split("."), dtype=int)
-        atom_list_2 = np.array(extend_atom.split("-")[1].split("."), dtype=int)
-
-        distance_1_2_array = (
-            molecule[atom_list_2[0]][1:4] - molecule[atom_list_1[0]][1:4]
-        )
-        molecule[atom_list_2, 1:] += distance * distance_1_2_array
     else:
-        extend_atom = int(extend_atom)
-        molecule[extend_atom][extend_xyz] += distance
-    if verbose > 3:
-        print("extend mol", molecule)
+        if "-" in extend_atom:
+            atom_list_1 = np.array(extend_atom.split("-")[0].split("."), dtype=int)
+            atom_list_2 = np.array(extend_atom.split("-")[1].split("."), dtype=int)
+
+            distance_1_2_array = (
+                molecule[atom_list_2[0]][1:4] - molecule[atom_list_1[0]][1:4]
+            )
+            molecule[atom_list_2, 1:] += distance * distance_1_2_array
+        else:
+            extend_atom = int(extend_atom)
+            molecule[extend_atom][extend_xyz] += distance
+        if verbose > 3:
+            print("extend mol", molecule)
+
     if if_rotate:
         if if_rotate_random:
             molecule, _ = rotate(
@@ -141,6 +147,10 @@ def gen_mole(
     """
     Function to generate the molecule
     """
+    if verbose > 3:
+        print(
+            f"if_rotate:{if_rotate} if_rotate_random:{if_rotate_random} solve_symmetry:{solve_symmetry}"
+        )
     molecule = extend(
         name_mol,
         extend_atom,
@@ -156,7 +166,7 @@ def gen_mole(
     mol = pyscf.M(
         atom=molecule,
         basis=basis,
-        ecp=return_def2_ecp(basis),
+        ecp=def2_ecp_basis,
         verbose=verbose,
         spin=dataset[dataset_name]["spin"][name_mol],
         charge=dataset[dataset_name]["charge"][name_mol],
