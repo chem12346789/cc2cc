@@ -256,16 +256,17 @@ class ModelClass:
         if if_train:
             input_.requires_grad = True
             output = self.model(input_)
-            middle_ = torch.autograd.grad(
-                torch.sum(output),
-                input_,
-                create_graph=True,
-            )[0]
-            if self.model_type == "cube":
-                middle_ = middle_[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            grad2force = batch["grad2force"]
-            grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
-            force = torch.einsum("pm,impx->ix", middle_, grad2force)
+            if self.args.if_grad:
+                middle_ = torch.autograd.grad(
+                    torch.sum(output),
+                    input_,
+                    create_graph=True,
+                )[0]
+                if self.model_type == "cube":
+                    middle_ = middle_[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+                grad2force = batch["grad2force"]
+                grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
+                force = torch.einsum("pm,impx->ix", middle_, grad2force)
             output = output * weight
         else:
             with torch.no_grad():
@@ -285,8 +286,11 @@ class ModelClass:
                 )
             loss_abs_record = torch.sum(torch.abs(target - output)).item()
 
-            tot_loss += self.loss_grad(grad_cc_train, force)
-            loss_grad_record = torch.sum(torch.abs(grad_cc_train - force)).item()
+            if self.args.if_grad:
+                tot_loss += self.loss_grad(grad_cc_train, force)
+                loss_grad_record = torch.sum(torch.abs(grad_cc_train - force)).item()
+            else:
+                loss_grad_record = 0.0
         else:
             loss_abs_record = 0.0
             loss_grad_record = 0.0
