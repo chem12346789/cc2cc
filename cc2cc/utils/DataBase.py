@@ -67,6 +67,7 @@ class DataBase:
             self.dtype = torch.float32
         self.train_atom = args.train_atom
         self.if_eval = if_eval
+        self.array_key = ["input", "weight", "output", "grad2force"]
 
         name_list = []
         error_molecule = []
@@ -155,11 +156,8 @@ class DataBase:
         """
         batch_gpu = {}
         for key, val in batch.items():
-            if key in ["input", "weight", "output"]:
-                batch_gpu[key] = val[0].to(
-                    device=device,
-                    non_blocking=True,
-                )
+            if key in self.array_key:
+                batch_gpu[key] = val[0].to(device=device, non_blocking=True)
             else:
                 batch_gpu[key] = val[0]
         return batch_gpu
@@ -170,11 +168,8 @@ class DataBase:
         """
         batch_gpu = {}
         for key, val in batch.items():
-            if key in ["input", "weight", "output"]:
-                batch_gpu[key] = val.to(
-                    device=device,
-                    non_blocking=True,
-                )
+            if key in self.array_key:
+                batch_gpu[key] = val.to(device=device, non_blocking=True)
             else:
                 batch_gpu[key] = val
         return batch_gpu

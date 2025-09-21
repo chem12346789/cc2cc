@@ -7,12 +7,12 @@ import json
 
 import opt_einsum as oe
 
-from pyscf.cc import ccsd_t_lambda_slow as ccsd_t_lambda
-from pyscf.cc import ccsd_t_rdm_slow as ccsd_t_rdm
-from pyscf.cc import ccsd_t_slow as ccsd_t
+from pyscf.cc import ccsd_t_lambda
+from pyscf.cc import ccsd_t_rdm
+from pyscf.cc import ccsd_t
 from pyscf.cc import ccsd_rdm
-from pyscf.cc.ccsd_t_rdm_slow import _gamma1_intermediates
-from pyscf.cc.ccsd_t_rdm_slow import _gamma2_intermediates
+from pyscf.cc.ccsd_t_rdm import _gamma1_intermediates
+from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
 from pyscf.grad import ccsd_t as ccsd_t_grad, ccsd as ccsd_grad
 
 from cc2cc.utils import diff_rho
@@ -50,7 +50,7 @@ def get_dft_energy(
     ao_value = ao_value[:4]
 
     rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
-    rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
+    rho_cc = np.zeros_like(rho_dft)  # dummy
 
     ni = mdft._numint
     dft_mo_coeff = mdft.mo_coeff
@@ -94,6 +94,8 @@ def get_dft_energy(
     if evaluate:
         return None, None, rho_cc, rho_dft, grad2force
     else:
+        rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
+
         dm12 = (
             0.5 * dm2_cc
             - 0.5 * oe.contract("pq,rs->pqrs", dm1_dft, dm1_dft)
@@ -318,7 +320,8 @@ def cc(mol, grids, name, args, evaluate=False):
                 print("ORCA calculation failed, no JSON file found.")
                 # # Clear the directory if it already exists to avoid disk space issues
                 for file in os.listdir(f"tmp_mol/{name}"):
-                    os.remove(os.path.join(f"tmp_mol/{name}", file))
+                    if "tmp" in file:
+                        os.remove(os.path.join(f"tmp_mol/{name}", file))
                 raise ValueError("ORCA calculation failed, no JSON file found.")
 
             with open(f"tmp_mol/{name}/mol.property.json", "r", encoding="UTF-8") as f:
@@ -331,7 +334,6 @@ def cc(mol, grids, name, args, evaluate=False):
         else:
             mycc = pyscf.cc.CCSD(mf)
             mycc.verbose = 4
-            mycc.direct = True
             _, t1, t2 = mycc.kernel()
             eris = mycc.ao2mo()
             e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
@@ -428,8 +430,11 @@ def cc(mol, grids, name, args, evaluate=False):
     print("Error force DFT: ", np.linalg.norm(force - (grad_dft - grad_dft_zeros)))
 
     # Generate input data
-    rho_cube_cc = grids.gen_cube_rho_rks(rho_cc, mdft._numint, dm1_cc)
     rho_cube_dft = grids.gen_cube_rho_rks(rho_dft, mdft._numint, dm1_dft)
+    if dm1_cc is None:
+        rho_cube_cc = np.zeros_like(rho_cube_dft)
+    else:
+        rho_cube_cc = grids.gen_cube_rho_rks(rho_cc, mdft._numint, dm1_cc)
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",
         mol=mol.tostring(format="xyz"),

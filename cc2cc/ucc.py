@@ -53,10 +53,7 @@ def get_dft_energy(
         pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft[0], xctype="GGA"),
         pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft[1], xctype="GGA"),
     ]
-    rho_cc = [
-        pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
-        pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
-    ]
+    rho_cc = np.zeros_like(rho_dft)  # dummy
 
     ni = mdft._numint
     dft_mo_coeff = mdft.mo_coeff
@@ -101,6 +98,11 @@ def get_dft_energy(
     if evaluate:
         return None, None, rho_cc, rho_dft, grad2force
     else:
+        rho_cc = [
+            pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
+            pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
+        ]
+
         dm12 = (
             0.5 * dm2_cc[0]
             + 0.5 * dm2_cc[1]
@@ -274,9 +276,10 @@ def ucc(mol, grids, name, args, evaluate=False):
 
             if not (os.path.exists(f"tmp_mol/{name}/mol.property.json")):
                 print("ORCA calculation failed, no JSON file found.")
-                # # Clear the directory if it already exists to avoid disk space issues
+                # # Clear the directory tmp files if it already exists to avoid disk space issues
                 for file in os.listdir(f"tmp_mol/{name}"):
-                    os.remove(os.path.join(f"tmp_mol/{name}", file))
+                    if "tmp" in file:
+                        os.remove(os.path.join(f"tmp_mol/{name}", file))
                 raise ValueError("ORCA calculation failed, no JSON file found.")
 
             with open(f"tmp_mol/{name}/mol.property.json", "r", encoding="UTF-8") as f:
@@ -289,7 +292,6 @@ def ucc(mol, grids, name, args, evaluate=False):
         else:
             mycc = pyscf.cc.UCCSD(mf)
             mycc.verbose = 4
-            mycc.direct = True
             _, t1, t2 = mycc.kernel()
             eris = mycc.ao2mo()
             e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
@@ -387,8 +389,11 @@ def ucc(mol, grids, name, args, evaluate=False):
 
     print("Error force DFT: ", np.linalg.norm(force - (grad_dft - grad_dft_zeros)))
 
-    rho_cube_cc = grids.gen_cube_rho_uks(rho_cc, mdft._numint, dm1_cc)
     rho_cube_dft = grids.gen_cube_rho_uks(rho_dft, mdft._numint, dm1_dft)
+    if dm1_cc is None:
+        rho_cube_cc = np.zeros_like(dm1_dft)
+    else:
+        rho_cube_cc = grids.gen_cube_rho_uks(rho_cc, mdft._numint, dm1_cc)
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",
         mol=mol.tostring(format="xyz"),

@@ -281,13 +281,6 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--if_grad",
-        type=str2bool,
-        default=True,
-        help="Whether to calculate the gradient. Default is True.",
-    )
-
-    parser.add_argument(
         "--use_orca",
         type=str2bool,
         default=False,
@@ -422,6 +415,20 @@ def add_args(parser: argparse.ArgumentParser):
         type=float,
         default=1.0,
         help="Lambda for the loss function. Default is 1.0.",
+    )
+
+    parser.add_argument(
+        "--loss_multiplier_force",
+        type=float,
+        default=1.0,
+        help="Lambda for the loss function. Default is 1.0.",
+    )
+
+    parser.add_argument(
+        "--if_grad",
+        type=str2bool,
+        default=False,
+        help="Whether to calculate the gradient. Default is False.",
     )
 
     parser.add_argument(
