@@ -25,6 +25,47 @@ with importlib.resources.path("cc2cc", "utils") as resource_path:
             dataset[dataset_name.stem] = json.load(f)
 
 
+def return_def2_ecp(basis: str) -> dict:
+    return {
+        "Rb": basis,
+        "Sr": basis,
+        "Y": basis,
+        "Zr": basis,
+        "Nb": basis,
+        "Mo": basis,
+        "Tc": basis,
+        "Ru": basis,
+        "Rh": basis,
+        "Pd": basis,
+        "Ag": basis,
+        "Cd": basis,
+        "In": basis,
+        "Sn": basis,
+        "Sb": basis,
+        "Te": basis,
+        "I": basis,
+        "Xe": basis,
+        "Cs": basis,
+        "Ba": basis,
+        "La": basis,
+        "Hf": basis,
+        "Ta": basis,
+        "W": basis,
+        "Re": basis,
+        "Os": basis,
+        "Ir": basis,
+        "Pt": basis,
+        "Au": basis,
+        "Hg": basis,
+        "Tl": basis,
+        "Pb": basis,
+        "Bi": basis,
+        "Po": basis,
+        "At": basis,
+        "Rn": basis,
+    }
+
+
 def extend(
     name_mol: str,
     extend_atom: str,
@@ -115,7 +156,7 @@ def gen_mole(
     mol = pyscf.M(
         atom=molecule,
         basis=basis,
-        ecp=basis,
+        ecp=return_def2_ecp(basis),
         verbose=verbose,
         spin=dataset[dataset_name]["spin"][name_mol],
         charge=dataset[dataset_name]["charge"][name_mol],
