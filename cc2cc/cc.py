@@ -430,8 +430,11 @@ def cc(mol, grids, name, args, evaluate=False):
     print("Error force DFT: ", np.linalg.norm(force - (grad_dft - grad_dft_zeros)))
 
     # Generate input data
-    rho_cube_cc = grids.gen_cube_rho_rks(rho_cc, mdft._numint, dm1_cc)
     rho_cube_dft = grids.gen_cube_rho_rks(rho_dft, mdft._numint, dm1_dft)
+    if dm1_cc is None:
+        rho_cube_cc = np.zeros_like(rho_cube_dft)
+    else:
+        rho_cube_cc = grids.gen_cube_rho_rks(rho_cc, mdft._numint, dm1_cc)
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",
         mol=mol.tostring(format="xyz"),

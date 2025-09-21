@@ -5,7 +5,7 @@ Module for handling molecular data and generating datasets for machine learning 
 import numpy as np
 import torch
 
-from cc2cc.utils.env_var import DATA_PATH, CUBE_SIZE
+from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBase import DataBase
 
@@ -28,14 +28,20 @@ class DataBaseCube(DataBase):
             input_mat = data["rho_cube_dft"]
             output_mat = data["exc_cc_grids"]
             energy_train = data["energy_train"]
+            grad2force = data["grad2force"]
+            grad_cc_train = data["grad_cc_train"]
         elif self.rho_input == "cc":
             input_mat = data["rho_cube_cc"]
             output_mat = data["exc_cc_grids"]
             energy_train = data["energy_train"]
+            grad2force = None
+            grad_cc_train = None
         elif self.rho_input == "zmp":
             input_mat = data["rho_cube_zmp"]
             output_mat = data["exc_cc_grids_zmp"]
             energy_train = data["energy_train_zmp"]
+            grad2force = None
+            grad_cc_train = None
         else:
             raise ValueError(f"Unknown rho_input: {self.rho_input}")
 
@@ -47,72 +53,46 @@ class DataBaseCube(DataBase):
                 print(
                     f"Error energy {error_energy} is too large: {name:>40}", flush=True
                 )
+                output_mat = torch.tensor(0)
 
-        input_ = []
-        weight_ = []
-        output_ = []
         atomic_systems = []
         atomic_stoichiometry = []
-
-        num_data_used = 0
-        total_ene_used = 0
-        total_ene_used_abs = 0
-        max_ene_den = 0
-        data_length = len(input_mat) // mol_info["natm"]
+        num_data_used = mol_info["natm"]
         for i_atom in range(mol_info["natm"]):
             atom_name = mol_info["elements"][i_atom]
-            if self.train_atom not in ["all", "All", "ALL"]:
-                if atom_name != self.train_atom:
-                    print(
-                        f"SKIP: {name:>40} {atom_name:>3}",
-                        flush=True,
-                    )
-                    continue
-
             if atom_name not in atomic_systems:
                 atomic_systems.append(atom_name)
                 atomic_stoichiometry.append(1)
             else:
                 atomic_stoichiometry[atomic_systems.index(atom_name)] += 1
-
-            num_data_used += 1
-            slice_ = slice(data_length * i_atom, data_length * (i_atom + 1))
-            input_.append(input_mat[slice_, :, :, :, :])
-            weight_.append(weight_mat[slice_])
-            if not self.if_eval:
-                output_.append(output_mat[slice_])
-                total_ene_used += np.sum(output_mat[slice_] * weight_mat[slice_])
-                total_ene_used_abs += np.sum(
-                    np.abs(output_mat[slice_] * weight_mat[slice_])
-                )
-                max_ene_den = max(
-                    max_ene_den, np.max(output_mat[slice_] * weight_mat[slice_])
-                )
-        input_ = np.array(input_).reshape((-1, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
-        weight_ = np.array(weight_).reshape((-1, 1))
-        if not self.if_eval:
-            output_ = np.array(output_).reshape((-1, 1))
-
-        if num_data_used == 0:
-            return 0, {}
-
-        print(f"Total energy used: {AU2KCALMOL * total_ene_used}")
-        print(f"Total abs energy used: {AU2KCALMOL * total_ene_used_abs}")
-        print(f"Max energy density: {AU2KCALMOL * max_ene_den}")
         print(f"Total data used for {name}: {num_data_used}", flush=True)
         print(
             f"Atomic systems: {atomic_systems}, Stoichiometry: {atomic_stoichiometry}",
             flush=True,
         )
 
+        if not self.if_eval and len(output_mat.shape) != 0:
+            total_ene_used = np.sum(output_mat * weight_mat)
+            total_ene_used_abs = np.sum(np.abs(output_mat * weight_mat))
+            max_ene_den = np.max(output_mat * weight_mat)
+            print(f"Total energy used: {AU2KCALMOL * total_ene_used}")
+            print(f"Total abs energy used: {AU2KCALMOL * total_ene_used_abs}")
+            print(f"Max energy density: {AU2KCALMOL * max_ene_den}")
+
         data_dict = {
-            "input": torch.tensor(input_, dtype=self.dtype),
-            "weight": torch.tensor(weight_, dtype=self.dtype),
+            "input": torch.tensor(input_mat, dtype=self.dtype),
+            "weight": torch.tensor(weight_mat.reshape((-1, 1)), dtype=self.dtype),
             "output": (
                 torch.tensor(0)
                 if self.if_eval
-                else torch.tensor(output_, dtype=self.dtype)
+                else torch.tensor(output_mat.reshape((-1, 1)), dtype=self.dtype)
             ),
+            "grad2force": (
+                torch.tensor(0)
+                if self.if_eval
+                else torch.tensor(grad2force, dtype=self.dtype)
+            ),
+            "grad_cc_train": grad_cc_train,
             "energy_train": energy_train,
             "name": name,
             "atomic_systems": atomic_systems,

@@ -14,7 +14,7 @@ import torch._functorch.config
 from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
 
-from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, CUBE_SIZE
+from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, CUBE_SIZE, CUBE_MIDDLE
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBaseCube import DataBaseCube
 from cc2cc.utils.DataBaseCenter import DataBaseCenter
@@ -32,6 +32,7 @@ class ModelClass:
     loss_ene: torch.nn.Module
     loss_ene_abs: torch.nn.Module
     loss_ene_atomic: torch.nn.Module
+    loss_grad: torch.nn.Module
     database_train: DataBaseCube | DataBaseCenter
     database_eval: DataBaseCube | DataBaseCenter
     model: torch.nn.Module
@@ -112,11 +113,13 @@ class ModelClass:
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=False)
 
-        if not if_validate:
-            torch._functorch.config.activation_memory_budget = (
-                self.args.activation_memory_budget
-            )
-            self.model.compile(dynamic=True, mode="reduce-overhead")
+        # if not if_validate:
+        #     torch._functorch.config.activation_memory_budget = (
+        #         self.args.activation_memory_budget
+        #     )
+        #     torch._functorch.config.donated_buffer = False
+        #     self.model.compile(dynamic=True, mode="max-autotune-no-cudagraphs")
+        #     print("Model compiled with torch.compile!")
 
         if self.args.distributed:
             print(f"Using DistributedDataParallel on rank {self.local_rank}")
@@ -191,12 +194,14 @@ class ModelClass:
             self.loss_ene_atomic = torch.nn.L1Loss(reduction="sum").cuda(
                 self.local_rank
             )
+            self.loss_grad = torch.nn.L1Loss(reduction="sum").cuda(self.local_rank)
         elif self.args.loss_ene == "MSELoss":
             self.loss_ene = torch.nn.MSELoss(reduction="sum").cuda(self.local_rank)
             self.loss_ene_abs = torch.nn.MSELoss(reduction="sum").cuda(self.local_rank)
             self.loss_ene_atomic = torch.nn.MSELoss(reduction="sum").cuda(
                 self.local_rank
             )
+            self.loss_grad = torch.nn.MSELoss(reduction="sum").cuda(self.local_rank)
         else:
             raise ValueError(f"Unknown loss function {self.args.loss_ene}")
 
@@ -248,7 +253,23 @@ class ModelClass:
         weight = batch["weight"]
         sum_target = batch["energy_train"].cuda(self.local_rank)
         data_weight = batch["data_weight"]
-        output = self.model(input_) * weight
+        if if_train:
+            input_.requires_grad = True
+            output = self.model(input_)
+            middle_ = torch.autograd.grad(
+                torch.sum(output),
+                input_,
+                create_graph=True,
+            )[0]
+            if self.model_type == "cube":
+                middle_ = middle_[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            grad2force = batch["grad2force"]
+            grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
+            force = torch.einsum("pm,impx->ix", middle_, grad2force)
+            output = output * weight
+        else:
+            with torch.no_grad():
+                output = self.model(input_) * weight
 
         tot_loss = self.loss_ene(
             data_weight * sum_target, data_weight * torch.sum(output)
@@ -257,13 +278,18 @@ class ModelClass:
 
         if if_train:
             target = batch["output"] * weight
-            if self.loss_multiplier_abs > IGNORE_MULTIPLIER:
+            if self.loss_multiplier_abs > IGNORE_MULTIPLIER and len(target.shape) != 0:
+                # len(target.shape) will 0 if target is a dummy tensor
                 tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(
                     data_weight * target, data_weight * output
                 )
             loss_abs_record = torch.sum(torch.abs(target - output)).item()
+
+            tot_loss += self.loss_grad(grad_cc_train, force)
+            loss_grad_record = torch.sum(torch.abs(grad_cc_train - force)).item()
         else:
             loss_abs_record = 0.0
+            loss_grad_record = 0.0
 
         if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
             ae_target = sum_target
@@ -313,6 +339,7 @@ class ModelClass:
             "loss_ene": AU2KCALMOL * loss_record,
             "loss_ene_abs": AU2KCALMOL * loss_abs_record,
             "loss_ene_atomic": AU2KCALMOL * loss_atomic_record,
+            "loss_grad_record": AU2KCALMOL * loss_grad_record,
             "loss_tot": AU2KCALMOL * tot_loss.item(),
             "name": batch["name"],
         }
@@ -336,7 +363,7 @@ class ModelClass:
             batch = self.database_train.process_batch(batch, device=self.local_rank)
             tot_loss, data_record = self.loss(batch)
 
-            tot_loss.backward()
+            tot_loss.backward(retain_graph=True)
             self.update_counter += 1
             if self.update_counter % self.iters_to_accumulate == 0:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_norm)
@@ -357,9 +384,7 @@ class ModelClass:
 
         for batch in self.database_eval.data_gpu:
             batch = self.database_train.process_batch(batch, device=self.local_rank)
-
-            with torch.no_grad():
-                data_record = self.loss(batch, if_train=False)
+            data_record = self.loss(batch, if_train=False)
 
             data_record_l.append(data_record)
         return data_record_l
