@@ -49,7 +49,7 @@ class DataBaseCube(DataBase):
             error_energy = AU2KCALMOL * abs(
                 energy_train - np.sum(output_mat * weight_mat)
             )
-            if error_energy > 0.2 * mol_info["natm"]:
+            if error_energy > 0.5 * mol_info["natm"]:
                 print(
                     f"Error energy {error_energy} is too large: {name:>40}", flush=True
                 )
@@ -97,7 +97,7 @@ class DataBaseCube(DataBase):
             "name": name,
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,
-            "data_weight": np.sqrt(num_data_used) if num_data_used > 0 else 0,
+            "data_weight": np.sqrt(num_data_used) if num_data_used > 1 else 2.0,
         }
 
         return num_data_used, data_dict

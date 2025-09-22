@@ -18,7 +18,7 @@ class BasicDataset(Dataset):
     Documentation for a class.
     """
 
-    def __init__(self, name_list, mol_info_dict, load_data, eval=False):
+    def __init__(self, name_list, mol_info_dict, load_data):
         super(BasicDataset, self).__init__()
         self.data = {}
         self.name_list = []
@@ -30,8 +30,8 @@ class BasicDataset(Dataset):
                 self.name_list.append(name)
             # Add more copies of the atomic data to balance the dataset.
             # This is useful when we need to have more data for single-atom systems.
-            if num_data_used == 1:
-                self.name_list.extend([name] * 9)
+            # if num_data_used == 1:
+            #     self.name_list.extend([name] * 9)
 
     def __len__(self):
         return len(self.name_list)
