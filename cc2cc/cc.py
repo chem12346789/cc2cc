@@ -96,12 +96,12 @@ def get_dft_energy(
     else:
         rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
 
+        # exchange part
         dm12 = (
             0.5 * dm2_cc
             - 0.5 * oe.contract("pq,rs->pqrs", dm1_dft, dm1_dft)
             + 0.05 * oe.contract("pr,qs->pqrs", dm1_dft, dm1_dft)
         )
-        # exchange part
         # + 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_cc * 0.5, dm1_cc * 0.5)
         # + 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_cc * 0.5, dm1_cc * 0.5)
         # alpha is 0.2 in b3lyp
@@ -116,7 +116,7 @@ def get_dft_energy(
             optimize="optimal",
         )
 
-        exc_cc_grids = np.zeros_like(rho_dft[0])
+        exc_cc_grids = -pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0]
 
         for i, coord in enumerate(grids.coords):
             if i * 10 % len(grids.coords) == 0:
@@ -129,15 +129,6 @@ def get_dft_energy(
                     rinv,
                     backend="torch",
                 )
-
-        eri = mol.intor("int2e")
-        error_energy = oe.contract("pqrs,pqrs->", eri, dm12)
-        error = np.sum(exc_cc_grids * grids.weights) - error_energy
-        print(
-            "exc_cc_grids: ",
-            f"error_energy: {AU2KCALMOL * error_energy},",
-            f"Error: {AU2KCALMOL * error},",
-        )
 
         # kinetic part
         eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo)
@@ -162,15 +153,7 @@ def get_dft_energy(
             )
             exc_cc_grids += part
 
-        kin = mol.intor("int1e_kin")
-        error_energy += oe.contract("pq,pq->", kin, dm1_cc - dm1_dft)
-        error = np.sum(exc_cc_grids * grids.weights) - error_energy
-        print(
-            "exc_cc_grids: ",
-            f"error_energy: {AU2KCALMOL * error_energy},",
-            f"Error: {AU2KCALMOL * error},",
-        )
-
+        # nuclear part
         for i, coord in enumerate(grids.coords):
             for i_atom in range(mol.natm):
                 distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
@@ -180,15 +163,6 @@ def get_dft_energy(
                         * mol.atom_charges()[i_atom]
                         / distance
                     )
-
-        nuc = mol.intor("int1e_nuc")
-        error_energy += oe.contract("pq,pq->", nuc, dm1_cc - dm1_dft)
-        error = np.sum(exc_cc_grids * grids.weights) - error_energy
-        print(
-            "exc_cc_grids: ",
-            f"error_energy: {AU2KCALMOL * error_energy},",
-            f"Error: {AU2KCALMOL * error},",
-        )
 
         # for i, coord in enumerate(grids.coords):
         #     for i_atom in range(mol.natm):
@@ -200,31 +174,6 @@ def get_dft_energy(
         #                 / distance
         #             )
 
-        ecp = mol.intor("ECPscalar")
-        error_energy += oe.contract("pq,pq->", ecp, dm1_cc - dm1_dft)
-        error = np.sum(exc_cc_grids * grids.weights) - error_energy
-        print(
-            "exc_cc_grids: ",
-            f"error_energy: {AU2KCALMOL * error_energy},",
-            f"Error: {AU2KCALMOL * error},",
-        )
-
-        exc_cc_grids -= pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0]
-        error_energy += -np.sum(
-            pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0] * grids.weights
-        )
-        error = np.sum(exc_cc_grids * grids.weights) - error_energy
-        print(
-            "exc_cc_grids: ",
-            f"error_energy: {AU2KCALMOL * error_energy},",
-            f"Error: {AU2KCALMOL * error},",
-        )
-
-        print("Final result:")
-        print(f"e_cc: {e_cc}, e_dft: {e_dft}")
-        print(
-            f"e_cc: {oe.contract("pq,pq->", ecp + kin + nuc, dm1_cc) + 0.5 * oe.contract("pqrs,pqrs->", eri, dm2_cc) + mol.energy_nuc()}, e_dft: {oe.contract("pq,pq->", ecp + kin + nuc, dm1_dft) + 0.5 * oe.contract("pqrs,pq,rs->", eri, dm1_dft, dm1_dft) - 0.05 * oe.contract("pqrs,pr,qs->", eri, dm1_dft, dm1_dft) + np.sum(pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0] * grids.weights) + mol.energy_nuc()}"
-        )
         error_energy = e_cc - e_dft
         error = np.sum(exc_cc_grids * grids.weights) - error_energy
         print(
