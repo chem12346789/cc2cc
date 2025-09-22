@@ -326,8 +326,8 @@ def gen_mole(
 
     mol = pyscf.M(
         atom=molecule,
-        basis=gen_basis(basis) if "cc" in dataset_name else basis,
-        ecp=gen_ecp(basis) if "cc" in dataset_name else def2_ecp_basis,
+        basis=gen_basis(basis) if "cc" in basis else basis,
+        ecp=gen_ecp(basis) if "cc" in basis else def2_ecp_basis,
         verbose=verbose,
         spin=dataset[dataset_name]["spin"][name_mol],
         charge=dataset[dataset_name]["charge"][name_mol],
