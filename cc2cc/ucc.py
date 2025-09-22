@@ -227,85 +227,22 @@ def ucc(mol, grids, name, args, evaluate=False):
 
     # UCCSD calculation
     if evaluate:
-        if ORCA_AVAILABLE:
-            maxcore = 2000  # in MB (each core! not total)
-            molecular_xyz = ""
-            for atom_info in mol._atom:
-                molecular_xyz += (
-                    f"{atom_info[0]:<6}\t{atom_info[1][0]:<16.10}\t{atom_info[1][1]:<16.10}\t{atom_info[1][2]:<16.10}"
-                    + "\n"
-                )
-
-            if not os.path.exists(f"tmp_mol/{name}"):
-                os.makedirs(f"tmp_mol/{name}")
-
-            with open(f"tmp_mol/{name}/mol.inp", "w", encoding="utf-8") as f:
-                f.write(
-                    f"""! {args.basis} CCSD(T) TightSCF PrintBasis
-
-                %method
-                    WriteJSONPropertyfile True
-                    FrozenCore FC_NONE
-                end
-
-                %maxcore {maxcore}
-
-                %MDCI
-                    MaxCore {maxcore}
-                end
-
-                %pal
-                    nprocs {os.environ.get("OMP_NUM_THREADS")}
-                end
-
-                %coords
-                CTyp   xyz     # the type of coordinates = xyz or internal
-                Charge {mol.charge}       # the total charge of the molecule
-                Mult   {mol.spin+1}        # the multiplicity = 2S+1
-                Units  bohrs    # the unit of length = angs or bohrs
-
-                # the subblock coords is for the actual coordinates
-                # for CTyp=xyz
-                coords
-                {molecular_xyz}end
-                end
-                """
-                )
-
-            os.system(f"$(which orca) tmp_mol/{name}/mol.inp > tmp_mol/{name}/mol.out")
-
-            if not (os.path.exists(f"tmp_mol/{name}/mol.property.json")):
-                print("ORCA calculation failed, no JSON file found.")
-                # # Clear the directory tmp files if it already exists to avoid disk space issues
-                for file in os.listdir(f"tmp_mol/{name}"):
-                    if "tmp" in file:
-                        os.remove(os.path.join(f"tmp_mol/{name}", file))
-                raise ValueError("ORCA calculation failed, no JSON file found.")
-
-            with open(f"tmp_mol/{name}/mol.property.json", "r", encoding="UTF-8") as f:
-                data_json = json.load(f)
-                print(data_json)
-
-            e_cc = data_json["Geometry_1"]["MDCI_Energies"]["TOTALENERGY"]
+        mycc = pyscf.cc.UCCSD(mf)
+        mycc.verbose = 4
+        _, t1, t2 = mycc.kernel()
+        eris = mycc.ao2mo()
+        e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
+        l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
+        dm1_cc = uccsd_t_rdm.make_rdm1(
+            mycc, t1, t2, l1, l2, eris=eris, ao_repr=True
+        )
+        e_cc = mycc.e_tot + e3ref
+        print(f"UCCSD(T) energy: {e_cc}")
+        if mol.natm == 1:
             grad_cc = np.zeros((mol.natm, 3))
-            dm1_cc = None
         else:
-            mycc = pyscf.cc.UCCSD(mf)
-            mycc.verbose = 4
-            _, t1, t2 = mycc.kernel()
-            eris = mycc.ao2mo()
-            e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
-            l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
-            dm1_cc = uccsd_t_rdm.make_rdm1(
-                mycc, t1, t2, l1, l2, eris=eris, ao_repr=True
-            )
-            e_cc = mycc.e_tot + e3ref
-            print(f"UCCSD(T) energy: {e_cc}")
-            if mol.natm == 1:
-                grad_cc = np.zeros((mol.natm, 3))
-            else:
-                gcc = uccsd_t_grad.Gradients(mycc)
-                grad_cc = gcc.kernel()
+            gcc = uccsd_t_grad.Gradients(mycc)
+            grad_cc = gcc.kernel()
 
         dm1_cc_mo = None
         dm2_cc = None

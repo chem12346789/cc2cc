@@ -149,8 +149,9 @@ class Grid(dft.gen_grid.Grids):
         self.level = level
         self.atomic_radii = None
         self.radii_adjust = None
-        self.becke_scheme = dft.gen_grid.original_becke
         self.radi_method = dft.radi.gauss_chebyshev
+        self.becke_scheme = dft.gen_grid.original_becke
+        self.prune = None
         self.build(with_non0tab=True, sort_grids=False)
         self.non0tab = self.make_mask(mol, self.coords)
         self.screen_index = self.non0tab
