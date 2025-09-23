@@ -113,13 +113,15 @@ class ModelClass:
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=False)
 
-        # if not if_validate:
-        #     torch._functorch.config.activation_memory_budget = (
-        #         self.args.activation_memory_budget
-        #     )
-        #     torch._functorch.config.donated_buffer = False
-        #     self.model.compile(dynamic=True, mode="max-autotune-no-cudagraphs")
-        #     print("Model compiled with torch.compile!")
+        if not if_validate:
+            if not self.args.if_grad:
+                # model.compile does not support Double backward which is used in grad.
+                torch._functorch.config.activation_memory_budget = (
+                    self.args.activation_memory_budget
+                )
+                torch._functorch.config.donated_buffer = False
+                self.model.compile(dynamic=True, mode="max-autotune-no-cudagraphs")
+                print("Model compiled with torch.compile!")
 
         if self.args.distributed:
             print(f"Using DistributedDataParallel on rank {self.local_rank}")
@@ -274,6 +276,8 @@ class ModelClass:
 
         tot_loss = self.loss_ene(
             data_weight * sum_target, data_weight * torch.sum(output)
+        ) / self.loss_ene(
+            data_weight * sum_target, data_weight * torch.zeros_like(sum_target)
         )
         loss_record = np.abs((sum_target - torch.sum(output)).item())
 
@@ -311,6 +315,7 @@ class ModelClass:
                 if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
                     ae_target = torch.zeros_like(ae_target)
                     ae_output = torch.zeros_like(ae_output)
+                    loss_atomic_record = 0.0
                 break
 
             atomic_batch = self.database_train.dataset.get_from_name(name_atom)

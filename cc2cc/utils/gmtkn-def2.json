@@ -3,6 +3,11 @@
         "ADDON_Se",
         "ADDON_Ge",
         "ADDON_As",
+        "ADDON_Te",
+        "ADDON_I",
+        "ADDON_Bi",
+        "ADDON_Pb",
+        "ADDON_Sb",
         "BUT14DIOL-B13",
         "BUT14DIOL-B14",
         "BUT14DIOL-B58",
@@ -2470,6 +2475,11 @@
         "ADDON_Ge": 2,
         "ADDON_As": 3,
         "ADDON_Se": 2,
+        "ADDON_Sb": 3,
+        "ADDON_Te": 2,
+        "ADDON_I": 1,
+        "ADDON_Bi": 3,
+        "ADDON_Pb": 2,
         "BUT14DIOL-B13": 0,
         "BUT14DIOL-B14": 0,
         "BUT14DIOL-B58": 0,
@@ -4937,6 +4947,11 @@
         "ADDON_Se": 0,
         "ADDON_Ge": 0,
         "ADDON_As": 0,
+        "ADDON_Sb": 0,
+        "ADDON_Te": 0,
+        "ADDON_I": 0,
+        "ADDON_Bi": 0,
+        "ADDON_Pb": 0,
         "BUT14DIOL-B13": 0,
         "BUT14DIOL-B14": 0,
         "BUT14DIOL-B58": 0,
@@ -7403,12 +7418,22 @@
     "molecule_ADDON": [
         "ADDON_Se",
         "ADDON_Ge",
-        "ADDON_As"
+        "ADDON_As",
+        "ADDON_Te",
+        "ADDON_I",
+        "ADDON_Bi",
+        "ADDON_Pb",
+        "ADDON_Sb"
     ],
     "molecule0_ADDON": [
         "ADDON_Se",
         "ADDON_Ge",
-        "ADDON_As"
+        "ADDON_As",
+        "ADDON_Te",
+        "ADDON_I",
+        "ADDON_Bi",
+        "ADDON_Pb",
+        "ADDON_Sb"
     ],
     "ADDON_Se": [
         [
@@ -7427,6 +7452,46 @@
         ]
     ],
     "ADDON_As": [
+        [
+            "As",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "ADDON_Sb": [
+        [
+            "As",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "ADDON_Te": [
+        [
+            "As",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "ADDON_I": [
+        [
+            "As",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "ADDON_Bi": [
+        [
+            "As",
+            0.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "ADDON_Pb": [
         [
             "As",
             0.0,
@@ -230383,6 +230448,11 @@
         "ADDON_Se",
         "ADDON_Ge",
         "ADDON_As",
+        "ADDON_Te",
+        "ADDON_I",
+        "ADDON_Bi",
+        "ADDON_Pb",
+        "ADDON_Sb",
         "RG18-ar",
         "RG18-kr",
         "RG18-ne",

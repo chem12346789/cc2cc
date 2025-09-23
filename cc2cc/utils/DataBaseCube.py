@@ -49,7 +49,7 @@ class DataBaseCube(DataBase):
             error_energy = AU2KCALMOL * abs(
                 energy_train - np.sum(output_mat * weight_mat)
             )
-            if error_energy > 0.5 * mol_info["natm"]:
+            if error_energy > 1.5 * mol_info["natm"]:
                 print(
                     f"Error energy {error_energy} is too large: {name:>40}", flush=True
                 )
