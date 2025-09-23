@@ -255,11 +255,7 @@ def cc(mol, grids, name, args, evaluate=False):
             del t1, t2, l1, l2, d1, d2
             e_cc = mycc.e_tot + e3ref
             print(f"CCSD(T) energy: {e_cc}")
-            if mol.natm == 1:
-                grad_cc = np.zeros((mol.natm, 3))
-            else:
-                gcc = ccsd_t_grad.Gradients(mycc)
-                grad_cc = gcc.kernel()
+            grad_cc = np.zeros((mol.natm, 3))
         else:
             dm1_cc = mycc.make_rdm1(ao_repr=True)
             dm1_cc_mo = mycc.make_rdm1(ao_repr=False)
