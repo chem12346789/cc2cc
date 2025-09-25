@@ -315,7 +315,7 @@ class ModelClass:
                 if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
                     ae_target = torch.zeros_like(ae_target)
                     ae_output = torch.zeros_like(ae_output)
-                    loss_atomic_record = 0.0
+                    loss_atomic_record = torch.zeros_like(loss_atomic_record)
                 break
 
             atomic_batch = self.database_train.dataset.get_from_name(name_atom)
