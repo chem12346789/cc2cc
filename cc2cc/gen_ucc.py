@@ -212,19 +212,6 @@ def ucc(mol, grids, name, args, evaluate=False):
     if args.check_convergence and not mf.converged:
         raise ValueError("UHF not converged.")
 
-    # DFT calculation
-    mdft = pyscf.scf.UKS(mol)
-    mdft.verbose = 4
-    mdft.max_cycle = 200
-    mdft.xc = "b3lyp"
-    mdft.kernel(mf.make_rdm1())
-    if args.check_convergence and not mdft.converged:
-        raise ValueError("UKS not converged.")
-    dm1_dft = mdft.make_rdm1(ao_repr=True)
-    e_dft = mdft.energy_tot(dm1_dft)
-    gdft = mdft.Gradients()
-    grad_dft = gdft.kernel()
-
     # UCCSD calculation
     if evaluate:
         mycc = pyscf.cc.UCCSD(mf)
@@ -233,9 +220,27 @@ def ucc(mol, grids, name, args, evaluate=False):
         eris = mycc.ao2mo()
         e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
         l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
-        dm1_cc = uccsd_t_rdm.make_rdm1(
-            mycc, t1, t2, l1, l2, eris=eris, ao_repr=True
+        dm1_cc = uccsd_t_rdm.make_rdm1(mycc, t1, t2, l1, l2, eris=eris, ao_repr=True)
+        dm1_cc_mo = None
+        dm2_cc = None
+        e_cc = mycc.e_tot + e3ref
+        print(f"UCCSD(T) energy: {e_cc}")
+        grad_cc = np.zeros((mol.natm, 3))
+    else:
+        mycc = pyscf.cc.UCCSD(mf)
+        mycc.verbose = 4
+        _, t1, t2 = mycc.kernel()
+        eris = mycc.ao2mo()
+        e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
+        l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
+        dm1_cc = uccsd_t_rdm.make_rdm1(mycc, t1, t2, l1, l2, eris=eris, ao_repr=True)
+        dm1_cc_mo = uccsd_t_rdm.make_rdm1(
+            mycc, t1, t2, l1, l2, eris=eris, ao_repr=False
         )
+        d1 = u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
+        d2 = u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
+        dm2_cc = uccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
+        del t1, t2, l1, l2, d1, d2
         e_cc = mycc.e_tot + e3ref
         print(f"UCCSD(T) energy: {e_cc}")
         if mol.natm == 1:
@@ -243,52 +248,32 @@ def ucc(mol, grids, name, args, evaluate=False):
         else:
             gcc = uccsd_t_grad.Gradients(mycc)
             grad_cc = gcc.kernel()
+    dm1_cc = np.array(dm1_cc)
+    dm2_cc = np.array(dm2_cc)
 
-        dm1_cc_mo = None
-        dm2_cc = None
-    else:
-        mycc = pyscf.cc.UCCSD(mf)
-        mycc.verbose = 4
-        _, t1, t2 = mycc.kernel()
-        if args.cc_triple:
-            eris = mycc.ao2mo()
-            e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
-            l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
-            dm1_cc = uccsd_t_rdm.make_rdm1(
-                mycc, t1, t2, l1, l2, eris=eris, ao_repr=True
-            )
-            dm1_cc_mo = uccsd_t_rdm.make_rdm1(
-                mycc, t1, t2, l1, l2, eris=eris, ao_repr=False
-            )
-            d1 = u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
-            d2 = u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
-            dm2_cc = uccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
-            del t1, t2, l1, l2, d1, d2
+    # DFT calculation
+    mdft = pyscf.scf.UKS(mol)
+    mdft.verbose = 4
+    mdft.max_cycle = 200
+    mdft.xc = "b3lyp"
+    # get_veff_modified_uks(mdft, modeldict, lambda_rho=1, dm_tar=dm1_cc)
+    mdft.kernel(mf.make_rdm1())
+    if args.check_convergence and not mdft.converged:
+        raise ValueError("UKS not converged.")
+    dm1_dft = mdft.make_rdm1(ao_repr=True)
+    e_dft = mdft.energy_tot(dm1_dft)
+    gdft = mdft.Gradients()
+    grad_dft = gdft.kernel()
 
-            e_cc = mycc.e_tot + e3ref
-            print(f"UCCSD(T) energy: {e_cc}")
-            grad_cc = np.zeros((mol.natm, 3))
-        else:
-            dm1_cc = mycc.make_rdm1(ao_repr=True)
-            dm1_cc_mo = mycc.make_rdm1(ao_repr=False)
-            dm2_cc = mycc.make_rdm2(ao_repr=True)
-            e_cc = mycc.e_tot
-            if mol.natm == 1:
-                grad_cc = np.zeros((mol.natm, 3))
-            else:
-                gcc = uccsd_grad.Gradients(mycc)
-                grad_cc = gcc.kernel()
-        dm1_cc = np.array(dm1_cc)
-        dm2_cc = np.array(dm2_cc)
-
-        print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} (CCSD vs DFT)")
-        cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
-        dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
-        print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
-
+    # Compare CCSD and DFT
+    print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} (CCSD vs DFT)")
+    cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
+    dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
+    print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
     energy_train = e_cc - e_dft
     grad_cc_train = grad_cc - grad_dft
 
+    # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
     error_energy_dft, exc_cc_grids_dft, rho_cc, rho_dft, grad2force = get_dft_energy(
         mol,
         grids,
@@ -319,14 +304,11 @@ def ucc(mol, grids, name, args, evaluate=False):
     )
     get_veff_grad_modified_zeros(gdft)
     grad_dft_zeros = gdft.kernel()
-
     print("Error force DFT: ", np.linalg.norm(force - (grad_dft - grad_dft_zeros)))
 
+    # Generate input data
     rho_cube_dft = grids.gen_cube_rho_uks(rho_dft, mdft._numint, dm1_dft)
-    if dm1_cc is None:
-        rho_cube_cc = np.zeros_like(dm1_dft)
-    else:
-        rho_cube_cc = grids.gen_cube_rho_uks(rho_cc, mdft._numint, dm1_cc)
+    rho_cube_cc = grids.gen_cube_rho_uks(rho_cc, mdft._numint, dm1_cc)
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",
         mol=mol.tostring(format="xyz"),

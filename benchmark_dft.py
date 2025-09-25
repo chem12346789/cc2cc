@@ -6,8 +6,9 @@ Other parameter are from the argparse.
 import argparse
 from itertools import product
 
-from cc2cc import add_args, benchmark_rks, benchmark_uks
-from cc2cc.utils import gen_mole, print_computer_info
+from cc2cc.benchmark_rks import benchmark_rks
+from cc2cc.benchmark_uks import benchmark_uks
+from cc2cc.utils import gen_mole, print_computer_info, add_args
 from cc2cc.utils import DataRecord
 from cc2cc.utils import MAIN_PATH
 

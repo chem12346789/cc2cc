@@ -1,8 +1,8 @@
 import argparse
 
-from cc2cc import train_model
 from cc2cc.utils import add_args, print_computer_info
 from cc2cc.utils.parser import gen_name_args
+from cc2cc.train_model import train_model
 
 train_str_list = [
     "molecule0-W4_11",

@@ -5,10 +5,11 @@ from itertools import product
 
 import numpy as np
 
-from cc2cc import add_args, cc, ucc
-from cc2cc.utils import Grid, gen_mole, print_computer_info
-from cc2cc.utils.env_var import DATA_PATH
+from cc2cc.utils import gen_mole, print_computer_info, add_args
+from cc2cc.utils.env_var import Grid, DATA_PATH
 from cc2cc.utils.parser import gen_name_args
+from cc2cc.gen_cc import cc
+from cc2cc.gen_ucc import ucc
 
 
 train_str_list = [
