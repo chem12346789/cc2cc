@@ -51,13 +51,6 @@ GENERATE_DATA = os.environ.get("DFT2CC_GENERATE_DATA")
 if GENERATE_DATA is None:
     GENERATE_DATA = False
 
-ORCA_AVAILABLE = os.environ.get("ORCA_AVAILABLE")
-if ORCA_AVAILABLE is None:
-    ORCA_AVAILABLE = False
-else:
-    ORCA_AVAILABLE = ORCA_AVAILABLE.lower() in ("true", "1", "yes")
-
-
 def print_computer_info(device):
     """
     Print information about the GPU and CUDA environment.

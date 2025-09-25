@@ -8,8 +8,7 @@ from torch import distributed as dist
 
 import wandb
 
-from cc2cc.utils import DataRecord
-from cc2cc.utils import ModelClass
+from cc2cc.utils import DataRecord, ModelClass
 from cc2cc.utils.timer import Timer
 
 

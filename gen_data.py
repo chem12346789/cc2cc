@@ -6,7 +6,7 @@ from itertools import product
 import numpy as np
 
 from cc2cc.utils import gen_mole, print_computer_info, add_args
-from cc2cc.utils.env_var import Grid, DATA_PATH
+from cc2cc.utils import Grid, DATA_PATH
 from cc2cc.utils.parser import gen_name_args
 from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc
@@ -821,9 +821,8 @@ if __name__ == "__main__":
     # remove the same name in eval and eval_str_exclude_list
     eval_str_list = [mol for mol in eval_str_list if mol not in eval_str_exclude_list]
 
-    name_mol_list, evaluate = ["ADDON_Sb"], False
     # name_mol_list, evaluate = train_str_list[2::3], False
-    # name_mol_list, evaluate = eval_str_list[2::3], True
+    name_mol_list, evaluate = eval_str_list[0::3], True
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
 

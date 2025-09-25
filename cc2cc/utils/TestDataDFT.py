@@ -1,6 +1,4 @@
 from timeit import default_timer as timer
-import os
-import json
 import warnings
 
 import numpy as np
@@ -8,6 +6,22 @@ import numpy as np
 import pyscf
 
 from cc2cc.utils.env_var import DATA_TEST_PATH
+
+
+def diff_rho(mol, dm1_compare1, dm1_compare2, grids):
+    """
+    Calculate the difference between two density matrices.
+    """
+    ao = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=0)
+    if len(np.shape(dm1_compare1)) != len(np.shape(dm1_compare2)):
+        raise ValueError("dm1_compare1 and dm1_compare2 must have the same dimension.")
+    if len(np.shape(dm1_compare1)) == 3:
+        dm1_compare1 = dm1_compare1[0] + dm1_compare1[1]
+        dm1_compare2 = dm1_compare2[0] + dm1_compare2[1]
+    ddm = dm1_compare1 - dm1_compare2
+    drho = pyscf.dft.numint.eval_rho(mol, ao, ddm, xctype="LDA")
+
+    return np.sum(np.abs(drho) * grids.weights)
 
 
 class TestDataDFT:

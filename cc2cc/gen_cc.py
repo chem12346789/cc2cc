@@ -13,10 +13,10 @@ from pyscf.cc import ccsd_t
 from pyscf.cc import ccsd_rdm
 from pyscf.cc.ccsd_t_rdm import _gamma1_intermediates
 from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
-from pyscf.grad import ccsd_t as ccsd_t_grad, ccsd as ccsd_grad
+from pyscf.grad import ccsd_t as ccsd_t_grad
 
 from cc2cc.utils import diff_rho
-from cc2cc.utils import DATA_PATH, AU2KCALMOL, ORCA_AVAILABLE
+from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.modelscf_rks import get_veff_grad_modified_zeros
 
 

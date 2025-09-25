@@ -1,10 +1,9 @@
 # pylint: disable=W0212
 
-import os
-import numpy as np
-import pyscf
 import json
 
+import pyscf
+import numpy as np
 import opt_einsum as oe
 
 from pyscf.cc import uccsd_t_lambda
@@ -13,10 +12,10 @@ from pyscf.cc import uccsd_t
 from pyscf.cc import uccsd_rdm
 from pyscf.cc.uccsd_t_rdm import _gamma1_intermediates as u_gamma1_intermediates
 from pyscf.cc.uccsd_t_rdm import _gamma2_intermediates as u_gamma2_intermediates
-from pyscf.grad import uccsd as uccsd_grad, uccsd_t as uccsd_t_grad
+from pyscf.grad import uccsd_t as uccsd_t_grad
 
 from cc2cc.utils import diff_rho
-from cc2cc.utils import DATA_PATH, AU2KCALMOL, ORCA_AVAILABLE
+from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.modelscf_uks import get_veff_grad_modified_zeros
 
 
