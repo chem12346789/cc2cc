@@ -821,8 +821,10 @@ if __name__ == "__main__":
     # remove the same name in eval and eval_str_exclude_list
     eval_str_list = [mol for mol in eval_str_list if mol not in eval_str_exclude_list]
 
-    name_mol_list, evaluate = train_str_list[2::3], False
-    # name_mol_list, evaluate = eval_str_list[2::3], True
+    if args.if_eval:
+        name_mol_list, evaluate = eval_str_list[args.training_cycle :: 3], True
+    else:
+        name_mol_list, evaluate = train_str_list[args.training_cycle :: 3], False
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
 
