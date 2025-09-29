@@ -16,6 +16,7 @@ validate
 /log_backup
 /tmp_mol
 /work_script/
+/wandb/
 
 *.zip
 *map

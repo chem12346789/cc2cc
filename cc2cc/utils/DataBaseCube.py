@@ -5,7 +5,7 @@ Module for handling molecular data and generating datasets for machine learning 
 import numpy as np
 import torch
 
-from cc2cc.utils.env_var import DATA_PATH
+from cc2cc.utils.env_var import DATA_PATH, CUBE_MIDDLE
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBase import DataBase
 
@@ -45,14 +45,24 @@ class DataBaseCube(DataBase):
         else:
             raise ValueError(f"Unknown rho_input: {self.rho_input}")
 
+        input_mat_index = (
+            np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-10
+        )
+        print(f"Total number of input points: {len(input_mat_index)}", flush=True)
+        print(f"Number of non-zero input points: {np.sum(input_mat_index)}", flush=True)
+        weight_mat = weight_mat[input_mat_index]
+        input_mat = input_mat[input_mat_index]
+        if len(output_mat.shape) != 0:
+            output_mat = output_mat[input_mat_index]
+        if len(grad2force) != 0:
+            grad2force = grad2force[:, :, input_mat_index, :]
+
         if not self.if_eval:
             error_energy = AU2KCALMOL * abs(
                 energy_train - np.sum(output_mat * weight_mat)
             )
-            if error_energy > 0.2 * mol_info["natm"]:
-                print(
-                    f"Error energy {error_energy} is too large: {name:>40}", flush=True
-                )
+            print(f"Error energy {error_energy}: {name:>40}", flush=True)
+            if error_energy > 1.5 * mol_info["natm"]:
                 output_mat = torch.tensor(0)
 
         atomic_systems = []
@@ -97,7 +107,7 @@ class DataBaseCube(DataBase):
             "name": name,
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,
-            "data_weight": np.sqrt(num_data_used) if num_data_used > 0 else 0,
+            "data_weight": np.sqrt(num_data_used) if num_data_used > 1 else 2.0,
         }
 
         return num_data_used, data_dict

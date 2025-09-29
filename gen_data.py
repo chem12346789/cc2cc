@@ -5,56 +5,62 @@ from itertools import product
 
 import numpy as np
 
-from cc2cc import add_args, cc, ucc
-from cc2cc.utils import Grid, gen_mole, print_computer_info
-from cc2cc.utils.env_var import DATA_PATH
+from cc2cc.utils import gen_mole, print_computer_info, add_args
+from cc2cc.utils import Grid, DATA_PATH
 from cc2cc.utils.parser import gen_name_args
+from cc2cc.gen_cc import cc
+from cc2cc.gen_ucc import ucc
 
 
 train_str_list = [
-    "molecule0-W4_11",
-    "ADDON_As",
-    "ADDON_Ge",
-    "ADDON_Se",
-    "AHB21-1A",
-    "AHB21-4A",
-    "ALK8-li+",
-    "ALK8-na+",
-    "ALKBDE10-ca",
-    "ALKBDE10-k",
-    "ALKBDE10-li",
-    "ALKBDE10-mg",
-    "ALKBDE10-na",
-    "CHB6-24A",
-    "DIPCS10-be_2+",
-    "DIPCS10-mg_2+",
-    "G21EA-EA_c-",
-    "G21EA-EA_o-",
-    "G21EA-EA_p-",
-    "G21EA-EA_s-",
-    "G21EA-EA_si-",
-    "G21IP-al+",
-    "G21IP-b+",
-    "G21IP-be+",
-    "G21IP-c+",
-    "G21IP-cl+",
-    "G21IP-f+",
-    "G21IP-mg+",
-    "G21IP-n+",
-    "G21IP-o+",
-    "G21IP-p+",
-    "G21IP-s+",
-    "G21IP-si+",
-    "HEAVYSB11-br",
-    "RG18-ar",
-    "RG18-kr",
-    "RG18-ne",
-    "SIE4x4-he",
-    "SIE4x4-he+",
-    # #####################
-    # ######  add 1  ######
-    # #####################
-    "molecule1-W4_11",
+    # "molecule0-W4_11",
+    # "ADDON_As",
+    # "ADDON_Ge",
+    # "ADDON_Se",
+    # "ADDON_Te",
+    # "ADDON_I",
+    # "ADDON_Bi",
+    # "ADDON_Pb",
+    # "ADDON_Sb",
+    # "AHB21-1A",
+    # "AHB21-4A",
+    # "ALK8-li+",
+    # "ALK8-na+",
+    # "ALKBDE10-ca",
+    # "ALKBDE10-k",
+    # "ALKBDE10-li",
+    # "ALKBDE10-mg",
+    # "ALKBDE10-na",
+    # "CHB6-24A",
+    # "DIPCS10-be_2+",
+    # "DIPCS10-mg_2+",
+    # "G21EA-EA_c-",
+    # "G21EA-EA_o-",
+    # "G21EA-EA_p-",
+    # "G21EA-EA_s-",
+    # "G21EA-EA_si-",
+    # "G21IP-al+",
+    # "G21IP-b+",
+    # "G21IP-be+",
+    # "G21IP-c+",
+    # "G21IP-cl+",
+    # "G21IP-f+",
+    # "G21IP-mg+",
+    # "G21IP-n+",
+    # "G21IP-o+",
+    # "G21IP-p+",
+    # "G21IP-s+",
+    # "G21IP-si+",
+    # "HEAVYSB11-br",
+    # "RG18-ar",
+    # "RG18-kr",
+    # "RG18-ne",
+    # "SIE4x4-he",
+    # "SIE4x4-he+",
+    # # #####################
+    # # ######  add 1  ######
+    # # #####################
+    # "molecule1-W4_11",
     "AHB21-8B",
     "AHB21-3B",
     "AHB21-10B",
@@ -815,8 +821,10 @@ if __name__ == "__main__":
     # remove the same name in eval and eval_str_exclude_list
     eval_str_list = [mol for mol in eval_str_list if mol not in eval_str_exclude_list]
 
-    name_mol_list, evaluate = train_str_list[2::3], False
-    # name_mol_list, evaluate = eval_str_list[1::3], True
+    if args.if_eval:
+        name_mol_list, evaluate = eval_str_list[args.training_cycle :: 3], True
+    else:
+        name_mol_list, evaluate = train_str_list[args.training_cycle :: 3], False
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
 

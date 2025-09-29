@@ -8,8 +8,7 @@ from torch import distributed as dist
 
 import wandb
 
-from cc2cc.utils import DataRecord
-from cc2cc.utils import ModelClass
+from cc2cc.utils import DataRecord, ModelClass
 from cc2cc.utils.timer import Timer
 
 
@@ -81,7 +80,6 @@ def train_model(train_str_dict, eval_str_dict, args):
             project="DFT2CC",
             resume="allow",
             name="dft2cc",
-            dir="~/wandb",
             config=experiment_dict,
             allow_val_change=True,
         )

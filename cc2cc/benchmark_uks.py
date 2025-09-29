@@ -1,7 +1,5 @@
 """Benchmark dft. Unrestrict Khon-Sham (with spin)."""
 
-from itertools import product
-
 from cc2cc.utils import TestDataDFT
 
 

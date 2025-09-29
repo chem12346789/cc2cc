@@ -6,10 +6,11 @@ Other parameter are from the argparse.
 import argparse
 from itertools import product
 
-from cc2cc import add_args, test_model_rks, test_model_uks
-from cc2cc.utils import gen_mole, print_computer_info
+from cc2cc.utils import gen_mole, print_computer_info, add_args
 from cc2cc.utils import Grid, ModelClass, DataRecord
 from cc2cc.utils import MAIN_PATH
+from cc2cc.test_model_rks import test_model_rks
+from cc2cc.test_model_uks import test_model_uks
 
 if __name__ == "__main__":
     # 0. Prepare the args
