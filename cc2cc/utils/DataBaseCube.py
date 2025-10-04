@@ -50,12 +50,16 @@ class DataBaseCube(DataBase):
         )
         print(f"Total number of input points: {len(input_mat_index)}", flush=True)
         print(f"Number of non-zero input points: {np.sum(input_mat_index)}", flush=True)
-        weight_mat = weight_mat[input_mat_index]
-        input_mat = input_mat[input_mat_index]
         if len(output_mat.shape) != 0:
+            print(
+                f"Energy in zero input region: {np.sum(output_mat[~input_mat_index] * weight_mat[~input_mat_index])}",
+                flush=True,
+            )
             output_mat = output_mat[input_mat_index]
         if len(grad2force) != 0:
             grad2force = grad2force[:, :, input_mat_index, :]
+        weight_mat = weight_mat[input_mat_index]
+        input_mat = input_mat[input_mat_index]
 
         if not self.if_eval:
             error_energy = AU2KCALMOL * abs(
