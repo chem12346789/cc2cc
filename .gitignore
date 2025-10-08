@@ -17,6 +17,8 @@ validate
 /tmp_mol
 /work_script/
 /wandb/
+hkqai*.ipynb
+dgx1*.ipynb
 
 *.zip
 *map
