@@ -46,13 +46,13 @@ class DataBaseCube(DataBase):
             raise ValueError(f"Unknown rho_input: {self.rho_input}")
 
         input_mat_index = (
-            np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-10
+            np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-14
         )
         print(f"Total number of input points: {len(input_mat_index)}", flush=True)
         print(f"Number of non-zero input points: {np.sum(input_mat_index)}", flush=True)
         if len(output_mat.shape) != 0:
             print(
-                f"Energy in zero input region: {np.sum(output_mat[~input_mat_index] * weight_mat[~input_mat_index])}",
+                f"Energy in zero input region: {AU2KCALMOL * np.sum(output_mat[~input_mat_index] * weight_mat[~input_mat_index])}",
                 flush=True,
             )
             output_mat = output_mat[input_mat_index]
