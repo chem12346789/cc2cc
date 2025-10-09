@@ -1,4 +1,5 @@
 """Test the model. Restrict Khon-Sham (no spin)."""
+
 from timeit import default_timer as timer
 
 import pyscf
@@ -19,7 +20,7 @@ def test_model_rks(
     """
     # 2.0 Prepare
     time_ai_start = timer()
-    mdft = pyscf.dft.RKS(mol)
+    mdft = pyscf.dft.RKS(mol).density_fit()
     mdft.xc = "b3lyp"
     mdft.grids = grids
     mdft.verbose = 4
@@ -33,6 +34,14 @@ def test_model_rks(
 
     mdft.kernel()
     # mdft.kernel(dm0=test_data.dm1_dft)
+    if mdft.converged is False:
+        print("RKS not converged.")
+        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=0.5)
+        mdft.max_cycle = 150
+        mdft.kernel()
+        if mdft.converged is False:
+            raise ValueError("RKS not converged.")
+
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
 

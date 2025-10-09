@@ -219,9 +219,6 @@ def ucc(mol, grids, name, args, evaluate=False):
         eris = mycc.ao2mo()
         e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
         dm1_cc = mycc.make_rdm1(ao_repr=True)
-        # l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
-        # dm1_cc = uccsd_t_rdm.make_rdm1(mycc, t1, t2, l1, l2, eris=eris, ao_repr=True)
-        # del l1, l2
         dm1_cc_mo = None
         dm2_cc = None
         del t1, t2

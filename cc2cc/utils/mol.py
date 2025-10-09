@@ -159,6 +159,8 @@ def gen_mole(
         solve_symmetry=solve_symmetry,
     )
 
+    if dataset[dataset_name]["charge"][name_mol] < 0:
+        basis = "ma-" + basis
     mol = pyscf.M(
         atom=molecule,
         basis=basis,
