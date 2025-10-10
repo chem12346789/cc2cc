@@ -271,7 +271,7 @@ def get_veff_grad_modified(
         dms,
         relativity=0,
         hermi=1,
-        max_memory=2000,
+        max_memory=max_memory,
         verbose=None,
     ):
         xctype = ni._xc_type(xc_code)
@@ -456,17 +456,10 @@ def get_veff_grad_modified(
         else:
             dm = dm_ks
 
-        t0 = (logger.process_clock(), logger.perf_counter())
-
         mf = ks_grad_.base
         ni = mf._numint
 
-        mem_now = lib.current_memory()[0]
-        max_memory = max(2000, ks_grad_.max_memory * 0.9 - mem_now)
-
         xctype = ni._xc_type(mf.xc)
-
-        ao_loc = mol.ao_loc_nr()
 
         force = np.zeros((3))
         aoslices = mol.aoslice_by_atom()
@@ -573,7 +566,6 @@ def get_veff_grad_modified_zeros(ks_grad):
         mf = ks_grad_.base
         ni = mf._numint
 
-        mem_now = lib.current_memory()[0]
         t0 = logger.timer(ks_grad_, "vxc", *t0)
 
         if not ni.libxc.is_hybrid_xc(mf.xc):

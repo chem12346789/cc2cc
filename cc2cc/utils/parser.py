@@ -281,10 +281,10 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--use_orca",
+        "--if_eval",
         type=str2bool,
         default=False,
-        help="Whether to use the ORCA package. Default is False.",
+        help="Whether to use the evaluation mode. Default is False.",
     )
 
     # ========== Arguments ==========

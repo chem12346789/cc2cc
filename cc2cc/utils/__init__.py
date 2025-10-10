@@ -20,7 +20,7 @@ from cc2cc.utils.DataRecord import DataRecord
 from cc2cc.utils.TestDataDFT import TestDataDFT
 from cc2cc.utils.timer import Timer
 
-from cc2cc.utils.env_var import DATA_PATH
+from cc2cc.utils.env_var import DATA_PATH, MAIN_PATH
 from cc2cc.utils.mol import AU2KCALMOL, AU2DEBYE
 
 
@@ -37,6 +37,7 @@ __all__ = [
     "Grid",
     "ModelClass",
     "DATA_PATH",
+    "MAIN_PATH",
     "AU2KCALMOL",
     "AU2DEBYE",
 ]
