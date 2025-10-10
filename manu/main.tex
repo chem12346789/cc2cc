@@ -157,7 +157,16 @@ One of the challenging tasks of the DFT calculation is to find the unique functi
 % 
 In this article, we combine the machine learning (ML) method and density functional theory (DFT) to predict the properties of the molecules such as the energy, the dipole, the bond length, the bond dissociation energy, the band gap, and so on.
 
+Among various methods to solve \eq{eq:KS}, the self-consistent field (SCF) method is widely used.
+%
+In the SCF method, the Kohn-Sham equation is solved iteratively utilizing the so-called potential term $v_{\mathrm{XC}} = \delta E_{\mathrm{XC}} / \delta \rho$, where $E_{\mathrm{XC}}$ is the exchange-correlation energy functional.
+% 
+
+
 \section{The NEURAL NETWORK}
+We use the transformer \cite{Vas17A5998} as the neural network to learn the functional between the electron density and the energy density of the molecule.
+% 
+After the training, the neural network can predict the energy of the molecule given the electron density and then can be used to optimize the molecular structure.
 
 \subsection{DATASET AND THE LOSS FUNCTION}
 
