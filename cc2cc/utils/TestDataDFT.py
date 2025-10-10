@@ -97,7 +97,7 @@ class TestDataDFT:
         Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected RKS molecule.
         """
         time_start = timer()
-        mdft = pyscf.scf.RKS(self.mol)
+        mdft = pyscf.scf.RKS(self.mol).density_fit()
         mdft.xc = xc_code_disp
         mdft.verbose = 4
         mdft.grids.level = 4
@@ -131,7 +131,7 @@ class TestDataDFT:
         Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected UKS molecule.
         """
         time_start = timer()
-        mdft = pyscf.scf.UKS(self.mol)
+        mdft = pyscf.scf.UKS(self.mol).density_fit()
         mdft.xc = xc_code_disp
         mdft.verbose = 4
         mdft.grids.level = 4

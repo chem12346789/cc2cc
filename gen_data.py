@@ -13,50 +13,50 @@ from cc2cc.gen_ucc import ucc
 
 
 train_str_list = [
-    # "molecule0-W4_11",
-    # "ADDON_As",
-    # "ADDON_Ge",
-    # "ADDON_Se",
-    # "ADDON_Te",
-    # "ADDON_I",
-    # "ADDON_Bi",
-    # "ADDON_Pb",
-    # "ADDON_Sb",
-    # "AHB21-1A",
-    # "AHB21-4A",
-    # "ALK8-li+",
-    # "ALK8-na+",
-    # "ALKBDE10-ca",
-    # "ALKBDE10-k",
-    # "ALKBDE10-li",
-    # "ALKBDE10-mg",
-    # "ALKBDE10-na",
-    # "CHB6-24A",
-    # "DIPCS10-be_2+",
-    # "DIPCS10-mg_2+",
-    # "G21EA-EA_c-",
-    # "G21EA-EA_o-",
-    # "G21EA-EA_p-",
-    # "G21EA-EA_s-",
-    # "G21EA-EA_si-",
-    # "G21IP-al+",
-    # "G21IP-b+",
-    # "G21IP-be+",
-    # "G21IP-c+",
-    # "G21IP-cl+",
-    # "G21IP-f+",
-    # "G21IP-mg+",
-    # "G21IP-n+",
-    # "G21IP-o+",
-    # "G21IP-p+",
-    # "G21IP-s+",
-    # "G21IP-si+",
-    # "HEAVYSB11-br",
-    # "RG18-ar",
-    # "RG18-kr",
-    # "RG18-ne",
-    # "SIE4x4-he",
-    # "SIE4x4-he+",
+    "molecule0-W4_11",
+    "ADDON_As",
+    "ADDON_Ge",
+    "ADDON_Se",
+    "ADDON_Te",
+    "ADDON_I",
+    "ADDON_Bi",
+    "ADDON_Pb",
+    "ADDON_Sb",
+    "AHB21-1A",
+    "AHB21-4A",
+    "ALK8-li+",
+    "ALK8-na+",
+    "ALKBDE10-ca",
+    "ALKBDE10-k",
+    "ALKBDE10-li",
+    "ALKBDE10-mg",
+    "ALKBDE10-na",
+    "CHB6-24A",
+    "DIPCS10-be_2+",
+    "DIPCS10-mg_2+",
+    "G21EA-EA_c-",
+    "G21EA-EA_o-",
+    "G21EA-EA_p-",
+    "G21EA-EA_s-",
+    "G21EA-EA_si-",
+    "G21IP-al+",
+    "G21IP-b+",
+    "G21IP-be+",
+    "G21IP-c+",
+    "G21IP-cl+",
+    "G21IP-f+",
+    "G21IP-mg+",
+    "G21IP-n+",
+    "G21IP-o+",
+    "G21IP-p+",
+    "G21IP-s+",
+    "G21IP-si+",
+    "HEAVYSB11-br",
+    "RG18-ar",
+    "RG18-kr",
+    "RG18-ne",
+    "SIE4x4-he",
+    "SIE4x4-he+",
     # # #####################
     # # ######  add 1  ######
     # # #####################
@@ -875,8 +875,18 @@ if __name__ == "__main__":
             grids = Grid(mol, args.grid_level)
 
             if args.if_continue:
+                if mol.spin == 0:
+                    if mol.nao >= 200:
+                        print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+                        error_molecule.append(name)
+                        continue
+                else:
+                    if mol.nao >= 140:
+                        print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+                        error_molecule.append(name)
+                        continue
+
                 if (DATA_PATH / f"data_{name}.npz").exists():
-                    print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
                     # refresh modified time of the file
                     data_frame = dict(
                         np.load(
@@ -884,7 +894,9 @@ if __name__ == "__main__":
                         ).items()
                     )
                     np.savez_compressed(DATA_PATH / f"data_{name}.npz", **data_frame)
-                    continue
+                    if mol.charge >= 0:
+                        print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+                        continue
 
             if mol.spin == 0:
                 cc(mol, grids, name, args, evaluate=evaluate)

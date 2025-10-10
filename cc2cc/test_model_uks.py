@@ -20,7 +20,7 @@ def test_model_uks(
     """
     # 2.0 Prepare
     time_ai_start = timer()
-    mdft = pyscf.dft.UKS(mol)
+    mdft = pyscf.dft.UKS(mol).density_fit()
     mdft.xc = "b3lyp"
     mdft.grids = grids
     mdft.verbose = 4
