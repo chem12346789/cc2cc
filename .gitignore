@@ -19,6 +19,7 @@ validate
 /wandb/
 hkqai*.ipynb
 dgx1*.ipynb
+local*.ipynb
 
 *.zip
 *map
