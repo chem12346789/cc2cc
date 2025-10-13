@@ -6,8 +6,6 @@ More details.
 
 # pylint: disable=W0212
 
-import warnings
-import ctypes
 import numpy as np
 from numba import njit
 

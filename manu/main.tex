@@ -168,13 +168,79 @@ We use the transformer \cite{Vas17A5998} as the neural network to learn the func
 % 
 After the training, the neural network can predict the energy of the molecule given the electron density and then can be used to optimize the molecular structure.
 
+\subsection{The architecture of the neural network}
+\begin{figure*}
+	\tikzset{%
+		block/.style={rectangle, draw, fill=blue!20, text centered, rounded corners, minimum height=0.6cm},
+		block1/.style={rectangle, fill=white, text centered, rounded corners, minimum height=0.6cm},
+	}
+	\begin{tikzpicture}[auto, node distance=1.5cm]
+		% We start by placing the blocks
+		\node [block] (input) {${\bm{e}_{\rm{cube}}(\brm{r}_i)}$};
+		\node [block, right=of input] (transformer) {Transformer};
+		\node [block, right=of transformer] (flatten) {Flatten};
+		\node [block, right=of flatten] (linear) {Linear};
+		\node [block, right=of linear, xshift=0.5cm] (output) {MLP};
+		\node [block1, right=of output] (output_final) {};
+		\node [block1, below=of input, yshift=0.5cm] (input1) {};
+		\node [block, below=of transformer, yshift=0.5cm, xshift=1cm] (flatten1) {Extraction};
+		\node [block, below=of flatten, yshift=0.5cm, xshift=1.5cm] (linear1) {Linear};
+		\node [block1, below=of output, yshift=0.5cm] (output1) {};
+		% connecting the blocks
+		\draw [->] (input) -- node {$(N, 27, 4)$} (transformer);
+		\draw [->] (transformer) -- node {$(N, 27, 4)$} (flatten);
+		\draw [->] (flatten) -- node {$(N, 108)$} (linear);
+		\draw [->] (linear) -- node {$(N, 1)$} (output);
+		\draw [->] (output) -- node {$(N, 1)$} (output_final);
+		\draw [->, rounded corners] (input.south) -- (input1.center) -- node {$(N, 27, 4)$} (flatten1);
+		\draw [->] (flatten1) -- node {$(N, 4)$} (linear1);
+		\draw [->, rounded corners] (linear1) -- node {$(N, 1)$} ([xshift=-0.75cm] output1.center) -- ([xshift=-0.75cm] output.center);
+		% \draw [->] (embedding) -- node {$\bm{h}_0$} (transformer);
+		% \draw [->] (transformer) -- node {$\bm{h}_L$} (linear);
+		% \draw [->] (linear) -- node {$E(\brm{r}_i)$} (output);
+	\end{tikzpicture}
+	\caption{
+		% 
+		The architecture of the neural network.
+		% 
+		The transformer we use here is only composed of multilayer of the attention part of the original transformer \cite{Vas17A5998}.
+		%
+		The Extraction block extracts the energy density at the center (${\bm{e}(\brm{r}_i)}$) from the input.
+		% 
+		The MLP block is a multilayer perceptron with two hidden layers, before the MLP block the two inputs are concatenated.
+		%
+	}
+	\label{fig:arch}
+\end{figure*}
+
+The architecture of the neural network is shown in \Fig{fig:arch}.
+%
+The input of the neural network is a set of the energy density ${\bm{e}_{\rm{cube}}(\brm{r}_i)}$ with the size of $(N, 27, 4)$, and the output is the energy density ${E(\brm{r}_i)}$ with the size of $(N, 1)$.
+% 
+N is the number of the grid points in the normal dft procedure.
+%
+\begin{align}
+	\mathbf{r}_{i} =
+	 & (x_{i},y_{i},z_{i})                                                                            \\
+	\bm{e}_{\rm{cube}}(\brm{r}_{i}) =
+	 & \big\{ \bm{e}(\mathbf{r}'_{i}) \text{ for } \mathbf{r}'_{i} \in \mathbf{r}_{i;cube} \big\}.    \\
+	\bm{e}(\brm{r}) =
+	 & (e_{\rm{LDA}}(\brm{r}), e_{\rm{VWN3}}(\brm{r}), e_{\rm{B88}}(\brm{r}), e_{\rm{LYP}}(\brm{r})), \\
+	\mathbf{r}_{i;cube} =
+	 & \big\{ \mathbf{r}'_{i} = (x',y',z') \vert \nl
+	 & x' \in [x_{i}-d,x_{i},x_{i}+d], \nl
+	 & y' \in [y_{i}-d,y_{i},y_{i}+d], \nl
+	 & z' \in [z_{i}-d,z_{i},z_{i}+d] \big\}.
+\end{align}
+
 \subsection{DATASET AND THE LOSS FUNCTION}
 
 The loss function of $E_{\mathrm{target}}$ is defined as
 \begin{align}
 	\label{eq:loss}
-	L_{e} = & \frac{1}{N} \sum_{i}^{N} \Big| E_{\mathrm{target}}(\brm{r}_{i}) - E_{\mathrm{predict}}(\brm{r}_{i}) \Big| \nl
-	        & \quad + \Big| E_{\mathrm{target}} - E_{\mathrm{predict}} \Big|.
+	L_{e} =
+	 & \frac{1}{N_{\rm{atom}}} \Big| \int \d \brm{r}_{i} \big(E_{\mathrm{target}}(\brm{r}_{i}) - E_{\mathrm{predict}}(\brm{r}_{i})\big) \Big| \nl
+	 & \quad + \int \d \brm{r}_{i} \Big| E_{\mathrm{target}}(\brm{r}_{i}) - E_{\mathrm{predict}}(\brm{r}_{i}) \Big|.
 \end{align}
 
 \subsection{Result}
