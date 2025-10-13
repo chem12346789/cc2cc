@@ -4,7 +4,8 @@
 % sd,
 % rsi,
 twocolumn,
-amsmath,amssymb,
+amsmath,
+amssymb,
 groupedaddress,
 % preprint,%
 reprint,%
@@ -123,7 +124,7 @@ reprint,%
 
 
 \title{
-	A molecule is a paragraph and an atom is a word
+	A molecule
 }
 \author{XX}
 
@@ -215,18 +216,18 @@ After the training, the neural network can predict the energy of the molecule gi
 
 The architecture of the neural network is shown in \Fig{fig:arch}.
 %
-The input of the neural network is a set of the energy density ${\bm{e}_{\rm{cube}}(\brm{r}_i)}$ with the size of $(N, 27, 4)$, and the output is the energy density ${E(\brm{r}_i)}$ with the size of $(N, 1)$.
+The input of the neural network is a set of the energy density ${\tilde{\bm{e}}_{\rm{cube}}(\brm{r}_i)}$ with the size of $(N, 27, 4)$, and the output is the energy density ${e(\brm{r}_i)}$ with the size of $(N, 1)$.
 % 
 N is the number of the grid points in the normal dft procedure.
 %
 \begin{align}
 	\mathbf{r}_{i} =
-	 & (x_{i},y_{i},z_{i})                                                                            \\
+	 & (x_{i},y_{i},z_{i})                                                                              \\
 	\bm{e}_{\rm{cube}}(\brm{r}_{i}) =
-	 & \big\{ \bm{e}(\mathbf{r}'_{i}) \text{ for } \mathbf{r}'_{i} \in \mathbf{r}_{i;cube} \big\}.    \\
+	 & \big\{ \bm{e}(\mathbf{r}'_{i}) \text{ for } \mathbf{r}'_{i} \in \mathbf{r}_{i;\rm{cube}} \big\}. \\
 	\bm{e}(\brm{r}) =
-	 & (e_{\rm{LDA}}(\brm{r}), e_{\rm{VWN3}}(\brm{r}), e_{\rm{B88}}(\brm{r}), e_{\rm{LYP}}(\brm{r})), \\
-	\mathbf{r}_{i;cube} =
+	 & (e_{\rm{LDA}}(\brm{r}), e_{\rm{VWN3}}(\brm{r}), e_{\rm{B88}}(\brm{r}), e_{\rm{LYP}}(\brm{r})),   \\
+	\mathbf{r}_{i;\rm{cube}} =
 	 & \big\{ \mathbf{r}'_{i} = (x',y',z') \vert \nl
 	 & x' \in [x_{i}-d,x_{i},x_{i}+d], \nl
 	 & y' \in [y_{i}-d,y_{i},y_{i}+d], \nl
@@ -239,12 +240,38 @@ The loss function of $E_{\mathrm{target}}$ is defined as
 \begin{align}
 	\label{eq:loss}
 	L_{e} =
-	 & \frac{1}{N_{\rm{atom}}} \Big| \int \d \brm{r}_{i} \big(E_{\mathrm{target}}(\brm{r}_{i}) - E_{\mathrm{predict}}(\brm{r}_{i})\big) \Big| \nl
-	 & \quad + \int \d \brm{r}_{i} \Big| E_{\mathrm{target}}(\brm{r}_{i}) - E_{\mathrm{predict}}(\brm{r}_{i}) \Big|.
+	 & \sqrt{N_{\rm{atom}}} \Big| \int \d \brm{r}_{i} \big(e_{\mathrm{target}}(\brm{r}_{i}) - e_{\mathrm{predict}}(\brm{r}_{i})\big) \Big| \nl
+	 & + \lambda_{\rm{ABS}} \sqrt{N_{\rm{atom}}} \int \d \brm{r}_{i} \Big| e_{\mathrm{target}}(\brm{r}_{i}) - e_{\mathrm{predict}}(\brm{r}_{i}) \Big| \nl
+	 & + \lambda_{\rm{AE}} \sqrt{N_{\rm{atom}}} \Big| E^{\rm{AE}}_{\mathrm{target}}(\brm{r}_{i}) - E^{\rm{AE}}_{\mathrm{predict}}(\brm{r}_{i}) \Big| .
 \end{align}
+where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}_{\mathrm{predict}}$ and $E^{\rm{AE}}_{\mathrm{target}}$ is the atomic energy of the predicted and target values, respectively.
+%
 
 \subsection{Result}
 
 \bibliography{./ref}
+
+\pagebreak
+
+\appendix
+
+\section{training details}
+\subsection{dataset}
+
+The dataset we use are listed in \Tab{tab:dataset}.
+\begin{table}
+	\caption{
+		The dataset we use.
+		%
+		\label{tab:dataset}
+	}
+	\begin{ruledtabular}
+		\begin{tabular}{lcccccc}
+			\textrm{Dataset} & \textrm{Size} & \textrm{Heavy Atoms} \\
+			\colrule
+			W4-11            & 100           & $\leq 2$             \\
+		\end{tabular}
+	\end{ruledtabular}
+\end{table}
 
 \end{document}
