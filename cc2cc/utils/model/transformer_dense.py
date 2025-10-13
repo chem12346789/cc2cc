@@ -61,7 +61,7 @@ class Model(nn.Module):
 
         self.densenet_out = DenseNet(
             d_model=2,
-            mlp=2,
+            mlp=16,
             depth=3,
             if_skip_connection_dense=1,
             drop_rate=0,
