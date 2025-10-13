@@ -61,11 +61,12 @@ class TestDataDFT:
             data_frame = {"mol_corr": mol.atom_coords()}
 
         if_update = False
+        dm1_dft = data_frame["dm1_dft"] if "dm1_dft" in data_frame else None
         if f"e_dft-{xc_code_disp}" not in data_frame:
             if mol.spin == 0:
-                data_frame_ks = self.test_mol_rks(xc_code_disp)
+                data_frame_ks = self.test_mol_rks(dm1_dft, xc_code_disp)
             else:
-                data_frame_ks = self.test_mol_uks(xc_code_disp)
+                data_frame_ks = self.test_mol_uks(dm1_dft, xc_code_disp)
             data_frame.update(data_frame_ks)
             if_update = True
 
@@ -77,9 +78,9 @@ class TestDataDFT:
                 "Please check the coordinates or regenerate the data."
             )
             if mol.spin == 0:
-                data_frame_ks = self.test_mol_rks(xc_code_disp)
+                data_frame_ks = self.test_mol_rks(dm1_dft, xc_code_disp)
             else:
-                data_frame_ks = self.test_mol_uks(xc_code_disp)
+                data_frame_ks = self.test_mol_uks(dm1_dft, xc_code_disp)
             data_frame.update(data_frame_ks)
 
         self.dm1_dft = data_frame["dm1_dft"]
@@ -92,7 +93,7 @@ class TestDataDFT:
             print(f"Data for {name} saved to file.")
             np.savez_compressed(path_to_data, **data_frame)
 
-    def test_mol_rks(self, xc_code_disp):
+    def test_mol_rks(self, dm1_dft, xc_code_disp):
         """
         Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected RKS molecule.
         """
@@ -102,7 +103,10 @@ class TestDataDFT:
         mdft.verbose = 4
         mdft.grids.level = 4
         mdft.level_shift = 0.1
-        mdft.kernel()
+        if dm1_dft is None:
+            mdft.kernel()
+        else:
+            mdft.kernel(dm0=dm1_dft)
         if mdft.converged is False:
             raise ValueError("RKS not converged.")
         dm1_dft = mdft.make_rdm1(ao_repr=True)
@@ -126,7 +130,7 @@ class TestDataDFT:
             dict_.update({"dm1_dft": dm1_dft})
         return dict_
 
-    def test_mol_uks(self, xc_code_disp):
+    def test_mol_uks(self, dm1_dft, xc_code_disp):
         """
         Generate 1-RDM, energy, dipole, and gradient for the dft dispersion-corrected UKS molecule.
         """
@@ -136,7 +140,7 @@ class TestDataDFT:
         mdft.verbose = 4
         mdft.grids.level = 4
         mdft.level_shift = 0.1
-        mdft.kernel()
+        mdft.kernel(dm0=dm1_dft)
         if mdft.converged is False:
             raise ValueError("UKS not converged.")
         dm1_dft = mdft.make_rdm1(ao_repr=True)
