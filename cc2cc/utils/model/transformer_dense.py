@@ -59,14 +59,14 @@ class Model(nn.Module):
             dense_actv="gelu",
         )
 
-        # self.densenet_out = DenseNet(
-        #     d_model=2,
-        #     mlp=2,
-        #     depth=2,
-        #     if_skip_connection_dense=1,
-        #     drop_rate=0,
-        #     dense_actv="gelu",
-        # )
+        self.densenet_out = DenseNet(
+            d_model=2,
+            mlp=16,
+            depth=3,
+            if_skip_connection_dense=1,
+            drop_rate=0,
+            dense_actv="gelu",
+        )
 
     def forward(self, x):
         """
@@ -106,7 +106,9 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
         # SHAPE x_center = (batch, 1)
 
-        # x_in = torch.cat((x, x_center), dim=-1)
-        # x = self.densenet_out(x_in)
+        # return b3lyp_ene * (x + x_center)
 
-        return b3lyp_ene * (x + x_center)
+        x_in = torch.cat((x, x_center), dim=-1)
+        x_in = self.densenet_out(x_in)
+
+        return b3lyp_ene * x_in
