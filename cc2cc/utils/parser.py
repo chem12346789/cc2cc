@@ -347,6 +347,14 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--optimizer",
+        type=str,
+        default="AdamW",
+        choices=["AdamW", "Adafactor"],
+        help="Optimizer for the training. Default is AdamW.",
+    )
+
+    parser.add_argument(
         "--scheduler",
         type=str,
         default="constant",
@@ -547,7 +555,8 @@ def add_args(parser: argparse.ArgumentParser):
     print(f"Max norm: {args.max_norm}")
     print(f"Eval step: {args.eval_step}")
     print(f"Weight decay: {args.weight_decay}")
-    print(f"Scheduler: {args.scheduler}")
+    print(f"Random seed: {args.seed}")
+    print(f"Optimizer: {args.optimizer}")
     print(f"Loss multiplier abs: {args.loss_multiplier_abs}")
     print(f"Loss multiplier atomic: {args.loss_multiplier_atomic}")
     print(f"Train atom: {args.train_atom}")

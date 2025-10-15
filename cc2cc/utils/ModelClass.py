@@ -166,11 +166,18 @@ class ModelClass:
         """
         Initialize the optimizer, scheduler, loss function and checkpoint_dir.
         """
-        self.optimizer = optim.AdamW(
-            self.model.parameters(),
-            lr=self.args.lr,
-            weight_decay=self.args.weight_decay,
-        )
+        if self.args.optimizer == "AdamW":
+            self.optimizer = optim.AdamW(
+                self.model.parameters(),
+                lr=self.args.lr,
+                weight_decay=self.args.weight_decay,
+            )
+        elif self.args.optimizer == "Adafactor":
+            self.optimizer = optim.Adafactor(
+                self.model.parameters(),
+                lr=self.args.lr,
+                weight_decay=self.args.weight_decay,
+            )
 
         if self.args.scheduler == "cosine":
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
