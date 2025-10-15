@@ -1,0 +1,56 @@
+This is BibTeX, Version 0.99d (TeX Live 2023/Debian)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: main.aux
+The style file: apsrev.bst
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Database file #1: ref.bib
+Warning--I didn't find a database entry for "Koh65A1133"
+Warning--I didn't find a database entry for "Hoh64B864"
+Warning--I didn't find a database entry for "Vas17A5998"
+Warning--I didn't find a database entry for "Vos80A789"
+Warning--I didn't find a database entry for "Bee88A785"
+Warning--I didn't find a database entry for "Lee88A785"
+Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+You've used 3 entries,
+            3411 wiz_defined-function locations,
+            1189 strings with 10946 characters,
+and the built_in function-call counts, 2389 in all, are:
+= -- 128
+> -- 91
+< -- 12
++ -- 78
+- -- 22
+* -- 331
+:= -- 251
+add.period$ -- 3
+call.type$ -- 3
+change.case$ -- 12
+chr.to.int$ -- 3
+cite$ -- 3
+duplicate$ -- 209
+empty$ -- 191
+format.name$ -- 55
+if$ -- 441
+int.to.chr$ -- 1
+int.to.str$ -- 4
+missing$ -- 32
+newline$ -- 24
+num.names$ -- 9
+pop$ -- 57
+preamble$ -- 1
+purify$ -- 12
+quote$ -- 0
+skip$ -- 87
+stack$ -- 0
+substring$ -- 74
+swap$ -- 173
+text.length$ -- 11
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 18
+warning$ -- 0
+while$ -- 9
+width$ -- 0
+write$ -- 44
+(There were 6 warnings)

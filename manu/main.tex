@@ -12,7 +12,7 @@ reprint,%
 % author-year,%
 % author-numerical,%
 % Conference Proceedings
-]{revtex4-2}
+]{revtex4}
 
 \usepackage{bm}
 \usepackage{listings}
@@ -222,46 +222,66 @@ N is the number of the grid points in the normal dft procedure.
 %
 \begin{align}
 	\mathbf{r}_{i} =
-	 & (x_{i},y_{i},z_{i})                                                                              \\
-	\bm{e}_{\rm{cube}}(\brm{r}_{i}) =
-	 & \big\{ \bm{e}(\mathbf{r}'_{i}) \text{ for } \mathbf{r}'_{i} \in \mathbf{r}_{i;\rm{cube}} \big\}. \\
-	\bm{e}(\brm{r}) =
-	 & (e_{\rm{LDA}}(\brm{r}), e_{\rm{VWN3}}(\brm{r}), e_{\rm{B88}}(\brm{r}), e_{\rm{LYP}}(\brm{r})),   \\
+	 & (x_{i},y_{i},z_{i})                                                                                 \\
+	\tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}) =
+	 & \big\{ \tilde{e}(\mathbf{r}'_{i}) \text{ for } \mathbf{r}'_{i} \in \mathbf{r}_{i;\rm{cube}} \big\}. \\
+	\tilde{e}(\brm{r}) =
+	 & (e_{\rm{LDA}}(\brm{r}), e_{\rm{VWN3}}(\brm{r}), e_{\rm{B88}}(\brm{r}), e_{\rm{LYP}}(\brm{r})),      \\
 	\mathbf{r}_{i;\rm{cube}} =
 	 & \big\{ \mathbf{r}'_{i} = (x',y',z') \vert \nl
 	 & x' \in [x_{i}-d,x_{i},x_{i}+d], \nl
 	 & y' \in [y_{i}-d,y_{i},y_{i}+d], \nl
 	 & z' \in [z_{i}-d,z_{i},z_{i}+d] \big\}.
 \end{align}
+The $\tilde{e}(\brm{r})$ is the energy density calculated by the LDA \cite{Koh65A1133}, VWN3 \cite{Vos80A789}, B88 \cite{Bee88A785}, and LYP \cite{Lee88A785} functionals.
+% 
+The $\mathbf{r}_{i;\rm{cube}}$ is a cube around the grid point $\mathbf{r}_{i}$ with the size of $3 \times 3 \times 3$ and the distance between two adjacent grid points is $d$.
+%
+This means that for each grid point $\mathbf{r}_{i}$, we consider a small region around it to capture the local environment and compute the energy density more accurately.
+% 
+We refer to the grid points within the cube, excluding the central point, as auxiliary grid points. Details of their contributions to the energy density are provided in the Appendix.
 
 \subsection{DATASET AND THE LOSS FUNCTION}
+The dataset we use to train the neural network is listed in the Appendix.
+%
+We use 551 molecules which consistent of less than 3 heavy atoms as the training set and 115 molecules as the validation set.
+% 
+In this article, we use the CCSD(T)/Def2-QZVP and CCSD(T)/Ma-Def2-QZVP \cite{weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} as the target energy of the molecules.
 
-The loss function of $E_{\mathrm{target}}$ is defined as
+
+The loss function is defined as
 \begin{align}
 	\label{eq:loss}
 	L_{e} =
-	 & \sqrt{N_{\rm{atom}}} \Big| \int \d \brm{r}_{i} \big(e_{\mathrm{target}}(\brm{r}_{i}) - e_{\mathrm{predict}}(\brm{r}_{i})\big) \Big| \nl
-	 & + \lambda_{\rm{ABS}} \sqrt{N_{\rm{atom}}} \int \d \brm{r}_{i} \Big| e_{\mathrm{target}}(\brm{r}_{i}) - e_{\mathrm{predict}}(\brm{r}_{i}) \Big| \nl
-	 & + \lambda_{\rm{AE}} \sqrt{N_{\rm{atom}}} \Big| E^{\rm{AE}}_{\mathrm{target}}(\brm{r}_{i}) - E^{\rm{AE}}_{\mathrm{predict}}(\brm{r}_{i}) \Big| .
+	 & \lambda_{\rm{RE}} \Big( \sqrt{N_{\rm{atom}}} \int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \Big)^2 \nl
+	 & + \lambda_{\rm{ABS}} \Big( \sqrt{N_{\rm{atom}}} \int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2 \nl
+	 & + \lambda_{\rm{AE}} \Big( \sqrt{N_{\rm{atom}}} \bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2 .
 \end{align}
-where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}_{\mathrm{predict}}$ and $E^{\rm{AE}}_{\mathrm{target}}$ is the atomic energy of the predicted and target values, respectively.
+where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, respectively.
 %
+The $\lambda_{\rm{RE}}$, $\lambda_{\rm{ABS}}$, and $\lambda_{\rm{AE}}$ are the weights of the three terms in the loss function.
+%
+The first term is the relative error in the total energy, the second term is the absolute error in the total energy, and the third term is the error in the atomic energy.
+
+
 
 \subsection{Result}
 
-\bibliography{./ref}
+\bibliography{ref}
 
-\pagebreak
+\clearpage
+\newpage
 
 \appendix
 
 \section{training details}
 \subsection{dataset}
 
-The dataset we use are listed in \Tab{tab:dataset}.
+The dataset we use are listed in \Tab{tab:dataset}, all the Datasets are obtained from the GMTKN55 datasets \cite{goerigkLookDensityFunctional2017}.
+%
 \begin{table}
 	\caption{
-		The dataset we use.
+		The training and validation dataset.
 		%
 		\label{tab:dataset}
 	}
@@ -270,8 +290,11 @@ The dataset we use are listed in \Tab{tab:dataset}.
 			\textrm{Dataset} & \textrm{Size} & \textrm{Heavy Atoms} \\
 			\colrule
 			W4-11            & 100           & $\leq 2$             \\
+			atomic           & 100           & $1$                  \\
 		\end{tabular}
 	\end{ruledtabular}
 \end{table}
+
+\section{Auxiliary grid points}
 
 \end{document}

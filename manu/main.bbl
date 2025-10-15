@@ -1,0 +1,41 @@
+\begin{thebibliography}{3}
+\expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
+\expandafter\ifx\csname bibnamefont\endcsname\relax
+  \def\bibnamefont#1{#1}\fi
+\expandafter\ifx\csname bibfnamefont\endcsname\relax
+  \def\bibfnamefont#1{#1}\fi
+\expandafter\ifx\csname citenamefont\endcsname\relax
+  \def\citenamefont#1{#1}\fi
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
+\providecommand{\bibinfo}[2]{#2}
+\providecommand{\eprint}[2][]{\url{#2}}
+
+\bibitem[{\citenamefont{Weigend and
+  Ahlrichs}(2005)}]{weigendBalancedBasisSets2005}
+\bibinfo{author}{\bibfnamefont{F.}~\bibnamefont{Weigend}} \bibnamefont{and}
+  \bibinfo{author}{\bibfnamefont{R.}~\bibnamefont{Ahlrichs}},
+  \bibinfo{journal}{Phys. Chem. Chem. Phys.} \textbf{\bibinfo{volume}{7}},
+  \bibinfo{pages}{3297} (\bibinfo{year}{2005}).
+
+\bibitem[{\citenamefont{Zheng et~al.}(2011)\citenamefont{Zheng, Xu, and
+  Truhlar}}]{zhengMinimallyAugmentedKarlsruhe2011-02}
+\bibinfo{author}{\bibfnamefont{J.}~\bibnamefont{Zheng}},
+  \bibinfo{author}{\bibfnamefont{X.}~\bibnamefont{Xu}}, \bibnamefont{and}
+  \bibinfo{author}{\bibfnamefont{D.~G.} \bibnamefont{Truhlar}},
+  \bibinfo{journal}{Theor Chem Acc} \textbf{\bibinfo{volume}{128}},
+  \bibinfo{pages}{295} (\bibinfo{year}{2011}).
+
+\bibitem[{\citenamefont{Goerigk et~al.}(2017)\citenamefont{Goerigk, Hansen,
+  Bauer, Ehrlich, Najibi, and Grimme}}]{goerigkLookDensityFunctional2017}
+\bibinfo{author}{\bibfnamefont{L.}~\bibnamefont{Goerigk}},
+  \bibinfo{author}{\bibfnamefont{A.}~\bibnamefont{Hansen}},
+  \bibinfo{author}{\bibfnamefont{C.}~\bibnamefont{Bauer}},
+  \bibinfo{author}{\bibfnamefont{S.}~\bibnamefont{Ehrlich}},
+  \bibinfo{author}{\bibfnamefont{A.}~\bibnamefont{Najibi}}, \bibnamefont{and}
+  \bibinfo{author}{\bibfnamefont{S.}~\bibnamefont{Grimme}},
+  \bibinfo{journal}{Phys. Chem. Chem. Phys.} \textbf{\bibinfo{volume}{19}},
+  \bibinfo{pages}{32184} (\bibinfo{year}{2017}).
+
+\end{thebibliography}
