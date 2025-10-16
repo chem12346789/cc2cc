@@ -876,14 +876,7 @@ if __name__ == "__main__":
 
             if args.if_continue:
                 if evaluate is False:
-                    if mol.spin == 0:
-                        if mol.nao >= 200:
-                            print(
-                                f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}"
-                            )
-                            error_molecule.append(name)
-                            continue
-                    else:
+                    if mol.spin != 0:
                         if mol.nao >= 140:
                             print(
                                 f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}"
