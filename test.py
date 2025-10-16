@@ -69,7 +69,7 @@ if __name__ == "__main__":
             continue
 
         if args.if_continue:
-            if ("name" in data_record.df_dict.keys()) and (
+            if ("name" in data_record.df_dict) and (
                 name in data_record.df_dict["name"]
             ):
                 print(f"SKIP: {name}")
