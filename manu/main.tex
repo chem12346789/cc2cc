@@ -12,7 +12,7 @@ reprint,%
 % author-year,%
 % author-numerical,%
 % Conference Proceedings
-]{revtex4}
+]{revtex4-2}
 
 \usepackage{bm}
 \usepackage{listings}
@@ -142,7 +142,7 @@ reprint,%
 \allowdisplaybreaks
 
 \section{Introduction}
-The well-known Kohn--Sham equation \cite{Koh65A1133} is
+The well-known Kohn--Sham equation \cite{kohnSelfConsistentEquationsIncluding1965-11-15} is
 \begin{align}
 	\label{eq:KS}
 	\Big( - \frac{1}{2} \nabla^{2} + v_{\mathrm{ext}} + v_{\mathrm{H}} + v_{\mathrm{XC}}\Big) \phi_{i} = \epsilon_{i} \phi_{i}.
@@ -150,24 +150,25 @@ The well-known Kohn--Sham equation \cite{Koh65A1133} is
 % 
 Where $\phi_{i}$ is the Kohn--Sham orbital, $\epsilon_{i}$ is the Kohn--Sham orbital energy, $v_{\mathrm{ext}}$ is the external potential (such as the electrostatic potential of nuclei), $v_{\mathrm{H}}$ is the electrostatic potential of the electron, and $v_{\mathrm{XC}}$ is the exchange-correlation potential.
 % 
-According to the Hohenberg-Kohn theorem \cite{Hoh64B864}, the external potential, $v_{\mathrm{ext}}$ is the unique functional of the ground-state electron density, $\rho = n_{i} \vert \phi_{i} \vert^{2}$, where $n_{i}$ is the occupation number of the Kohn-Sham orbital.
-% 
-So, once this unique functional is obtained, the Kohn-Sham equation can be solved iteratively to obtain the electron density and the other properties of the molecule.
-
-One of the challenging tasks of the DFT calculation is to find the unique functional between the exact potential $v_{\mathrm{XC}}$ and the electron density $\rho$.
-% 
-In this article, we combine the machine learning (ML) method and density functional theory (DFT) to predict the properties of the molecules such as the energy, the dipole, the bond length, the bond dissociation energy, the band gap, and so on.
-
-Among various methods to solve \eq{eq:KS}, the self-consistent field (SCF) method is widely used.
+According to the Hohenberg-Kohn theorem \cite{hohenbergInhomogeneousElectronGas1964-11-09}, exchange-correlation energy density $e_{\mathrm{XC}}$ is the unique functional of the ground-state electron density, $\rho = n_{i} \vert \phi_{i} \vert^{2}$, where $n_{i}$ is the occupation number of the Kohn-Sham orbital.
 %
-In the SCF method, the Kohn-Sham equation is solved iteratively utilizing the so-called potential term $v_{\mathrm{XC}} = \delta E_{\mathrm{XC}} / \delta \rho$, where $E_{\mathrm{XC}}$ is the exchange-correlation energy functional.
+Then, the Kohn-Sham equation is solved iteratively utilizing the so-called potential term $v_{\mathrm{XC}} = \delta E_{\mathrm{XC}} / \delta \rho$.
 % 
+So, once this unique functional is obtained, the properties of the molecules can be calculated accurately and efficiently.
+%
+This is the main idea of the density functional theory (DFT) \cite{parrDensityFunctionalTheory1980}.
+
+One of the challenging tasks of the DFT calculation is to find the unique functional between the exact exchange-correlation energy density $e_{\mathrm{XC}}$ and the electron density $\rho$.
+% 
+Numerous approximations have been proposed for this functional, including early local-density approximation functionals \cite{parrDensityFunctionalTheory1980}, hybrid functionals \cite{perdewAtomsMoleculesSolids1992-09-15}, and the rapidly growing class of machine-learning (ML) functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07}.
+
+In this article, we combine the machine learning method and density functional theory (DFT) to predict the properties of the molecules such as the energy, the dipole, the bond length, the bond dissociation energy, the band gap, and so on.
 
 
 \section{The NEURAL NETWORK}
-We use the transformer \cite{Vas17A5998} as the neural network to learn the functional between the electron density and the energy density of the molecule.
+We use the transformer \cite{vaswaniAttentionAllYou2023-08-02} as the neural network to learn the functional between the electron density and the energy density of the molecule.
 % 
-After the training, the neural network can predict the energy of the molecule given the electron density and then can be used to optimize the molecular structure.
+After the training, the neural network can predict the energy of the molecule given the electron density and then can be used to optimize the electron density iteratively using the self-consistent field (SCF) method.
 
 \subsection{The architecture of the neural network}
 \begin{figure*}
@@ -177,25 +178,29 @@ After the training, the neural network can predict the energy of the molecule gi
 	}
 	\begin{tikzpicture}[auto, node distance=1.5cm]
 		% We start by placing the blocks
-		\node [block] (input) {${\bm{e}_{\rm{cube}}(\brm{r}_i)}$};
+		\node [block1] (input-1) {};
+		\node [block1, right=of input-1, xshift=-1cm] (input) {};
 		\node [block, right=of input] (transformer) {Transformer};
 		\node [block, right=of transformer] (flatten) {Flatten};
 		\node [block, right=of flatten] (linear) {Linear};
-		\node [block, right=of linear, xshift=0.5cm] (output) {MLP};
+		\node [block, right=of linear, xshift=0.2cm] (output) {MLP};
 		\node [block1, right=of output] (output_final) {};
 		\node [block1, below=of input, yshift=0.5cm] (input1) {};
-		\node [block, below=of transformer, yshift=0.5cm, xshift=1cm] (flatten1) {Extraction};
-		\node [block, below=of flatten, yshift=0.5cm, xshift=1.5cm] (linear1) {Linear};
+		\node [block, below=of transformer, yshift=0.5cm] (flatten1) {Extraction};
+		\node [block, below=of flatten, yshift=0.5cm] (transformer1) {Transformer};
+		\node [block, below=of linear, yshift=0.5cm] (linear1) {Linear};
 		\node [block1, below=of output, yshift=0.5cm] (output1) {};
 		% connecting the blocks
-		\draw [->] (input) -- node {$(N, 27, 4)$} (transformer);
+		\draw [-] (input-1) -- node[xshift=0.625cm] {$(N, 27, 4)$} (input.center);
+		\draw [->] (input.center) -- (transformer);
 		\draw [->] (transformer) -- node {$(N, 27, 4)$} (flatten);
 		\draw [->] (flatten) -- node {$(N, 108)$} (linear);
-		\draw [->] (linear) -- node {$(N, 1)$} (output);
+		\draw [->] (linear) -- node[xshift=-0.125cm] {$(N, 1)$} (output);
 		\draw [->] (output) -- node {$(N, 1)$} (output_final);
-		\draw [->, rounded corners] (input.south) -- (input1.center) -- node {$(N, 27, 4)$} (flatten1);
-		\draw [->] (flatten1) -- node {$(N, 4)$} (linear1);
-		\draw [->, rounded corners] (linear1) -- node {$(N, 1)$} ([xshift=-0.75cm] output1.center) -- ([xshift=-0.75cm] output.center);
+		\draw [->, rounded corners] ([xshift=1.25cm] input.center) -- ([xshift=1.25cm] input1.center) -- (flatten1);
+		\draw [->] (flatten1) -- node {$(N, 4)$} (transformer1);
+		\draw [->] (transformer1) -- node {$(N, 4)$} (linear1);
+		\draw [->, rounded corners] (linear1) -- node[xshift=0.05cm] {$(N, 1)$} ([xshift=-0.75cm] output1.center) -- ([xshift=-0.75cm] output.center);
 		% \draw [->] (embedding) -- node {$\bm{h}_0$} (transformer);
 		% \draw [->] (transformer) -- node {$\bm{h}_L$} (linear);
 		% \draw [->] (linear) -- node {$E(\brm{r}_i)$} (output);
@@ -204,7 +209,7 @@ After the training, the neural network can predict the energy of the molecule gi
 		% 
 		The architecture of the neural network.
 		% 
-		The transformer we use here is only composed of multilayer of the attention part of the original transformer \cite{Vas17A5998}.
+		The transformer we use here is only composed of multilayer of the scaled dot-product attention part of the original transformer \cite{vaswaniAttentionAllYou2023-08-02}.
 		%
 		The Extraction block extracts the energy density at the center (${\bm{e}(\brm{r}_i)}$) from the input.
 		% 
@@ -233,29 +238,34 @@ N is the number of the grid points in the normal dft procedure.
 	 & y' \in [y_{i}-d,y_{i},y_{i}+d], \nl
 	 & z' \in [z_{i}-d,z_{i},z_{i}+d] \big\}.
 \end{align}
-The $\tilde{e}(\brm{r})$ is the energy density calculated by the LDA \cite{Koh65A1133}, VWN3 \cite{Vos80A789}, B88 \cite{Bee88A785}, and LYP \cite{Lee88A785} functionals.
+The $\tilde{e}(\brm{r})$ is the energy density calculated by the 4 functionals (LDA, VWN3, B88 and LYP) from the original B3LYP functional \cite{perdewAtomsMoleculesSolids1992-09-15}.
 % 
 The $\mathbf{r}_{i;\rm{cube}}$ is a cube around the grid point $\mathbf{r}_{i}$ with the size of $3 \times 3 \times 3$ and the distance between two adjacent grid points is $d$.
 %
 This means that for each grid point $\mathbf{r}_{i}$, we consider a small region around it to capture the local environment and compute the energy density more accurately.
 % 
 We refer to the grid points within the cube, excluding the central point, as auxiliary grid points. Details of their contributions to the energy density are provided in the Appendix.
+% 
+The output of the neural network is the energy density at the grid point $\mathbf{r}_{i}$, denoted as $e(\brm{r}_{i})$.
+% 
+The total exchange-correlation energy is obtained by integrating the energy density over the entire grid.
 
 \subsection{DATASET AND THE LOSS FUNCTION}
 The dataset we use to train the neural network is listed in the Appendix.
 %
-We use 551 molecules which consistent of less than 3 heavy atoms as the training set and 115 molecules as the validation set.
+We use 551 molecules which consistent of less than 3 heavy atoms as the training set and 115 molecules contain 4-5 heavy atoms as the validation set.
 % 
-In this article, we use the CCSD(T)/Def2-QZVP and CCSD(T)/Ma-Def2-QZVP \cite{weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} as the target energy of the molecules.
-
+In this article, we use the CCSD(T)/Def2-QZVP (except the anions) and CCSD(T)/Ma-Def2-QZVP (the anions) \cite{bartlettCoupledclusterTheoryQuantum2007-02-22,weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} to calculate the electron density and the energy density of the molecules.
+%
+The electron density will be used as the calculation of the input of the neural network and the energy density will be used as the target of the neural network.
 
 The loss function is defined as
 \begin{align}
 	\label{eq:loss}
 	L_{e} =
-	 & \lambda_{\rm{RE}} \Big( \sqrt{N_{\rm{atom}}} \int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \Big)^2 \nl
-	 & + \lambda_{\rm{ABS}} \Big( \sqrt{N_{\rm{atom}}} \int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2 \nl
-	 & + \lambda_{\rm{AE}} \Big( \sqrt{N_{\rm{atom}}} \bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2 .
+	 & \lambda_{\rm{RE}} N_{\rm{atom}} \Big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \Big)^2 \nl
+	 & + \lambda_{\rm{ABS}} N_{\rm{atom}} \Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2 \nl
+	 & + \lambda_{\rm{AE}} N_{\rm{atom}} \Big(\bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2 .
 \end{align}
 where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, respectively.
 %
@@ -263,9 +273,10 @@ The $\lambda_{\rm{RE}}$, $\lambda_{\rm{ABS}}$, and $\lambda_{\rm{AE}}$ are the w
 %
 The first term is the relative error in the total energy, the second term is the absolute error in the total energy, and the third term is the error in the atomic energy.
 
+\subsection{compare with other machine learning functionals}
+The main difference between our method and other machine learning functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07} is that we use the energy density as the target of the neural network instead of the total energy.
 
-
-\subsection{Result}
+\section{Result}
 
 \bibliography{ref}
 
@@ -276,24 +287,31 @@ The first term is the relative error in the total energy, the second term is the
 
 \section{training details}
 \subsection{dataset}
-
-The dataset we use are listed in \Tab{tab:dataset}, all the Datasets are obtained from the GMTKN55 datasets \cite{goerigkLookDensityFunctional2017}.
-%
-\begin{table}
+\begin{table*}
 	\caption{
 		The training and validation dataset.
 		%
 		\label{tab:dataset}
 	}
 	\begin{ruledtabular}
-		\begin{tabular}{lcccccc}
-			\textrm{Dataset} & \textrm{Size} & \textrm{Heavy Atoms} \\
+		\begin{tabular}{lcccc}
+			   & Original Dataset & Size & Number of heavy atoms & Number of hydrogen atoms \\
 			\colrule
-			W4-11            & 100           & $\leq 2$             \\
-			atomic           & 100           & $1$                  \\
+			A  & GMTKN55          & 100  & $1$                   & $0$                      \\
+			B  & W4-11            & 100  & $1$                   & $>0$                     \\
+			C  & W4-11            & 100  & $2$                   & $>0$                     \\
+			A' & GMTKN55          & 100  & $4$                   & $>0$  and $<4$           \\
+			B' & GMTKN55          & 100  & $5$                   & $>0$  and $<3$           \\
+			C' & GMTKN55          & 100  & $6$                   & $>0$  and $<3$           \\
 		\end{tabular}
 	\end{ruledtabular}
-\end{table}
+\end{table*}
+
+The dataset we use are listed in \Tab{tab:dataset}, all the Datasets are obtained from the GMTKN55 datasets \cite{goerigkLookDensityFunctional2017}.
+%
+In this article, we use the electron density and energy density from CCSD(T)/Def2-QZVP (except the anions) and CCSD(T)/Ma-Def2-QZVP (the anions) \cite{bartlettCoupledclusterTheoryQuantum2007-02-22,weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} as the input and target of the molecules.
+%
+This leads to a significant label error, which is estimated to be 2.33 kcal/mol as the mean absolute error (MAE) for the W4-11 dataset.
 
 \section{Auxiliary grid points}
 
