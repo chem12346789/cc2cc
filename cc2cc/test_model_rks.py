@@ -35,13 +35,22 @@ def test_model_rks(
     mdft.kernel()
     # mdft.kernel(dm0=test_data.dm1_dft)
     if mdft.converged is False:
-        print("RKS not converged.")
-        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=0.5)
-        mdft.max_cycle = 150
+        print("RKS not converged. First try.")
+        mdft.diis_damp = 0.5
         mdft.kernel()
         if mdft.converged is False:
-            raise ValueError("RKS not converged.")
-
+            print("RKS not converged. Second try.")
+            mdft.conv_tol = 1e-6
+            mdft.diis_damp = 0.0
+            pyscf.scf.addons.dynamic_level_shift_(mdft, factor=0.5)
+            mdft.kernel()
+            if mdft.converged is False:
+                print("RKS not converged. Third try.")
+                mdft.level_shift = 0.0
+                mdft = mdft.newton()
+                mdft.kernel()
+                if mdft.converged is False:
+                    raise ValueError("RKS not converged.")
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
 
