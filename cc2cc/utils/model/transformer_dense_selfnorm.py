@@ -73,6 +73,11 @@ class Model(nn.Module):
         # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 
+        # Apply self-normalization
+        b3lyp_rmsd = torch.sqrt(torch.mean(b3lyp_ene**2))
+        x = x / b3lyp_rmsd
+        x_center = x_center / b3lyp_rmsd
+
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
         # SHAPE x = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
@@ -97,4 +102,4 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
         # SHAPE x_center = (batch, 1)
 
-        return b3lyp_ene * (x + x_center)
+        return b3lyp_ene * x * x_center

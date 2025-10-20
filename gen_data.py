@@ -13,20 +13,6 @@ from cc2cc.gen_ucc import ucc
 
 
 train_str_list = [
-    # "W4_11-ssh",
-    # "W4_11-h2cn",
-    # "W4_11-ch2ch",
-    # "W4_11-ch2nh",
-    # "W4_11-sih3f",
-    # "W4_11-c2h4",
-    # "W4_11-ch2nh2",
-    # "W4_11-ch3nh",
-    # "W4_11-methanol",
-    # "W4_11-n2h4",
-    # "W4_11-ch3nh2",
-    # "W4_11-b2h6",
-    # "W4_11-c2h6",
-    # "W4_11-si2h6",
     # "molecule0-W4_11",
     # "AHB21-1A",
     # "AHB21-4A",
@@ -40,7 +26,7 @@ train_str_list = [
     # "CHB6-24A",
     # "DIPCS10-be_2+",
     # "DIPCS10-mg_2+",
-    "G21EA-EA_c-",
+    # "G21EA-EA_c-",
     # "G21EA-EA_o-",
     # "G21EA-EA_p-",
     # "G21EA-EA_s-",
@@ -848,6 +834,20 @@ if __name__ == "__main__":
         name_mol_list, evaluate = eval_str_list[args.training_cycle :: 3], True
     else:
         name_mol_list, evaluate = train_str_list[args.training_cycle :: 3], False
+    name_mol_list = [
+        "W4_11-ssh",
+        "W4_11-h2cn",
+        "W4_11-ch2ch",
+        "W4_11-ch2nh2",
+        "W4_11-ch3nh",
+        "W4_11-n2h4",
+        "W4_11-ch3nh2",
+        "W4_11-b2h6",
+        "W4_11-c2h6",
+        "W4_11-si2h6",
+    ]
+    evaluate = False
+
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
 
@@ -881,14 +881,14 @@ if __name__ == "__main__":
             grids = Grid(mol, args.grid_level)
 
             if args.if_continue:
-                if evaluate is False:
-                    if mol.spin != 0:
-                        if mol.nao >= 140:
-                            print(
-                                f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}"
-                            )
-                            error_molecule.append(name)
-                            continue
+                # if evaluate is False:
+                #     if mol.spin != 0:
+                #         if mol.nao >= 140:
+                #             print(
+                #                 f"Nao too large: {name_mol} {extend_atom} {extend_xyz} {distance}"
+                #             )
+                #             error_molecule.append(name)
+                #             continue
 
                 if (DATA_PATH / f"data_{name}.npz").exists():
                     # refresh modified time of the file
