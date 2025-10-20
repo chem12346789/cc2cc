@@ -5,6 +5,7 @@ from timeit import default_timer as timer
 import pyscf
 
 from cc2cc.utils import get_veff_modified_uks, get_veff_grad_modified_uks
+from cc2cc.utils import TestDataDFT
 
 
 def test_model_uks(
@@ -23,17 +24,40 @@ def test_model_uks(
     mdft = pyscf.dft.UKS(mol).density_fit()
     mdft.xc = "b3lyp"
     mdft.grids = grids
-    mdft.verbose = 4
-    mdft.max_cycle = 50
-    mdft.conv_tol = 1e-7
-
     if modeldict.model_type == "center_4":
         get_veff_modified_uks(mdft, modeldict, max_memory=8000)
     elif modeldict.model_type == "cube":
-        get_veff_modified_uks(mdft, modeldict, max_memory=800)
+        get_veff_modified_uks(mdft, modeldict, max_memory=400)
+    mdft.verbose = 4
 
-    mdft.kernel()
-    # mdft.kernel(dm0=test_data.dm1_dft)
+    mdft.max_cycle = -1
+    mdft.conv_tol = 1e-7
+    if_retry = False
+    test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
+    mdft.kernel(dm0=test_data.dm1_dft)
+
+    # mdft.max_cycle = 50
+    # mdft.conv_tol = 1e-7
+    # if_retry = True
+    # mdft.kernel()
+
+    if mdft.converged is False and if_retry:
+        print("UKS not converged. First try.")
+        mdft.diis_damp = 0.5
+        mdft.kernel()
+        if mdft.converged is False:
+            print("UKS not converged. Second try.")
+            mdft.conv_tol = 1e-6
+            mdft.diis_damp = 0.0
+            pyscf.scf.addons.dynamic_level_shift_(mdft, factor=0.5)
+            mdft.kernel()
+            if mdft.converged is False:
+                print("UKS not converged. Third try.")
+                mdft.level_shift = 0.5
+                mdft = mdft.newton()
+                mdft.kernel()
+                if mdft.converged is False:
+                    print("Error: UKS not converged!!!")
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
 
