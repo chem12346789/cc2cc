@@ -11,10 +11,10 @@ def benchmark_rks(mol, name, data_record):
     for xc_code, disp in [
         ("b3lyp", None),
         ("b3lyp", "d3bj"),
-        # ("M06-2X", None),
-        # ("M06-2X", "d3zero"),
-        # ("WB97X-V", None),
-        # ("WB97M-V", None),
+        ("M06-2X", None),
+        ("M06-2X", "d3zero"),
+        ("WB97X-V", None),
+        ("WB97M-V", None),
     ]:
         test_data = TestDataDFT(
             mol,

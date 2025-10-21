@@ -149,6 +149,7 @@ class ModelClass:
                 }
             self.state_dict = state_dict
             self.args.model = checkpoint["model"]
+            print(f"Model loaded from {load_path} with model {self.args.model}")
         else:
             print("Model not found, starting from scratch.")
 

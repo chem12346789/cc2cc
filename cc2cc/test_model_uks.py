@@ -25,7 +25,7 @@ def test_model_uks(
     mdft.xc = "b3lyp"
     mdft.grids = grids
     if modeldict.model_type == "center_4":
-        get_veff_modified_uks(mdft, modeldict, max_memory=8000)
+        get_veff_modified_uks(mdft, modeldict, max_memory=4000)
     elif modeldict.model_type == "cube":
         get_veff_modified_uks(mdft, modeldict, max_memory=400)
     mdft.verbose = 4
