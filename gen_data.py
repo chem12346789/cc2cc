@@ -843,22 +843,28 @@ if __name__ == "__main__":
     else:
         name_mol_list, evaluate = train_str_list[args.training_cycle :: 3], False
 
-    # AHB21-1A -1
-    # AHB21-4A -1
-    # G21EA-EA_c- -1
-    # G21EA-EA_o- -1
-    # G21EA-EA_p- -1
-    # G21EA-EA_s- -1
-    # G21EA-EA_si- -1
+    # name_mol_list = [
+    #     "AHB21-1A"
+    #     "AHB21-4A"
+    #     "G21EA-EA_c-"
+    #     "G21EA-EA_o-"
+    #     "G21EA-EA_p-"
+    #     "G21EA-EA_s-"
+    #     "G21EA-EA_si-"
+    # ]
+    # evaluate = False
 
-    # "ADDON_As",
-    # "ADDON_Ge",
-    # "ADDON_Se",
-    # "ADDON_Te",
-    # "ADDON_I",
-    # "ADDON_Bi",
-    # "ADDON_Pb",
-    # "ADDON_Sb",
+    # name_mol_list = [
+    #     "ADDON_As",
+    #     "ADDON_Ge",
+    #     "ADDON_Se",
+    #     "ADDON_Te",
+    #     "ADDON_I",
+    #     "ADDON_Bi",
+    #     "ADDON_Pb",
+    #     "ADDON_Sb",
+    # ]
+    # evaluate = False
 
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
