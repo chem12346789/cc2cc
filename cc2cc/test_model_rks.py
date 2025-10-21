@@ -25,12 +25,12 @@ def test_model_rks(
     mdft.xc = "b3lyp"
     mdft.grids = grids
     if modeldict.model_type == "center_4":
-        get_veff_modified_rks(mdft, modeldict, max_memory=8000)
+        get_veff_modified_rks(mdft, modeldict, max_memory=4000)
     elif modeldict.model_type == "cube":
         get_veff_modified_rks(mdft, modeldict, max_memory=400)
     mdft.verbose = 4
 
-    mdft.max_cycle = 0
+    mdft.max_cycle = -1
     mdft.conv_tol = 1e-7
     if_retry = False
     test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
