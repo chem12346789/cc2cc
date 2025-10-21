@@ -13,46 +13,54 @@ from cc2cc.gen_ucc import ucc
 
 
 train_str_list = [
-    # "molecule0-W4_11",
-    # "AHB21-1A",
-    # "AHB21-4A",
-    # "ALK8-li+",
-    # "ALK8-na+",
-    # "ALKBDE10-ca",
-    # "ALKBDE10-k",
-    # "ALKBDE10-li",
-    # "ALKBDE10-mg",
-    # "ALKBDE10-na",
-    # "CHB6-24A",
-    # "DIPCS10-be_2+",
-    # "DIPCS10-mg_2+",
-    # "G21EA-EA_c-",
-    # "G21EA-EA_o-",
-    # "G21EA-EA_p-",
-    # "G21EA-EA_s-",
-    # "G21EA-EA_si-",
-    # "G21IP-al+",
-    # "G21IP-b+",
-    # "G21IP-be+",
-    # "G21IP-c+",
-    # "G21IP-cl+",
-    # "G21IP-f+",
-    # "G21IP-mg+",
-    # "G21IP-n+",
-    # "G21IP-o+",
-    # "G21IP-p+",
-    # "G21IP-s+",
-    # "G21IP-si+",
-    # "HEAVYSB11-br",
-    # "RG18-ar",
-    # "RG18-kr",
-    # "RG18-ne",
-    # "SIE4x4-he",
-    # "SIE4x4-he+",
+    "molecule0-W4_11",
+    "ADDON_As",
+    "ADDON_Ge",
+    "ADDON_Se",
+    "ADDON_Te",
+    "ADDON_I",
+    "ADDON_Bi",
+    "ADDON_Pb",
+    "ADDON_Sb",
+    "AHB21-1A",
+    "AHB21-4A",
+    "ALK8-li+",
+    "ALK8-na+",
+    "ALKBDE10-ca",
+    "ALKBDE10-k",
+    "ALKBDE10-li",
+    "ALKBDE10-mg",
+    "ALKBDE10-na",
+    "CHB6-24A",
+    "DIPCS10-be_2+",
+    "DIPCS10-mg_2+",
+    "G21EA-EA_c-",
+    "G21EA-EA_o-",
+    "G21EA-EA_p-",
+    "G21EA-EA_s-",
+    "G21EA-EA_si-",
+    "G21IP-al+",
+    "G21IP-b+",
+    "G21IP-be+",
+    "G21IP-c+",
+    "G21IP-cl+",
+    "G21IP-f+",
+    "G21IP-mg+",
+    "G21IP-n+",
+    "G21IP-o+",
+    "G21IP-p+",
+    "G21IP-s+",
+    "G21IP-si+",
+    "HEAVYSB11-br",
+    "RG18-ar",
+    "RG18-kr",
+    "RG18-ne",
+    "SIE4x4-he",
+    "SIE4x4-he+",
     # # #####################
     # # ######  add 1  ######
     # # #####################
-    # "molecule1-W4_11",
+    "molecule1-W4_11",
     # "AHB21-8B",
     # "AHB21-3B",
     # "AHB21-10B",
@@ -834,19 +842,23 @@ if __name__ == "__main__":
         name_mol_list, evaluate = eval_str_list[args.training_cycle :: 3], True
     else:
         name_mol_list, evaluate = train_str_list[args.training_cycle :: 3], False
-    name_mol_list = [
-        "W4_11-ssh",
-        "W4_11-h2cn",
-        "W4_11-ch2ch",
-        "W4_11-ch2nh2",
-        "W4_11-ch3nh",
-        "W4_11-n2h4",
-        "W4_11-ch3nh2",
-        "W4_11-b2h6",
-        "W4_11-c2h6",
-        "W4_11-si2h6",
-    ]
-    evaluate = False
+
+    # AHB21-1A -1
+    # AHB21-4A -1
+    # G21EA-EA_c- -1
+    # G21EA-EA_o- -1
+    # G21EA-EA_p- -1
+    # G21EA-EA_s- -1
+    # G21EA-EA_si- -1
+
+    # "ADDON_As",
+    # "ADDON_Ge",
+    # "ADDON_Se",
+    # "ADDON_Te",
+    # "ADDON_I",
+    # "ADDON_Bi",
+    # "ADDON_Pb",
+    # "ADDON_Sb",
 
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
