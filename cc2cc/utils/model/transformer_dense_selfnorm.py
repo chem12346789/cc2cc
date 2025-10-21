@@ -102,4 +102,4 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
         # SHAPE x_center = (batch, 1)
 
-        return b3lyp_ene * x * x_center
+        return b3lyp_ene * (x + x_center)
