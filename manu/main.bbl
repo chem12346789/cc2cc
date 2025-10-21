@@ -6,7 +6,7 @@
 %Control: page (0) single
 %Control: year (1) truncated
 %Control: production of eprint (0) enabled
-\begin{thebibliography}{14}%
+\begin{thebibliography}{17}%
 \makeatletter
 \providecommand \@ifxundefined [1]{%
  \@ifx{#1\undefined}
@@ -261,6 +261,24 @@
   {journal} {\bibinfo  {journal} {Theor Chem Acc}\ }\textbf {\bibinfo {volume}
   {128}},\ \bibinfo {pages} {295} (\bibinfo {year} {2011})}\BibitemShut
   {NoStop}%
+\bibitem [{\citenamefont {Loshchilov}\ and\ \citenamefont
+  {Hutter}(2019)}]{loshchilovDecoupledWeightDecay2019-01-04}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {I.}~\bibnamefont
+  {Loshchilov}}\ and\ \bibinfo {author} {\bibfnamefont {F.}~\bibnamefont
+  {Hutter}},\ }\href {https://doi.org/10.48550/arXiv.1711.05101} {\bibinfo
+  {title} {Decoupled {{Weight Decay Regularization}}}} (\bibinfo {year}
+  {2019}),\ \Eprint {https://arxiv.org/abs/1711.05101} {arXiv:1711.05101 [cs]}
+  \BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Loshchilov}\ and\ \citenamefont
+  {Hutter}(2017)}]{loshchilovSGDRStochasticGradient2017-05-03}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {I.}~\bibnamefont
+  {Loshchilov}}\ and\ \bibinfo {author} {\bibfnamefont {F.}~\bibnamefont
+  {Hutter}},\ }\href {https://doi.org/10.48550/arXiv.1608.03983} {\bibinfo
+  {title} {{{SGDR}}: {{Stochastic Gradient Descent}} with {{Warm Restarts}}}}
+  (\bibinfo {year} {2017}),\ \Eprint {https://arxiv.org/abs/1608.03983}
+  {arXiv:1608.03983 [cs]} \BibitemShut {NoStop}%
 \bibitem [{\citenamefont {Goerigk}\ \emph {et~al.}(2017)\citenamefont
   {Goerigk}, \citenamefont {Hansen}, \citenamefont {Bauer}, \citenamefont
   {Ehrlich}, \citenamefont {Najibi},\ and\ \citenamefont
@@ -278,4 +296,72 @@
   {\bibfield  {journal} {\bibinfo  {journal} {Phys. Chem. Chem. Phys.}\
   }\textbf {\bibinfo {volume} {19}},\ \bibinfo {pages} {32184} (\bibinfo {year}
   {2017})}\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Sun}\ \emph {et~al.}(2020)\citenamefont {Sun},
+  \citenamefont {Zhang}, \citenamefont {Banerjee}, \citenamefont {Bao},
+  \citenamefont {Barbry}, \citenamefont {Blunt}, \citenamefont {Bogdanov},
+  \citenamefont {Booth}, \citenamefont {Chen}, \citenamefont {Cui},
+  \citenamefont {Eriksen}, \citenamefont {Gao}, \citenamefont {Guo},
+  \citenamefont {Hermann}, \citenamefont {Hermes}, \citenamefont {Koh},
+  \citenamefont {Koval}, \citenamefont {Lehtola}, \citenamefont {Li},
+  \citenamefont {Liu}, \citenamefont {Mardirossian}, \citenamefont {McClain},
+  \citenamefont {Motta}, \citenamefont {Mussard}, \citenamefont {Pham},
+  \citenamefont {Pulkin}, \citenamefont {Purwanto}, \citenamefont {Robinson},
+  \citenamefont {Ronca}, \citenamefont {Sayfutyarova}, \citenamefont
+  {Scheurer}, \citenamefont {Schurkus}, \citenamefont {Smith}, \citenamefont
+  {Sun}, \citenamefont {Sun}, \citenamefont {Upadhyay}, \citenamefont {Wagner},
+  \citenamefont {Wang}, \citenamefont {White}, \citenamefont {Whitfield},
+  \citenamefont {Williamson}, \citenamefont {Wouters}, \citenamefont {Yang},
+  \citenamefont {Yu}, \citenamefont {Zhu}, \citenamefont {Berkelbach},
+  \citenamefont {Sharma}, \citenamefont {Sokolov},\ and\ \citenamefont
+  {Chan}}]{sunRecentDevelopmentsSCF2020-07-14}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Q.}~\bibnamefont
+  {Sun}}, \bibinfo {author} {\bibfnamefont {X.}~\bibnamefont {Zhang}}, \bibinfo
+  {author} {\bibfnamefont {S.}~\bibnamefont {Banerjee}}, \bibinfo {author}
+  {\bibfnamefont {P.}~\bibnamefont {Bao}}, \bibinfo {author} {\bibfnamefont
+  {M.}~\bibnamefont {Barbry}}, \bibinfo {author} {\bibfnamefont {N.~S.}\
+  \bibnamefont {Blunt}}, \bibinfo {author} {\bibfnamefont {N.~A.}\ \bibnamefont
+  {Bogdanov}}, \bibinfo {author} {\bibfnamefont {G.~H.}\ \bibnamefont {Booth}},
+  \bibinfo {author} {\bibfnamefont {J.}~\bibnamefont {Chen}}, \bibinfo {author}
+  {\bibfnamefont {Z.-H.}\ \bibnamefont {Cui}}, \bibinfo {author} {\bibfnamefont
+  {J.~J.}\ \bibnamefont {Eriksen}}, \bibinfo {author} {\bibfnamefont
+  {Y.}~\bibnamefont {Gao}}, \bibinfo {author} {\bibfnamefont {S.}~\bibnamefont
+  {Guo}}, \bibinfo {author} {\bibfnamefont {J.}~\bibnamefont {Hermann}},
+  \bibinfo {author} {\bibfnamefont {M.~R.}\ \bibnamefont {Hermes}}, \bibinfo
+  {author} {\bibfnamefont {K.}~\bibnamefont {Koh}}, \bibinfo {author}
+  {\bibfnamefont {P.}~\bibnamefont {Koval}}, \bibinfo {author} {\bibfnamefont
+  {S.}~\bibnamefont {Lehtola}}, \bibinfo {author} {\bibfnamefont
+  {Z.}~\bibnamefont {Li}}, \bibinfo {author} {\bibfnamefont {J.}~\bibnamefont
+  {Liu}}, \bibinfo {author} {\bibfnamefont {N.}~\bibnamefont {Mardirossian}},
+  \bibinfo {author} {\bibfnamefont {J.~D.}\ \bibnamefont {McClain}}, \bibinfo
+  {author} {\bibfnamefont {M.}~\bibnamefont {Motta}}, \bibinfo {author}
+  {\bibfnamefont {B.}~\bibnamefont {Mussard}}, \bibinfo {author} {\bibfnamefont
+  {H.~Q.}\ \bibnamefont {Pham}}, \bibinfo {author} {\bibfnamefont
+  {A.}~\bibnamefont {Pulkin}}, \bibinfo {author} {\bibfnamefont
+  {W.}~\bibnamefont {Purwanto}}, \bibinfo {author} {\bibfnamefont {P.~J.}\
+  \bibnamefont {Robinson}}, \bibinfo {author} {\bibfnamefont {E.}~\bibnamefont
+  {Ronca}}, \bibinfo {author} {\bibfnamefont {E.~R.}\ \bibnamefont
+  {Sayfutyarova}}, \bibinfo {author} {\bibfnamefont {M.}~\bibnamefont
+  {Scheurer}}, \bibinfo {author} {\bibfnamefont {H.~F.}\ \bibnamefont
+  {Schurkus}}, \bibinfo {author} {\bibfnamefont {J.~E.~T.}\ \bibnamefont
+  {Smith}}, \bibinfo {author} {\bibfnamefont {C.}~\bibnamefont {Sun}}, \bibinfo
+  {author} {\bibfnamefont {S.-N.}\ \bibnamefont {Sun}}, \bibinfo {author}
+  {\bibfnamefont {S.}~\bibnamefont {Upadhyay}}, \bibinfo {author}
+  {\bibfnamefont {L.~K.}\ \bibnamefont {Wagner}}, \bibinfo {author}
+  {\bibfnamefont {X.}~\bibnamefont {Wang}}, \bibinfo {author} {\bibfnamefont
+  {A.}~\bibnamefont {White}}, \bibinfo {author} {\bibfnamefont {J.~D.}\
+  \bibnamefont {Whitfield}}, \bibinfo {author} {\bibfnamefont {M.~J.}\
+  \bibnamefont {Williamson}}, \bibinfo {author} {\bibfnamefont
+  {S.}~\bibnamefont {Wouters}}, \bibinfo {author} {\bibfnamefont
+  {J.}~\bibnamefont {Yang}}, \bibinfo {author} {\bibfnamefont {J.~M.}\
+  \bibnamefont {Yu}}, \bibinfo {author} {\bibfnamefont {T.}~\bibnamefont
+  {Zhu}}, \bibinfo {author} {\bibfnamefont {T.~C.}\ \bibnamefont {Berkelbach}},
+  \bibinfo {author} {\bibfnamefont {S.}~\bibnamefont {Sharma}}, \bibinfo
+  {author} {\bibfnamefont {A.~Y.}\ \bibnamefont {Sokolov}},\ and\ \bibinfo
+  {author} {\bibfnamefont {G.~K.-L.}\ \bibnamefont {Chan}},\ }\bibfield
+  {title} {\bibinfo {title} {Recent developments in the {{P}} {\textsc{y}}
+  {{SCF}} program package},\ }\href {https://doi.org/10.1063/5.0006074}
+  {\bibfield  {journal} {\bibinfo  {journal} {The Journal of Chemical Physics}\
+  }\textbf {\bibinfo {volume} {153}},\ \bibinfo {pages} {024109} (\bibinfo
+  {year} {2020})}\BibitemShut {NoStop}%
 \end{thebibliography}%
