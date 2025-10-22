@@ -116,10 +116,6 @@ class ModelClass:
         if not if_validate:
             if not self.args.if_grad:
                 # model.compile does not support Double backward which is used in grad.
-                torch._functorch.config.activation_memory_budget = (
-                    self.args.activation_memory_budget
-                )
-                torch._functorch.config.donated_buffer = False
                 self.model.compile(dynamic=True, mode="max-autotune-no-cudagraphs")
                 print("Model compiled with torch.compile!")
 
@@ -378,7 +374,10 @@ class ModelClass:
             batch = self.database_train.process_batch(batch, device=self.local_rank)
             tot_loss, data_record = self.loss(batch)
 
-            tot_loss.backward(retain_graph=True)
+            if self.args.if_grad:
+                tot_loss.backward(retain_graph=True)
+            else:
+                tot_loss.backward()
             self.update_counter += 1
             if self.update_counter % self.iters_to_accumulate == 0:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_norm)
