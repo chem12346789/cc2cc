@@ -843,6 +843,33 @@ if __name__ == "__main__":
     else:
         name_mol_list, evaluate = train_str_list[args.training_cycle :: 3], False
 
+    # name_mol_list = [
+    #     "IL16-150B",
+    #     "AHB21-13",
+    #     "IL16-152B",
+    #     "IL16-214B",
+    #     "IL16-229B",
+    #     "AHB21-12",
+    #     "AHB21-14",
+    #     "AHB21-21",
+    #     "AHB21-11",
+    #     "AHB21-20",
+    #     "IL16-144B",
+    #     "IL16-230B",
+    # ]
+    # evaluate = True
+
+    # name_mol_list = [
+    #     "AHB21-1A",
+    #     "AHB21-4A",
+    #     "G21EA-EA_c-",
+    #     "G21EA-EA_o-",
+    #     "G21EA-EA_p-",
+    #     "G21EA-EA_s-",
+    #     "G21EA-EA_si-",
+    # ]
+    # evaluate = False
+
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
 
@@ -886,16 +913,9 @@ if __name__ == "__main__":
                 #             continue
 
                 if (DATA_PATH / f"data_{name}.npz").exists():
-                    # refresh modified time of the file
-                    data_frame = dict(
-                        np.load(
-                            DATA_PATH / f"data_{name}.npz", allow_pickle=True
-                        ).items()
-                    )
-                    np.savez_compressed(DATA_PATH / f"data_{name}.npz", **data_frame)
-                    if mol.charge >= 0:
-                        print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
-                        continue
+                    # if mol.charge >= 0:
+                    #     print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+                    continue
 
             if mol.spin == 0:
                 cc(mol, grids, name, args, evaluate=evaluate)

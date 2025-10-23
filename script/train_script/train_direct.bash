@@ -32,7 +32,7 @@ export LD_PRELOAD=~/.local/lib/libjemalloc.so:$LD_PRELOAD
 
 export PID_THIS_RUN=$$
 
-export PYSCF_MAX_MEMORY=80000
+export PYSCF_MAX_MEMORY=25000
 export PYTHONPATH=~/python:$PYTHONPATH
 export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
 export DFT2CC_CUBE_USE=3
