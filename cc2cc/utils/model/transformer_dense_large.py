@@ -18,16 +18,16 @@ class Model(nn.Module):
 
         self.model_type = "cube"
 
-        # self.predictor = Extractor(
-        #     d_model=CUBE_SIZE**3,
-        #     seq_len=4,
-        #     num_layer=3,
-        #     qkv_bias=False,
-        #     num_heads=1,
-        #     mlp_ratio=1,
-        #     drop_rate=0,
-        #     atte_actv="gelu",
-        # )
+        self.predictor = Extractor(
+            d_model=CUBE_SIZE**3,
+            seq_len=4,
+            num_layer=7,
+            qkv_bias=False,
+            num_heads=1,
+            mlp_ratio=1,
+            drop_rate=0,
+            atte_actv="gelu",
+        )
 
         self.densenet = DenseNet(
             d_model=4 * CUBE_SIZE**3,
@@ -38,16 +38,16 @@ class Model(nn.Module):
             dense_actv="gelu",
         )
 
-        # self.predictor_center = Extractor(
-        #     d_model=1,
-        #     seq_len=4,
-        #     num_layer=7,
-        #     qkv_bias=False,
-        #     num_heads=1,
-        #     mlp_ratio=1,
-        #     drop_rate=0,
-        #     atte_actv="gelu",
-        # )
+        self.predictor_center = Extractor(
+            d_model=1,
+            seq_len=4,
+            num_layer=7,
+            qkv_bias=False,
+            num_heads=1,
+            mlp_ratio=1,
+            drop_rate=0,
+            atte_actv="gelu",
+        )
 
         self.densenet_center = DenseNet(
             d_model=4,
@@ -74,9 +74,9 @@ class Model(nn.Module):
 
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
-        # # SHAPE x = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
-        # x = self.predictor(x)
-        # # SHAPE shape = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
+        # SHAPE x = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
+        x = self.predictor(x)
+        # SHAPE shape = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
 
         # SHAPE x = (batch, 4, CUBE_SIZE**3)
         x = x.reshape(-1, 4 * CUBE_SIZE**3)
@@ -86,9 +86,9 @@ class Model(nn.Module):
 
         # SHAPE x_center = (batch, 4)
         x_center = x_center.reshape(-1, 4, 1)
-        # # SHAPE x_center = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
-        # x_center = self.predictor_center(x_center)
-        # # SHAPE shape = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
+        # SHAPE x_center = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
+        x_center = self.predictor_center(x_center)
+        # SHAPE shape = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
 
         # SHAPE x_center = (batch, 4, 1)
         x_center = x_center.reshape(-1, 4 * 1)
