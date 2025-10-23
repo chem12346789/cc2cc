@@ -215,6 +215,7 @@ def ucc(mol, grids, name, args, evaluate=False):
     if evaluate:
         mycc = pyscf.cc.UCCSD(mf)
         mycc.verbose = 4
+        mycc.direct = True
         _, t1, t2 = mycc.kernel()
         eris = mycc.ao2mo()
         e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
