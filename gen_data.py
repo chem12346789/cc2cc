@@ -115,7 +115,7 @@ train_str_list = [
     # #####################
     # ########  2  ########
     # #####################
-    # "molecule2-W4_11",
+    "molecule2-W4_11",
     # "BH76-hcnts",
     # "BH76-hcots",
     # "BH76-hn2ts",
@@ -842,80 +842,6 @@ if __name__ == "__main__":
         name_mol_list, evaluate = eval_str_list[args.training_cycle :: 6], True
     else:
         name_mol_list, evaluate = train_str_list[args.training_cycle :: 3], False
-
-    # name_mol_list = [
-    #     "AHB21-1A"
-    #     "AHB21-4A"
-    #     "G21EA-EA_c-"
-    #     "G21EA-EA_o-"
-    #     "G21EA-EA_p-"
-    #     "G21EA-EA_s-"
-    #     "G21EA-EA_si-"
-    # ]
-    # evaluate = False
-
-    # name_mol_list = [
-    #     "W4_11-alcl",
-    #     "W4_11-alf",
-    #     "W4_11-b2",
-    #     "W4_11-be2",
-    #     "W4_11-bf",
-    #     "W4_11-bn",
-    #     "W4_11-bn3pi",
-    #     "W4_11-c2",
-    #     "W4_11-cf",
-    #     "W4_11-cl2",
-    #     "W4_11-clf",
-    #     "W4_11-clo",
-    #     "W4_11-cn",
-    #     "W4_11-co",
-    #     "W4_11-cs",
-    #     "W4_11-f2",
-    #     "W4_11-n2",
-    #     "W4_11-no",
-    #     "W4_11-o2",
-    #     "W4_11-of",
-    #     "W4_11-p2",
-    #     "W4_11-s2",
-    #     "W4_11-sif",
-    #     "W4_11-sio",
-    #     "W4_11-so",
-    #     "W4_11-cch",
-    #     "W4_11-hcn",
-    #     "W4_11-hco",
-    #     "W4_11-hnc",
-    #     "W4_11-hno",
-    #     "W4_11-hocl",
-    #     "W4_11-hof",
-    #     "W4_11-hoo",
-    #     "W4_11-n2h",
-    #     "W4_11-ssh",
-    #     "W4_11-c-hcoh",
-    #     "W4_11-c-n2h2",
-    #     "W4_11-c2h2",
-    #     "W4_11-ch2c",
-    #     "W4_11-h2cn",
-    #     "W4_11-h2co",
-    #     "W4_11-hcnh",
-    #     "W4_11-hooh",
-    #     "W4_11-nh2cl",
-    #     "W4_11-t-hcoh",
-    #     "W4_11-t-n2h2",
-    #     "W4_11-ch2ch",
-    #     "W4_11-ch2nh",
-    #     "W4_11-ch3f",
-    #     "W4_11-sih3f",
-    #     "W4_11-c2h4",
-    #     "W4_11-ch2nh2",
-    #     "W4_11-ch3nh",
-    #     "W4_11-methanol",
-    #     "W4_11-n2h4",
-    #     "W4_11-ch3nh2",
-    #     "W4_11-b2h6",
-    #     "W4_11-c2h6",
-    #     "W4_11-si2h6",
-    # ]
-    # evaluate = False
 
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
