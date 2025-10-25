@@ -112,6 +112,16 @@ class ModelClass:
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=False)
+        else:
+            for name, param in self.model.named_parameters():
+                if "weight" in name:
+                    print(f"Initialize parameter {name} with shape {param.shape}")
+                    torch.nn.init.normal_(param, mean=0.0, std=0.02)
+                elif "bias" in name:
+                    print(f"Initialize parameter {name} with shape {param.shape}")
+                    torch.nn.init.zeros_(param)
+                else:
+                    print(f"Parameter {name} with shape {param.shape} not initialized")
 
         if not if_validate:
             if not self.args.if_grad:
