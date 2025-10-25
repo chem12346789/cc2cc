@@ -872,7 +872,7 @@ if __name__ == "__main__":
 
     name_mol_list = [
         "W4_11-s2",
-    ][args.training_cycle :: 3]
+    ]
     evaluate = False
 
     error_molecule = []
@@ -908,14 +908,6 @@ if __name__ == "__main__":
             grids = Grid(mol, args.grid_level)
 
             if args.if_continue:
-                if evaluate is False:
-                    if mol.spin != 0:
-                        if mol.nao >= 140:
-                            print(
-                                f"Nao too large: {name_mol} {extend_atom} {extend_xyz} {distance}"
-                            )
-                            error_molecule.append(name)
-                            continue
 
                 if (DATA_PATH / f"data_{name}.npz").exists():
                     # if mol.charge >= 0:

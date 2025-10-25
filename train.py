@@ -827,4 +827,8 @@ if __name__ == "__main__":
     # remove the same name in eval and eval_str_exclude_list
     eval_str_list = [mol for mol in eval_str_list if mol not in eval_str_exclude_list]
 
+    print(f"Train set size: {len(train_str_list)}")
+    print(f"Train set: {train_str_list}")
+    print(f"Eval set size: {len(eval_str_list)}")
+    print(f"Eval set: {eval_str_list}")
     train_model(train_str_list, eval_str_list, args)
