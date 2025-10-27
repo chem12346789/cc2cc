@@ -94,17 +94,21 @@ class DataBaseCube(DataBase):
             print(f"Max energy density: {AU2KCALMOL * max_ene_den}")
 
         data_dict = {
-            "input": torch.tensor(input_mat, dtype=self.dtype),
-            "weight": torch.tensor(weight_mat.reshape((-1, 1)), dtype=self.dtype),
+            "input": torch.tensor(input_mat, dtype=self.dtype).detach().clone(),
+            "weight": torch.tensor(weight_mat.reshape((-1, 1)), dtype=self.dtype)
+            .detach()
+            .clone(),
             "output": (
-                torch.tensor(0)
+                torch.tensor(0).detach().clone()
                 if self.if_eval
                 else torch.tensor(output_mat.reshape((-1, 1)), dtype=self.dtype)
+                .detach()
+                .clone()
             ),
             "grad2force": (
-                torch.tensor(0)
+                torch.tensor(0).detach().clone()
                 if self.if_eval
-                else torch.tensor(grad2force, dtype=self.dtype)
+                else torch.tensor(grad2force, dtype=self.dtype).detach().clone()
             ),
             "grad_cc_train": grad_cc_train,
             "energy_train": energy_train,
@@ -112,7 +116,7 @@ class DataBaseCube(DataBase):
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,
             "data_weight": (
-                np.sqrt(40.0) if num_data_used == 1 else np.sqrt(num_data_used)
+                np.sqrt(4.0) if num_data_used == 1 else np.sqrt(num_data_used)
             ),
         }
 
