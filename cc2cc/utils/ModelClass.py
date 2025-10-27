@@ -116,7 +116,7 @@ class ModelClass:
             for name, param in self.model.named_parameters():
                 if "weight" in name:
                     print(f"Initialize parameter {name} with shape {param.shape}")
-                    torch.nn.init.normal_(param, mean=0.0, std=0.02)
+                    torch.nn.init.xavier_normal_(param)
                 elif "bias" in name:
                     print(f"Initialize parameter {name} with shape {param.shape}")
                     torch.nn.init.zeros_(param)
