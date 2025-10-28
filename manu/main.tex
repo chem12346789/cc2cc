@@ -286,11 +286,13 @@ We set the initial learning rate to be $1 \times 10^{-4}$ and then gradually dec
 %
 The parameters of the AdamW optimizer are set to be $\beta_1 = 0.9$, $\beta_2 = 0.999$, and $\epsilon = 1 \times 10^{-8}$, and the weight decay is set to be $1 \times 10^{-12}$.
 % 
-The weights in the loss function \eq{eq:loss} are set to be $\lambda_{\rm{RE}} = 1$, $\lambda_{\rm{ABS}} = 0.01$, and $\lambda_{\rm{AE}} = 1$.
+The weights in the loss function \eq{eq:loss} are set to be $\lambda_{\rm{RE}} = 40$, $\lambda_{\rm{ABS}} = 0.4$, and $\lambda_{\rm{AE}} = 40$ for single atom systems, and $\lambda_{\rm{RE}} = 1$, $\lambda_{\rm{ABS}} = 0.01$, and $\lambda_{\rm{AE}} = 1$ for multi-atom systems.
 %
 We use a batch size of $4$ and train the model for $20000$ epochs.
 %
-The training process is monitored using the validation set, and the model with the lowest validation loss is selected as the final model.
+The training process is monitored using the validation set every $50$ epochs, and the model with the lowest validation loss is selected as the final model.
+
+The training is performed on a single NVIDIA A100 GPU with 80GB memory with double precision training using PyTorch \cite{paszkePyTorchImperativeStyle2019-12-03} and the training takes around $96$ hours to complete. The version of PyTorch used is $2.8.0$, and CUDA version is $12.2$.
 
 \subsection{Comparison with other machine learning functionals}
 The main difference between our method and other machine learning functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07} is that we use the energy density as the target of the neural network instead of the total energy.
@@ -304,7 +306,7 @@ The main difference between our method and other machine learning functionals \c
 
 \appendix
 
-\section{TRAINING DETAILS}
+\section{Training Details}
 
 \subsection{Dataset}
 
@@ -316,30 +318,34 @@ The main difference between our method and other machine learning functionals \c
 	}
 	\begin{ruledtabular}
 		\begin{tabular}{lcccc}
-			   & Original Dataset & Size & Number of heavy atoms & Number of hydrogen atoms \\
+			     & Original Dataset & Size & Number of heavy atoms & Number of hydrogen atoms        \\
 			\colrule
-			A  & GMTKN55          & 47   & $1$                   & $0$                      \\
-			B  & W4-11            & 22   & $1$                   & $>0$                     \\
-			C  & W4-11            & 59   & $2$                   & $>0$                     \\
-			A' & GMTKN55          & 81   & $4$                   & $>0$  and $\leq4$        \\
-			B' & GMTKN55          & 23   & $5$                   & $>0$  and $\leq3$        \\
-			C' & GMTKN55          & 11   & $6$                   & $>0$  and $\leq3$        \\
+			A    & GMTKN55~$^{1}$   & 55   & $1$                   & $0$                             \\
+			B    & W4-11            & 22   & $1$                   & $>0$                            \\
+			C    & W4-11            & 59   & $2$                   & $>0$                            \\
+			A$'$ & GMTKN55          & 81   & $4$                   & $>0$  and $\leq4$               \\
+			B$'$ & GMTKN55          & 23   & $5$                   & $>0$  and $\leq3$               \\
+			C$'$ & GMTKN55          & 11   & $6$                   & $>0$  and $\leq3$               \\
+			\colrule
+			\multicolumn{3}{l}{$^{1}$\footnotesize{Include additional As Ge Se Te I Bi Pb Sb atom.}} \\
 		\end{tabular}
 	\end{ruledtabular}
 \end{table*}
 
 The dataset we use are listed in \Tab{tab:dataset}, all the Datasets are obtained from the GMTKN55 datasets \cite{goerigkLookDensityFunctional2017}.
 % 
-We use the molecules in datasets A, B, and C as the training set and the molecules in datasets A', B', and C' as the validation set.
+We use the molecules in datasets A, B, and C as the training set and the molecules in datasets A$'$, B$'$, and C$'$ as the validation set.
 % 
-This lead to 128 molecules in the training set and 115 molecules in the validation set, while the number of molecules in GMTKN55 datasets is 2462 \cite{goerigkLookDensityFunctional2017}.
-% TODO: ablation study on the dataset size.
-To improve training efficiency and balance the dataset across different atom species, we augment the training set by adding 9 additional copies of dataset A.
+Datasets A, B, and C are defined as follows: A comprises single-atom systems from GMTKN55 \cite{goerigkLookDensityFunctional2017}; B comprises molecules with one heavy (non-hydrogen) atom from W4-11; and C comprises molecules with two heavy atoms from W4-11.
+% 
+This lead to $136$ molecules in the training set and $115$ molecules in the validation set, while the number of molecules in GMTKN55 datasets is 2462 \cite{goerigkLookDensityFunctional2017}.
+% % TODO: ablation study on the dataset size.
+% To improve training efficiency and balance the dataset across different atom species, we augment the training set by adding 9 additional copies of dataset A.
 
 In this article, we use the electron density and energy density from CCSD(T)/Def2-QZVP (except the anions) and CCSD(T)/Ma-Def2-QZVP (the anions) \cite{bartlettCoupledclusterTheoryQuantum2007-02-22,weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} as the input and target of the molecules.
 %
 This leads to a significant label error, which is estimated to be 2.33 kcal/mol as the mean absolute error (MAE) for the W4-11 dataset.
-% 
+
 We use the energy density calculated by the four functionals (LDA, VWN3, B88, and LYP) from the original B3LYP functional \cite{perdewAtomsMoleculesSolids1992-09-15} as the input features of the neural network, not the electron density and the derivatives of the electron density directly.
 % 
 \begin{align}
@@ -347,9 +353,13 @@ We use the energy density calculated by the four functionals (LDA, VWN3, B88, an
 	 & \big( e_{\rm{LDA}}(\brm{r}), e_{\rm{VWN3}}(\brm{r}), e_{\rm{B88}}(\brm{r}), e_{\rm{LYP}}(\brm{r}) \big).
 \end{align}
 %
-This choice is motivated by the fact that the electron density and its derivatives span a wide range of values, which can complicate the learning process for the neural network.
+This choice is motivated by the very wide dynamic range of the electron density, $\rho$, and its derivatives, which complicates learning and can destabilize both the optimization and the validation process.
+%
+By using the energy densities from established components (LDA, VWN3, B88, LYP) as input features, we provide numerically stable, physically informed representations of the local electronic environment.
+
+The network outputs the residual energy density, defined as $e(\brm{r}) = e_{\rm{xc}}^{\rm{CCSD(T)}}(\brm{r}) - e_{\rm{xc}}^{\rm{B3LYP}}(\brm{r})$, where the B3LYP term is computed from the input features and the CCSD(T) term serves as the target.
 % 
-By using the energy densities from established functionals as input features, we provide the neural network with more stable and informative representations of the local electronic environment.
+The total exchange-correlation energy density is then reconstructed by adding the B3LYP energy density back to the predicted residual, $E_{\rm{xc}}^{\rm{pred}} = E'_{\rm{xc}} + E_{\rm{xc}}^{\rm{B3LYP}}$.
 
 \section{Auxiliary Grid Points}
 To provide additional features for the neural network, we consider a small cube surrounding each grid point $\mathbf{r}_{i} = (x_{i},y_{i},z_{i})$.
@@ -367,13 +377,21 @@ In the standard DFT procedure, each grid point is assigned a weight $w_{i}$, whi
 We set all the weights of the auxiliary grid points ($w_{i;\rm{aux}}$) to be zero. Thus, they do not contribute to the total energy and potential in the DFT procedure.
 % 
 \begin{align}
-	E_{\rm{xc}} =
-	  & \int e_{\rm{xc}}(\mathbf{r}_{i;\rm{cube}}) \d \mathbf{r}_{i;\rm{cube}} \nl
+	E'_{\rm{xc}} =
+	  & \int e(\mathbf{r}_{i;\rm{cube}}) \d \mathbf{r}_{i;\rm{cube}} \nl
 	= & \sum_{i} w_{i} e(\brm{r}_{i}) + \sum_{i} \sum_{\brm{r}'_{i} \in \brm{r}_{i;\rm{aux}}} w_{i;\rm{aux}} e(\brm{r}'_{i}) \nl
 	= & \sum_{i} w_{i} e(\brm{r}_{i}).
 \end{align}
 % 
-As a result, the auxiliary grid points do not influence the potential and the procedure remains consistent with the standard DFT calculation.
+As a result, the auxiliary grid points influence the potential but do not affect the fock matrix or the total energy. It makes the procedure remains consistent with the standard DFT calculation.
+% 
+\begin{align}
+	v'_{\rm{xc}}(\brm{r}_{i}) =
+	  & \frac{\delta E'_{\rm{xc}}}{\delta \rho(\brm{r}_{i})} \nl
+	= & \sum_{j} w_{j} \frac{\delta e(\brm{r}_{j})}{\delta \rho(\brm{r}_{i})} \nl
+	= & \sum_{j} w_{j} \frac{\delta {\rm{NN}}\big( \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w \big)}{\delta \rho(\brm{r}_{i})} \nl
+	= & \sum_{j} w_{j} \frac{\partial {\rm{NN}}\big( \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w \big)}{\partial \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i})} \frac{\delta \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i})}{\delta \rho(\brm{r}_{i})}
+\end{align}
 
 To make the neural network can capture the rotational variance, we set the cube to be aligned with the main rotation axis of the secondary derivative matrix of the electron density at the grid point $\brm{r}_{i}$.
 %
@@ -394,4 +412,9 @@ The eigenvectors $\mathbf{u}(\brm{r}_{i})$ of this matrix represent the main rot
 	 & \big\{ \mathbf{r}_{i} + d (m \mathbf{u}_{1}(\brm{r}_{i}) + n \mathbf{u}_{2}(\brm{r}_{i}) + p \mathbf{u}_{3}(\brm{r}_{i})) \nl
 	 & \text{ for } m,n,p \in \{-1,0,1\} \big\}.
 \end{align}
+
+\section{Ablation Study}
+\subsection{Ablation study on the dataset size}
+In this subsection, we analyze the impact of dataset size on the performance of the neural network. We train the model with varying dataset sizes and evaluate its accuracy on the validation set. The results are summarized in Table~\ref{tab:dataset_size}.
+
 \end{document}
