@@ -123,11 +123,11 @@ class ModelClass:
                 else:
                     print(f"Parameter {name} with shape {param.shape} not initialized")
 
-        if not if_validate:
-            if not self.args.if_grad:
-                # model.compile does not support Double backward which is used in grad.
-                self.model.compile(dynamic=True, mode="max-autotune-no-cudagraphs")
-                print("Model compiled with torch.compile!")
+        # if not if_validate:
+        #     if not self.args.if_grad:
+        #         # model.compile does not support Double backward which is used in grad.
+        #         self.model.compile(dynamic=True, mode="max-autotune-no-cudagraphs")
+        #         print("Model compiled with torch.compile!")
 
         if self.args.distributed:
             print(f"Using DistributedDataParallel on rank {self.local_rank}")

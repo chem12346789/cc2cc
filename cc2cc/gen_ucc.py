@@ -207,6 +207,7 @@ def ucc(mol, grids, name, args, evaluate=False):
     # UHF calculation
     mf = pyscf.scf.UHF(mol)
     mf.max_cycle = 200
+    mf.verbose = 4
     mf.kernel()
     if args.check_convergence and not mf.converged:
         raise ValueError("UHF not converged.")

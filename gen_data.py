@@ -843,6 +843,29 @@ if __name__ == "__main__":
     else:
         name_mol_list, evaluate = train_str_list[args.training_cycle :: 3], False
 
+    name_mol_list = [
+        [
+            "W4_11-b2h6",
+            "W4_11-c2h6",
+            # "W4_11-ch2ch",
+            "W4_11-ch2nh2",
+            # "W4_11-ch3nh",
+            "W4_11-ch3nh2",
+            "W4_11-h2cn",
+            "W4_11-h2co",
+            "W4_11-hcnh",
+            "W4_11-hco",
+            "W4_11-hof",
+            "W4_11-hoo",
+            "W4_11-n2h",
+            "W4_11-nh2cl",
+            "W4_11-si2h6",
+            "W4_11-sih3f",
+            "W4_11-ssh",
+        ][args.training_cycle]
+    ]
+    evaluate = False
+
     # name_mol_list = [
     #     "IL16-150B",
     #     "AHB21-13",
@@ -869,18 +892,6 @@ if __name__ == "__main__":
     #     "G21EA-EA_si-",
     # ]
     # evaluate = False
-
-    name_mol_list = [
-        "AHB21-13",
-        "G2RC-58",
-        "INV24-NCl3_TS",
-        "PNICO23-3a",
-        "RG18-ne4",
-        "RSE43-E35",
-        "W4_11-foof",
-        # "W4_11-s2",
-    ][args.training_cycle :: 3]
-    evaluate = True
 
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
@@ -915,11 +926,11 @@ if __name__ == "__main__":
             grids = Grid(mol, args.grid_level)
 
             if args.if_continue:
-
-                # if (DATA_PATH / f"data_{name}.npz").exists():
-                #     # if mol.charge >= 0:
-                #     #     print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
-                #     continue
+                if (DATA_PATH / f"data_{name}.npz").exists():
+                    continue
+                    # if mol.charge >= 0:
+                    #     print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+                    #     continue
 
             if mol.spin == 0:
                 cc(mol, grids, name, args, evaluate=evaluate)
