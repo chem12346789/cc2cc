@@ -75,7 +75,7 @@ if __name__ == "__main__":
                 print(f"SKIP: {name}")
                 continue
 
-        grids = Grid(mol, args.grid_level)
+        grids = Grid(mol, args.grid_level, test=True)
 
         try:
             if mol.spin == 0:

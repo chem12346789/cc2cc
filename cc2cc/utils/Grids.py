@@ -141,15 +141,16 @@ class Grid(dft.gen_grid.Grids):
     This class is modified from pyscf.dft.gen_grid.Grids. Some default parameters are changed.
     """
 
-    def __init__(self, mol, level):
+    def __init__(self, mol, level, test=False):
         super().__init__(mol)
 
         self.level = level
-        self.atomic_radii = None
-        self.radii_adjust = None
         self.radi_method = dft.radi.gauss_chebyshev
         self.becke_scheme = dft.gen_grid.original_becke
-        self.prune = None
+        if not test:
+            self.atomic_radii = None
+            self.radii_adjust = None
+            self.prune = None
         self.build(with_non0tab=True, sort_grids=False)
         self.non0tab = self.make_mask(mol, self.coords)
         self.screen_index = self.non0tab
