@@ -28,10 +28,10 @@ class BasicDataset(Dataset):
             if num_data_used != 0:
                 self.data[name] = data_dict
                 self.name_list.append(name)
-            # Add more copies of the atomic data to balance the dataset.
-            # This is useful when we need to have more data for single-atom systems.
-            if num_data_used == 1:
-                self.name_list.extend([name] * 9)
+            # # Add more copies of the atomic data to balance the dataset.
+            # # This is useful when we need to have more data for single-atom systems.
+            # if num_data_used == 1:
+            #     self.name_list.extend([name] * 9)
 
     def __len__(self):
         return len(self.name_list)

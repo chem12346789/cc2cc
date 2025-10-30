@@ -116,7 +116,7 @@ class DataBaseCube(DataBase):
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,
             "data_weight": (
-                np.sqrt(4.0) if num_data_used == 1 else np.sqrt(num_data_used)
+                np.sqrt(40.0) if num_data_used == 1 else np.sqrt(num_data_used)
             ),
         }
 
