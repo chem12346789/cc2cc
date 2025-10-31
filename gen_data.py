@@ -115,7 +115,7 @@ train_str_list = [
     # #####################
     # ########  2  ########
     # #####################
-    "molecule2-W4_11",
+    # "molecule2-W4_11",
     # "BH76-hcnts",
     # "BH76-hcots",
     # "BH76-hn2ts",
@@ -357,6 +357,10 @@ train_str_list = [
 ]
 
 eval_str_list = [
+    # #####################
+    # ######    3    ######
+    # #####################
+    "molecule3-W4_11",
     # #####################
     # ######  4(<9)  ######
     # #####################
@@ -843,28 +847,28 @@ if __name__ == "__main__":
     else:
         name_mol_list, evaluate = train_str_list[args.training_cycle :: 3], False
 
-    name_mol_list = [
-        [
-            "W4_11-b2h6",
-            "W4_11-c2h6",
-            # "W4_11-ch2ch",
-            "W4_11-ch2nh2",
-            # "W4_11-ch3nh",
-            "W4_11-ch3nh2",
-            "W4_11-h2cn",
-            "W4_11-h2co",
-            "W4_11-hcnh",
-            "W4_11-hco",
-            "W4_11-hof",
-            "W4_11-hoo",
-            "W4_11-n2h",
-            "W4_11-nh2cl",
-            "W4_11-si2h6",
-            "W4_11-sih3f",
-            "W4_11-ssh",
-        ][args.training_cycle]
-    ]
-    evaluate = False
+    # name_mol_list = [
+    #     [
+    #         # "W4_11-b2h6",
+    #         "W4_11-c2h6",
+    #         # "W4_11-ch2ch",
+    #         "W4_11-ch2nh2",
+    #         # "W4_11-ch3nh",
+    #         "W4_11-ch3nh2",
+    #         "W4_11-h2cn",
+    #         "W4_11-h2co",
+    #         "W4_11-hcnh",
+    #         "W4_11-hco",
+    #         "W4_11-hof",
+    #         "W4_11-hoo",
+    #         "W4_11-n2h",
+    #         "W4_11-nh2cl",
+    #         "W4_11-si2h6",
+    #         "W4_11-sih3f",
+    #         "W4_11-ssh",
+    #     ][args.training_cycle]
+    # ]
+    # evaluate = False
 
     # name_mol_list = [
     #     "IL16-150B",
@@ -916,7 +920,8 @@ if __name__ == "__main__":
                 extend_xyz,
                 distance,
                 args.basis,
-                args.dataset,
+                ma_basis=False,
+                dataset_name=args.dataset,
             )
 
             if mol is None:

@@ -102,7 +102,8 @@ class DataBase:
                     extend_xyz,
                     distance,
                     args.basis,
-                    args.dataset,
+                    ma_basis=True,
+                    dataset_name=args.dataset,
                     verbose=-1,
                 )
                 name = f"{name}{training_cycle_iteration}"
