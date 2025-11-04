@@ -134,6 +134,7 @@ def gen_mole(
     extend_xyz: int,
     distance: float,
     basis: str,
+    ma_basis: bool = False,
     dataset_name: str = "Mol",
     verbose=0,
     if_rotate=False,
@@ -159,8 +160,9 @@ def gen_mole(
         solve_symmetry=solve_symmetry,
     )
 
-    if dataset[dataset_name]["charge"][name_mol] < 0:
-        basis = "ma-" + basis
+    if ma_basis:
+        if dataset[dataset_name]["charge"][name_mol] < 0:
+            basis = "ma-" + basis
     mol = pyscf.M(
         atom=molecule,
         basis=basis,

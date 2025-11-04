@@ -53,7 +53,8 @@ if __name__ == "__main__":
             extend_xyz,
             distance,
             args.basis,
-            args.dataset,
+            ma_basis=True,
+            dataset_name=args.dataset,
         )
 
         if mol is None:

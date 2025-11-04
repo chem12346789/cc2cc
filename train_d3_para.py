@@ -157,9 +157,10 @@ parser.add_argument(
 parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--seed", type=int, default=42, help="Random seed")
 args = parser.parse_args()
-data_path = f"validate_hkqai_done/ccdft_cc-pVDZ_{args.load}_gmtkn-cc-pVDZ.csv"
+BASIS_SET = "def2-QZVP"
+DATA_PATH = f"validate_hkqai_done/ccdft_{BASIS_SET}_{args.load}_gmtkn-def2.csv"
 save_para = {}
-save_para_path = f"validate_hkqai_done/ccdft_cc-pVDZ_{args.load}_gmtkn-cc-pVDZ.json"
+SAVE_PARA_PATH = f"validate_hkqai_done/ccdft_{BASIS_SET}_{args.load}_gmtkn-def2.json"
 
 
 # Set the random seed for reproducibility
@@ -174,9 +175,9 @@ torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.enabled = False
 print("Warning: Using deterministic mode, which may slow down training.")
 
-device = "cuda"
+DEVICE = "cuda"
 
-data = pd.read_csv(data_path)
+data = pd.read_csv(DATA_PATH)
 batch_subset = [
     "W4_11",
     "G21EA",
@@ -216,7 +217,7 @@ batch_subset = [
     "ADIM6",
     "S22",
     "S66",
-    # "HEAVY28",
+    "HEAVY28",
     "WATER27",
     "CARBHB12",
     "PNICO23",
@@ -235,28 +236,21 @@ batch_subset = [
     "BUT14DIOL",
 ]
 
-if Path(save_para_path).exists():
-    with open(save_para_path, "r", encoding="utf-8") as f:
+if Path(SAVE_PARA_PATH).exists():
+    with open(SAVE_PARA_PATH, "r", encoding="utf-8") as f:
         load_para = json.load(f)
 else:
     load_para = None
 
-for damping, dft_type in product(
-    [
-        "bj",
-        "zero",
-    ],
-    [
-        "scf",
-        # "dft",
-    ],
-):
-    data_name_list = (data["name"].str.split("_cc-pVDZ").str[0]).to_numpy()
-    data_cc_ene = data["cc_ene"].to_numpy() * AU2KCALMOL
-    data_dft_ene = data[f"{dft_type}_ene"].to_numpy() * AU2KCALMOL
+with open(
+    "/home/chenzihao/workspace/cc2cc_test5/cc2cc/utils/gmtkn-def2.json",
+    encoding="utf-8",
+) as f:
+    json_data = json.load(f)
 
-    with open("jupyter-notebook/new_dataset/gmtkn-cc-pVDZ.json", encoding="utf-8") as f:
-        json_data = json.load(f)
+for damping, dft_type in product(["bj"], ["scf"]):
+    data_name_list = (data["name"].str.split("_def2").str[0]).to_numpy()
+    data_dft_ene = data[f"{dft_type}_ene"].to_numpy() * AU2KCALMOL
 
     input_batch = {}
     name_batch_list = {}
@@ -269,16 +263,21 @@ for damping, dft_type in product(
         ]
     else:
         load_para_disp = {}
-    model = Model(device=device, damping=damping, **load_para_disp)
+    model = Model(device=DEVICE, damping=damping, **load_para_disp)
     model.compile(mode="max-autotune-no-cudagraphs")
     for name_mol in data_name_list:
         for i_subset in batch_subset:
-            if i_subset == "BH76RC":
-                i_subset_name = "BH76"
-            else:
-                i_subset_name = i_subset
+            i_subset_name = "BH76" if i_subset == "BH76RC" else i_subset
             if name_mol.startswith(i_subset_name):
-                mol = gen_mole(name_mol, 0, 1, 0, "cc-pVDZ", True, "gmtkn-cc-pVDZ")
+                mol = gen_mole(
+                    name_mol,
+                    0,
+                    1,
+                    0,
+                    "def2-qzvp",
+                    ma_basis=True,
+                    dataset_name=args.dataset,
+                )
                 atoms = Atoms(
                     symbols=mol.elements, positions=mol.atom_coords() * units.Bohr
                 )
@@ -290,10 +289,7 @@ for damping, dft_type in product(
                 name_batch_list[i_subset].append(name_mol)
 
     for i_subset in batch_subset:
-        if i_subset == "BH76RC":
-            i_subset_name = "BH76"
-        else:
-            i_subset_name = i_subset
+        i_subset_name = "BH76" if i_subset == "BH76RC" else i_subset
         reaction_dict = json_data[f"reaction-{i_subset}"]
         name_batch_list[i_subset] = np.array(name_batch_list[i_subset])
         input_batch[i_subset] = model.obtain_batch_dicts(input_batch[i_subset])
@@ -305,10 +301,11 @@ for damping, dft_type in product(
             stoichiometry_list = i_reaction["stoichiometry"]
 
             for i in range(len(systems_list)):
-                if i_subset == "BH76RC":
-                    mole_name = f"{systems_list[i]}"
-                else:
-                    mole_name = f"{i_subset}-{systems_list[i]}"
+                mole_name = (
+                    f"{systems_list[i]}"
+                    if i_subset == "BH76RC"
+                    else f"{i_subset}-{systems_list[i]}"
+                )
                 stoichiometry = int(stoichiometry_list[i])
 
                 if mole_name in json_data:
@@ -324,38 +321,17 @@ for damping, dft_type in product(
 
     energy_batch_target = {}
     for i_subset in batch_subset:
-        if i_subset == "BH76RC":
-            i_subset_name = "BH76"
-        else:
-            i_subset_name = i_subset
+        i_subset_name = "BH76" if i_subset == "BH76RC" else i_subset
         reaction_dict = json_data[f"reaction-{i_subset}"]
 
         energy_batch_target[i_subset] = torch.zeros(
-            len(reaction_dict), dtype=torch.float64, device=device
+            len(reaction_dict), dtype=torch.float64, device=DEVICE
         )
         weight_batch = np.zeros(len(reaction_dict), dtype=np.float64)
         for i_reaction_name, (i_reaction_keys, i_reaction) in enumerate(
             reaction_dict.items()
         ):
-            systems_list = i_reaction["systems"]
-            stoichiometry_list = i_reaction["stoichiometry"]
-
-            for i in range(len(systems_list)):
-                if i_subset == "BH76RC":
-                    mole_name = f"{systems_list[i]}"
-                else:
-                    mole_name = f"{i_subset}-{systems_list[i]}"
-                stoichiometry = int(stoichiometry_list[i])
-
-                if mole_name in json_data:
-                    if isinstance(json_data[mole_name], str):
-                        mole_name = json_data[mole_name]
-
-                col = np.where(data_name_list == mole_name)[0]
-                energy_batch_target[i_subset][i_reaction_name] += (
-                    data_cc_ene[col[0]] - data_dft_ene[col[0]]
-                ) * stoichiometry
-                weight_batch[i_reaction_name] += data_cc_ene[col[0]] * stoichiometry
+            weight_batch[i_reaction_name] = i_reaction["reference"]
         mean_absolute_deviation.extend(np.abs(weight_batch))
         weight_batch_list[i_subset] = 1 / np.mean(np.abs(weight_batch))
 
@@ -391,7 +367,7 @@ for damping, dft_type in product(
 
             reaction_dict = json_data[f"reaction-{i_subset}"]
             energy_batch_output[i_subset] = torch.zeros(
-                len(reaction_dict), dtype=torch.float64, device=device
+                len(reaction_dict), dtype=torch.float64, device=DEVICE
             )
             for i_reaction_name, (i_reaction_keys, i_reaction) in enumerate(
                 reaction_dict.items()
@@ -401,7 +377,7 @@ for damping, dft_type in product(
 
                 for i in range(len(systems_list)):
                     mole_name = (
-                        systems_list[i]
+                        f"{systems_list[i]}"
                         if i_subset == "BH76RC"
                         else f"{i_subset}-{systems_list[i]}"
                     )
@@ -467,13 +443,21 @@ for damping, dft_type in product(
 
     best_epoch = np.argmin(wtmad_2_list)
     print(f"Best epoch: {best_epoch}, wtmad_2: {wtmad_2_list[best_epoch]}")
-    model_new = Model(device=device, damping=damping, **parameter_list[best_epoch])
+    model_new = Model(device=DEVICE, damping=damping, **parameter_list[best_epoch])
     save_para[f"{"ai" if dft_type == "scf" else dft_type}_d3{damping}"] = (
         parameter_list[best_epoch]
     )
     data_dft_disp = []
     for name_mol in data_name_list:
-        mol = gen_mole(name_mol, 0, 1, 0, "cc-pVDZ", True, "gmtkn-cc-pVDZ")
+        mol = gen_mole(
+            name_mol,
+            0,
+            1,
+            0,
+            "def2-qzvp",
+            ma_basis=True,
+            dataset_name=args.dataset,
+        )
         atoms = Atoms(symbols=mol.elements, positions=mol.atom_coords() * units.Bohr)
         energy = model_new(model_new.obtain_batch_dicts([atoms]))
         data_dft_disp.append(energy.item() / AU2KCALMOL)
@@ -482,7 +466,7 @@ for damping, dft_type in product(
         data_dft_disp
     )
 
-data.to_csv(data_path, index=False)
+data.to_csv(DATA_PATH, index=False)
 
-with open(save_para_path, "w", encoding="utf-8") as f:
+with open(SAVE_PARA_PATH, "w", encoding="utf-8") as f:
     json.dump(save_para, f)
