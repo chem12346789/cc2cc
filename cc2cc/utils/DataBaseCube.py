@@ -61,7 +61,7 @@ class DataBaseCube(DataBase):
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 
         input_mat_index = (
-            np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-8
+            np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-10
         )
         print(f"Total number of input points: {len(input_mat_index)}", flush=True)
         print(f"Number of non-zero input points: {np.sum(input_mat_index)}", flush=True)
@@ -124,19 +124,32 @@ class DataBaseCube(DataBase):
             print(f"Max energy density: {AU2KCALMOL * max_ene_den}")
 
         if self.args.if_relative_weight and not self.if_eval:
-            loss_multiplier = self.args.loss_multiplier / self.loss_ene(
-                torch.zeros_like(energy_target), energy_target
+            epsilon = 1e-5
+            loss_multiplier = 1 / (
+                self.loss_ene(torch.zeros(()), torch.tensor(energy_target)) + epsilon
             )
-            loss_multiplier_abs = self.args.loss_multiplier_abs / self.loss_ene_abs(
-                torch.zeros_like(output_mat * weight_mat),
-                torch.tensor(output_mat * weight_mat),
+            loss_multiplier_abs = 1 / (
+                self.loss_ene_abs(
+                    torch.zeros((output_mat * weight_mat).shape),
+                    torch.tensor(output_mat * weight_mat),
+                )
+                + epsilon
             )
-            loss_multiplier_grad = self.args.loss_multiplier_grad / self.loss_grad(
-                torch.zeros_like(grad_cc_train), grad_cc_train
+            if grad_cc_train is not None:
+                loss_multiplier_grad = 1 / (
+                    self.loss_grad(
+                        torch.zeros(grad_cc_train.shape), torch.tensor(grad_cc_train)
+                    )
+                    + epsilon
+                )
+            else:
+                loss_multiplier_grad = 1
+            loss_multiplier_atomic = 1 / (
+                self.loss_ene_atomic(torch.zeros(()), torch.tensor(ae_target)) + epsilon
             )
-            loss_multiplier_atomic = (
-                self.args.loss_multiplier_atomic
-                / self.loss_ene_atomic(torch.zeros_like(ae_target), ae_target)
+            print(
+                f"Relative loss multipliers: {loss_multiplier}, {loss_multiplier_abs}, {loss_multiplier_grad}, {loss_multiplier_atomic}",
+                flush=True,
             )
         else:
             loss_multiplier = self.args.loss_multiplier

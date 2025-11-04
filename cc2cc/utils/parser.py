@@ -404,7 +404,7 @@ def add_args(parser: argparse.ArgumentParser):
 
     parser.add_argument(
         "--if_relative_weight",
-        type=bool,
+        type=str2bool,
         default=False,
         help="Whether to use relative weight for the loss function. Default is False.",
     )
