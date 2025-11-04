@@ -71,7 +71,7 @@ def modified_block_loop(
     grids,
     nao=None,
     deriv=0,
-    max_memory=25000,
+    max_memory=500,
     non0tab=None,
     blksize=None,
     buf=None,
@@ -147,9 +147,9 @@ class Grid(dft.gen_grid.Grids):
         self.level = level
         self.radi_method = dft.radi.gauss_chebyshev
         self.becke_scheme = dft.gen_grid.original_becke
+        self.atomic_radii = None
+        self.radii_adjust = None
         if not test:
-            self.atomic_radii = None
-            self.radii_adjust = None
             self.prune = None
         self.build(with_non0tab=True, sort_grids=False)
         self.non0tab = self.make_mask(mol, self.coords)

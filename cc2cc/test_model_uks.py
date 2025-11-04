@@ -47,13 +47,12 @@ def test_model_uks(
         mdft.kernel()
         if mdft.converged is False:
             print("UKS not converged. Second try.")
-            mdft.conv_tol = 1e-6
-            mdft.diis_damp = 0.0
+            mdft.diis_damp = 0
             pyscf.scf.addons.dynamic_level_shift_(mdft, factor=0.5)
             mdft.kernel()
             if mdft.converged is False:
                 print("UKS not converged. Third try.")
-                mdft.level_shift = 0.5
+                mdft.level_shift = 0
                 mdft = mdft.newton()
                 mdft.kernel()
                 if mdft.converged is False:
