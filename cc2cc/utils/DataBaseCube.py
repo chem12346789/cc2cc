@@ -61,7 +61,7 @@ class DataBaseCube(DataBase):
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 
         input_mat_index = (
-            np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-14
+            np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-8
         )
         print(f"Total number of input points: {len(input_mat_index)}", flush=True)
         print(f"Number of non-zero input points: {np.sum(input_mat_index)}", flush=True)
@@ -96,11 +96,12 @@ class DataBaseCube(DataBase):
                 atomic_stoichiometry[atomic_systems.index(atom_name)] += 1
         print(f"Total data used for {name}: {num_data_used}", flush=True)
 
+        ae_target = 0.0
         if self.args.if_atomic:
-            ae_target = 0.0
-            if name in self.atomic_name_dict:
+            if name in list(self.atomic_name_dict.values()):
                 self.atomic_energy_dict[atom_name] = energy_target
             else:
+                ae_target += energy_target
                 for i_system in range(len(atomic_systems)):
                     system_atom = atomic_systems[i_system]
                     if system_atom in self.atomic_energy_dict:
@@ -110,7 +111,7 @@ class DataBaseCube(DataBase):
                         )
 
             print(
-                f"Atomic systems: {atomic_systems}, Stoichiometry: {atomic_stoichiometry}",
+                f"Atomic systems: {atomic_systems}, Stoichiometry: {atomic_stoichiometry} , AE target: {ae_target * AU2KCALMOL}",
                 flush=True,
             )
 

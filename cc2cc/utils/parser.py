@@ -214,15 +214,6 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--loss_ene_abs",
-        type=str,
-        choices=["MSELoss", "L1Loss"],
-        default="MSELoss",
-        help="Loss function for the energy. "
-        "Default is MSELoss. Other options are L1Loss.",
-    )
-
-    parser.add_argument(
         "--grid_level",
         type=int,
         default=4,
@@ -454,6 +445,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--if_atomic",
+        type=str2bool,
+        default=False,
+        help="Whether to calculate the atomic energy. Default is False.",
+    )
+
+    parser.add_argument(
         "--load",
         type=str,
         default="",
@@ -557,6 +555,7 @@ def add_args(parser: argparse.ArgumentParser):
     print(f"Weight decay: {args.weight_decay}")
     print(f"Random seed: {args.seed}")
     print(f"Optimizer: {args.optimizer}")
+    print(f"if_atomic: {args.if_atomic}")
     print(f"Loss multiplier: {args.loss_multiplier}")
     print(f"Loss multiplier abs: {args.loss_multiplier_abs}")
     print(f"Loss multiplier grad: {args.loss_multiplier_grad}")

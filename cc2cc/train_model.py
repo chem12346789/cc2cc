@@ -59,8 +59,10 @@ def train_model(train_str_dict, eval_str_dict, args):
             "pid": os.getpid(),
             "rho_input": args.rho_input,
             "checkpoint": modeldict.dir_checkpoint.stem,
-            "loss_multiplier_abs": modeldict.loss_multiplier_abs,
-            "loss_multiplier_atomic": modeldict.loss_multiplier_atomic,
+            "loss_multiplier": args.loss_multiplier,
+            "loss_multiplier_abs": args.loss_multiplier_abs,
+            "loss_multiplier_atomic": args.loss_multiplier_atomic,
+            "loss_multiplier_grad": args.loss_multiplier_grad,
             "loss_ene": (
                 "L1Loss"
                 if isinstance(modeldict.loss_ene, torch.nn.L1Loss)

@@ -93,11 +93,13 @@ class DataBase:
         error_molecule = []
         mol_info_dict = {}
         if atomic_name_dict is None:
-            atomic_name_dict = {}
-        self.atomic_name_dict = atomic_name_dict
+            self.atomic_name_dict = {}
+        else:
+            self.atomic_name_dict = atomic_name_dict
         if atomic_energy_dict is None:
-            atomic_energy_dict = {}
-        self.atomic_energy_dict = atomic_energy_dict
+            self.atomic_energy_dict = {}
+        else:
+            self.atomic_energy_dict = atomic_energy_dict
 
         training_cycle_list = [""]
         if args.training_cycle > 0:
@@ -157,12 +159,17 @@ class DataBase:
                 print(f"Error generating molecule {name}: {e}", flush=True)
 
         # move atomic_name_dict in the head of name_list.
-        for iter_atom_name, atom_name in enumerate(self.atomic_name_dict):
+        for iter_atom_name, (atom_key, atom_name) in enumerate(
+            self.atomic_name_dict.items()
+        ):
             if atom_name in name_list:
                 name_list.remove(atom_name)
                 name_list.insert(iter_atom_name, atom_name)
             else:
-                print(f"Warning: atomic {atom_name} not in the dataset.", flush=True)
+                print(
+                    f"Warning: atomic {atom_name} as {atom_key} not in the dataset.",
+                    flush=True,
+                )
         print(name_list, flush=True)
 
         self.dataset = BasicDataset(name_list, mol_info_dict, self.load_data)
