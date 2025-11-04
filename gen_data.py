@@ -848,8 +848,8 @@ if __name__ == "__main__":
         name_mol_list, evaluate = train_str_list[args.training_cycle :: 3], False
 
     name_mol_list = [
-        "W4_11-b2h6",
-        "W4_11-c2h6",
+        # "W4_11-b2h6",
+        # "W4_11-c2h6",
         "W4_11-ch2ch",
         "W4_11-ch2nh2",
         "W4_11-ch3nh",
@@ -858,7 +858,7 @@ if __name__ == "__main__":
         "W4_11-hcnh",
         "W4_11-hoo",
         "W4_11-si2h6",
-        # "W4_11-sih3f",
+        "W4_11-sih3f",
         "W4_11-ssh",
     ]
     evaluate = False
