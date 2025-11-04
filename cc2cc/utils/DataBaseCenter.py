@@ -13,8 +13,23 @@ from cc2cc.utils.DataBase import DataBase
 class DataBaseCenter(DataBase):
     """Documentation for a class."""
 
-    def __init__(self, molecule_list, args, shuffle=True, if_eval=False):
-        super().__init__(molecule_list, args, shuffle=shuffle, if_eval=if_eval)
+    def __init__(
+        self,
+        molecule_list,
+        args,
+        shuffle=True,
+        if_eval=False,
+        atomic_name_dict=None,
+        atomic_energy_dict=None,
+    ):
+        super().__init__(
+            molecule_list,
+            args,
+            shuffle=shuffle,
+            if_eval=if_eval,
+            atomic_name_dict=atomic_name_dict,
+            atomic_energy_dict=atomic_energy_dict,
+        )
 
     def load_data(self, mol_info, name):
         """
@@ -24,26 +39,26 @@ class DataBaseCenter(DataBase):
         data = np.load(DATA_PATH / f"data_{name}.npz")
 
         weight_mat = data["weights"]
-        if self.rho_input == "dft":
+        if self.args.rho_input == "dft":
             input_mat = data["rho_cube_dft"]
             output_mat = data["exc_cc_grids"]
             energy_train = data["energy_train"]
             grad2force = data["grad2force"]
             grad_cc_train = data["grad_cc_train"]
-        elif self.rho_input == "cc":
+        elif self.args.rho_input == "cc":
             input_mat = data["rho_cube_cc"]
             output_mat = data["exc_cc_grids"]
             energy_train = data["energy_train"]
             grad2force = None
             grad_cc_train = None
-        elif self.rho_input == "zmp":
+        elif self.args.rho_input == "zmp":
             input_mat = data["rho_cube_zmp"]
             output_mat = data["exc_cc_grids_zmp"]
             energy_train = data["energy_train_zmp"]
             grad2force = None
             grad_cc_train = None
         else:
-            raise ValueError(f"Unknown rho_input: {self.rho_input}")
+            raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 
         if not self.if_eval:
             error_energy = AU2KCALMOL * abs(

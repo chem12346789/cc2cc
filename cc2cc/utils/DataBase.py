@@ -52,7 +52,15 @@ class BasicDataset(Dataset):
 class DataBase:
     """Documentation for a class."""
 
-    def __init__(self, molecule_list, args, shuffle=True, if_eval=False):
+    def __init__(
+        self,
+        molecule_list,
+        args,
+        shuffle=True,
+        if_eval=False,
+        atomic_name_dict=None,
+        atomic_energy_dict=None,
+    ):
         """
         Initialize the DataBase with a list of molecules and arguments.
         Args:
@@ -60,19 +68,36 @@ class DataBase:
             args: Arguments containing various settings for the database.
             shuffle (bool): Whether to shuffle the dataset.
         """
-        self.rho_input = args.rho_input
+        self.args = args
         if args.precision == "float64":
             self.dtype = torch.float64
         else:
             self.dtype = torch.float32
-        self.train_atom = args.train_atom
         self.if_eval = if_eval
         self.array_key = ["input", "weight", "output", "grad2force"]
+
+        if args.loss_ene == "L1Loss":
+            self.loss_ene = torch.nn.L1Loss(reduction="sum")
+            self.loss_ene_abs = torch.nn.L1Loss(reduction="sum")
+            self.loss_ene_atomic = torch.nn.L1Loss(reduction="sum")
+            self.loss_grad = torch.nn.L1Loss(reduction="sum")
+        elif args.loss_ene == "MSELoss":
+            self.loss_ene = torch.nn.MSELoss(reduction="sum")
+            self.loss_ene_abs = torch.nn.MSELoss(reduction="sum")
+            self.loss_ene_atomic = torch.nn.MSELoss(reduction="sum")
+            self.loss_grad = torch.nn.MSELoss(reduction="sum")
+        else:
+            raise ValueError(f"Unknown loss function {args.loss_ene}")
 
         name_list = []
         error_molecule = []
         mol_info_dict = {}
-        self.atomic_name_dict = {}
+        if atomic_name_dict is None:
+            atomic_name_dict = {}
+        self.atomic_name_dict = atomic_name_dict
+        if atomic_energy_dict is None:
+            atomic_energy_dict = {}
+        self.atomic_energy_dict = atomic_energy_dict
 
         training_cycle_list = [""]
         if args.training_cycle > 0:
@@ -116,8 +141,9 @@ class DataBase:
 
                 name_list.append(name)
                 if mol.natm == 1 and mol.charge == 0:
-                    self.atomic_name_dict[mol.atom_pure_symbol(0)] = name
-                    print(f"{mol.elements} use {name}", flush=True)
+                    if atomic_name_dict is None:
+                        self.atomic_name_dict[mol.atom_pure_symbol(0)] = name
+                        print(f"{mol.elements} use {name}", flush=True)
 
                 mol_info_dict[name] = {
                     "natm": mol.natm,
@@ -128,6 +154,15 @@ class DataBase:
 
             except ValueError as e:
                 print(f"Error generating molecule {name}: {e}", flush=True)
+
+        # move atomic_name_dict in the head of name_list.
+        for iter_atom_name, atom_name in enumerate(self.atomic_name_dict):
+            if atom_name in name_list:
+                name_list.remove(atom_name)
+                name_list.insert(iter_atom_name, atom_name)
+            else:
+                print(f"Warning: atomic {atom_name} not in the dataset.", flush=True)
+        print(name_list, flush=True)
 
         self.dataset = BasicDataset(name_list, mol_info_dict, self.load_data)
         if args.distributed:

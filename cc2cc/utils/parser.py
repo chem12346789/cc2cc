@@ -412,6 +412,20 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--if_relative_weight",
+        type=bool,
+        default=False,
+        help="Whether to use relative weight for the loss function. Default is False.",
+    )
+
+    parser.add_argument(
+        "--loss_multiplier",
+        type=float,
+        default=1.0,
+        help="Lambda for the loss function. Default is 1.0.",
+    )
+
+    parser.add_argument(
         "--loss_multiplier_abs",
         type=float,
         default=1.0,
@@ -426,7 +440,7 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--loss_multiplier_force",
+        "--loss_multiplier_grad",
         type=float,
         default=1.0,
         help="Lambda for the loss function. Default is 1.0.",
@@ -437,13 +451,6 @@ def add_args(parser: argparse.ArgumentParser):
         type=str2bool,
         default=False,
         help="Whether to calculate the gradient. Default is False.",
-    )
-
-    parser.add_argument(
-        "--train_atom",
-        type=int,
-        default=1,
-        help="Atom for training. Default is 1 (1 for Hydrogen).",
     )
 
     parser.add_argument(
@@ -518,13 +525,6 @@ def add_args(parser: argparse.ArgumentParser):
     args.name_mol_input = args.name_mol.copy()
     args.name_mol = gen_name_args(args.name_mol, args.dataset, args.name_mol_reverse)
 
-    if args.train_atom not in periodic_table:
-        raise ValueError(
-            f"Invalid train_atom value: {args.train_atom}. Please use a valid atomic number."
-        )
-    else:
-        args.train_atom = periodic_table[args.train_atom]
-
     if args.device == "cuda":
         if not torch.cuda.is_available():
             print("CUDA is not available. Use CPU instead. ")
@@ -557,9 +557,10 @@ def add_args(parser: argparse.ArgumentParser):
     print(f"Weight decay: {args.weight_decay}")
     print(f"Random seed: {args.seed}")
     print(f"Optimizer: {args.optimizer}")
+    print(f"Loss multiplier: {args.loss_multiplier}")
     print(f"Loss multiplier abs: {args.loss_multiplier_abs}")
+    print(f"Loss multiplier grad: {args.loss_multiplier_grad}")
     print(f"Loss multiplier atomic: {args.loss_multiplier_atomic}")
-    print(f"Train atom: {args.train_atom}")
     print(f"Load: {args.load}")
     print(f"Save directory: {args.save_dir}")
     print(f"Training cycle: {args.training_cycle}")

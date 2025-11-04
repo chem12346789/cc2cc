@@ -19,8 +19,6 @@ from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBaseCube import DataBaseCube
 from cc2cc.utils.DataBaseCenter import DataBaseCenter
 
-IGNORE_MULTIPLIER = 1e-12
-
 
 class ModelClass:
     """
@@ -49,8 +47,6 @@ class ModelClass:
         self.args = args
         self.model_name = self.args.model
         self.load = self.args.load
-        self.loss_multiplier_abs = self.args.loss_multiplier_abs
-        self.loss_multiplier_atomic = self.args.loss_multiplier_atomic
 
         self.iters_to_accumulate = self.args.iters_to_accumulate
         self.max_norm = self.args.max_norm
@@ -227,16 +223,26 @@ class ModelClass:
         """
         if self.model_type == "center_4":
             input_size = (1, 4)
-            self.database_eval = DataBaseCenter(
-                eval_str_dict, self.args, shuffle=False, if_eval=True
-            )
             self.database_train = DataBaseCenter(train_str_dict, self.args)
+            self.database_eval = DataBaseCenter(
+                eval_str_dict,
+                self.args,
+                shuffle=False,
+                if_eval=True,
+                atomic_name_dict=self.database_train.atomic_name_dict,
+                atomic_energy_dict=self.database_train.atomic_energy_dict,
+            )
         elif self.model_type == "cube":
             input_size = (1, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-            self.database_eval = DataBaseCube(
-                eval_str_dict, self.args, shuffle=False, if_eval=True
-            )
             self.database_train = DataBaseCube(train_str_dict, self.args)
+            self.database_eval = DataBaseCube(
+                eval_str_dict,
+                self.args,
+                shuffle=False,
+                if_eval=True,
+                atomic_name_dict=self.database_train.atomic_name_dict,
+                atomic_energy_dict=self.database_train.atomic_energy_dict,
+            )
         else:
             raise ValueError(f"Unknown model type: {self.model_type}")
 
@@ -267,8 +273,14 @@ class ModelClass:
         """
         input_ = batch["input"]
         weight = batch["weight"]
-        sum_target = batch["energy_train"].cuda(self.local_rank)
+        sum_target = batch["energy_target"].cuda(self.local_rank)
         data_weight = batch["data_weight"]
+        ae_target = batch["ae_target"].cuda(self.local_rank)
+        loss_multiplier = batch["loss_multiplier"]
+        loss_multiplier_abs = batch["loss_multiplier_abs"]
+        loss_multiplier_grad = batch["loss_multiplier_grad"]
+        loss_multiplier_atomic = batch["loss_multiplier_atomic"]
+
         if if_train:
             input_.requires_grad = True
             output = self.model(input_)
@@ -288,22 +300,22 @@ class ModelClass:
             with torch.no_grad():
                 output = self.model(input_) * weight
 
-        tot_loss = self.loss_ene(
+        tot_loss = loss_multiplier * self.loss_ene(
             data_weight * sum_target, data_weight * torch.sum(output)
         )
         loss_record = np.abs((sum_target - torch.sum(output)).item())
 
         if if_train:
             target = batch["output"] * weight
-            if self.loss_multiplier_abs > IGNORE_MULTIPLIER and len(target.shape) != 0:
+            if len(target.shape) != 0:
                 # len(target.shape) will 0 if target is a dummy tensor
-                tot_loss += self.loss_multiplier_abs * self.loss_ene_abs(
+                tot_loss += loss_multiplier_abs * self.loss_ene_abs(
                     data_weight * target, data_weight * output
                 )
             loss_abs_record = torch.sum(torch.abs(target - output)).item()
 
             if self.args.if_grad:
-                tot_loss += self.loss_grad(grad_cc_train, force)
+                tot_loss += loss_multiplier_grad * self.loss_grad(grad_cc_train, force)
                 loss_grad_record = torch.sum(torch.abs(grad_cc_train - force)).item()
             else:
                 loss_grad_record = 0.0
@@ -311,49 +323,35 @@ class ModelClass:
             loss_abs_record = 0.0
             loss_grad_record = 0.0
 
-        if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
-            ae_target = sum_target
+        if self.args.if_atomic:
             ae_output = torch.sum(output)
-        loss_atomic_record = sum_target - torch.sum(output)
-        for i_system in range(len(batch["atomic_systems"])):
-            system_atom = batch["atomic_systems"][i_system]
-            if system_atom in self.database_train.atomic_name_dict:
-                name_atom = self.database_train.atomic_name_dict[system_atom]
-            else:
-                print(
-                    f"Warning: {system_atom} not found in atomic_name_dict, "
-                    "skipping atomic energy calculation."
+
+            for i_system in range(len(batch["atomic_systems"])):
+                system_atom = batch["atomic_systems"][i_system]
+                if system_atom in self.database_train.atomic_name_dict:
+                    name_atom = self.database_train.atomic_name_dict[system_atom]
+                else:
+                    print(
+                        f"Warning: {system_atom} not found in atomic_name_dict, "
+                        "skipping atomic energy calculation."
+                    )
+                    break
+                atomic_batch = self.database_train.dataset.get_from_name(name_atom)
+                atomic_batch = self.database_train.process_batch_dataset(
+                    atomic_batch, device=self.local_rank
                 )
-                if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
-                    ae_target = torch.zeros_like(ae_target)
-                    ae_output = torch.zeros_like(ae_output)
-                    loss_atomic_record = torch.zeros_like(loss_atomic_record)
-                break
+                atomic_input_ = atomic_batch["input"]
+                atomic_weight = atomic_batch["weight"]
+                atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
+                if self.args.if_atomic:
+                    ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
-            atomic_batch = self.database_train.dataset.get_from_name(name_atom)
-            atomic_batch = self.database_train.process_batch_dataset(
-                atomic_batch, device=self.local_rank
-            )
-
-            atomic_input_ = atomic_batch["input"]
-            atomic_weight = atomic_batch["weight"]
-            atomic_target = torch.tensor(atomic_batch["energy_train"]).cuda(
-                self.local_rank
-            )
-            atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
-
-            if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
-                ae_target -= batch["atomic_stoichiometry"][i_system] * atomic_target
-                ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
-            loss_atomic_record -= batch["atomic_stoichiometry"][i_system] * (
-                atomic_target - atomic_output
-            )
-
-        if self.loss_multiplier_atomic > IGNORE_MULTIPLIER:
-            tot_loss += self.loss_multiplier_atomic * self.loss_ene_atomic(
+            tot_loss += loss_multiplier_atomic * self.loss_ene_atomic(
                 data_weight * ae_target, data_weight * ae_output
             )
-        loss_atomic_record = torch.abs(loss_atomic_record).item()
+            loss_atomic_record = torch.abs(ae_target - ae_output).item()
+        else:
+            loss_atomic_record = 0.0
 
         tot_loss = tot_loss / self.iters_to_accumulate
         data_record = {
