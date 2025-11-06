@@ -63,6 +63,7 @@ def train_model(train_str_dict, eval_str_dict, args):
             "loss_multiplier_abs": args.loss_multiplier_abs,
             "loss_multiplier_atomic": args.loss_multiplier_atomic,
             "loss_multiplier_grad": args.loss_multiplier_grad,
+            "if_relative_weight": args.if_relative_weight,
             "loss_ene": (
                 "L1Loss"
                 if isinstance(modeldict.loss_ene, torch.nn.L1Loss)

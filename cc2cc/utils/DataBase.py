@@ -4,6 +4,7 @@ Module for handling molecular data and generating datasets for machine learning 
 
 import os
 from itertools import product
+import numpy as np
 
 import torch
 from torch.utils.data import Dataset
@@ -11,6 +12,9 @@ from torch.utils.data import DataLoader
 
 from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import gen_mole
+
+
+PRINT_DEBUG = False
 
 
 class BasicDataset(Dataset):
@@ -28,10 +32,10 @@ class BasicDataset(Dataset):
             if num_data_used != 0:
                 self.data[name] = data_dict
                 self.name_list.append(name)
-            # # Add more copies of the atomic data to balance the dataset.
-            # # This is useful when we need to have more data for single-atom systems.
-            # if num_data_used == 1:
-            #     self.name_list.extend([name] * 9)
+            # Add more copies of the atomic data to balance the dataset.
+            # This is useful when we need to have more data for single-atom systems.
+            if num_data_used == 1:
+                self.name_list.extend([name] * 19)
 
     def __len__(self):
         return len(self.name_list)
@@ -200,9 +204,39 @@ class DataBase:
         batch_gpu = {}
         for key, val in batch.items():
             if key in self.array_key:
+                if PRINT_DEBUG:
+                    print(f"key : {key}, shape of val : {val.size()}", flush=True)
                 batch_gpu[key] = val[0].to(device=device, non_blocking=True)
+                if PRINT_DEBUG:
+                    print(
+                        f"After processing, key : {key}, type of val : {type(batch_gpu[key])}, shape of val : {batch_gpu[key].size()}",
+                        flush=True,
+                    )
             else:
-                batch_gpu[key] = val[0]
+                if PRINT_DEBUG:
+                    print(
+                        f"key : {key}, len of val : {len(val)}, val : {val}", flush=True
+                    )
+                if isinstance(val, list):
+                    if len(np.shape(val)) == 1:
+                        batch_gpu[key] = val[0]
+                    elif len(np.shape(val)) == 2:
+                        batch_gpu[key] = list(np.array(val)[:, 0])
+                    elif len(np.shape(val)) == 3:
+                        batch_gpu[key] = list(np.array(val)[:, :, 0])
+                    elif len(np.shape(val)) == 4:
+                        batch_gpu[key] = list(np.array(val)[:, :, :, 0])
+                    else:
+                        raise ValueError(
+                            f"Unknown shape for key {val}: {np.shape(val)}"
+                        )
+                else:
+                    batch_gpu[key] = val[0]
+                if PRINT_DEBUG:
+                    print(
+                        f"After processing, key : {key}, type of val : {type(batch_gpu[key])}, val : {batch_gpu[key]}",
+                        flush=True,
+                    )
         return batch_gpu
 
     def process_batch_dataset(self, batch, device="cuda"):

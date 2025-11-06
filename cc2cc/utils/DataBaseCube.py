@@ -61,7 +61,7 @@ class DataBaseCube(DataBase):
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 
         input_mat_index = (
-            np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-10
+            np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-14
         )
         print(f"Total number of input points: {len(input_mat_index)}", flush=True)
         print(f"Number of non-zero input points: {np.sum(input_mat_index)}", flush=True)
@@ -109,6 +109,12 @@ class DataBaseCube(DataBase):
                             atomic_stoichiometry[i_system]
                             * self.atomic_energy_dict[system_atom]
                         )
+                    else:
+                        print(
+                            f"Warning: {system_atom} not found in atomic_name_dict, "
+                            "skipping atomic energy calculation."
+                        )
+                        break
 
             print(
                 f"Atomic systems: {atomic_systems}, Stoichiometry: {atomic_stoichiometry} , AE target: {ae_target * AU2KCALMOL}",
@@ -180,9 +186,7 @@ class DataBaseCube(DataBase):
             "name": name,
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,
-            "data_weight": (
-                np.sqrt(40.0) if num_data_used == 1 else np.sqrt(num_data_used)
-            ),
+            "data_weight": np.sqrt(num_data_used),
             "loss_multiplier": loss_multiplier,
             "loss_multiplier_abs": loss_multiplier_abs,
             "loss_multiplier_grad": loss_multiplier_grad,

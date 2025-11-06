@@ -343,8 +343,7 @@ class ModelClass:
                 atomic_input_ = atomic_batch["input"]
                 atomic_weight = atomic_batch["weight"]
                 atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
-                if self.args.if_atomic:
-                    ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
+                ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
             tot_loss += loss_multiplier_atomic * self.loss_ene_atomic(
                 data_weight * ae_target, data_weight * ae_output
