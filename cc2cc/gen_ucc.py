@@ -143,7 +143,6 @@ def get_dft_energy(
                     ao_value[0][i],
                     ao_value[0][i],
                     rinv,
-                    backend="torch",
                 )
 
         for i_spin in range(2):

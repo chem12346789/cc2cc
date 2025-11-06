@@ -127,7 +127,6 @@ def get_dft_energy(
                     ao_value[0][i],
                     ao_value[0][i],
                     rinv,
-                    backend="torch",
                 )
 
         # kinetic part
