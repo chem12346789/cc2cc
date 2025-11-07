@@ -156,6 +156,8 @@ parser.add_argument(
 )
 parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--seed", type=int, default=42, help="Random seed")
+parser.add_argument("--dataset", type=str, default="gmtkn-def2", help="Dataset name")
+
 args = parser.parse_args()
 BASIS_SET = "def2-QZVP"
 DATA_PATH = f"validate_hkqai_done/ccdft_{BASIS_SET}_{args.load}_gmtkn-def2.csv"
@@ -173,68 +175,22 @@ torch.cuda.manual_seed_all(args.seed)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.enabled = False
-print("Warning: Using deterministic mode, which may slow down training.")
+print("Warning: Using deterministic mode, which may slow down training.", flush=True)
 
 DEVICE = "cuda"
 
 data = pd.read_csv(DATA_PATH)
-batch_subset = [
-    "W4_11",
-    "G21EA",
-    "G21IP",
-    "DIPCS10",
-    "PA26",
-    "SIE4x4",
-    "ALKBDE10",
-    "YBDE18",
-    "AL2X6",
-    "HEAVYSB11",
-    "NBPRC",
-    "ALK8",
-    "RC21",
-    "G2RC",
-    "BH76RC",
-    "FH51",
-    "TAUT15",
-    "DC13",
-    "MB16_43",
-    "DARC",
-    "RSE43",
-    "BSR36",
-    "CDIE20",
-    "ISO34",
-    # "ISOL24",
-    # "C60ISO",
-    "PArel",
-    "BH76",
-    "BHPERI",
-    "BHDIV10",
-    "INV24",
-    "BHROT27",
-    "PX13",
-    "WCPT18",
-    "RG18",
-    "ADIM6",
-    "S22",
-    "S66",
-    "HEAVY28",
-    "WATER27",
-    "CARBHB12",
-    "PNICO23",
-    "HAL59",
-    "AHB21",
-    "CHB6",
-    "IL16",
-    "IDISP",
-    "ICONF",
-    "ACONF",
-    "Amino20x4",
-    "PCONF21",
-    "MCONF",
-    "SCONF",
-    # "UPU23",
-    "BUT14DIOL",
-]
+
+with open("jupyter-notebook/subset.json", "r", encoding="utf-8") as f:
+    # full_subset_dict = json.load(f)["full_subset_small_dict"]
+    full_subset_dict = json.load(f)["full_subset_dict"]
+    # full_subset_dict = json.load(f)["full_subset_dict_test"]
+name_mol_list = []
+for subset in full_subset_dict.values():
+    for name_mol in subset:
+        name_mol_list.append(f"{name_mol}")
+batch_subset = list(set(name_mol_list))
+print(batch_subset, flush=True)
 
 if Path(SAVE_PARA_PATH).exists():
     with open(SAVE_PARA_PATH, "r", encoding="utf-8") as f:
@@ -248,7 +204,11 @@ with open(
 ) as f:
     json_data = json.load(f)
 
-for damping, dft_type in product(["bj"], ["scf"]):
+if args.load == "":
+    dft_type_list = ["b3lyp"]
+else:
+    dft_type_list = ["scf"]
+for damping, dft_type in product(["bj"], dft_type_list):
     data_name_list = (data["name"].str.split("_def2").str[0]).to_numpy()
     data_dft_ene = data[f"{dft_type}_ene"].to_numpy() * AU2KCALMOL
 
@@ -314,7 +274,7 @@ for damping, dft_type in product(["bj"], ["scf"]):
 
                 col = np.where(data_name_list == mole_name)[0]
                 if col.size != 1:
-                    print(f"Warning: {mole_name} not found in name_list")
+                    print(f"Warning: {mole_name} not found in name_list", flush=True)
                     reaction_dict.pop(i_reaction_keys)
                     break
         json_data[f"reaction-{i_subset}"] = reaction_dict
@@ -331,12 +291,30 @@ for damping, dft_type in product(["bj"], ["scf"]):
         for i_reaction_name, (i_reaction_keys, i_reaction) in enumerate(
             reaction_dict.items()
         ):
+            systems_list = i_reaction["systems"]
+            stoichiometry_list = i_reaction["stoichiometry"]
             weight_batch[i_reaction_name] = i_reaction["reference"]
+            energy_batch_target[i_subset][i_reaction_name] = i_reaction["reference"]
+            for i in range(len(systems_list)):
+                if i_subset == "BH76RC":
+                    mole_name = f"{systems_list[i]}"
+                else:
+                    mole_name = f"{i_subset}-{systems_list[i]}"
+                stoichiometry = int(stoichiometry_list[i])
+
+                if mole_name in json_data:
+                    if isinstance(json_data[mole_name], str):
+                        mole_name = json_data[mole_name]
+
+                col = np.where(data_name_list == mole_name)[0]
+                energy_batch_target[i_subset][i_reaction_name] += (
+                    -data_dft_ene[col[0]]
+                ) * stoichiometry
         mean_absolute_deviation.extend(np.abs(weight_batch))
         weight_batch_list[i_subset] = 1 / np.mean(np.abs(weight_batch))
 
     print(
-        f"mean_absolute_deviation: {np.mean(mean_absolute_deviation) / len(mean_absolute_deviation)}",
+        f"mean_absolute_deviation: {56.84 / len(mean_absolute_deviation)}",
         flush=True,
     )
 
@@ -353,7 +331,7 @@ for damping, dft_type in product(["bj"], ["scf"]):
     loss_function = torch.nn.L1Loss(reduction="sum")
     torch.set_printoptions(precision=5, sci_mode=False)
     energy_batch_output = {}
-    print("start training...")
+    print("start training...", flush=True)
 
     parameter_list = []
     wtmad_2_list = []
@@ -361,6 +339,7 @@ for damping, dft_type in product(["bj"], ["scf"]):
     for epoch in tqdm.tqdm(range(args.epochs + 1)):
         loss_batch = []
         wtmad_2 = 0
+        loss = 0.0
         optimizer.zero_grad()
         for i_subset in batch_subset:
             energy = model(input_batch[i_subset])
@@ -393,9 +372,11 @@ for damping, dft_type in product(["bj"], ["scf"]):
                             energy[col_disp[0]] * stoichiometry
                         )
                     else:
-                        print(f"Warning: {mole_name} not found in name_list")
+                        print(
+                            f"Warning: {mole_name} not found in name_list", flush=True
+                        )
                         break
-            loss = (
+            loss += (
                 loss_function(
                     energy_batch_output[i_subset], energy_batch_target[i_subset]
                 )
@@ -417,9 +398,9 @@ for damping, dft_type in product(["bj"], ["scf"]):
                 * weight_batch_list[i_subset]
             ).item()
 
-            # clip the loss to avoid exploding gradients
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            loss.backward()
+        # clip the loss to avoid exploding gradients
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        loss.backward()
         optimizer.step()
         scheduler.step()
 
@@ -431,18 +412,14 @@ for damping, dft_type in product(["bj"], ["scf"]):
                 else:
                     parameter_dict[key] = item
             parameter_list.append(deepcopy(parameter_dict))
-            wtmad_2_list.append(
-                wtmad_2
-                * np.mean(mean_absolute_deviation)
-                / len(mean_absolute_deviation)
-            )
+            wtmad_2_list.append(wtmad_2 * 56.84 / len(mean_absolute_deviation))
             print(
-                f"Epoch: {epoch}, wtmad_2: {wtmad_2 * np.mean(mean_absolute_deviation) / len(mean_absolute_deviation)}, loss: {loss_batch}",
+                f"Epoch: {epoch}, wtmad_2: {wtmad_2 * 56.84 / len(mean_absolute_deviation)}, loss: {loss_batch}",
                 flush=True,
             )
 
     best_epoch = np.argmin(wtmad_2_list)
-    print(f"Best epoch: {best_epoch}, wtmad_2: {wtmad_2_list[best_epoch]}")
+    print(f"Best epoch: {best_epoch}, wtmad_2: {wtmad_2_list[best_epoch]}", flush=True)
     model_new = Model(device=DEVICE, damping=damping, **parameter_list[best_epoch])
     save_para[f"{"ai" if dft_type == "scf" else dft_type}_d3{damping}"] = (
         parameter_list[best_epoch]
