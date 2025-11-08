@@ -186,7 +186,11 @@ class DataBaseCube(DataBase):
             "name": name,
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,
-            "data_weight": np.sqrt(num_data_used),
+            "data_weight": (
+                self.args.atomic_weighting
+                if num_data_used == 1
+                else np.sqrt(num_data_used)
+            ),
             "loss_multiplier": loss_multiplier,
             "loss_multiplier_abs": loss_multiplier_abs,
             "loss_multiplier_grad": loss_multiplier_grad,

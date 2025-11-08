@@ -410,6 +410,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--atomic_weighting",
+        type=int,
+        default=1,
+        help="Weighting scheme for atomic energy. Default is 1 (with 20 copies).",
+    )
+
+    parser.add_argument(
         "--loss_multiplier",
         type=float,
         default=1.0,

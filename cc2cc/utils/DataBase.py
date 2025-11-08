@@ -35,7 +35,8 @@ class BasicDataset(Dataset):
             # Add more copies of the atomic data to balance the dataset.
             # This is useful when we need to have more data for single-atom systems.
             if num_data_used == 1:
-                self.name_list.extend([name] * 19)
+                append_number = 20 // int(data_dict["data_weight"]) - 1
+                self.name_list.extend([name] * append_number)
 
     def __len__(self):
         return len(self.name_list)
