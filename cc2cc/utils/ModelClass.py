@@ -281,20 +281,23 @@ class ModelClass:
         loss_multiplier_grad = batch["loss_multiplier_grad"]
         loss_multiplier_atomic = batch["loss_multiplier_atomic"]
 
+        if hasattr(self.model, "normal_factor"):
+            self.model.normal_factor = batch["normal_factor"]
+
         if if_train:
             input_.requires_grad = True
             output = self.model(input_)
-            if self.args.if_grad:
-                middle_ = torch.autograd.grad(
-                    torch.sum(output),
-                    input_,
-                    create_graph=True,
-                )[0]
-                if self.model_type == "cube":
-                    middle_ = middle_[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-                grad2force = batch["grad2force"]
-                grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
-                force = torch.einsum("pm,impx->ix", middle_, grad2force)
+            # if self.args.if_grad:
+            #     middle_ = torch.autograd.grad(
+            #         torch.sum(output),
+            #         input_,
+            #         create_graph=True,
+            #     )[0]
+            #     if self.model_type == "cube":
+            #         middle_ = middle_[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            #     grad2force = batch["grad2force"]
+            #     grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
+            #     force = torch.einsum("pm,impx->ix", middle_, grad2force)
             output = output * weight
         else:
             with torch.no_grad():
