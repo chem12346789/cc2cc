@@ -14,14 +14,14 @@ from cc2cc.gen_ucc import ucc
 
 train_str_list = [
     "molecule0-W4_11",
-    "ADDON_As",
-    "ADDON_Ge",
-    "ADDON_Se",
-    "ADDON_Te",
-    "ADDON_I",
-    "ADDON_Bi",
-    "ADDON_Pb",
-    "ADDON_Sb",
+    # "ADDON_As",
+    # "ADDON_Ge",
+    # "ADDON_Se",
+    # "ADDON_Te",
+    # "ADDON_I",
+    # "ADDON_Bi",
+    # "ADDON_Pb",
+    # "ADDON_Sb",
     "AHB21-1A",
     "AHB21-4A",
     "ALK8-li+",
@@ -847,21 +847,21 @@ if __name__ == "__main__":
     else:
         name_mol_list, evaluate = train_str_list[args.training_cycle :: 3], False
 
-    name_mol_list = [
-        "W4_11-ch2ch",
-        "W4_11-ch2nh2",
-        "W4_11-ch3nh",
-        "W4_11-ch3nh2",
-        "W4_11-hoo",
-        "W4_11-ssh",
-        "W4_11-h2cn",
-        "W4_11-hcnh",
-        "W4_11-sih3f",
-        "W4_11-b2h6",
-        "W4_11-c2h6",
-        "W4_11-si2h6",
-    ]
-    evaluate = False
+    # name_mol_list = [
+    #     "W4_11-ch2ch",
+    #     "W4_11-ch2nh2",
+    #     "W4_11-ch3nh",
+    #     "W4_11-ch3nh2",
+    #     "W4_11-hoo",
+    #     "W4_11-ssh",
+    #     "W4_11-h2cn",
+    #     "W4_11-hcnh",
+    #     "W4_11-sih3f",
+    #     "W4_11-b2h6",
+    #     "W4_11-c2h6",
+    #     "W4_11-si2h6",
+    # ]
+    # evaluate = False
 
     # name_mol_list = [
     #     "IL16-150B",

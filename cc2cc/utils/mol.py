@@ -161,8 +161,12 @@ def gen_mole(
     )
 
     if ma_basis:
-        if dataset[dataset_name]["charge"][name_mol] < 0:
-            basis = "ma-" + basis
+        if "def2" in basis:
+            if dataset[dataset_name]["charge"][name_mol] < 0:
+                basis = "ma-" + basis
+        if "cc-pV" in basis:
+            if dataset[dataset_name]["charge"][name_mol] < 0:
+                basis = "aug-" + basis
     mol = pyscf.M(
         atom=molecule,
         basis=basis,
