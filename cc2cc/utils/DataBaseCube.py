@@ -131,10 +131,10 @@ class DataBaseCube(DataBase):
 
         if self.args.if_relative_weight and not self.if_eval:
             epsilon = 1e-5
-            loss_multiplier = 1 / (
+            loss_multiplier = self.args.loss_multiplier / (
                 self.loss_ene(torch.zeros(()), torch.tensor(energy_target)) + epsilon
             )
-            loss_multiplier_abs = 1 / (
+            loss_multiplier_abs = self.args.loss_multiplier_abs / (
                 self.loss_ene_abs(
                     torch.zeros((output_mat * weight_mat).shape),
                     torch.tensor(output_mat * weight_mat),
@@ -142,7 +142,7 @@ class DataBaseCube(DataBase):
                 + epsilon
             )
             if grad_cc_train is not None:
-                loss_multiplier_grad = 1 / (
+                loss_multiplier_grad = self.args.loss_multiplier_grad / (
                     self.loss_grad(
                         torch.zeros(grad_cc_train.shape), torch.tensor(grad_cc_train)
                     )
@@ -150,7 +150,7 @@ class DataBaseCube(DataBase):
                 )
             else:
                 loss_multiplier_grad = 1
-            loss_multiplier_atomic = 1 / (
+            loss_multiplier_atomic = self.args.loss_multiplier_atomic / (
                 self.loss_ene_atomic(torch.zeros(()), torch.tensor(ae_target)) + epsilon
             )
             print(
