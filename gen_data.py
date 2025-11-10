@@ -852,14 +852,14 @@ if __name__ == "__main__":
         "W4_11-ch2nh2",
         "W4_11-ch3nh",
         "W4_11-ch3nh2",
+        "W4_11-hoo",
+        "W4_11-ssh",
         "W4_11-h2cn",
         "W4_11-hcnh",
-        "W4_11-hoo",
-        "W4_11-si2h6",
         "W4_11-sih3f",
-        "W4_11-ssh",
         "W4_11-b2h6",
         "W4_11-c2h6",
+        "W4_11-si2h6",
     ]
     evaluate = False
 
