@@ -75,6 +75,19 @@ class DataBaseCube(DataBase):
             grad2force = grad2force[:, :, input_mat_index, :]
         weight_mat = weight_mat[input_mat_index]
         input_mat = input_mat[input_mat_index]
+        print(
+            f"Input shape after filtering: {input_mat.shape}; Weight shape after filtering: {weight_mat.shape}",
+            flush=True,
+        )
+        b3lyp_ene = (
+            0.08 * input_mat[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.19 * input_mat[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.72 * input_mat[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + 0.81 * input_mat[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        )
+        normal_factor = np.sqrt(np.sum(b3lyp_ene * b3lyp_ene * weight_mat))
+        print(f"Normal factor: {normal_factor}", flush=True)
+        print(f"b3lyp_ene: min {np.sum(b3lyp_ene * weight_mat)}", flush=True)
 
         if not self.if_eval:
             error_energy = AU2KCALMOL * abs(
@@ -186,6 +199,7 @@ class DataBaseCube(DataBase):
             "name": name,
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,
+            "normal_factor": normal_factor,
             "data_weight": (
                 self.args.atomic_weighting
                 if num_data_used == 1
