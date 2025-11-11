@@ -21,7 +21,7 @@ class Model(nn.Module):
         self.predictor = Extractor(
             d_model=CUBE_SIZE**3,
             seq_len=4,
-            num_layer=3,
+            num_layer=7,
             qkv_bias=False,
             num_heads=1,
             mlp_ratio=1,
@@ -32,7 +32,7 @@ class Model(nn.Module):
         self.densenet = DenseNet(
             d_model=4 * CUBE_SIZE**3,
             mlp=108,
-            depth=5,
+            depth=9,
             drop_rate=0,
             if_skip_connection_dense=1,
             dense_actv="gelu",
@@ -41,7 +41,7 @@ class Model(nn.Module):
         self.predictor_center = Extractor(
             d_model=1,
             seq_len=4,
-            num_layer=3,
+            num_layer=7,
             qkv_bias=False,
             num_heads=1,
             mlp_ratio=1,
@@ -52,7 +52,7 @@ class Model(nn.Module):
         self.densenet_center = DenseNet(
             d_model=4,
             mlp=128,
-            depth=5,
+            depth=9,
             if_skip_connection_dense=1,
             drop_rate=0,
             dense_actv="gelu",
