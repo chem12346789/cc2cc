@@ -2,7 +2,6 @@
 Generate list of model.
 """
 
-import torch
 from torch import nn
 
 from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
@@ -33,7 +32,7 @@ class Model(nn.Module):
         self.densenet = DenseNet(
             d_model=4 * CUBE_SIZE**3,
             mlp=108,
-            depth=9,
+            depth=4,
             drop_rate=0,
             if_skip_connection_dense=1,
             dense_actv="gelu",
@@ -42,7 +41,7 @@ class Model(nn.Module):
         self.predictor_center = Extractor(
             d_model=1,
             seq_len=4,
-            num_layer=7,
+            num_layer=3,
             qkv_bias=False,
             num_heads=1,
             mlp_ratio=1,
@@ -52,8 +51,8 @@ class Model(nn.Module):
 
         self.densenet_center = DenseNet(
             d_model=4,
-            mlp=128,
-            depth=9,
+            mlp=108,
+            depth=4,
             if_skip_connection_dense=1,
             drop_rate=0,
             dense_actv="gelu",
@@ -72,11 +71,6 @@ class Model(nn.Module):
         )
         # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-
-        # Apply self-normalization
-        b3lyp_rmsd = torch.sqrt(torch.mean(b3lyp_ene**2))
-        x = x / b3lyp_rmsd
-        x_center = x_center / b3lyp_rmsd
 
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)

@@ -2,7 +2,6 @@
 Generate list of model.
 """
 
-import torch
 from torch import nn
 
 from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
@@ -28,7 +27,6 @@ class Model(nn.Module):
             mlp_ratio=1,
             drop_rate=0,
             atte_actv="gelu",
-            atte_normal="rms",
         )
 
         self.densenet = DenseNet(
@@ -49,7 +47,6 @@ class Model(nn.Module):
             mlp_ratio=1,
             drop_rate=0,
             atte_actv="gelu",
-            atte_normal="rms",
         )
 
         self.densenet_center = DenseNet(
@@ -61,14 +58,7 @@ class Model(nn.Module):
             dense_actv="gelu",
         )
 
-        # self.densenet_out = DenseNet(
-        #     d_model=2,
-        #     mlp=2,
-        #     depth=2,
-        #     if_skip_connection_dense=1,
-        #     drop_rate=0,
-        #     dense_actv="gelu",
-        # )
+        self.normal_factor = 1.0
 
     def forward(self, x):
         """
@@ -83,6 +73,9 @@ class Model(nn.Module):
         )
         # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+
+        x = x / self.normal_factor
+        x_center = x_center / self.normal_factor
 
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
@@ -108,7 +101,4 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
         # SHAPE x_center = (batch, 1)
 
-        # x_in = torch.cat((x, x_center), dim=-1)
-        # x = self.densenet_out(x_in)
-
-        return b3lyp_ene * (x + x_center)
+        return b3lyp_ene * x * x_center
