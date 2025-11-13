@@ -158,6 +158,7 @@ class DataBase:
                     "elements": mol.elements,
                     "charge": mol.charge,
                     "spin": mol.spin,
+                    "nelec": mol.nelectron,
                 }
 
             except ValueError as e:
