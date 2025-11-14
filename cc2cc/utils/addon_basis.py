@@ -1,6 +1,6 @@
 import pyscf
 
-cc_basis = {
+addon_basis = {
     "Dummy": {
         "Dummy": pyscf.gto.basis.parse(
             """ H s
@@ -9,7 +9,7 @@ end""",
             optimize=True,
         )
     },
-    "K": {
+    "K-cc-pVQZ": {
         "K": pyscf.gto.basis.parse(
             """K s
  1.135491E+08  5.691030E-08 -1.634640E-08  5.386310E-09 -1.039930E-09  0.000000E+00  0.000000E+00  0.000000E+00
@@ -82,7 +82,7 @@ end""",
             optimize=True,
         )
     },
-    "Ca": {
+    "Ca-cc-pVQZ": {
         "Ca": pyscf.gto.basis.parse(
             """ Ca s
  1.042287E+08  7.304280E-08 -2.120170E-08  7.311010E-09 -1.745740E-09  0.000000E+00  0.000000E+00  0.000000E+00
@@ -153,9 +153,7 @@ end""",
             optimize=True,
         )
     },
-}
-aug_cc_basis = {
-    "K": {
+    "K-aug-cc-pVQZ": {
         "K": pyscf.gto.basis.parse(
             """ K s
  1.135491E+08  5.691030E-08 -1.634640E-08  5.386310E-09 -1.039930E-09  0.000000E+00  0.000000E+00  0.000000E+00  0.000000E+00
@@ -233,7 +231,7 @@ end""",
             optimize=True,
         )
     },
-    "Ca": {
+    "Ca-aug-cc-pVQZ": {
         "Ca": pyscf.gto.basis.parse(
             """Ca s
  1.042287E+08  7.304280E-08 -2.120170E-08  7.311010E-09 -1.745740E-09  0.000000E+00  0.000000E+00  0.000000E+00  0.000000E+00
