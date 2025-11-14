@@ -149,14 +149,14 @@ def gen_basis(basis: str, atom_list: list):
                 if atom in aug_cc_pp_atom_list:
                     dict_.update(get_basis(basis + "-PP", atom))
                 if atom in special_atom_list:
-                    dict_.update(addon_basis[atom + basis])
+                    dict_.update(addon_basis[atom][basis])
             else:
                 if atom in cc_atom_list:
                     dict_.update(get_basis(basis, atom))
                 if atom in cc_pp_atom_list:
                     dict_.update(get_basis(basis + "-PP", atom))
                 if atom in special_atom_list:
-                    dict_.update(addon_basis[atom + basis])
+                    dict_.update(addon_basis[atom][basis])
         return dict_
 
 
