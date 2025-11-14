@@ -24,13 +24,11 @@ def get_dft_energy(
     mol,
     grids,
     dm1_dft,
-    e_dft,
     mdft,
     mf,
     dm1_cc,
     dm1_cc_mo,
     dm2_cc,
-    e_cc,
     evaluate=False,
 ):
     """
@@ -50,50 +48,49 @@ def get_dft_energy(
     ao_value = ao_value[:4]
 
     rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
-    rho_cc = np.zeros_like(rho_dft)  # dummy
-
-    ni = mdft._numint
-    dft_mo_coeff = mdft.mo_coeff
-    mf_mo_coeff = mf.mo_coeff
-
-    vxc_lda = ni.eval_xc_eff("LDA,", rho_dft[0], deriv=1, xctype="LDA")[1]
-    vxc_vwn = ni.eval_xc_eff(",VWN3", rho_dft[0], deriv=1, xctype="LDA")[1]
-    vxc_b88 = ni.eval_xc_eff("B88,", rho_dft, deriv=1, xctype="GGA")[1]
-    vxc_lyp = ni.eval_xc_eff(",LYP", rho_dft, deriv=1, xctype="GGA")[1]
-
-    vxc_b3lyp = np.zeros((4, 4, len(grids.coords)))
-    vxc_b3lyp[0, 0:1, :] = vxc_lda
-    vxc_b3lyp[1, 0:1, :] = vxc_vwn
-    vxc_b3lyp[2, :, :] = vxc_b88
-    vxc_b3lyp[3, :, :] = vxc_lyp
-
-    wv = grids.weights * vxc_b3lyp
-    wv[:, 0, :] *= 0.5
-
-    atmlst = range(mol.natm)
-    grad2force = np.zeros((len(atmlst), 4, len(grids.coords), 3))
-    for k, ia in enumerate(atmlst):
-        p0, p1 = mol.aoslice_by_atom()[ia, 2:]
-        grad2force[k] = np.einsum(
-            "mnp,xpi,npj,ij->mpx",
-            wv,
-            ao_value[1:4, :, p0:p1],
-            ao_array,
-            dm1_dft[p0:p1],
-            optimize=True,
-        ) + np.einsum(
-            "mnp,nxpi,pj,ij->mpx",
-            wv,
-            ao_mat[:, :, :, p0:p1],
-            ao_value[0],
-            dm1_dft[p0:p1],
-            optimize=True,
-        )
-    grad2force = -grad2force * 2
 
     if evaluate:
-        return None, None, rho_cc, rho_dft, grad2force
+        return None, rho_dft, None
     else:
+        ni = mdft._numint
+        dft_mo_coeff = mdft.mo_coeff
+        mf_mo_coeff = mf.mo_coeff
+
+        vxc_lda = ni.eval_xc_eff("LDA,", rho_dft[0], deriv=1, xctype="LDA")[1]
+        vxc_vwn = ni.eval_xc_eff(",VWN3", rho_dft[0], deriv=1, xctype="LDA")[1]
+        vxc_b88 = ni.eval_xc_eff("B88,", rho_dft, deriv=1, xctype="GGA")[1]
+        vxc_lyp = ni.eval_xc_eff(",LYP", rho_dft, deriv=1, xctype="GGA")[1]
+
+        vxc_b3lyp = np.zeros((4, 4, len(grids.coords)))
+        vxc_b3lyp[0, 0:1, :] = vxc_lda
+        vxc_b3lyp[1, 0:1, :] = vxc_vwn
+        vxc_b3lyp[2, :, :] = vxc_b88
+        vxc_b3lyp[3, :, :] = vxc_lyp
+
+        wv = grids.weights * vxc_b3lyp
+        wv[:, 0, :] *= 0.5
+
+        atmlst = range(mol.natm)
+        grad2force = np.zeros((len(atmlst), 4, len(grids.coords), 3))
+        for k, ia in enumerate(atmlst):
+            p0, p1 = mol.aoslice_by_atom()[ia, 2:]
+            grad2force[k] = np.einsum(
+                "mnp,xpi,npj,ij->mpx",
+                wv,
+                ao_value[1:4, :, p0:p1],
+                ao_array,
+                dm1_dft[p0:p1],
+                optimize=True,
+            ) + np.einsum(
+                "mnp,nxpi,pj,ij->mpx",
+                wv,
+                ao_mat[:, :, :, p0:p1],
+                ao_value[0],
+                dm1_dft[p0:p1],
+                optimize=True,
+            )
+        grad2force = -grad2force * 2
+
         rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
 
         # exchange part
@@ -163,28 +160,7 @@ def get_dft_energy(
                         / distance
                     )
 
-        # for i, coord in enumerate(grids.coords):
-        #     for i_atom in range(mol.natm):
-        #         distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
-        #         if distance > 1e-3:
-        #             exc_cc_grids[i] -= (
-        #                 (rho_cc[0][i] - rho_dft[0][i])
-        #                 * mol.atom_charges()[i_atom]
-        #                 / distance
-        #             )
-
-        error_energy = e_cc - e_dft
-        error = np.sum(exc_cc_grids * grids.weights) - error_energy
-        print(
-            "exc_cc_grids: ",
-            f"max exc_cc_grids: {np.max(exc_cc_grids)}",
-            f"min exc_cc_grids: {np.min(exc_cc_grids)}",
-            f"mean exc_cc_grids: {np.mean(exc_cc_grids)}",
-            f"std exc_cc_grids: {np.std(exc_cc_grids)}",
-            f"error_energy: {AU2KCALMOL * error_energy},",
-            f"Error: {AU2KCALMOL * error},",
-        )
-        return error_energy, exc_cc_grids, rho_cc, rho_dft, grad2force
+        return exc_cc_grids, rho_dft, grad2force
 
 
 def cc(mol, grids, name, args, evaluate=False):
@@ -200,22 +176,50 @@ def cc(mol, grids, name, args, evaluate=False):
     if args.check_convergence and not mf.converged:
         raise ValueError("RHF not converged.")
 
-    # CCSD calculation
     if evaluate:
+        # DFT calculation
+        mdft = pyscf.scf.RKS(mol)
+        mdft.verbose = 4
+        mdft.max_cycle = 200
+        mdft.xc = "b3lyp"
+        # get_veff_modified_rks(mdft, modeldict, lambda_rho=1, dm_tar=dm1_cc)
+        mdft.kernel()
+        if args.check_convergence and not mdft.converged:
+            raise ValueError("RKS not converged.")
+        dm1_dft = mdft.make_rdm1(ao_repr=True)
+        e_dft = mdft.e_tot
+
+        # CCSD calculation
         mycc = pyscf.cc.CCSD(mf)
         mycc.verbose = 4
         mycc.direct = True
         _, t1, t2 = mycc.kernel()
         eris = mycc.ao2mo()
         e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
-        dm1_cc = mycc.make_rdm1(ao_repr=True)
+        dm1_cc = None
         dm1_cc_mo = None
         dm2_cc = None
         del t1, t2
         e_cc = mycc.e_tot + e3ref
         print(f"CCSD(T) energy: {e_cc}")
-        grad_cc = np.zeros((mol.natm, 3))
+        energy_train = e_cc - e_dft
+        grad_cc_train = None
     else:
+        # DFT calculation
+        mdft = pyscf.scf.RKS(mol)
+        mdft.verbose = 4
+        mdft.max_cycle = 200
+        mdft.xc = "b3lyp"
+        # get_veff_modified_rks(mdft, modeldict, lambda_rho=1, dm_tar=dm1_cc)
+        mdft.kernel()
+        if args.check_convergence and not mdft.converged:
+            raise ValueError("RKS not converged.")
+        dm1_dft = mdft.make_rdm1(ao_repr=True)
+        e_dft = mdft.e_tot
+        gdft = mdft.Gradients()
+        grad_dft = gdft.kernel()
+
+        # CCSD calculation
         mycc = pyscf.cc.CCSD(mf)
         mycc.verbose = 4
         mycc.direct = True
@@ -236,66 +240,60 @@ def cc(mol, grids, name, args, evaluate=False):
         else:
             gcc = ccsd_t_grad.Gradients(mycc)
             grad_cc = gcc.kernel()
-
-    # DFT calculation
-    mdft = pyscf.scf.RKS(mol)
-    mdft.verbose = 4
-    mdft.max_cycle = 200
-    mdft.xc = "b3lyp"
-    # get_veff_modified_rks(mdft, modeldict, lambda_rho=1, dm_tar=dm1_cc)
-    mdft.kernel()
-    if args.check_convergence and not mdft.converged:
-        raise ValueError("RKS not converged.")
-    dm1_dft = mdft.make_rdm1(ao_repr=True)
-    e_dft = mdft.e_tot
-    gdft = mdft.Gradients()
-    grad_dft = gdft.kernel()
-
-    # Compare CCSD and DFT
-    print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} (CCSD vs DFT)")
-    cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
-    dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
-    print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
-    energy_train = e_cc - e_dft
-    grad_cc_train = grad_cc - grad_dft
+        print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} (CCSD vs DFT)")
+        cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
+        dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
+        print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
+        energy_train = e_cc - e_dft
+        grad_cc_train = grad_cc - grad_dft
 
     # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
-    error_energy_dft, exc_cc_grids_dft, rho_cc, rho_dft, grad2force = get_dft_energy(
+    exc_cc_grids_dft, rho_dft, grad2force = get_dft_energy(
         mol,
         grids,
         dm1_dft,
-        e_dft,
         mdft,
         mf,
         dm1_cc,
         dm1_cc_mo,
         dm2_cc,
-        e_cc,
         evaluate=evaluate,
     )
 
-    # Test force
-    grad_mat = np.array(
-        [
-            0.08 * np.ones(len(grids.coords)),
-            0.19 * np.ones(len(grids.coords)),
-            0.72 * np.ones(len(grids.coords)),
-            0.81 * np.ones(len(grids.coords)),
-        ]
-    )
-    force = np.einsum(
-        "mp,impx->ix",
-        grad_mat,
-        grad2force,
-        optimize=True,
-    )
-    get_veff_grad_modified_zeros(gdft)
-    grad_dft_zeros = gdft.kernel()
-    print("Error force DFT: ", np.linalg.norm(force - (grad_dft - grad_dft_zeros)))
+    if exc_cc_grids_dft is not None:
+        error = np.sum(exc_cc_grids_dft * grids.weights) - energy_train
+        print(
+            "exc_cc_grids: ",
+            f"max exc_cc_grids: {np.max(exc_cc_grids_dft)}",
+            f"min exc_cc_grids: {np.min(exc_cc_grids_dft)}",
+            f"mean exc_cc_grids: {np.mean(exc_cc_grids_dft)}",
+            f"std exc_cc_grids: {np.std(exc_cc_grids_dft)}",
+            f"energy_train: {AU2KCALMOL * energy_train},",
+            f"Error: {AU2KCALMOL * error},",
+        )
+
+    if grad2force is not None:
+        # Test force
+        grad_mat = np.array(
+            [
+                0.08 * np.ones(len(grids.coords)),
+                0.19 * np.ones(len(grids.coords)),
+                0.72 * np.ones(len(grids.coords)),
+                0.81 * np.ones(len(grids.coords)),
+            ]
+        )
+        force = np.einsum(
+            "mp,impx->ix",
+            grad_mat,
+            grad2force,
+            optimize=True,
+        )
+        get_veff_grad_modified_zeros(gdft)
+        grad_dft_zeros = gdft.kernel()
+        print("Error force DFT: ", np.linalg.norm(force - (grad_dft - grad_dft_zeros)))
 
     # Generate input data
     rho_cube_dft = grids.gen_cube_rho_rks(rho_dft, mdft._numint, dm1_dft)
-    rho_cube_cc = grids.gen_cube_rho_rks(rho_cc, mdft._numint, dm1_cc)
     np.savez_compressed(
         DATA_PATH / f"data_{name}.npz",
         mol=mol.tostring(format="xyz"),
@@ -303,12 +301,9 @@ def cc(mol, grids, name, args, evaluate=False):
         spin=mol.spin,
         e_cc=e_cc,
         energy_train=energy_train,
-        dm1_cc=dm1_cc,
-        rho_cube_cc=rho_cube_cc,
         rho_cube_dft=rho_cube_dft,
         weights=grids.weights,
         exc_cc_grids=exc_cc_grids_dft,
-        error_energy=error_energy_dft,
         grad2force=grad2force,
         grad_cc_train=grad_cc_train,
     )
