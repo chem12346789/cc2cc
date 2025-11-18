@@ -14,7 +14,7 @@ from pyscf.gto.basis.bse import get_basis
 from pyscf.gto.basis.bse import _ecp_basis
 
 from cc2cc.utils.rotate import rotate
-from cc2cc.utils.addon_basis import cc_basis, aug_cc_basis
+from cc2cc.utils.addon_basis import addon_basis
 
 AU2KCALMOL = 627.5094733748099
 AU2DEBYE = 2.541746472
@@ -149,14 +149,14 @@ def gen_basis(basis: str, atom_list: list):
                 if atom in aug_cc_pp_atom_list:
                     dict_.update(get_basis(basis + "-PP", atom))
                 if atom in special_atom_list:
-                    dict_.update(aug_cc_basis[atom])
+                    dict_.update(addon_basis[atom][basis])
             else:
                 if atom in cc_atom_list:
                     dict_.update(get_basis(basis, atom))
                 if atom in cc_pp_atom_list:
                     dict_.update(get_basis(basis + "-PP", atom))
                 if atom in special_atom_list:
-                    dict_.update(cc_basis[atom])
+                    dict_.update(addon_basis[atom][basis])
         return dict_
 
 

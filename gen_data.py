@@ -14,14 +14,6 @@ from cc2cc.gen_ucc import ucc
 
 train_str_list = [
     # "molecule0-W4_11",
-    # "ADDON_As",
-    # "ADDON_Ge",
-    # "ADDON_Se",
-    # "ADDON_Te",
-    # "ADDON_I",
-    # "ADDON_Bi",
-    # "ADDON_Pb",
-    # "ADDON_Sb",
     # "AHB21-1A",
     # "AHB21-4A",
     # "ALK8-li+",
@@ -57,9 +49,6 @@ train_str_list = [
     # "RG18-ne",
     # "SIE4x4-he",
     # "SIE4x4-he+",
-    # # # #####################
-    # # # ######  add 1  ######
-    # # # #####################
     # "molecule1-W4_11",
     "AHB21-1B",
     "AHB21-10A",
@@ -386,13 +375,9 @@ train_str_list = [
 
 eval_str_list = [
     # # #####################
-    # # ######    3    ######
-    # # #####################
-    "molecule3-W4_11",
-    # # #####################
     # # ######  4(<9)  ######
     # # #####################
-    "molecule4-W4_11",
+    # # "molecule4-W4_11",
     # # #####################
     # # ######  5(<9)  ######
     # # #####################
