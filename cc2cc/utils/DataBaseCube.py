@@ -88,10 +88,10 @@ class DataBaseCube(DataBase):
             flush=True,
         )
         print(f"b3lyp_ene: min {np.sum(b3lyp_ene * weight_mat)}", flush=True)
-        mean_val = np.sum(b3lyp_ene * weight_mat / mol_info["nelec"])
-        normal_factor = np.sqrt(
-            np.sum((b3lyp_ene - mean_val) ** 2 * weight_mat / mol_info["nelec"])
-        )
+        mean_val = np.sum(b3lyp_ene * weight_mat)
+        normal_factor = np.sqrt(np.sqrt(
+            np.sum((b3lyp_ene - mean_val) ** 2 * weight_mat) / mol_info["natm"]
+        ))
         print(f"Normal factor: {normal_factor}", flush=True)
 
         if not self.if_eval:
