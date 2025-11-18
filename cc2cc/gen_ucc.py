@@ -259,11 +259,14 @@ def ucc(mol, grids, name, args, evaluate=False):
         del t1, t2, l1, l2, d1, d2
         e_cc = mycc.e_tot + e3ref
         print(f"UCCSD(T) energy: {e_cc}")
-        if mol.natm == 1:
-            grad_cc = np.zeros((mol.natm, 3))
-        else:
+
+        try:
             gcc = uccsd_t_grad.Gradients(mycc)
             grad_cc = gcc.kernel()
+        except Exception as e:
+            print("UCCSD gradient calculation failed:", e)
+            grad_cc = np.zeros((mol.natm, 3))  # Fallback to zero gradients
+
         energy_train = e_cc - e_dft
         grad_cc_train = grad_cc - grad_dft
 

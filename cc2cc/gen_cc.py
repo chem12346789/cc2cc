@@ -235,17 +235,22 @@ def cc(mol, grids, name, args, evaluate=False):
         del t1, t2, l1, l2, d1, d2
         e_cc = mycc.e_tot + e3ref
         print(f"CCSD(T) energy: {e_cc}")
-        if mol.natm == 1:
-            grad_cc = np.zeros((mol.natm, 3))
-        else:
+
+        try:
             gcc = ccsd_t_grad.Gradients(mycc)
             grad_cc = gcc.kernel()
+        except Exception as e:
+            print("CCSD gradient calculation failed:", e)
+            grad_cc = np.zeros((mol.natm, 3))  # Fallback to zero gradients
+
+        energy_train = e_cc - e_dft
+        grad_cc_train = grad_cc - grad_dft
+
+        # Compare CCSD and DFT
         print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} (CCSD vs DFT)")
         cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
         dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
-        energy_train = e_cc - e_dft
-        grad_cc_train = grad_cc - grad_dft
 
     # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
     exc_cc_grids_dft, rho_dft, grad2force = get_dft_energy(
