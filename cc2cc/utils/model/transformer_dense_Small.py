@@ -41,7 +41,7 @@ class Model(nn.Module):
         self.predictor_center = Extractor(
             d_model=1,
             seq_len=4,
-            num_layer=7,
+            num_layer=3,
             qkv_bias=False,
             num_heads=1,
             mlp_ratio=1,
@@ -51,14 +51,12 @@ class Model(nn.Module):
 
         self.densenet_center = DenseNet(
             d_model=4,
-            mlp=128,
+            mlp=108,
             depth=9,
             if_skip_connection_dense=1,
             drop_rate=0,
             dense_actv="gelu",
         )
-
-        self.normal_factor = 1.0
 
     def forward(self, x):
         """
@@ -73,10 +71,6 @@ class Model(nn.Module):
         )
         # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-
-        # Normalize the input data
-        x = x / self.normal_factor
-        x_center = x_center / self.normal_factor
 
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
@@ -102,4 +96,4 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
         # SHAPE x_center = (batch, 1)
 
-        return b3lyp_ene * x * x_center
+        return b3lyp_ene * (x + x_center)
