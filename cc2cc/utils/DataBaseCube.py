@@ -61,7 +61,7 @@ class DataBaseCube(DataBase):
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 
         # input_mat_index = (
-        #     np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-14
+        #     np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-20
         # )
         # print(f"Total number of input points: {len(input_mat_index)}", flush=True)
         # print(f"Number of non-zero input points: {np.sum(input_mat_index)}", flush=True)
@@ -75,6 +75,7 @@ class DataBaseCube(DataBase):
         #     grad2force = grad2force[:, :, input_mat_index, :]
         # weight_mat = weight_mat[input_mat_index]
         # input_mat = input_mat[input_mat_index]
+
         b3lyp_ene = (
             0.08 * input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
             + 0.19 * input_mat[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
@@ -89,9 +90,9 @@ class DataBaseCube(DataBase):
         )
         print(f"b3lyp_ene: min {np.sum(b3lyp_ene * weight_mat)}", flush=True)
         mean_val = np.sum(b3lyp_ene * weight_mat)
-        normal_factor = np.sqrt(np.sqrt(
-            np.sum((b3lyp_ene - mean_val) ** 2 * weight_mat) / mol_info["natm"]
-        ))
+        normal_factor = np.sqrt(
+            np.sqrt(np.sum((b3lyp_ene - mean_val) ** 2 * weight_mat) / mol_info["natm"])
+        )
         print(f"Normal factor: {normal_factor}", flush=True)
 
         if not self.if_eval:

@@ -173,7 +173,7 @@ class DataBase:
                 name_list.insert(iter_atom_name, atom_name)
             else:
                 print(
-                    f"Warning: atomic {atom_name} as {atom_key} not in the dataset.",
+                    f"Warning: atomic {atom_name} as {atom_key} is atom.",
                     flush=True,
                 )
         print(name_list, flush=True)
