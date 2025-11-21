@@ -171,10 +171,18 @@ def cc(mol, grids, name, args, evaluate=False):
     print(f"Generate data for {name}")
     # RHF calculation
     mf = pyscf.scf.RHF(mol)
-    mf.max_cycle = 200
+    mf.max_cycle = 50
     mf.kernel()
     if args.check_convergence and not mf.converged:
-        raise ValueError("RHF not converged.")
+        mf.max_cycle = 500
+        mf.level_shift = 1.5
+        mf.kernel()
+        if args.check_convergence and not mf.converged:
+            mf_newton = mf.newton()
+            mf_newton.kernel()
+            mf.kernel(dm=mf_newton.make_rdm1())
+            if args.check_convergence and not mf.converged:
+                raise ValueError("RHF not converged.")
 
     if evaluate:
         # DFT calculation
@@ -235,15 +243,16 @@ def cc(mol, grids, name, args, evaluate=False):
         del t1, t2, l1, l2, d1, d2
         e_cc = mycc.e_tot + e3ref
         print(f"CCSD(T) energy: {e_cc}")
+        energy_train = e_cc - e_dft
 
-        try:
+        if mol.natm == 1:
+            grad_cc = np.zeros((mol.natm, 3))  # Fallback to zero gradients
+        elif mol.nelectron == 1:
+            ghf = pyscf.grad.rhf.Gradients(mf)
+            grad_cc = ghf.kernel()
+        else:
             gcc = ccsd_t_grad.Gradients(mycc)
             grad_cc = gcc.kernel()
-        except Exception as e:
-            print("CCSD gradient calculation failed:", e)
-            grad_cc = np.zeros((mol.natm, 3))  # Fallback to zero gradients
-
-        energy_train = e_cc - e_dft
         grad_cc_train = grad_cc - grad_dft
 
         # Compare CCSD and DFT

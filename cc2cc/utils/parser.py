@@ -197,6 +197,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--md_number",
+        type=int,
+        default=0,
+        help="MD frame number to generate the data. Default is 0.",
+    )
+
+    parser.add_argument(
         "--rho_input",
         type=str,
         default="dft",
