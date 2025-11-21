@@ -281,17 +281,16 @@ class ModelClass:
         loss_multiplier_grad = batch["loss_multiplier_grad"]
         loss_multiplier_atomic = batch["loss_multiplier_atomic"]
 
-        input_w = torch.einsum("pcxyz,p->pcxyz", input_, weight)
         if hasattr(self.model, "normal_factor"):
             self.model.normal_factor = batch["normal_factor"]
 
         if if_train:
-            input_w.requires_grad = True
-            output_w = self.model(input_w)
+            input_.requires_grad = True
+            output = self.model(input_)
             if self.args.if_grad:
                 middle_ = torch.autograd.grad(
-                    torch.sum(output_w),
-                    input_w,
+                    torch.sum(output),
+                    input_,
                     create_graph=True,
                 )[0]
                 if self.model_type == "cube":
@@ -299,23 +298,24 @@ class ModelClass:
                 grad2force = batch["grad2force"]
                 force = torch.einsum("pm,impx->ix", middle_, grad2force)
                 grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
+            output = output * weight
         else:
             with torch.no_grad():
-                output_w = self.model(input_w)
+                output = self.model(input_) * weight
 
         tot_loss = loss_multiplier * self.loss_ene(
-            data_weight * sum_target, data_weight * torch.sum(output_w)
+            data_weight * sum_target, data_weight * torch.sum(output)
         )
-        loss_record = np.abs((sum_target - torch.sum(output_w)).item())
+        loss_record = np.abs((sum_target - torch.sum(output)).item())
 
         if if_train:
-            target_w = batch["output"] * weight
-            if len(target_w.shape) != 0:
+            target = batch["output"] * weight
+            if len(target.shape) != 0:
                 # len(target.shape) will 0 if target is a dummy tensor
                 tot_loss += loss_multiplier_abs * self.loss_ene_abs(
-                    data_weight * target_w, data_weight * output_w
+                    data_weight * target, data_weight * output
                 )
-            loss_abs_record = torch.sum(torch.abs(target_w - output_w)).item()
+            loss_abs_record = torch.sum(torch.abs(target - output)).item()
 
             if self.args.if_grad:
                 tot_loss += loss_multiplier_grad * self.loss_grad(grad_cc_train, force)
@@ -327,7 +327,7 @@ class ModelClass:
             loss_grad_record = 0.0
 
         if self.args.if_atomic:
-            ae_output = torch.sum(output_w)
+            ae_output = torch.sum(output)
 
             for i_system in range(len(batch["atomic_systems"])):
                 system_atom = batch["atomic_systems"][i_system]
@@ -345,11 +345,8 @@ class ModelClass:
                 )
                 atomic_input_ = atomic_batch["input"]
                 atomic_weight = atomic_batch["weight"]
-                atomic_input_w = torch.einsum(
-                    "pcxyz,p->pcxyz", atomic_input_, atomic_weight
-                )
-                atomic_output_w = torch.sum(self.model(atomic_input_w))
-                ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output_w
+                atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
+                ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
             tot_loss += loss_multiplier_atomic * self.loss_ene_atomic(
                 data_weight * ae_target, data_weight * ae_output

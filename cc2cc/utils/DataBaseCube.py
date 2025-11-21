@@ -60,21 +60,22 @@ class DataBaseCube(DataBase):
         else:
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 
-        # input_mat_index = (
-        #     np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-20
-        # )
-        # print(f"Total number of input points: {len(input_mat_index)}", flush=True)
-        # print(f"Number of non-zero input points: {np.sum(input_mat_index)}", flush=True)
-        # if len(output_mat.shape) != 0:
-        #     print(
-        #         f"Energy in zero input region: {AU2KCALMOL * np.sum(output_mat[~input_mat_index] * weight_mat[~input_mat_index])}",
-        #         flush=True,
-        #     )
-        #     output_mat = output_mat[input_mat_index]
-        # if len(grad2force) != 0:
-        #     grad2force = grad2force[:, :, input_mat_index, :]
-        # weight_mat = weight_mat[input_mat_index]
-        # input_mat = input_mat[input_mat_index]
+        print("", flush=True)
+        print("After filtering:")
+        print(f"max input value: {np.max(input_mat)} at {np.argmax(input_mat)}")
+        print(f"min input value: {np.min(input_mat)} at {np.argmin(input_mat)}")
+        if not self.if_eval and len(output_mat.shape) != 0:
+            print(f"max output value: {np.max(output_mat)} at {np.argmax(output_mat)}")
+            print(f"min output value: {np.min(output_mat)} at {np.argmin(output_mat)}")
+        print(
+            f"max input value with weight: {np.max(np.einsum('pcxyz,p->pcxyz', input_mat, weight_mat))}"
+        )
+        print(
+            f"min input value with weight: {np.min(np.einsum('pcxyz,p->pcxyz', input_mat, weight_mat))}"
+        )
+        if not self.if_eval and len(output_mat.shape) != 0:
+            print(f"max output value with weight: {np.max(output_mat * weight_mat)}")
+            print(f"min output value with weight: {np.min(output_mat * weight_mat)}")
 
         b3lyp_ene = (
             0.08 * input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
@@ -88,7 +89,6 @@ class DataBaseCube(DataBase):
             f"Weight shape after filtering: {weight_mat.shape}",
             flush=True,
         )
-        print(f"b3lyp_ene: min {np.sum(b3lyp_ene * weight_mat)}", flush=True)
         mean_val = np.sum(b3lyp_ene * weight_mat)
         normal_factor = np.sqrt(
             np.sqrt(np.sum((b3lyp_ene - mean_val) ** 2 * weight_mat) / mol_info["natm"])
@@ -219,4 +219,5 @@ class DataBaseCube(DataBase):
             "loss_multiplier_atomic": loss_multiplier_atomic,
         }
 
+        print("", flush=True)
         return num_data_used, data_dict
