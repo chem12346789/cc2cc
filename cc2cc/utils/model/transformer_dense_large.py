@@ -21,7 +21,7 @@ class Model(nn.Module):
         self.predictor = Extractor(
             d_model=CUBE_SIZE**3,
             seq_len=4,
-            num_layer=7,
+            num_layer=5,
             qkv_bias=False,
             num_heads=1,
             mlp_ratio=1,
@@ -41,7 +41,7 @@ class Model(nn.Module):
         self.predictor_center = Extractor(
             d_model=1,
             seq_len=4,
-            num_layer=7,
+            num_layer=5,
             qkv_bias=False,
             num_heads=1,
             mlp_ratio=1,
