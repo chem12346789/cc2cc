@@ -60,6 +60,7 @@ class Model(nn.Module):
         )
 
         self.preprocess = torch.nn.Tanh()
+        self.factor = 1000.0
 
     def forward(self, x):
         """
@@ -75,8 +76,8 @@ class Model(nn.Module):
         # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 
-        x = self.preprocess(x)
-        x_center = self.preprocess(x_center)
+        x = self.preprocess(x / self.factor) * self.factor
+        x_center = self.preprocess(x_center / self.factor) * self.factor
 
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
