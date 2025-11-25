@@ -212,6 +212,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--if_eval",
+        type=str2bool,
+        default=False,
+        help="Whether to use the evaluation mode in generating the data. Default is False.",
+    )
+
+    parser.add_argument(
         "--loss_ene",
         type=str,
         choices=["MSELoss", "L1Loss"],
@@ -279,10 +286,10 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--if_eval",
-        type=str2bool,
-        default=False,
-        help="Whether to use the evaluation mode. Default is False.",
+        "--max_cycle",
+        type=int,
+        default=50,
+        help="Maximum number of SCF cycles. Default is 50 (use default in PySCF) and -1 for no iteration.",
     )
 
     # ========== Arguments ==========
@@ -506,13 +513,6 @@ def add_args(parser: argparse.ArgumentParser):
         type=str2bool,
         default=False,
         help="Weather to continue the test or generate data. Default is False.",
-    )
-
-    parser.add_argument(
-        "--if_disp",
-        type=str2bool,
-        default=True,
-        help="Weather to use dispersion correction. Default is True.",
     )
 
     parser.add_argument(

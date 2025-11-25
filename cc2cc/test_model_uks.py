@@ -30,16 +30,17 @@ def test_model_uks(
         get_veff_modified_uks(mdft, modeldict, max_memory=80)
     mdft.verbose = 4
 
-    # mdft.max_cycle = -1
-    # mdft.conv_tol = 1e-7
-    # if_retry = False
-    # test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
-    # mdft.kernel(dm0=test_data.dm1_dft)
-
-    mdft.max_cycle = 50
-    mdft.conv_tol = 1e-7
-    if_retry = True
-    mdft.kernel()
+    if args.max_cycle == -1:
+        mdft.max_cycle = -1
+        mdft.conv_tol = 1e-7
+        if_retry = False
+        test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
+        mdft.kernel(dm0=test_data.dm1_dft)
+    else:
+        mdft.max_cycle = args.max_cycle
+        mdft.conv_tol = 1e-7
+        if_retry = True
+        mdft.kernel()
 
     if mdft.converged is False and if_retry:
         print("UKS not converged. First try.")
