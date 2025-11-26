@@ -52,6 +52,7 @@ GENERATE_DATA = os.environ.get("DFT2CC_GENERATE_DATA")
 if GENERATE_DATA is None:
     GENERATE_DATA = False
 
+
 def print_computer_info(device):
     """
     Print information about the GPU and CUDA environment.
@@ -63,6 +64,8 @@ def print_computer_info(device):
     - CUDA visible devices from environment
     - Current CUDA device
     - Number of available CUDA devices
+    - Version of CUDA toolkit and PyTorch
+    - Number of CPU threads
     """
     # print the information of the process
     print(f"PID: {os.getpid()}")
@@ -70,7 +73,7 @@ def print_computer_info(device):
     print(f"CPU Count: {os.cpu_count()}")
     print(f"NUMBER_OF_THREADS: {os.environ.get('NUMBER_OF_THREADS', 'Not Set')}")
     print(f"NUMBER_OF_GPU: {os.environ.get('NUMBER_OF_GPU', 'Not Set')}")
-    lib.num_threads(int(os.environ.get('NUMBER_OF_THREADS', 1)))
+    lib.num_threads(int(os.environ.get("NUMBER_OF_THREADS", 1)))
 
     if device == "cuda":
         # print the gpu information
@@ -79,6 +82,8 @@ def print_computer_info(device):
         print(f"GPU number: {os.environ.get('CUDA_VISIBLE_DEVICES')}")
         print(f"Current Device: {torch.cuda.current_device()}")
         print(f"Number of Devices: {torch.cuda.device_count()}")
+        print(f"CUDA Version: {torch.version.cuda}")
+        print(f"PyTorch Version: {torch.__version__}")
 
     print(f"CUBE_SIZE: {CUBE_SIZE}")
     print(f"CUBE_MIDDLE: {CUBE_MIDDLE}")
