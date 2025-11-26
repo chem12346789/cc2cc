@@ -60,7 +60,7 @@ class Model(nn.Module):
         )
 
         self.preprocess = torch.nn.Tanh()
-        self.factor = 1.0
+        self.factor = 10.0
 
     def forward(self, x):
         """
