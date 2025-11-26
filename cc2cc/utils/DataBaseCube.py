@@ -151,8 +151,6 @@ class DataBaseCube(DataBase):
                         )
                         break
 
-            with open("atomic_energy_real.json", "a", encoding="utf-8") as f_atomic:
-                f_atomic.write(f'"{name}": {ae_target},\n')
             print(
                 f"Atomic systems: {atomic_systems}, Stoichiometry: {atomic_stoichiometry} , AE target: {ae_target * AU2KCALMOL}",
                 flush=True,
