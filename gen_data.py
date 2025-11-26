@@ -368,13 +368,22 @@ if __name__ == "__main__":
                         if min_distance > 1e-2 * len(molecule):
                             traj_mole_pool.append(molecule.copy())
                             print(f"the min distance is {min_distance}", flush=True)
-                            if len(traj_mole_pool) >= args.md_number + 1:
+                            if len(traj_mole_pool) > args.md_number:
+                                print(molecule)
                                 break
                     else:
                         traj_mole_pool.append(molecule.copy())
-                        print(traj_mole_pool, flush=True)
 
-            mol.atom = traj_mole_pool[args.md_number]
+            mol = pyscf.M(
+                atom=traj_mole_pool[args.md_number],
+                basis=mol.basis,
+                ecp=mol.ecp,
+                spin=mol.spin,
+                charge=mol.charge,
+                unit="B",
+            )
+            print(f"MD frame number: {args.md_number}", flush=True)
+            print(f"Molecule atoms:\n{mol.atom}", flush=True)
             if args.md_number != 0:
                 if mol.natm != 1:
                     name = f"{name}_{args.md_number}"
