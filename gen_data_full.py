@@ -923,32 +923,19 @@ if __name__ == "__main__":
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
 
-    for (
-        name_mol,
-        extend_atom,
-        extend_xyz,
-        distance,
-    ) in product(
-        name_mol_list,
-        args.extend_atom,
-        args.extend_xyz,
-        args.distance_list,
-    ):
-        name = f"{name_mol}_{args.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
+    for name_mol in name_mol_list:
+        name = f"{name_mol}_{args.basis}"
 
         try:
             mol = gen_mole(
                 name_mol,
-                extend_atom,
-                extend_xyz,
-                distance,
                 args.basis,
                 ma_basis=False,
                 dataset_name=args.dataset,
             )
 
             if mol is None:
-                print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+                print(f"SKIP: {name_mol}")
                 continue
 
             grids = Grid(mol, args.grid_level)
@@ -965,12 +952,12 @@ if __name__ == "__main__":
             else:
                 ucc(mol, grids, name, args, evaluate=evaluate)
         except (ValueError, RuntimeError) as e:
-            print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
+            print(f"ERROR: {name_mol}")
             print(e)
             error_molecule.append(name)
             print(f"Error molecule: {error_molecule}")
         finally:
-            print(f"Processed: {name_mol} {extend_atom} {extend_xyz} {distance}")
+            print(f"Processed: {name_mol}")
         print()
 
     print(f"Error molecule: {error_molecule}")

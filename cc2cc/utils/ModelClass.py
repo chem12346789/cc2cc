@@ -93,18 +93,10 @@ class ModelClass:
         self.model_type = self.model.model_type
         print(f"Model type: {self.model_type}")
 
-        if self.args.save_dir is not None and self.args.save_dir != "":
-            self.dir_checkpoint = (
-                CHECKPOINTS_PATH / f"checkpoint_{self.args.save_dir}"
-            ).resolve()
-            if not self.dir_checkpoint.exists():
-                print(f"Directory {self.dir_checkpoint} not found. Created!")
-                (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
-        else:
-            self.dir_checkpoint = (
-                CHECKPOINTS_PATH
-                / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
-            ).resolve()
+        self.dir_checkpoint = (
+            CHECKPOINTS_PATH
+            / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
+        ).resolve()
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=False)
@@ -288,6 +280,7 @@ class ModelClass:
             input_.requires_grad = True
             output = self.model(input_)
             if self.args.if_grad:
+                grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
                 middle_ = torch.autograd.grad(
                     torch.sum(output),
                     input_,
@@ -297,7 +290,6 @@ class ModelClass:
                     middle_ = middle_[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
                 grad2force = batch["grad2force"]
                 force = torch.einsum("pm,impx->ix", middle_, grad2force)
-                grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
             output = output * weight
         else:
             with torch.no_grad():
@@ -384,10 +376,7 @@ class ModelClass:
             batch = self.database_train.process_batch(batch, device=self.local_rank)
             tot_loss, data_record = self.loss(batch)
 
-            if self.args.if_grad:
-                tot_loss.backward(retain_graph=True)
-            else:
-                tot_loss.backward()
+            tot_loss.backward()
             self.update_counter += 1
             if self.update_counter % self.iters_to_accumulate == 0:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_norm)

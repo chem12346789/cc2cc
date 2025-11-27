@@ -41,23 +41,10 @@ if __name__ == "__main__":
         )
     error_molecule = []
 
-    for (
-        name_mol,
-        extend_atom,
-        extend_xyz,
-        distance,
-    ) in product(
-        args.name_mol,
-        args.extend_atom,
-        args.extend_xyz,
-        args.distance_list,
-    ):
-        name = f"{name_mol}_{args.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
+    for (name_mol,) in (args.name_mol,):
+        name = f"{name_mol}_{args.basis}"
         mol = gen_mole(
             name_mol,
-            extend_atom,
-            extend_xyz,
-            distance,
             args.basis,
             ma_basis=True,
             dataset_name=args.dataset,
@@ -98,12 +85,12 @@ if __name__ == "__main__":
                     args,
                 )
         except (ValueError, RuntimeError) as e:
-            print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
+            print(f"ERROR: {name_mol}")
             print(e)
             error_molecule.append(name)
             print(f"Error molecule: {error_molecule}")
         finally:
-            print(f"Processed: {name_mol} {extend_atom} {extend_xyz} {distance}")
+            print(f"Processed: {name_mol}")
         print()
 
     print(f"Error molecule: {error_molecule}")

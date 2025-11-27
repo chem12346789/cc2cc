@@ -20,13 +20,13 @@ AU2KCALMOL = 627.5094733748099
 AU2DEBYE = 2.541746472
 dataset = {}
 with importlib.resources.path("cc2cc", "utils") as resource_path:
-    for dataset_name in Path(os.fspath(resource_path)).rglob("*.json"):
+    for dataset_name_ in Path(os.fspath(resource_path)).rglob("*.json"):
         with open(
-            Path(os.fspath(resource_path)) / f"{dataset_name.stem}.json",
+            Path(os.fspath(resource_path)) / f"{dataset_name_.stem}.json",
             "r",
             encoding="utf-8",
         ) as f:
-            dataset[dataset_name.stem] = json.load(f)
+            dataset[dataset_name_.stem] = json.load(f)
 
 
 def get_ecp(name, elements):
@@ -185,9 +185,6 @@ def gen_ecp(basis: str, atom_list: list) -> dict:
 
 def extend(
     name_mol: str,
-    extend_atom: str,
-    extend_xyz: int,
-    distance: float,
     dataset_name: str = "Mol",
     verbose=4,
     if_rotate=False,
@@ -199,31 +196,8 @@ def extend(
     """
     molecule = np.array(copy.deepcopy(dataset[dataset_name][name_mol]), dtype=object)
 
-    if isinstance(extend_atom, int):
-        extend_atom = str(extend_atom)
-
     if verbose > 3:
-        print(f"Generate {name_mol}_{distance:.4f}")
-        print(f"Extend {extend_atom} {extend_xyz} {distance:.4f}")
         print("original mol", molecule)
-
-    if len(molecule) == 1:
-        if abs(distance) > 1e-12:
-            raise ValueError("Distance is not allowed in single atom")
-    else:
-        if "-" in extend_atom:
-            atom_list_1 = np.array(extend_atom.split("-")[0].split("."), dtype=int)
-            atom_list_2 = np.array(extend_atom.split("-")[1].split("."), dtype=int)
-
-            distance_1_2_array = (
-                molecule[atom_list_2[0]][1:4] - molecule[atom_list_1[0]][1:4]
-            )
-            molecule[atom_list_2, 1:] += distance * distance_1_2_array
-        else:
-            extend_atom = int(extend_atom)
-            molecule[extend_atom][extend_xyz] += distance
-        if verbose > 3:
-            print("extend mol", molecule)
 
     if if_rotate:
         if if_rotate_random:
@@ -244,12 +218,9 @@ def extend(
 
 def gen_mole(
     name_mol: str,
-    extend_atom: str,
-    extend_xyz: int,
-    distance: float,
     basis: str,
-    ma_basis: bool = False,
-    dataset_name: str = "Mol",
+    ma_basis: bool,
+    dataset_name: str,
     verbose=0,
     if_rotate=False,
     if_rotate_random=False,
@@ -264,9 +235,6 @@ def gen_mole(
         )
     molecule = extend(
         name_mol,
-        extend_atom,
-        extend_xyz,
-        distance,
         dataset_name,
         verbose=verbose,
         if_rotate=if_rotate,

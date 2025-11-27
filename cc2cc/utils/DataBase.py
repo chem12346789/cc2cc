@@ -114,25 +114,16 @@ class DataBase:
 
         for (
             name_mol,
-            extend_atom,
-            extend_xyz,
-            distance,
             training_cycle_iteration,
         ) in product(
             molecule_list,
-            args.extend_atom,
-            args.extend_xyz,
-            args.distance_list,
             training_cycle_list,
         ):
-            name = f"{name_mol}_{args.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
+            name = f"{name_mol}_{args.basis}"
 
             try:
                 mol = gen_mole(
                     name_mol,
-                    extend_atom,
-                    extend_xyz,
-                    distance,
                     args.basis,
                     ma_basis=True,
                     dataset_name=args.dataset,

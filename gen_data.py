@@ -280,32 +280,19 @@ if __name__ == "__main__":
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
 
-    for (
-        name_mol,
-        extend_atom,
-        extend_xyz,
-        distance,
-    ) in product(
-        name_mol_list,
-        args.extend_atom,
-        args.extend_xyz,
-        args.distance_list,
-    ):
-        name = f"{name_mol}_{args.basis}_{extend_atom}_{extend_xyz}_{distance:.4f}"
+    for name_mol in name_mol_list:
+        name = f"{name_mol}_{args.basis}"
 
         try:
             mol = gen_mole(
                 name_mol,
-                extend_atom,
-                extend_xyz,
-                distance,
                 args.basis,
                 ma_basis=False,
                 dataset_name=args.dataset,
             )
 
             if mol is None:
-                print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
+                print(f"SKIP: {name_mol} due to missing molecule file.")
                 continue
 
             if args.md_number != 0 and mol.natm != 1:
@@ -352,27 +339,10 @@ if __name__ == "__main__":
                         solve_symmetry=True,
                         verbose=0,
                     )
-                    if len(traj_mole_pool) > 0:
-                        min_distance = 1e10
-                        for exist_mole in traj_mole_pool:
-                            distance_ = (
-                                np.array(exist_mole)[:, 1:] - np.array(molecule)[:, 1:]
-                            )
-                            distance_ = (
-                                distance_[:, 0] ** 2
-                                + distance_[:, 1] ** 2
-                                + distance_[:, 2] ** 2
-                            ) ** 0.5
-                            if np.sum(distance_) < min_distance:
-                                min_distance = np.sum(distance_)
-                        if min_distance > 1e-2 * len(molecule):
-                            traj_mole_pool.append(molecule.copy())
-                            print(f"the min distance is {min_distance}", flush=True)
-                            if len(traj_mole_pool) > args.md_number:
-                                print(molecule)
-                                break
-                    else:
-                        traj_mole_pool.append(molecule.copy())
+                    traj_mole_pool.append(molecule.copy())
+                    if len(traj_mole_pool) > args.md_number:
+                        print(molecule)
+                        break
 
             mol = pyscf.M(
                 atom=traj_mole_pool[args.md_number],
@@ -405,12 +375,12 @@ if __name__ == "__main__":
                 ucc(mol, grids, name, args, evaluate=evaluate)
 
         except (ValueError, RuntimeError) as e:
-            print(f"ERROR: {name_mol} {extend_atom} {extend_xyz} {distance}")
+            print(f"ERROR: {name_mol} {args.md_number}")
             print(e)
             error_molecule.append(name)
             print(f"Error molecule: {error_molecule}")
         finally:
-            print(f"Processed: {name_mol} {extend_atom} {extend_xyz} {distance}")
+            print(f"Processed: {name_mol} {args.md_number}")
         print()
 
     print(f"Error molecule: {error_molecule}")

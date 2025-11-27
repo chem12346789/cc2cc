@@ -172,31 +172,6 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--distance_list",
-        "-dl",
-        nargs="+",
-        type=float,
-        help="Distance between atom H to the origin. Default is 1.0.",
-        default=1.0,
-    )
-
-    parser.add_argument(
-        "--extend_atom",
-        type=str,
-        nargs="+",
-        default=0,
-        help="Number of atoms to extend. Default is 0.",
-    )
-
-    parser.add_argument(
-        "--extend_xyz",
-        type=int,
-        nargs="+",
-        default=0,
-        help="Number of xyz to extend. 0 for x, 1 for y, 2 for z. Default is 0.",
-    )
-
-    parser.add_argument(
         "--md_number",
         type=int,
         default=0,
@@ -480,13 +455,6 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--save_dir",
-        type=str,
-        default="",
-        help="Directory for saving the model. Default is empty.",
-    )
-
-    parser.add_argument(
         "--training_cycle",
         type=int,
         default=0,
@@ -499,13 +467,6 @@ def add_args(parser: argparse.ArgumentParser):
         type=int,
         default=-1,
         help="Epoch for loading the model. Default is -1.",
-    )
-
-    parser.add_argument(
-        "--density_restriction",
-        type=float,
-        default=0.0,
-        help="Lambda for the density restriction. Default is 0.0.",
     )
 
     parser.add_argument(
@@ -550,9 +511,6 @@ def add_args(parser: argparse.ArgumentParser):
     print("Arguments:", flush=True)
     print(f"Name of molecule: {args.name_mol_input}")
     print(f"List of molecule: {args.name_mol}")
-    print(f"Distance list: {args.distance_list}")
-    print(f"Extend atom: {args.extend_atom}")
-    print(f"Extend xyz: {args.extend_xyz}")
     print(f"Grid_level: {args.grid_level}")
     print(f"Basis set: {args.basis}")
     print(f"Dataset: {args.dataset}")
@@ -575,10 +533,8 @@ def add_args(parser: argparse.ArgumentParser):
     print(f"Loss multiplier grad: {args.loss_multiplier_grad}")
     print(f"Loss multiplier atomic: {args.loss_multiplier_atomic}")
     print(f"Load: {args.load}")
-    print(f"Save directory: {args.save_dir}")
     print(f"Training cycle: {args.training_cycle}")
     print(f"Load epoch: {args.load_epoch}")
-    print(f"Density restriction: {args.density_restriction}")
     print(f"Continue: {args.if_continue}")
     print("", flush=True)
 
