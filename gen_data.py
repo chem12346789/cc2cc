@@ -2,7 +2,6 @@
 
 import argparse
 import copy
-from itertools import product
 
 import numpy as np
 
@@ -273,9 +272,9 @@ if __name__ == "__main__":
     eval_str_list = gen_name_args(eval_str_list, args.dataset, args.name_mol_reverse)
 
     if args.if_eval:
-        name_mol_list, evaluate = eval_str_list[args.training_cycle :: 3], True
+        name_mol_list, evaluate = eval_str_list[args.mp_number :: 3], True
     else:
-        name_mol_list, evaluate = train_str_list[args.training_cycle :: 3], False
+        name_mol_list, evaluate = train_str_list[args.mp_number :: 3], False
 
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")

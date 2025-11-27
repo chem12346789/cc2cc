@@ -1,9 +1,6 @@
 """ """
 
 import argparse
-from itertools import product
-
-import numpy as np
 
 from cc2cc.utils import gen_mole, print_computer_info, add_args
 from cc2cc.utils import Grid, DATA_PATH
@@ -905,9 +902,9 @@ if __name__ == "__main__":
     eval_str_list = [mol for mol in eval_str_list if mol not in eval_str_exclude_list]
 
     if args.if_eval:
-        name_mol_list, evaluate = eval_str_list[args.training_cycle :: 6], True
+        name_mol_list, evaluate = eval_str_list[args.mp_number :: 6], True
     else:
-        name_mol_list, evaluate = train_str_list[args.training_cycle :: 3], False
+        name_mol_list, evaluate = train_str_list[args.mp_number :: 3], False
 
     # name_mol_list = [
     #     "AHB21-1A",

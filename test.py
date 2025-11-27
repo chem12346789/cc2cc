@@ -4,7 +4,6 @@ Other parameter are from the argparse.
 """
 
 import argparse
-from itertools import product
 
 from cc2cc.utils import gen_mole, print_computer_info, add_args
 from cc2cc.utils import Grid, ModelClass, DataRecord

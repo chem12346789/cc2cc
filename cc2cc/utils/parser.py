@@ -155,6 +155,8 @@ def add_args(parser: argparse.ArgumentParser):
 
     More details.
     """
+    # ========= Arguments ==========
+    # for data generation
     parser.add_argument(
         "--name_mol",
         "-m",
@@ -179,11 +181,10 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--rho_input",
-        type=str,
-        default="dft",
-        choices=["dft", "cc", "zmp"],
-        help="Type of input density. ",
+        "--mp_number",
+        type=int,
+        default=0,
+        help="Number of training cycles. Default is 1.",
     )
 
     parser.add_argument(
@@ -191,15 +192,6 @@ def add_args(parser: argparse.ArgumentParser):
         type=str2bool,
         default=False,
         help="Whether to use the evaluation mode in generating the data. Default is False.",
-    )
-
-    parser.add_argument(
-        "--loss_ene",
-        type=str,
-        choices=["MSELoss", "L1Loss"],
-        default="MSELoss",
-        help="Loss function for the energy. "
-        "Default is MSELoss. Other options are L1Loss.",
     )
 
     parser.add_argument(
@@ -239,36 +231,25 @@ def add_args(parser: argparse.ArgumentParser):
         "Default is True.",
     )
 
-    parser.add_argument(
-        "--disp",
-        type=str,
-        default=None,
-        choices=[
-            "d3bj",
-            "d3zero",
-            "d3bjm",
-            "d3mbj",
-            "d3zerom",
-            "d3mzero",
-            "d3op",
-            "d4",
-            None,
-        ],
-        help="Type of dispersion correction to use. "
-        "Default is None (no dispersion correction). "
-        "Options are d3bj, d3zero, d3bjm, d3mbj, "
-        "d3zerom, d3mzero, d3op, d4.",
-    )
-
-    parser.add_argument(
-        "--max_cycle",
-        type=int,
-        default=50,
-        help="Maximum number of SCF cycles. Default is 50 (use default in PySCF) and -1 for no iteration.",
-    )
-
     # ========== Arguments ==========
     # for training
+    parser.add_argument(
+        "--rho_input",
+        type=str,
+        default="dft",
+        choices=["dft"],
+        help="Type of input density. ",
+    )
+
+    parser.add_argument(
+        "--loss_ene",
+        type=str,
+        choices=["MSELoss", "L1Loss"],
+        default="MSELoss",
+        help="Loss function for the energy. "
+        "Default is MSELoss. Other options are L1Loss.",
+    )
+
     parser.add_argument(
         "--model",
         type=str,
@@ -454,13 +435,6 @@ def add_args(parser: argparse.ArgumentParser):
         help="Whether to load the saved check point. Default is empty.",
     )
 
-    parser.add_argument(
-        "--training_cycle",
-        type=int,
-        default=0,
-        help="Number of training cycles. Default is 1.",
-    )
-
     # for testing
     parser.add_argument(
         "--load_epoch",
@@ -474,6 +448,13 @@ def add_args(parser: argparse.ArgumentParser):
         type=str2bool,
         default=False,
         help="Weather to continue the test or generate data. Default is False.",
+    )
+
+    parser.add_argument(
+        "--max_cycle",
+        type=int,
+        default=50,
+        help="Maximum number of SCF cycles. Default is 50 (use default in PySCF) and -1 for no iteration.",
     )
 
     parser.add_argument(
@@ -509,33 +490,8 @@ def add_args(parser: argparse.ArgumentParser):
         raise ValueError(f"Invalid device: {args.device}. Please use 'cuda' or 'cpu'.")
 
     print("Arguments:", flush=True)
-    print(f"Name of molecule: {args.name_mol_input}")
-    print(f"List of molecule: {args.name_mol}")
-    print(f"Grid_level: {args.grid_level}")
-    print(f"Basis set: {args.basis}")
-    print(f"Dataset: {args.dataset}")
-    print(f"CCSD(T): {args.cc_triple}")
-    print(f"Gradient: {args.if_grad}")
-    print(f"Model: {args.model}")
-    print(f"Epoch: {args.epoch}")
-    print(f"Batch size: {args.batch_size}")
-    print(f"Precision: {args.precision}")
-    print(f"Learning rate: {args.lr}")
-    print(f"Iterations to accumulate: {args.iters_to_accumulate}")
-    print(f"Max norm: {args.max_norm}")
-    print(f"Eval step: {args.eval_step}")
-    print(f"Weight decay: {args.weight_decay}")
-    print(f"Random seed: {args.seed}")
-    print(f"Optimizer: {args.optimizer}")
-    print(f"if_atomic: {args.if_atomic}")
-    print(f"Loss multiplier: {args.loss_multiplier}")
-    print(f"Loss multiplier abs: {args.loss_multiplier_abs}")
-    print(f"Loss multiplier grad: {args.loss_multiplier_grad}")
-    print(f"Loss multiplier atomic: {args.loss_multiplier_atomic}")
-    print(f"Load: {args.load}")
-    print(f"Training cycle: {args.training_cycle}")
-    print(f"Load epoch: {args.load_epoch}")
-    print(f"Continue: {args.if_continue}")
+    for arg_ in vars(args):
+        print(f"{arg_}: {getattr(args, arg_)}", flush=True)
     print("", flush=True)
 
     return args

@@ -4,7 +4,6 @@ Other parameter are from the argparse.
 """
 
 import argparse
-from itertools import product
 
 from cc2cc.benchmark_rks import benchmark_rks
 from cc2cc.benchmark_uks import benchmark_uks

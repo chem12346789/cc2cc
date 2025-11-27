@@ -107,10 +107,8 @@ class DataBase:
             self.atomic_energy_dict = atomic_energy_dict
 
         training_cycle_list = [""]
-        if args.training_cycle > 0:
-            training_cycle_list.extend(
-                [f"_scf_{i}" for i in range(1, args.training_cycle + 1)]
-            )
+        if args.md_number > 0:
+            training_cycle_list.extend([f"_{i}" for i in range(1, args.md_number + 1)])
 
         for (
             name_mol,

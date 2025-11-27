@@ -45,18 +45,6 @@ class DataBaseCube(DataBase):
             energy_target = data["energy_train"]
             grad2force = data["grad2force"]
             grad_cc_train = data["grad_cc_train"]
-        elif self.args.rho_input == "cc":
-            input_mat = data["rho_cube_cc"]
-            output_mat = data["exc_cc_grids"]
-            energy_target = data["energy_train"]
-            grad2force = None
-            grad_cc_train = None
-        elif self.args.rho_input == "zmp":
-            input_mat = data["rho_cube_zmp"]
-            output_mat = data["exc_cc_grids_zmp"]
-            energy_target = data["energy_train_zmp"]
-            grad2force = None
-            grad_cc_train = None
         else:
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 
