@@ -12,65 +12,6 @@ import torch
 
 from cc2cc.utils.mol import dataset
 
-periodic_table = {
-    -1: "all",
-    1: "H",
-    2: "He",
-    3: "Li",
-    4: "Be",
-    5: "B",
-    6: "C",
-    7: "N",
-    8: "O",
-    9: "F",
-    10: "Ne",
-    11: "Na",
-    12: "Mg",
-    13: "Al",
-    14: "Si",
-    15: "P",
-    16: "S",
-    17: "Cl",
-    18: "Ar",
-    19: "K",
-    20: "Ca",
-    21: "Sc",
-    22: "Ti",
-    23: "V",
-    24: "Cr",
-    25: "Mn",
-    26: "Fe",
-    27: "Co",
-    28: "Ni",
-    29: "Cu",
-    30: "Zn",
-    31: "Ga",
-    32: "Ge",
-    33: "As",
-    34: "Se",
-    35: "Br",
-    36: "Kr",
-    37: "Rb",
-    38: "Sr",
-    39: "Y",
-    40: "Zr",
-    41: "Nb",
-    42: "Mo",
-    43: "Tc",
-    44: "Ru",
-    45: "Rh",
-    46: "Pd",
-    47: "Ag",
-    48: "Cd",
-    49: "In",
-    50: "Sn",
-    51: "Sb",
-    52: "Te",
-    53: "I",
-    54: "Xe",
-}
-
-
 def str2bool(v):
     """
     Function to convert string to boolean
@@ -83,19 +24,6 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError("Boolean value expected.")
-
-
-def get_distance(distance_list):
-    """
-    Function to distance list and generate logger
-    """
-    if len(distance_list) == 3:
-        distance_l = np.linspace(
-            distance_list[0], distance_list[1], int(distance_list[2])
-        )
-    else:
-        distance_l = distance_list
-    return distance_l
 
 
 def gen_name_args(
@@ -188,6 +116,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--mp_total",
+        type=int,
+        default=3,
+        help="Total number of training cycles. Default is 3.",
+    )
+
+    parser.add_argument(
         "--if_eval",
         type=str2bool,
         default=False,
@@ -213,14 +148,6 @@ def add_args(parser: argparse.ArgumentParser):
         type=str,
         default="mol",
         help="Name of the dataset. Default is mol (training and testing).",
-    )
-
-    parser.add_argument(
-        "--cc_triple",
-        type=str2bool,
-        default=False,
-        help="Whether to use the noniterative CCSD(T) in the coupled cluster method. "
-        "Default is False.",
     )
 
     parser.add_argument(
@@ -472,10 +399,7 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     args = parser.parse_args()
-    for i in range(len(args.extend_xyz)):
-        args.extend_xyz[i] += 1
 
-    args.distance_list = get_distance(args.distance_list)
     args.name_mol_input = args.name_mol.copy()
     args.name_mol = gen_name_args(args.name_mol, args.dataset, args.name_mol_reverse)
 
