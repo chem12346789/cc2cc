@@ -123,7 +123,7 @@ class DataBase:
                 mol = gen_mole(
                     name_mol,
                     args.basis,
-                    ma_basis=True,
+                    ma_basis=False,
                     dataset_name=args.dataset,
                     verbose=-1,
                 )

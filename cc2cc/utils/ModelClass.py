@@ -93,10 +93,18 @@ class ModelClass:
         self.model_type = self.model.model_type
         print(f"Model type: {self.model_type}")
 
-        self.dir_checkpoint = (
-            CHECKPOINTS_PATH
-            / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
-        ).resolve()
+        if self.args.save_dir is not None and self.args.save_dir != "":
+            self.dir_checkpoint = (
+                CHECKPOINTS_PATH / f"checkpoint_{self.args.save_dir}"
+            ).resolve()
+        else:
+            self.dir_checkpoint = (
+                CHECKPOINTS_PATH
+                / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
+            ).resolve()
+        if not self.dir_checkpoint.exists():
+            print(f"Directory {self.dir_checkpoint} not found. Created!")
+            (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=False)

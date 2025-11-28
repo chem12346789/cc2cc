@@ -231,11 +231,8 @@ for damping, dft_type in product(["bj"], dft_type_list):
             if name_mol.startswith(i_subset_name):
                 mol = gen_mole(
                     name_mol,
-                    0,
-                    1,
-                    0,
                     "def2-qzvp",
-                    ma_basis=True,
+                    ma_basis=False,
                     dataset_name=args.dataset,
                 )
                 atoms = Atoms(
@@ -428,11 +425,8 @@ for damping, dft_type in product(["bj"], dft_type_list):
     for name_mol in data_name_list:
         mol = gen_mole(
             name_mol,
-            0,
-            1,
-            0,
             "def2-qzvp",
-            ma_basis=True,
+            ma_basis=False,
             dataset_name=args.dataset,
         )
         atoms = Atoms(symbols=mol.elements, positions=mol.atom_coords() * units.Bohr)

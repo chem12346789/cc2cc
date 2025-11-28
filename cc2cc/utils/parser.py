@@ -12,6 +12,7 @@ import torch
 
 from cc2cc.utils.mol import dataset
 
+
 def str2bool(v):
     """
     Function to convert string to boolean
@@ -359,7 +360,14 @@ def add_args(parser: argparse.ArgumentParser):
         "--load",
         type=str,
         default="",
-        help="Whether to load the saved check point. Default is empty.",
+        help="Path to load the model. Default is empty.",
+    )
+
+    parser.add_argument(
+        "--save_dir",
+        type=str,
+        default="",
+        help="Directory to save the model. Default is empty.",
     )
 
     # for testing

@@ -32,7 +32,7 @@ class Model(nn.Module):
         self.densenet = DenseNet(
             d_model=4 * CUBE_SIZE**3,
             mlp=108,
-            depth=5,
+            depth=9,
             drop_rate=0,
             if_skip_connection_dense=1,
             dense_actv="gelu",
@@ -52,7 +52,7 @@ class Model(nn.Module):
         self.densenet_center = DenseNet(
             d_model=4,
             mlp=108,
-            depth=5,
+            depth=9,
             if_skip_connection_dense=1,
             drop_rate=0,
             dense_actv="gelu",
