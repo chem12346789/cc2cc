@@ -1,6 +1,6 @@
 # pylint: disable=W0212
-
-import json
+import gc
+from itertools import product
 
 import pyscf
 import numpy as np
@@ -98,6 +98,9 @@ def get_dft_energy(
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
         ]
+        exc_cc_grids = -pyscf.dft.libxc.eval_xc(
+            "b3lyp", rho_dft, spin=1 if mol.spin else 0
+        )[0] * (rho_dft[0][0] + rho_dft[1][0])
 
         dm12 = (
             0.5 * dm2_cc[0]
@@ -115,32 +118,81 @@ def get_dft_energy(
         # + 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_cc[0], dm1_cc[0])
         # + 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_cc[1], dm1_cc[1])
         # alpha is 0.2 in b3lyp
+        del dm2_cc
+        gc.collect()
 
-        expr_rinv_dm2_r = oe.contract_expression(
-            "ijkl,i,j,kl->",
-            dm12,
-            (mol.nao,),
-            (mol.nao,),
-            (mol.nao, mol.nao),
-            constants=[0],
-            optimize="optimal",
-        )
+        n_slices = 50
+        n_batchs = mol.nao // n_slices + 1
+        for i_batch, j_batch, k_batch, l_batch in product(
+            range(n_batchs),
+            range(n_batchs),
+            range(n_batchs),
+            range(n_batchs),
+        ):
+            nao_slice_i = (
+                n_slices if i_batch != n_batchs - 1 else mol.nao - n_slices * i_batch
+            )
+            nao_slice_j = (
+                n_slices if j_batch != n_batchs - 1 else mol.nao - n_slices * j_batch
+            )
+            nao_slice_k = (
+                n_slices if k_batch != n_batchs - 1 else mol.nao - n_slices * k_batch
+            )
+            nao_slice_l = (
+                n_slices if l_batch != n_batchs - 1 else mol.nao - n_slices * l_batch
+            )
 
-        exc_cc_grids = -pyscf.dft.libxc.eval_xc(
-            "b3lyp", rho_dft, spin=1 if mol.spin else 0
-        )[0] * (rho_dft[0][0] + rho_dft[1][0])
+            i_slice = slice(n_slices * i_batch, n_slices * i_batch + nao_slice_i)
+            j_slice = slice(n_slices * j_batch, n_slices * j_batch + nao_slice_j)
+            k_slice = slice(n_slices * k_batch, n_slices * k_batch + nao_slice_k)
+            l_slice = slice(n_slices * l_batch, n_slices * l_batch + nao_slice_l)
 
-        for i, coord in enumerate(grids.coords):
-            if i * 10 % len(grids.coords) == 0:
-                print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
+            expr_rinv_dm2_r = oe.contract_expression(
+                "ijkl,i,j,kl->",
+                dm12[i_slice, j_slice, k_slice, l_slice],
+                (nao_slice_i,),
+                (nao_slice_j,),
+                (nao_slice_k, nao_slice_l),
+                constants=[0],
+                optimize="optimal",
+            )
 
-            with mol.with_rinv_origin(coord):
-                rinv = mol.intor("int1e_rinv")
-                exc_cc_grids[i] += expr_rinv_dm2_r(
-                    ao_value[0][i],
-                    ao_value[0][i],
-                    rinv,
-                )
+            for i, coord in enumerate(grids.coords):
+                if i * 10 % len(grids.coords) == 0:
+                    print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
+                ao_0_i = ao_value[0][i]
+                with mol.with_rinv_origin(coord):
+                    rinv = mol.intor("int1e_rinv")
+                    exc_cc_grids[i] += expr_rinv_dm2_r(
+                        ao_0_i[i_slice],
+                        ao_0_i[j_slice],
+                        rinv[k_slice, l_slice],
+                    )
+
+            del expr_rinv_dm2_r
+            gc.collect()
+
+        # expr_rinv_dm2_r = oe.contract_expression(
+        #     "ijkl,i,j,kl->",
+        #     dm12,
+        #     (mol.nao,),
+        #     (mol.nao,),
+        #     (mol.nao, mol.nao),
+        #     constants=[0],
+        #     optimize="optimal",
+        # )
+
+        # for i, coord in enumerate(grids.coords):
+        #     if i * 10 % len(grids.coords) == 0:
+        #         print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
+
+        #     with mol.with_rinv_origin(coord):
+        #         rinv = mol.intor("int1e_rinv")
+        #         exc_cc_grids[i] += expr_rinv_dm2_r(
+        #             ao_value[0][i],
+        #             ao_value[0][i],
+        #             rinv,
+        #         )
 
         for i_spin in range(2):
             eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo[i_spin])
