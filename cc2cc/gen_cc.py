@@ -1,11 +1,11 @@
 # pylint: disable=W0212
-
-import numpy as np
-import pyscf
 import gc
 from itertools import product
 
 import opt_einsum as oe
+import numpy as np
+import pyscf
+import torch
 
 from pyscf.cc import ccsd_t_lambda
 from pyscf.cc import ccsd_t_rdm
@@ -106,6 +106,7 @@ def get_dft_energy(
         del dm2_cc
         gc.collect()
 
+        backends = "torch" if torch.cuda.is_available() else "numpy"
         n_slices = 50
         n_batchs = mol.nao // n_slices + 1
         for i_batch, j_batch, k_batch, l_batch in product(
@@ -152,7 +153,7 @@ def get_dft_energy(
                         ao_0_i[i_slice],
                         ao_0_i[j_slice],
                         rinv[k_slice, l_slice],
-                        backend="torch",
+                        backend=backends,
                     )
 
             del expr_rinv_dm2_r
