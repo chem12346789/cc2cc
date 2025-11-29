@@ -445,10 +445,10 @@ class ModelClass:
             device=self.device,
         )
         input_mat.requires_grad = True
-        output_mat = self.model(input_mat)[:, 0]
+        output_mat = self.model(input_mat)
         middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
         middle_mat = grids.get_center_density(middle_cube).detach().cpu().numpy()
-        energy_den = exc_b3lyp + output_mat.detach().cpu().numpy()
+        energy_den = exc_b3lyp + output_mat[:, 0].detach().cpu().numpy()
         vxc = (
             (0.08 + middle_mat[:, 0]) * vxc_b3lyp[0]
             + (0.19 + middle_mat[:, 1]) * vxc_b3lyp[1]
@@ -485,12 +485,10 @@ class ModelClass:
             device=self.device,
         )
         input_mat.requires_grad = True
-        output_mat = self.model(input_mat)[:, 0]
-
+        output_mat = self.model(input_mat)
         middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
-
         middle_mat = middle_cube.detach().cpu().numpy()
-        energy_den = exc_b3lyp + output_mat.detach().cpu().numpy()
+        energy_den = exc_b3lyp + output_mat[:, 0].detach().cpu().numpy()
 
         vxc = (
             (0.08 + middle_mat[:, 0]) * vxc_b3lyp[0]
