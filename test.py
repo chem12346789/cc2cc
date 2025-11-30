@@ -40,7 +40,7 @@ if __name__ == "__main__":
         )
     error_molecule = []
 
-    for (name_mol,) in (args.name_mol,):
+    for name_mol in args.name_mol:
         name = f"{name_mol}_{args.basis}"
         mol = gen_mole(
             name_mol,
