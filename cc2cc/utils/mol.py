@@ -219,8 +219,8 @@ def extend(
 def gen_mole(
     name_mol: str,
     basis: str,
-    ma_basis: bool,
     dataset_name: str,
+    ma_basis: bool = False,
     verbose=0,
     if_rotate=False,
     if_rotate_random=False,

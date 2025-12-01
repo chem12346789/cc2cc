@@ -45,7 +45,7 @@ if __name__ == "__main__":
         mol = gen_mole(
             name_mol,
             args.basis,
-            ma_basis=True,
+            # ma_basis=True,
             dataset_name=args.dataset,
             if_rotate=args.if_rotate,
             if_rotate_random=args.if_rotate_random,

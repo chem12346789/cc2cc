@@ -184,7 +184,6 @@ if __name__ == "__main__":
                     mol = gen_mole(
                         name_mol,
                         "def2-qzvp",
-                        ma_basis=False,
                         dataset_name=args.dataset,
                     )
                     input_batch[i_subset].append(mol)
@@ -380,7 +379,6 @@ if __name__ == "__main__":
             mol = gen_mole(
                 name_mol,
                 "def2-qzvp",
-                ma_basis=False,
                 dataset_name=args.dataset,
             )
             atoms = Atoms(

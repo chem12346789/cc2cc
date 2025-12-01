@@ -300,7 +300,6 @@ if __name__ == "__main__":
             mol = gen_mole(
                 name_mol,
                 args.basis,
-                ma_basis=False,
                 dataset_name=args.dataset,
             )
 

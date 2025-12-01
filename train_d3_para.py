@@ -232,7 +232,6 @@ for damping, dft_type in product(["bj"], dft_type_list):
                 mol = gen_mole(
                     name_mol,
                     "def2-qzvp",
-                    ma_basis=False,
                     dataset_name=args.dataset,
                 )
                 atoms = Atoms(
@@ -426,7 +425,6 @@ for damping, dft_type in product(["bj"], dft_type_list):
         mol = gen_mole(
             name_mol,
             "def2-qzvp",
-            ma_basis=False,
             dataset_name=args.dataset,
         )
         atoms = Atoms(symbols=mol.elements, positions=mol.atom_coords() * units.Bohr)
