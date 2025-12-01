@@ -91,7 +91,7 @@ class ModelClass:
         self.device = next(self.model.parameters()).device
         self.dtype = next(self.model.parameters()).dtype
         self.model_type = self.model.model_type
-        print(f"Model type: {self.model_type}")
+        self.print(f"Model type: {self.model_type}")
 
         if self.args.save_dir is not None and self.args.save_dir != "":
             self.dir_checkpoint = (
@@ -103,33 +103,39 @@ class ModelClass:
                 / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
             ).resolve()
         if not self.dir_checkpoint.exists():
-            print(f"Directory {self.dir_checkpoint} not found. Created!")
+            self.print(f"Directory {self.dir_checkpoint} not found. Created!")
             (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=False)
-        else:
-            for name, param in self.model.named_parameters():
-                if "weight" in name:
-                    print(f"Initialize parameter {name} with shape {param.shape}")
-                    torch.nn.init.xavier_normal_(param)
-                elif "bias" in name:
-                    print(f"Initialize parameter {name} with shape {param.shape}")
-                    torch.nn.init.zeros_(param)
-                else:
-                    print(f"Parameter {name} with shape {param.shape} not initialized")
+        # else:
+        #     for name, param in self.model.named_parameters():
+        #         if "weight" in name:
+        #             self.print(f"Initialize parameter {name} with shape {param.shape}")
+        #             torch.nn.init.xavier_normal_(param)
+        #         elif "bias" in name:
+        #             self.print(f"Initialize parameter {name} with shape {param.shape}")
+        #             torch.nn.init.zeros_(param)
+        #         else:
+        #             self.print(f"Parameter {name} with shape {param.shape} not initialized")
 
-        # if not if_validate:
-        #     if not self.args.if_grad:
-        #         # model.compile does not support Double backward which is used in grad.
-        #         self.model.compile(dynamic=True, mode="max-autotune-no-cudagraphs")
-        #         print("Model compiled with torch.compile!")
+        if (not if_validate) and (not self.args.if_grad):
+            # model.compile does not support Double backward which is used in grad.
+            self.model.compile(dynamic=True, mode="max-autotune-no-cudagraphs")
+            self.print("Model compiled with torch.compile!")
 
         if self.args.distributed:
-            print(f"Using DistributedDataParallel on rank {self.local_rank}")
+            self.print(f"Using DistributedDataParallel on rank {self.local_rank}")
             self.model = DistributedDataParallel(
                 self.model, device_ids=[self.local_rank]
             )
+
+    def print(self, msg):
+        """
+        Print message only on the main process.
+        """
+        if self.verbose:
+            print(msg, flush=True)
 
     def load_model(self):
         """
@@ -137,9 +143,9 @@ class ModelClass:
         """
         load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.load}/").resolve()
         load_path = load_checkpoint / f"{self.args.load_epoch}.pth"
-        print(f"Checking path {load_path}")
+        self.print(f"Checking path {load_path}")
         if load_path.exists():
-            print("Loading model from path")
+            self.print("Loading model from path")
             checkpoint = torch.load(
                 load_path, map_location=self.args.device, weights_only=True
             )
@@ -151,9 +157,9 @@ class ModelClass:
                 }
             self.state_dict = state_dict
             self.args.model = checkpoint["model"]
-            print(f"Model loaded from {load_path} with model {self.args.model}")
+            self.print(f"Model loaded from {load_path} with model {self.args.model}")
         else:
-            print("Model not found, starting from scratch.")
+            self.print("Model not found, starting from scratch.")
 
     def save_model(self, epoch):
         """
@@ -223,7 +229,11 @@ class ModelClass:
         """
         if self.model_type == "center_4":
             input_size = (1, 4)
-            self.database_train = DataBaseCenter(train_str_dict, self.args)
+            self.database_train = DataBaseCenter(
+                train_str_dict,
+                self.args,
+                verbose=self.verbose,
+            )
             self.database_eval = DataBaseCenter(
                 eval_str_dict,
                 self.args,
@@ -231,10 +241,15 @@ class ModelClass:
                 if_eval=True,
                 atomic_name_dict=self.database_train.atomic_name_dict,
                 atomic_energy_dict=self.database_train.atomic_energy_dict,
+                verbose=self.verbose,
             )
         elif self.model_type == "cube":
             input_size = (1, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-            self.database_train = DataBaseCube(train_str_dict, self.args)
+            self.database_train = DataBaseCube(
+                train_str_dict,
+                self.args,
+                verbose=self.verbose,
+            )
             self.database_eval = DataBaseCube(
                 eval_str_dict,
                 self.args,
@@ -242,17 +257,18 @@ class ModelClass:
                 if_eval=True,
                 atomic_name_dict=self.database_train.atomic_name_dict,
                 atomic_energy_dict=self.database_train.atomic_energy_dict,
+                verbose=self.verbose,
             )
         else:
             raise ValueError(f"Unknown model type: {self.model_type}")
 
         if self.local_rank == 0:
-            print(
+            self.print(
                 f"Model {self.model_name} initialized with input size {input_size} "
                 f"and model type {self.model_type}."
             )
-            print(f"Training on {len(self.database_train)} systems.")
-            print(f"Evaluating on {len(self.database_eval)} systems.")
+            self.print(f"Training on {len(self.database_train)} systems.")
+            self.print(f"Evaluating on {len(self.database_eval)} systems.")
 
     def train(self):
         """
@@ -334,7 +350,7 @@ class ModelClass:
                 if system_atom in self.database_train.atomic_name_dict:
                     name_atom = self.database_train.atomic_name_dict[system_atom]
                 else:
-                    print(
+                    self.print(
                         f"Warning: {system_atom} not found in atomic_name_dict, "
                         "skipping atomic energy calculation."
                     )

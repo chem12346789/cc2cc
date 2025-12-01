@@ -21,6 +21,7 @@ class DataBaseCenter(DataBase):
         if_eval=False,
         atomic_name_dict=None,
         atomic_energy_dict=None,
+        verbose=False,
     ):
         super().__init__(
             molecule_list,

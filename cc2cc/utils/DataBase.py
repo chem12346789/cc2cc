@@ -32,11 +32,11 @@ class BasicDataset(Dataset):
             if num_data_used != 0:
                 self.data[name] = data_dict
                 self.name_list.append(name)
-            # Add more copies of the atomic data to balance the dataset.
-            # This is useful when we need to have more data for single-atom systems.
-            if num_data_used == 1:
-                append_number = 20 // int(data_dict["data_weight"]) - 1
-                self.name_list.extend([name] * append_number)
+            # # Add more copies of the atomic data to balance the dataset.
+            # # This is useful when we need to have more data for single-atom systems.
+            # if num_data_used == 1:
+            #     append_number = 20 // int(data_dict["data_weight"]) - 1
+            #     self.name_list.extend([name] * append_number)
 
     def __len__(self):
         return len(self.name_list)
@@ -65,6 +65,7 @@ class DataBase:
         if_eval=False,
         atomic_name_dict=None,
         atomic_energy_dict=None,
+        verbose=False,
     ):
         """
         Initialize the DataBase with a list of molecules and arguments.
@@ -79,6 +80,7 @@ class DataBase:
         else:
             self.dtype = torch.float32
         self.if_eval = if_eval
+        self.verbose = verbose
         self.array_key = ["input", "weight", "output", "grad2force"]
 
         if args.loss_ene == "L1Loss":
@@ -93,6 +95,8 @@ class DataBase:
             self.loss_grad = torch.nn.MSELoss(reduction="sum")
         else:
             raise ValueError(f"Unknown loss function {args.loss_ene}")
+
+        self.print = lambda msg: print(msg, flush=True) if self.verbose else None
 
         name_list = []
         error_molecule = []
@@ -131,16 +135,16 @@ class DataBase:
 
                 path_name_ = DATA_PATH / f"data_{name}.npz"
                 if not (path_name_).exists():
-                    print(f"No file: {name:>40}", flush=True)
+                    self.print(f"No file: {name:>40}")
                     error_molecule.append(name)
-                    print(f"Error molecule: {error_molecule}")
+                    self.print(f"Error molecule: {error_molecule}")
                     continue
 
                 name_list.append(name)
                 if mol.natm == 1 and mol.charge == 0:
                     if atomic_name_dict is None:
                         self.atomic_name_dict[mol.atom_pure_symbol(0)] = name
-                        print(f"{mol.elements} use {name}", flush=True)
+                        self.print(f"{mol.elements} use {name}")
 
                 mol_info_dict[name] = {
                     "natm": mol.natm,
@@ -151,7 +155,7 @@ class DataBase:
                 }
 
             except ValueError as e:
-                print(f"Error generating molecule {name}: {e}", flush=True)
+                self.print(f"Error generating molecule {name}: {e}")
 
         # move atomic_name_dict in the head of name_list.
         for iter_atom_name, (atom_key, atom_name) in enumerate(
@@ -161,11 +165,10 @@ class DataBase:
                 name_list.remove(atom_name)
                 name_list.insert(iter_atom_name, atom_name)
             else:
-                print(
+                self.print(
                     f"Warning: atomic {atom_name} as {atom_key} is atom.",
-                    flush=True,
                 )
-        print(name_list, flush=True)
+        self.print(name_list)
 
         self.dataset = BasicDataset(name_list, mol_info_dict, self.load_data)
         if args.distributed:
@@ -196,18 +199,15 @@ class DataBase:
         for key, val in batch.items():
             if key in self.array_key:
                 if PRINT_DEBUG:
-                    print(f"key : {key}, shape of val : {val.size()}", flush=True)
+                    self.print(f"key : {key}, shape of val : {val.size()}")
                 batch_gpu[key] = val[0].to(device=device, non_blocking=True)
                 if PRINT_DEBUG:
-                    print(
-                        f"After processing, key : {key}, type of val : {type(batch_gpu[key])}, shape of val : {batch_gpu[key].size()}",
-                        flush=True,
+                    self.print(
+                        f"After processing, key : {key}, type of val : {type(batch_gpu[key])}, shape of val : {batch_gpu[key].size()}"
                     )
             else:
                 if PRINT_DEBUG:
-                    print(
-                        f"key : {key}, len of val : {len(val)}, val : {val}", flush=True
-                    )
+                    self.print(f"key : {key}, len of val : {len(val)}, val : {val}")
                 if isinstance(val, list):
                     if len(np.shape(val)) == 1:
                         batch_gpu[key] = val[0]
@@ -224,9 +224,8 @@ class DataBase:
                 else:
                     batch_gpu[key] = val[0]
                 if PRINT_DEBUG:
-                    print(
+                    self.print(
                         f"After processing, key : {key}, type of val : {type(batch_gpu[key])}, val : {batch_gpu[key]}",
-                        flush=True,
                     )
         return batch_gpu
 
