@@ -102,9 +102,6 @@ class ModelClass:
                 CHECKPOINTS_PATH
                 / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
             ).resolve()
-        if not self.dir_checkpoint.exists():
-            self.print(f"Directory {self.dir_checkpoint} not found. Created!")
-            (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=False)
@@ -165,6 +162,9 @@ class ModelClass:
         """
         Save the model to the checkpoint.
         """
+        if not self.dir_checkpoint.exists():
+            self.print(f"Directory {self.dir_checkpoint} not found. Created!")
+            (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
         state_dict = self.model.state_dict()
         torch.save(
             {"state_dict": state_dict, "model": self.args.model},
