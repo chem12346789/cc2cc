@@ -105,16 +105,16 @@ class ModelClass:
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=False)
-        # else:
-        #     for name, param in self.model.named_parameters():
-        #         if "weight" in name:
-        #             self.print(f"Initialize parameter {name} with shape {param.shape}")
-        #             torch.nn.init.xavier_normal_(param)
-        #         elif "bias" in name:
-        #             self.print(f"Initialize parameter {name} with shape {param.shape}")
-        #             torch.nn.init.zeros_(param)
-        #         else:
-        #             self.print(f"Parameter {name} with shape {param.shape} not initialized")
+        else:
+            for name, param in self.model.named_parameters():
+                if "weight" in name:
+                    self.print(f"Initialize parameter {name} with shape {param.shape}")
+                    torch.nn.init.xavier_normal_(param)
+                elif "bias" in name:
+                    self.print(f"Initialize parameter {name} with shape {param.shape}")
+                    torch.nn.init.zeros_(param)
+                else:
+                    self.print(f"Parameter {name} with shape {param.shape} not initialized")
 
         if (not if_validate) and (not self.args.if_grad):
             # model.compile does not support Double backward which is used in grad.
