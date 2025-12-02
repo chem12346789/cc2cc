@@ -275,18 +275,17 @@ def train_model(train_str_dict, eval_str_dict, args):
                         }
                     )
 
-                if epoch < (args.eval_step * 100):
-                    print(
-                        f"Local_rank {modeldict.local_rank:>2}, "
-                        f"Epoch: {epoch:>5}, "
-                        f"Train: {len(train_data_record_l)}, "
-                        f"Eval: {len(eval_data_record_l)}, "
-                        f"Loss: {epoch_train_loss:>5.2f}, "
-                        f"Eval: {epoch_eval_loss:>5.2f}, "
-                        f"lr: {epoch_lr:>5.2e}, "
-                        f"{timer.measure()}",
-                        flush=True,
-                    )
+                print(
+                    f"Local_rank {modeldict.local_rank:>2}, "
+                    f"Epoch: {epoch:>5}, "
+                    f"Train: {len(train_data_record_l)}, "
+                    f"Eval: {len(eval_data_record_l)}, "
+                    f"Loss: {epoch_train_loss:>5.2f}, "
+                    f"Eval: {epoch_eval_loss:>5.2f}, "
+                    f"lr: {epoch_lr:>5.2e}, "
+                    f"{timer.measure()}",
+                    flush=True,
+                )
 
         if modeldict.args.distributed:
             dist.barrier()

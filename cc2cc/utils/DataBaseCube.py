@@ -171,29 +171,32 @@ class DataBaseCube(DataBase):
             epsilon = 1e-10
             loss_multiplier = self.args.loss_multiplier / (
                 self.loss_ene(
-                    data_weight * torch.zeros(()),
-                    data_weight * torch.tensor(energy_target),
+                    torch.zeros(()),
+                    AU2KCALMOL * torch.tensor(energy_target),
                 )
                 + epsilon
             )
             # loss_multiplier_abs = self.args.loss_multiplier_abs / (
             #     self.loss_ene_abs(
             #         torch.zeros((output_mat * weight_mat).shape),
-            #         torch.tensor(output_mat * weight_mat),
+            #         AU2KCALMOL * torch.tensor(output_mat * weight_mat),
             #     )
             #     + epsilon
             # )
             if grad_cc_train is not None:
                 loss_multiplier_grad = self.args.loss_multiplier_grad / (
                     self.loss_grad(
-                        torch.zeros(grad_cc_train.shape), torch.tensor(grad_cc_train)
+                        torch.zeros(grad_cc_train.shape),
+                        AU2KCALMOL * torch.tensor(grad_cc_train),
                     )
                     + epsilon
                 )
             else:
                 loss_multiplier_grad = 1
             loss_multiplier_atomic = self.args.loss_multiplier_atomic / (
-                self.loss_ene_atomic(torch.zeros(()), torch.tensor(ae_target))
+                self.loss_ene_atomic(
+                    torch.zeros(()), AU2KCALMOL * torch.tensor(ae_target)
+                )
             )
             if loss_multiplier_atomic > 1 / epsilon:
                 loss_multiplier_atomic = 0
