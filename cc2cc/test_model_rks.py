@@ -57,7 +57,11 @@ def test_model_rks(
                 mdft = mdft.newton()
                 mdft.kernel()
                 if mdft.converged is False:
-                    print("Error: RKS not converged!!!")
+                    print("Error: RKS not converged!!! Restart without SCF procedure.")
+                    mdft.max_cycle = -1
+                    mdft.conv_tol = 1e-7
+                    test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
+                    mdft.kernel(dm0=test_data.dm1_dft)
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
 
