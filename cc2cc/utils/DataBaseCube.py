@@ -202,6 +202,7 @@ class DataBaseCube(DataBase):
             # )
             # if loss_multiplier_atomic > 1 / epsilon:
             #     loss_multiplier_atomic = 0
+
             self.print(
                 f"Relative loss multipliers: {loss_multiplier}, {loss_multiplier_abs}, {loss_multiplier_grad}, {loss_multiplier_atomic}",
             )

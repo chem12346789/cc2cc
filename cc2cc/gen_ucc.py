@@ -15,6 +15,8 @@ from pyscf.cc.uccsd_t_rdm import _gamma1_intermediates as u_gamma1_intermediates
 from pyscf.cc.uccsd_t_rdm import _gamma2_intermediates as u_gamma2_intermediates
 from pyscf.grad import uccsd_t as uccsd_t_grad
 
+from cc2cc.gen_cc import block_loop_rdm2
+
 from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.modelscf_uks import get_veff_grad_modified_zeros
@@ -34,6 +36,8 @@ def get_dft_energy(
     """
     Calculate the (exchange-correlation energy - DFT energy) on the grids.
     """
+    backends = "torch" if torch.cuda.is_available() else "numpy"
+    print(f"Using backend: {backends} for get_dft_energy\n")
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
     ao_array = np.array([ao_value[0], ao_value[1], ao_value[2], ao_value[3]])
     ao_mat = np.array(
@@ -53,7 +57,7 @@ def get_dft_energy(
     ]
 
     if evaluate:
-        return None, rho_dft, None
+        return rho_dft, {}
     else:
         ni = mdft._numint
         dft_mo_coeff = mdft.mo_coeff
@@ -99,59 +103,38 @@ def get_dft_energy(
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA"),
             pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA"),
         ]
-        exc_cc_grids = -pyscf.dft.libxc.eval_xc(
+        exc_dft_grids = pyscf.dft.libxc.eval_xc(
             "b3lyp", rho_dft, spin=1 if mol.spin else 0
         )[0] * (rho_dft[0][0] + rho_dft[1][0])
 
-        dm12 = (
-            0.5 * dm2_cc[0]
-            + 0.5 * dm2_cc[1]
-            + 0.5 * dm2_cc[1].transpose(2, 3, 0, 1)
-            + 0.5 * dm2_cc[2]
-            - 0.5
-            * oe.contract(
-                "pq,rs->pqrs", dm1_dft[0] + dm1_dft[1], dm1_dft[0] + dm1_dft[1]
+        # exchange part from dm2_cc
+        print("Start exchange part...")
+        exc_cc_grids = np.zeros_like(exc_dft_grids)
+        for (
+            i_slice,
+            j_slice,
+            k_slice,
+            l_slice,
+            nao_slice_i,
+            nao_slice_j,
+            nao_slice_k,
+            nao_slice_l,
+        ) in block_loop_rdm2(mol.nao):
+            dm12_cc = (
+                0.5 * dm2_cc[0][i_slice, j_slice, k_slice, l_slice]
+                + 0.5 * dm2_cc[1][i_slice, j_slice, k_slice, l_slice]
+                + 0.5
+                * dm2_cc[1][i_slice, j_slice, k_slice, l_slice].transpose(2, 3, 0, 1)
+                + 0.5 * dm2_cc[2][i_slice, j_slice, k_slice, l_slice]
+                - 0.5
+                * oe.contract(
+                    "pq,rs->pqrs", dm1_cc[0] + dm1_cc[1], dm1_cc[0] + dm1_cc[1]
+                )
             )
-            + 0.1 * oe.contract("pr,qs->pqrs", dm1_dft[0], dm1_dft[0])
-            + 0.1 * oe.contract("pr,qs->pqrs", dm1_dft[1], dm1_dft[1])
-        )
-        # exchange part
-        # + 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_cc[0], dm1_cc[0])
-        # + 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_cc[1], dm1_cc[1])
-        # alpha is 0.2 in b3lyp
-        del dm2_cc
-        gc.collect()
-
-        backends = "torch" if torch.cuda.is_available() else "numpy"
-        n_slices = 50
-        n_batchs = mol.nao // n_slices + 1
-        for i_batch, j_batch, k_batch, l_batch in product(
-            range(n_batchs),
-            range(n_batchs),
-            range(n_batchs),
-            range(n_batchs),
-        ):
-            nao_slice_i = (
-                n_slices if i_batch != n_batchs - 1 else mol.nao - n_slices * i_batch
-            )
-            nao_slice_j = (
-                n_slices if j_batch != n_batchs - 1 else mol.nao - n_slices * j_batch
-            )
-            nao_slice_k = (
-                n_slices if k_batch != n_batchs - 1 else mol.nao - n_slices * k_batch
-            )
-            nao_slice_l = (
-                n_slices if l_batch != n_batchs - 1 else mol.nao - n_slices * l_batch
-            )
-
-            i_slice = slice(n_slices * i_batch, n_slices * i_batch + nao_slice_i)
-            j_slice = slice(n_slices * j_batch, n_slices * j_batch + nao_slice_j)
-            k_slice = slice(n_slices * k_batch, n_slices * k_batch + nao_slice_k)
-            l_slice = slice(n_slices * l_batch, n_slices * l_batch + nao_slice_l)
 
             expr_rinv_dm2_r = oe.contract_expression(
                 "ijkl,i,j,kl->",
-                dm12[i_slice, j_slice, k_slice, l_slice],
+                dm12_cc,
                 (nao_slice_i,),
                 (nao_slice_j,),
                 (nao_slice_k, nao_slice_l),
@@ -171,32 +154,88 @@ def get_dft_energy(
                         rinv[k_slice, l_slice],
                         backend=backends,
                     )
-
-            del expr_rinv_dm2_r
+            del expr_rinv_dm2_r, dm12_cc
             gc.collect()
+            torch.cuda.empty_cache()
+        print("Exchange part done.\n")
 
-        # expr_rinv_dm2_r = oe.contract_expression(
-        #     "ijkl,i,j,kl->",
-        #     dm12,
-        #     (mol.nao,),
-        #     (mol.nao,),
-        #     (mol.nao, mol.nao),
-        #     constants=[0],
-        #     optimize="optimal",
-        # )
+        # K part from dm1_dft
+        # exchange part
+        # - 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_dft[0], dm1_dft[0])
+        # - 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_dft[1], dm1_dft[1])
+        # alpha is 0.2 in b3lyp
+        print("Start K part...")
+        exc_k_grids = np.zeros_like(exc_dft_grids)
+        for (
+            i_slice,
+            j_slice,
+            k_slice,
+            l_slice,
+            nao_slice_i,
+            nao_slice_j,
+            nao_slice_k,
+            nao_slice_l,
+        ) in block_loop_rdm2(mol.nao):
+            dm12_cc = -0.1 * oe.contract(
+                "pr,qs->pqrs",
+                dm1_dft[0][i_slice, k_slice],
+                dm1_dft[0][j_slice, l_slice],
+            ) - 0.1 * oe.contract(
+                "pr,qs->pqrs",
+                dm1_dft[1][i_slice, k_slice],
+                dm1_dft[1][j_slice, l_slice],
+            )
+            expr_rinv_dm2_r = oe.contract_expression(
+                "ijkl,i,j,kl->",
+                dm12_cc[i_slice, j_slice, k_slice, l_slice],
+                (nao_slice_i,),
+                (nao_slice_j,),
+                (nao_slice_k, nao_slice_l),
+                constants=[0],
+                optimize="optimal",
+            )
 
-        # for i, coord in enumerate(grids.coords):
-        #     if i * 10 % len(grids.coords) == 0:
-        #         print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
+            for i, coord in enumerate(grids.coords):
+                if i * 10 % len(grids.coords) == 0:
+                    print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
+                ao_0_i = ao_value[0][i]
+                with mol.with_rinv_origin(coord):
+                    rinv = mol.intor("int1e_rinv")
+                    exc_k_grids[i] += expr_rinv_dm2_r(
+                        ao_0_i[i_slice],
+                        ao_0_i[j_slice],
+                        rinv[k_slice, l_slice],
+                        backend=backends,
+                    )
+            del expr_rinv_dm2_r, dm12_cc
+            gc.collect()
+            torch.cuda.empty_cache()
+        print("Exchange part done.\n")
 
-        #     with mol.with_rinv_origin(coord):
-        #         rinv = mol.intor("int1e_rinv")
-        #         exc_cc_grids[i] += expr_rinv_dm2_r(
-        #             ao_value[0][i],
-        #             ao_value[0][i],
-        #             rinv,
-        #         )
+        # hatree part from dm1_cc
+        print("Start hatree part...")
+        hatree_cc_grids = np.zeros_like(exc_dft_grids)
+        int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
+        vele = np.einsum(
+            "pij,ij->p",
+            int1e_grids,
+            dm1_cc[0] + dm1_cc[1],
+        )
+        hatree_cc_grids += 0.5 * vele * (rho_cc[0][0] + rho_cc[1][0])
 
+        # hatree part from dm1_dft
+        hatree_dft_grids = np.zeros_like(exc_dft_grids)
+        vele = np.einsum(
+            "pij,ij->p",
+            int1e_grids,
+            dm1_dft[0] + dm1_dft[1],
+        )
+        hatree_dft_grids += 0.5 * vele * (rho_dft[0][0] + rho_dft[1][0])
+        print("Hatree part done.\n")
+
+        # kinetic part
+        kin_cc_grids = np.zeros_like(exc_dft_grids)
+        kin_dft_grids = np.zeros_like(exc_dft_grids)
         for i_spin in range(2):
             eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo[i_spin])
             eigs_v_dm1 = mf_mo_coeff[i_spin] @ eigs_v_dm1
@@ -208,7 +247,7 @@ def get_dft_energy(
                     eigs_v_dm1[:, i],
                     ao_2_diag,
                 )
-                exc_cc_grids -= part * eigs_e_dm1[i] / 2
+                kin_cc_grids -= part * eigs_e_dm1[i] / 2
 
             for i in range(mol.nelec[i_spin]):
                 part = oe.contract(
@@ -218,24 +257,54 @@ def get_dft_energy(
                     dft_mo_coeff[i_spin][:, i],
                     ao_2_diag,
                 )
-                exc_cc_grids += part / 2
+                kin_dft_grids -= part / 2
 
+        # nuclear part
+        nuc_cc_grids = np.zeros_like(exc_dft_grids)
+        nuc_dft_grids = np.zeros_like(exc_dft_grids)
         for i, coord in enumerate(grids.coords):
             for i_atom in range(mol.natm):
                 distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
                 if distance > 1e-3:
-                    exc_cc_grids[i] -= (
-                        (
-                            rho_cc[0][0][i]
-                            + rho_cc[1][0][i]
-                            - rho_dft[0][0][i]
-                            - rho_dft[1][0][i]
-                        )
+                    nuc_cc_grids[i] -= (
+                        (rho_cc[0][0][i] + rho_cc[1][0][i])
+                        * mol.atom_charges()[i_atom]
+                        / distance
+                    )
+                    nuc_dft_grids[i] -= (
+                        (rho_dft[0][0][i] + rho_dft[1][0][i])
                         * mol.atom_charges()[i_atom]
                         / distance
                     )
 
-        return exc_cc_grids, rho_dft, grad2force
+        tol_cc_grids = exc_cc_grids + hatree_cc_grids + kin_cc_grids + nuc_cc_grids
+        tol_dft_grids = (
+            exc_dft_grids
+            + exc_k_grids
+            + hatree_dft_grids
+            + kin_dft_grids
+            + nuc_dft_grids
+        )
+        tol_delta_grids = tol_cc_grids - tol_dft_grids
+
+        print(f"tol_cc_grids: {np.sum(tol_cc_grids * grids.weights)}")
+        print(f"tol_dft_grids: {np.sum(tol_dft_grids * grids.weights)}")
+        return (
+            rho_dft,
+            {
+                "exc_cc_grids": exc_cc_grids,
+                "hatree_cc_grids": hatree_cc_grids,
+                "kin_cc_grids": kin_cc_grids,
+                "nuc_cc_grids": nuc_cc_grids,
+                "exc_dft_grids": exc_dft_grids,
+                "exc_k_grids": exc_k_grids,
+                "hatree_dft_grids": hatree_dft_grids,
+                "kin_dft_grids": kin_dft_grids,
+                "nuc_dft_grids": nuc_dft_grids,
+                "tol_delta_grids": tol_delta_grids,
+                "grad2force": grad2force,
+            },
+        )
 
 
 def ucc(mol, grids, name, args, evaluate=False):
@@ -341,7 +410,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
     # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
-    exc_cc_grids_dft, rho_dft, grad2force = get_dft_energy(
+    rho_dft, data_dict = get_dft_energy(
         mol,
         grids,
         dm1_dft,
@@ -353,18 +422,11 @@ def ucc(mol, grids, name, args, evaluate=False):
         evaluate=evaluate,
     )
 
-    if exc_cc_grids_dft is not None:
-        error = np.sum(exc_cc_grids_dft * grids.weights) - (e_cc - e_dft)
-        print(
-            "exc_cc_grids: ",
-            f"max exc_cc_grids: {np.max(exc_cc_grids_dft)}",
-            f"min exc_cc_grids: {np.min(exc_cc_grids_dft)}",
-            f"mean exc_cc_grids: {np.mean(exc_cc_grids_dft)}",
-            f"std exc_cc_grids: {np.std(exc_cc_grids_dft)}",
-            f"Error: {AU2KCALMOL * error},",
-        )
+    if "tol_delta_grids" in data_dict:
+        error = np.sum(data_dict["tol_delta_grids"] * grids.weights) - energy_train
+        print(f"Error: {AU2KCALMOL * error}")
 
-    if grad2force is not None:
+    if "grad2force" in data_dict:
         grad_mat = np.array(
             [
                 0.08 * np.ones(len(grids.coords)),
@@ -374,10 +436,7 @@ def ucc(mol, grids, name, args, evaluate=False):
             ]
         )
         force = np.einsum(
-            "mp,impx->ix",
-            grad_mat,
-            grad2force,
-            optimize=True,
+            "mp,impx->ix", grad_mat, data_dict["grad2force"], optimize=True
         )
         get_veff_grad_modified_zeros(gdft)
         grad_dft_zeros = gdft.kernel()
@@ -385,16 +444,17 @@ def ucc(mol, grids, name, args, evaluate=False):
 
     # Generate input data
     rho_cube_dft = grids.gen_cube_rho_uks(rho_dft, mdft._numint, dm1_dft)
-    np.savez_compressed(
-        DATA_PATH / f"data_{name}.npz",
-        mol=mol.tostring(format="xyz"),
-        charge=mol.charge,
-        spin=mol.spin,
-        e_cc=e_cc,
-        energy_train=energy_train,
-        rho_cube_dft=rho_cube_dft,
-        weights=grids.weights,
-        exc_cc_grids=exc_cc_grids_dft,
-        grad2force=grad2force,
-        grad_cc_train=grad_cc_train,
+
+    data_dict.update(
+        {
+            "mol": mol.tostring(format="xyz"),
+            "charge": mol.charge,
+            "spin": mol.spin,
+            "e_cc": e_cc,
+            "energy_train": energy_train,
+            "rho_cube_dft": rho_cube_dft,
+            "weights": grids.weights,
+            "grad_cc_train": grad_cc_train,
+        }
     )
+    np.savez_compressed(DATA_PATH / f"data_{name}.npz", **data_dict)
