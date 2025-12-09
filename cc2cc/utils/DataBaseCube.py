@@ -183,23 +183,26 @@ class DataBaseCube(DataBase):
             #     )
             #     + epsilon
             # )
-            if grad_cc_train is not None:
-                loss_multiplier_grad = self.args.loss_multiplier_grad / (
-                    self.loss_grad(
-                        torch.zeros(grad_cc_train.shape),
-                        AU2KCALMOL * torch.tensor(grad_cc_train),
-                    )
-                    + epsilon
-                )
-            else:
-                loss_multiplier_grad = 1
-            loss_multiplier_atomic = self.args.loss_multiplier_atomic / (
-                self.loss_ene_atomic(
-                    torch.zeros(()), AU2KCALMOL * torch.tensor(ae_target)
-                )
-            )
-            if loss_multiplier_atomic > 1 / epsilon:
-                loss_multiplier_atomic = 0
+
+            # if grad_cc_train is not None:
+            #     loss_multiplier_grad = self.args.loss_multiplier_grad / (
+            #         self.loss_grad(
+            #             torch.zeros(grad_cc_train.shape),
+            #             AU2KCALMOL * torch.tensor(grad_cc_train),
+            #         )
+            #         + epsilon
+            #     )
+            # else:
+            #     loss_multiplier_grad = 1
+
+            # loss_multiplier_atomic = self.args.loss_multiplier_atomic / (
+            #     self.loss_ene_atomic(
+            #         torch.zeros(()), AU2KCALMOL * torch.tensor(ae_target)
+            #     )
+            # )
+            # if loss_multiplier_atomic > 1 / epsilon:
+            #     loss_multiplier_atomic = 0
+
             self.print(
                 f"Relative loss multipliers: {loss_multiplier}, {loss_multiplier_abs}, {loss_multiplier_grad}, {loss_multiplier_atomic}",
             )
