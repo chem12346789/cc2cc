@@ -7,6 +7,7 @@ import opt_einsum as oe
 import torch
 
 import pyscf
+from pyscf import lib
 from pyscf.cc import uccsd_t_lambda
 from pyscf.cc import uccsd_t_rdm
 from pyscf.cc import uccsd_t
@@ -14,6 +15,7 @@ from pyscf.cc import uccsd_rdm
 from pyscf.cc.uccsd_t_rdm import _gamma1_intermediates as u_gamma1_intermediates
 from pyscf.cc.uccsd_t_rdm import _gamma2_intermediates as u_gamma2_intermediates
 from pyscf.grad import uccsd_t as uccsd_t_grad
+from pyscf.grad import uccsd as uccsd_grad
 
 from cc2cc.gen_cc import block_loop_rdm2
 
@@ -436,14 +438,25 @@ def ucc(mol, grids, name, args, evaluate=False):
         dm1_cc = None
         dm1_cc_mo = None
         dm2_cc = None
+        grad_cc = None
         del t1, t2
         gc.collect()
     else:
         l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
         d1 = u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
         d2 = u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
+        # CC gradient
+        if mol.natm == 1:
+            grad_cc = np.zeros((mol.natm, 3))  # Fallback to zero gradients
+        elif mol.nelectron == 1:
+            ghf = pyscf.grad.uhf.Gradients(mf)
+            grad_cc = ghf.kernel()
+        else:
+            gcc = uccsd_t_grad.Gradients(mycc)
+            grad_cc = gcc.kernel(t1, t2, l1, l2, eris=eris)
         del t1, t2, l1, l2
         gc.collect()
+
         dm1_cc_mo = uccsd_rdm._make_rdm1(mycc, d1, True)
         mo_a, mo_b = mycc.mo_coeff
         dm1_cc = np.array(
@@ -455,7 +468,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         dm2_cc = uccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
         dm1_cc_mo = np.array(dm1_cc_mo)
         dm2_cc = np.array(dm2_cc)
-        del d1, d2
+        del d1, d2, eris, mycc
         gc.collect()
 
         # Compare CCSD and DFT
@@ -500,7 +513,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         ) - (e_cc - e_hf)
         print(f"Error HF part: {AU2KCALMOL * error_hf}")
 
-    if "grad2force" in data_dict:
+    if "grad2force" in data_dict and grad_cc is not None:
         # HF gradient
         ghf = pyscf.grad.uhf.Gradients(mf)
         grad_hf = ghf.kernel()
@@ -509,15 +522,6 @@ def ucc(mol, grids, name, args, evaluate=False):
         gdft = mdft.Gradients()
         grad_dft = gdft.kernel()
 
-        # CC gradient
-        if mol.natm == 1:
-            grad_cc = np.zeros((mol.natm, 3))  # Fallback to zero gradients
-        elif mol.nelectron == 1:
-            ghf = pyscf.grad.uhf.Gradients(mf)
-            grad_cc = ghf.kernel()
-        else:
-            gcc = uccsd_t_grad.Gradients(mycc)
-            grad_cc = gcc.kernel()
         data_dict["grad_cc_train"] = grad_cc - grad_dft
         data_dict["grad_hf"] = grad_hf
         data_dict["grad_dft"] = grad_dft

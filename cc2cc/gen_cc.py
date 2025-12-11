@@ -434,13 +434,23 @@ def cc(mol, grids, name, args, evaluate=False):
         l1, l2 = ccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
         d1 = _gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
         d2 = _gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
+        # CC gradient
+        if mol.natm == 1:
+            grad_cc = np.zeros((mol.natm, 3))  # Fallback to zero gradients
+        elif mol.nelectron == 1:
+            ghf = pyscf.grad.rhf.Gradients(mf)
+            grad_cc = ghf.kernel()
+        else:
+            gcc = ccsd_t_grad.Gradients(mycc)
+            grad_cc = gcc.kernel(t1, t2, l1, l2, eris=eris)
         del t1, t2, l1, l2
         gc.collect()
+
         dm1_cc_mo = ccsd_rdm._make_rdm1(mycc, d1, True)
         mo = mycc.mo_coeff
         dm1_cc = np.einsum("pi,ij,qj->pq", mo, dm1_cc_mo, mo.conj())
         dm2_cc = ccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
-        del d1, d2
+        del d1, d2, eris, mycc
         gc.collect()
 
         # Compare CCSD and DFT
@@ -494,15 +504,6 @@ def cc(mol, grids, name, args, evaluate=False):
         gdft = mdft.Gradients()
         grad_dft = gdft.kernel()
 
-        # CC gradient
-        if mol.natm == 1:
-            grad_cc = np.zeros((mol.natm, 3))  # Fallback to zero gradients
-        elif mol.nelectron == 1:
-            ghf = pyscf.grad.rhf.Gradients(mf)
-            grad_cc = ghf.kernel()
-        else:
-            gcc = ccsd_t_grad.Gradients(mycc)
-            grad_cc = gcc.kernel()
         data_dict["grad_cc_train"] = grad_cc - grad_dft
         data_dict["grad_hf"] = grad_hf
         data_dict["grad_dft"] = grad_dft
