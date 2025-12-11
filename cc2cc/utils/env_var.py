@@ -45,13 +45,7 @@ if DATA_TEST_DIR is None:
 else:
     DATA_TEST_PATH = MAIN_PATH / "data" / DATA_TEST_DIR
 
-DATA_SCF_PATH = MAIN_PATH / "data" / "grids_scf"
 CHECKPOINTS_PATH = MAIN_PATH / "checkpoints"
-
-GENERATE_DATA = os.environ.get("DFT2CC_GENERATE_DATA")
-if GENERATE_DATA is None:
-    GENERATE_DATA = False
-
 
 def print_computer_info(device):
     """
@@ -92,6 +86,4 @@ def print_computer_info(device):
     print(f"MAIN_PATH: {MAIN_PATH.resolve()}")
     print(f"DATA_PATH: {DATA_PATH.resolve()}")
     print(f"DATA_TEST_PATH: {DATA_TEST_PATH.resolve()}")
-    print(f"DATA_SCF_PATH: {DATA_SCF_PATH.resolve()}")
     print(f"CHECKPOINTS_PATH: {CHECKPOINTS_PATH.resolve()}")
-    print(f"GENERATE_DATA: {GENERATE_DATA}", flush=True)

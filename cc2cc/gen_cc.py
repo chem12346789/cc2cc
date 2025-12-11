@@ -2,11 +2,11 @@
 import gc
 from itertools import product
 
-import opt_einsum as oe
 import numpy as np
-import pyscf
+import opt_einsum as oe
 import torch
 
+import pyscf
 from pyscf.cc import ccsd_t_lambda
 from pyscf.cc import ccsd_t
 from pyscf.cc import ccsd_rdm
@@ -57,7 +57,7 @@ def get_dft_energy(
     grids,
     mdft,
     mf,
-    mycc,
+    dm1_hf,
     dm1_dft,
     dm1_cc,
     dm1_cc_mo,
@@ -83,6 +83,7 @@ def get_dft_energy(
     ao_value = ao_value[:4]
 
     rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
+    rho_hf = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_hf, xctype="GGA")
 
     if evaluate:
         return rho_dft, {}
@@ -177,11 +178,11 @@ def get_dft_energy(
 
         # K part from dm1_dft
         # exchange part
-        # - 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_cc[0], dm1_cc[0])
-        # - 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_cc[1], dm1_cc[1])
+        # - 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_dft[0], dm1_dft[0])
+        # - 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_dft[1], dm1_dft[1])
         # alpha is 0.2 in b3lyp
         print("Start K part...")
-        exc_k_grids = np.zeros_like(exc_dft_grids)
+        exc_k_dft_grids = np.zeros_like(exc_dft_grids)
         for (
             i_slice,
             j_slice,
@@ -192,16 +193,14 @@ def get_dft_energy(
             nao_slice_k,
             nao_slice_l,
         ) in block_loop_rdm2(mol.nao):
-            dm12_cc = -0.05 * oe.contract(
-                "pr,qs->pqrs", dm1_dft[i_slice, k_slice], dm1_dft[j_slice, l_slice]
-            )
             expr_rinv_dm2_r = oe.contract_expression(
-                "ijkl,i,j,kl->",
-                dm12_cc[i_slice, j_slice, k_slice, l_slice],
+                "ik,jl,i,j,kl->",
+                dm1_dft[i_slice, k_slice],
+                dm1_dft[j_slice, l_slice],
                 (nao_slice_i,),
                 (nao_slice_j,),
                 (nao_slice_k, nao_slice_l),
-                constants=[0],
+                constants=[0, 1],
                 optimize="optimal",
             )
 
@@ -211,16 +210,60 @@ def get_dft_energy(
                 ao_0_i = ao_value[0][i]
                 with mol.with_rinv_origin(coord):
                     rinv = mol.intor("int1e_rinv")
-                    exc_k_grids[i] += expr_rinv_dm2_r(
+                    exc_k_dft_grids[i] += -0.05 * expr_rinv_dm2_r(
                         ao_0_i[i_slice],
                         ao_0_i[j_slice],
                         rinv[k_slice, l_slice],
                         backend=backends,
                     )
-            del expr_rinv_dm2_r, dm12_cc
+            del expr_rinv_dm2_r
             gc.collect()
             torch.cuda.empty_cache()
         print("Exchange part done.\n")
+
+        # K part from dm1_hf
+        # exchange part
+        # - 0.5 * oe.contract("pr,qs->pqrs", dm1_hf[0], dm1_hf[0])
+        # - 0.5 * oe.contract("pr,qs->pqrs", dm1_hf[1], dm1_hf[1])
+        # coefficient = - 2 * 0.5 * 0.5 * 0.5 = -0.25
+        print("Start K part from HF...")
+        exc_k_hf_grids = np.zeros_like(exc_dft_grids)
+        for (
+            i_slice,
+            j_slice,
+            k_slice,
+            l_slice,
+            nao_slice_i,
+            nao_slice_j,
+            nao_slice_k,
+            nao_slice_l,
+        ) in block_loop_rdm2(mol.nao):
+            expr_rinv_dm2_r = oe.contract_expression(
+                "ik,jl,i,j,kl->",
+                dm1_hf[i_slice, k_slice],
+                dm1_hf[j_slice, l_slice],
+                (nao_slice_i,),
+                (nao_slice_j,),
+                (nao_slice_k, nao_slice_l),
+                constants=[0, 1],
+                optimize="optimal",
+            )
+
+            for i, coord in enumerate(grids.coords):
+                if i * 10 % len(grids.coords) == 0:
+                    print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
+                ao_0_i = ao_value[0][i]
+                with mol.with_rinv_origin(coord):
+                    rinv = mol.intor("int1e_rinv")
+                    exc_k_hf_grids[i] += -0.25 * expr_rinv_dm2_r(
+                        ao_0_i[i_slice],
+                        ao_0_i[j_slice],
+                        rinv[k_slice, l_slice],
+                        backend=backends,
+                    )
+            del expr_rinv_dm2_r
+            gc.collect()
+            torch.cuda.empty_cache()
 
         # hatree part from dm1_cc
         print("Start hatree part...")
@@ -243,9 +286,19 @@ def get_dft_energy(
         hatree_dft_grids += 0.5 * vele * rho_dft[0]
         print("Hatree part done.\n")
 
+        # hatree part from dm1_hf
+        hatree_hf_grids = np.zeros_like(exc_dft_grids)
+        vele = np.einsum(
+            "pij,ij->p",
+            int1e_grids,
+            dm1_hf,
+        )
+        hatree_hf_grids += 0.5 * vele * rho_hf[0]
+
         # kinetic part
         kin_cc_grids = np.zeros_like(exc_dft_grids)
         kin_dft_grids = np.zeros_like(exc_dft_grids)
+        kin_hf_grids = np.zeros_like(exc_dft_grids)
         eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo)
         eigs_v_dm1 = mf_mo_coeff @ eigs_v_dm1
         for i in range(np.shape(eigs_v_dm1)[1]):
@@ -268,24 +321,38 @@ def get_dft_energy(
             )
             kin_dft_grids -= part
 
+        for i in range(mol.nelec[0]):
+            part = oe.contract(
+                "pm,m,n,pn->p",
+                ao_value[0],
+                mf_mo_coeff[:, i],
+                mf_mo_coeff[:, i],
+                ao_2_diag,
+            )
+            kin_hf_grids -= part
+
         # nuclear part
         nuc_cc_grids = np.zeros_like(exc_dft_grids)
         nuc_dft_grids = np.zeros_like(exc_dft_grids)
+        nuc_hf_grids = np.zeros_like(exc_dft_grids)
         for i, coord in enumerate(grids.coords):
             for i_atom in range(mol.natm):
                 distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
-                if distance > 1e-3:
+                if distance > 1e-5:
                     nuc_cc_grids[i] -= (
                         rho_cc[0][i] * mol.atom_charges()[i_atom] / distance
                     )
                     nuc_dft_grids[i] -= (
                         rho_dft[0][i] * mol.atom_charges()[i_atom] / distance
                     )
+                    nuc_hf_grids[i] -= (
+                        rho_hf[0][i] * mol.atom_charges()[i_atom] / distance
+                    )
 
         tol_cc_grids = exc_cc_grids + hatree_cc_grids + kin_cc_grids + nuc_cc_grids
         tol_dft_grids = (
             exc_dft_grids
-            + exc_k_grids
+            + exc_k_dft_grids
             + hatree_dft_grids
             + kin_dft_grids
             + nuc_dft_grids
@@ -300,10 +367,14 @@ def get_dft_energy(
                 "kin_cc_grids": kin_cc_grids,
                 "nuc_cc_grids": nuc_cc_grids,
                 "exc_dft_grids": exc_dft_grids,
-                "exc_k_grids": exc_k_grids,
+                "exc_k_dft_grids": exc_k_dft_grids,
                 "hatree_dft_grids": hatree_dft_grids,
                 "kin_dft_grids": kin_dft_grids,
                 "nuc_dft_grids": nuc_dft_grids,
+                "exc_k_hf_grids": exc_k_hf_grids,
+                "hatree_hf_grids": hatree_hf_grids,
+                "kin_hf_grids": kin_hf_grids,
+                "nuc_hf_grids": nuc_hf_grids,
                 "tol_delta_grids": tol_delta_grids,
                 "grad2force": grad2force,
             },
@@ -318,69 +389,48 @@ def cc(mol, grids, name, args, evaluate=False):
     print(f"Generate data for {name}")
     # RHF calculation
     mf = pyscf.scf.RHF(mol)
-    mf.max_cycle = 50
+    mf.max_cycle = 500
+    mf.verbose = 4
     mf.kernel()
     if args.check_convergence and not mf.converged:
         mf.max_cycle = 500
-        mf.level_shift = 1.5
+        mf.level_shift = 0.5
         mf.kernel()
         if args.check_convergence and not mf.converged:
-            mf_newton = mf.newton()
-            mf_newton.kernel()
-            mf.kernel(dm=mf_newton.make_rdm1())
-            if args.check_convergence and not mf.converged:
-                raise ValueError("RHF not converged.")
+            raise ValueError("RHF not converged.")
+    dm1_hf = mf.make_rdm1(ao_repr=True)
+    e_hf = mf.e_tot
+
+    # DFT calculation
+    mdft = pyscf.scf.RKS(mol)
+    mdft.verbose = 4
+    mdft.max_cycle = 200
+    mdft.xc = "b3lyp"
+    # get_veff_modified_rks(mdft, modeldict, lambda_rho=1, dm_tar=dm1_cc)
+    mdft.kernel(mf.make_rdm1())
+    if args.check_convergence and not mdft.converged:
+        raise ValueError("RKS not converged.")
+    dm1_dft = mdft.make_rdm1(ao_repr=True)
+    e_dft = mdft.e_tot
+
+    # CCSD calculation
+    mycc = pyscf.cc.CCSD(mf)
+    mycc.verbose = 4
+    mycc.direct = True
+    _, t1, t2 = mycc.kernel()
+    eris = mycc.ao2mo()
+    e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
+    e_cc = mycc.e_tot + e3ref
+    print(f"CCSD(T) energy: {e_cc}")
+    energy_train = e_cc - e_dft
 
     if evaluate:
-        # DFT calculation
-        mdft = pyscf.scf.RKS(mol)
-        mdft.verbose = 4
-        mdft.max_cycle = 200
-        mdft.xc = "b3lyp"
-        # get_veff_modified_rks(mdft, modeldict, lambda_rho=1, dm_tar=dm1_cc)
-        mdft.kernel()
-        if args.check_convergence and not mdft.converged:
-            raise ValueError("RKS not converged.")
-        dm1_dft = mdft.make_rdm1(ao_repr=True)
-        e_dft = mdft.e_tot
-
-        # CCSD calculation
-        mycc = pyscf.cc.CCSD(mf)
-        mycc.verbose = 4
-        mycc.direct = True
-        _, t1, t2 = mycc.kernel()
-        eris = mycc.ao2mo()
-        e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
         dm1_cc = None
         dm1_cc_mo = None
         dm2_cc = None
         del t1, t2
-        e_cc = mycc.e_tot + e3ref
-        print(f"CCSD(T) energy: {e_cc}")
-        energy_train = e_cc - e_dft
-        grad_cc_train = None
+        gc.collect()
     else:
-        # DFT calculation
-        mdft = pyscf.scf.RKS(mol)
-        mdft.verbose = 4
-        mdft.max_cycle = 200
-        mdft.xc = "b3lyp"
-        # get_veff_modified_rks(mdft, modeldict, lambda_rho=1, dm_tar=dm1_cc)
-        mdft.kernel()
-        if args.check_convergence and not mdft.converged:
-            raise ValueError("RKS not converged.")
-        dm1_dft = mdft.make_rdm1(ao_repr=True)
-        e_dft = mdft.e_tot
-        gdft = mdft.Gradients()
-        grad_dft = gdft.kernel()
-
-        # CCSD calculation
-        mycc = pyscf.cc.CCSD(mf)
-        mycc.verbose = 4
-        mycc.direct = True
-        _, t1, t2 = mycc.kernel()
-        eris = mycc.ao2mo()
-        e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
         l1, l2 = ccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
         d1 = _gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
         d2 = _gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
@@ -392,19 +442,6 @@ def cc(mol, grids, name, args, evaluate=False):
         dm2_cc = ccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
         del d1, d2
         gc.collect()
-        e_cc = mycc.e_tot + e3ref
-        print(f"CCSD(T) energy: {e_cc}")
-        energy_train = e_cc - e_dft
-
-        if mol.natm == 1:
-            grad_cc = np.zeros((mol.natm, 3))  # Fallback to zero gradients
-        elif mol.nelectron == 1:
-            ghf = pyscf.grad.rhf.Gradients(mf)
-            grad_cc = ghf.kernel()
-        else:
-            gcc = ccsd_t_grad.Gradients(mycc)
-            grad_cc = gcc.kernel()
-        grad_cc_train = grad_cc - grad_dft
 
         # Compare CCSD and DFT
         print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} (CCSD vs DFT)")
@@ -418,7 +455,7 @@ def cc(mol, grids, name, args, evaluate=False):
         grids,
         mdft,
         mf,
-        mycc,
+        dm1_hf,
         dm1_dft,
         dm1_cc,
         dm1_cc_mo,
@@ -429,8 +466,48 @@ def cc(mol, grids, name, args, evaluate=False):
     if "tol_delta_grids" in data_dict:
         error = np.sum(data_dict["tol_delta_grids"] * grids.weights) - energy_train
         print(f"Error: {AU2KCALMOL * error}")
+        error_hf = np.sum(
+            (
+                (
+                    data_dict["exc_cc_grids"]
+                    + data_dict["hatree_cc_grids"]
+                    + data_dict["kin_cc_grids"]
+                    + data_dict["nuc_cc_grids"]
+                )
+                - (
+                    data_dict["exc_k_hf_grids"]
+                    + data_dict["hatree_hf_grids"]
+                    + data_dict["kin_hf_grids"]
+                    + data_dict["nuc_hf_grids"]
+                )
+            )
+            * grids.weights
+        ) - (e_cc - e_hf)
+        print(f"Error HF part: {AU2KCALMOL * error_hf}")
 
     if "grad2force" in data_dict:
+        # HF gradient
+        ghf_hf = pyscf.grad.rhf.Gradients(mf)
+        grad_hf = ghf_hf.kernel()
+
+        # DFT gradient
+        gdft = mdft.Gradients()
+        grad_dft = gdft.kernel()
+
+        # CC gradient
+        if mol.natm == 1:
+            grad_cc = np.zeros((mol.natm, 3))  # Fallback to zero gradients
+        elif mol.nelectron == 1:
+            ghf = pyscf.grad.rhf.Gradients(mf)
+            grad_cc = ghf.kernel()
+        else:
+            gcc = ccsd_t_grad.Gradients(mycc)
+            grad_cc = gcc.kernel()
+        data_dict["grad_cc_train"] = grad_cc - grad_dft
+        data_dict["grad_hf"] = grad_hf
+        data_dict["grad_dft"] = grad_dft
+        data_dict["grad_cc"] = grad_cc
+
         # Test force
         grad_mat = np.array(
             [
@@ -456,10 +533,11 @@ def cc(mol, grids, name, args, evaluate=False):
             "charge": mol.charge,
             "spin": mol.spin,
             "e_cc": e_cc,
+            "e_dft": e_dft,
+            "e_hf": e_hf,
             "energy_train": energy_train,
             "rho_cube_dft": rho_cube_dft,
             "weights": grids.weights,
-            "grad_cc_train": grad_cc_train,
         }
     )
     np.savez_compressed(DATA_PATH / f"data_{name}.npz", **data_dict)
