@@ -65,6 +65,7 @@ class Model(nn.Module):
             depth=1,
             if_skip_connection_dense=False,
             drop_rate=0,
+            dense_bias=False,
             dense_actv="gelu",
         )
 
