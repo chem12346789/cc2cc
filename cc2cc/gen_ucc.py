@@ -135,7 +135,9 @@ def get_dft_energy(
                 + 0.5 * dm2_cc[2][i_slice, j_slice, k_slice, l_slice]
                 - 0.5
                 * oe.contract(
-                    "pq,rs->pqrs", dm1_cc[0] + dm1_cc[1], dm1_cc[0] + dm1_cc[1]
+                    "pq,rs->pqrs",
+                    dm1_cc[0][i_slice, j_slice] + dm1_cc[1][i_slice, j_slice],
+                    dm1_cc[0][k_slice, l_slice] + dm1_cc[1][k_slice, l_slice],
                 )
             )
 
@@ -193,7 +195,7 @@ def get_dft_energy(
             )
             expr_rinv_dm2_r = oe.contract_expression(
                 "ijkl,i,j,kl->",
-                dm12_cc[i_slice, j_slice, k_slice, l_slice],
+                dm12_cc,
                 (nao_slice_i,),
                 (nao_slice_j,),
                 (nao_slice_k, nao_slice_l),
