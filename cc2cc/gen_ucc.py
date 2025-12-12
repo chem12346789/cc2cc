@@ -131,7 +131,7 @@ def get_dft_energy(
                 0.5 * dm2_cc[0][i_slice, j_slice, k_slice, l_slice]
                 + 0.5 * dm2_cc[1][i_slice, j_slice, k_slice, l_slice]
                 + 0.5
-                * dm2_cc[1][i_slice, j_slice, k_slice, l_slice].transpose(2, 3, 0, 1)
+                * (dm2_cc[1].transpose(2, 3, 0, 1))[i_slice, j_slice, k_slice, l_slice]
                 + 0.5 * dm2_cc[2][i_slice, j_slice, k_slice, l_slice]
                 - 0.5
                 * oe.contract(
