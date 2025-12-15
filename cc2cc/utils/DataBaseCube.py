@@ -101,10 +101,7 @@ class DataBaseCube(DataBase):
             f"B3lyp_ene shape after filtering: {b3lyp_ene.shape};"
             f"Weight shape after filtering: {weight_mat.shape}",
         )
-        mean_val = np.sum(b3lyp_ene * weight_mat)
-        normal_factor = np.sqrt(
-            np.sqrt(np.sum((b3lyp_ene - mean_val) ** 2 * weight_mat) / mol_info["natm"])
-        )
+        normal_factor = np.sum(b3lyp_ene * weight_mat)
         self.print(f"Normal factor: {normal_factor}")
 
         if not self.if_eval:

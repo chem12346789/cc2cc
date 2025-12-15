@@ -57,6 +57,7 @@ def get_veff_modified(
 
         nelec = np.zeros((2, nset))
         excsum = np.zeros(nset)
+        excsum_b3lyp = np.zeros(nset)
         vmat = np.zeros((2, nset, nao, nao))
 
         def block_loop(ao_deriv):
@@ -67,7 +68,7 @@ def get_veff_modified(
                     rho_a = make_rhoa(i, ao, mask, xctype)
                     rho_b = make_rhob(i, ao, mask, xctype)
                     rho = (rho_a, rho_b)
-                    energy_den, vxc = modeldict.eval_xc_eff(
+                    exc_b3lyp, energy_den, vxc = modeldict.eval_xc_eff(
                         rho, ni, dms, grids, coords_, mask
                     )
 
@@ -81,6 +82,7 @@ def get_veff_modified(
                     nelec[0, i] += den_a.sum()
                     nelec[1, i] += den_b.sum()
                     excsum[i] += np.dot(weights_, energy_den)
+                    excsum_b3lyp[i] += np.dot(weights_, exc_b3lyp)
                     wv = weights_ * vxc
                     yield i, ao, mask, wv
 
@@ -182,13 +184,14 @@ def get_veff_modified(
             vmat = vmat[:, 0]
             nelec = nelec.reshape(2)
             excsum = excsum[0]
+            excsum_b3lyp = excsum_b3lyp[0]
 
         dtype = np.result_type(dma, dmb)
         if vmat.dtype != dtype:
             vmat = np.asarray(vmat, dtype=dtype)
 
         if hasattr(modeldict.model, "normal_factor"):
-            modeldict.model.normal_factor = excsum
+            modeldict.model.normal_factor = excsum_b3lyp
 
         return nelec, excsum, vmat
 
@@ -330,7 +333,7 @@ def get_veff_grad_modified(
                 rho_a = make_rho(0, ao[:4], mask, xctype)
                 rho_b = make_rho(1, ao[:4], mask, xctype)
                 rho = (rho_a, rho_b)
-                _, vxc = modeldict.eval_xc_eff(rho, ni, dms, grids, coords_, mask)
+                _, _, vxc = modeldict.eval_xc_eff(rho, ni, dms, grids, coords_, mask)
                 wv = weight * vxc
                 wv[:, 0] *= 0.5
                 _gga_grad_sum_(vmat[0], mol, ao, wv[0], mask, ao_loc)

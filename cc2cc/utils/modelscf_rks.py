@@ -57,6 +57,7 @@ def get_veff_modified(
 
         nelec = np.zeros(nset)
         excsum = np.zeros(nset)
+        excsum_b3lyp = np.zeros(nset)
         vmat = np.zeros((nset, nao, nao))
 
         def block_loop(ao_deriv):
@@ -65,7 +66,7 @@ def get_veff_modified(
             ):
                 for i in range(nset):
                     rho = make_rho(i, ao, mask, xctype)
-                    energy_den, vxc = modeldict.eval_xc_eff(
+                    exc_b3lyp, energy_den, vxc = modeldict.eval_xc_eff(
                         rho, ni, dms, grids, coords_, mask
                     )
 
@@ -75,6 +76,7 @@ def get_veff_modified(
                         den = rho[0] * weights_
                     nelec[i] += den.sum()
                     excsum[i] += np.dot(weights_, energy_den)
+                    excsum_b3lyp[i] += np.dot(weights_, exc_b3lyp)
                     wv = weights_ * vxc
                     yield i, ao, mask, wv
 
@@ -141,6 +143,7 @@ def get_veff_modified(
             nelec = nelec[0]
             excsum = excsum[0]
             vmat = vmat[0]
+            excsum_b3lyp = excsum_b3lyp[0]
 
         if isinstance(dms, np.ndarray):
             dtype = dms.dtype
@@ -150,7 +153,7 @@ def get_veff_modified(
             vmat = np.asarray(vmat, dtype=dtype)
 
         if hasattr(modeldict.model, "normal_factor"):
-            modeldict.model.normal_factor = excsum
+            modeldict.model.normal_factor = excsum_b3lyp
 
         return nelec, excsum, vmat
 
@@ -302,7 +305,9 @@ def get_veff_grad_modified(
             ):
                 for idm in range(nset):
                     rho = make_rho(idm, ao[:4], mask, xctype)
-                    _, vxc = modeldict.eval_xc_eff(rho, ni, dms, grids, coords_, mask)
+                    _, _, vxc = modeldict.eval_xc_eff(
+                        rho, ni, dms, grids, coords_, mask
+                    )
                     wv = weight * vxc
                     wv[0] *= 0.5
                     _gga_grad_sum_(vmat[idm], mol, ao, wv, mask, ao_loc)

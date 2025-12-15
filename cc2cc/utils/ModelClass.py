@@ -471,7 +471,7 @@ class ModelClass:
             + (0.72 + middle_mat[:, 2]) * vxc_b3lyp[2]
             + (0.81 + middle_mat[:, 3]) * vxc_b3lyp[3]
         )
-        return energy_den, vxc
+        return exc_b3lyp, energy_den, vxc
 
     def eval_xc_eff_4(self, rho, ni, dms, grids, coords_, mask):
         """
@@ -512,7 +512,7 @@ class ModelClass:
             + (0.72 + middle_mat[:, 2]) * vxc_b3lyp[2]
             + (0.81 + middle_mat[:, 3]) * vxc_b3lyp[3]
         )
-        return energy_den, vxc
+        return exc_b3lyp, energy_den, vxc
 
     def eval_xc_eff(self, rho, ni, dms, grids, coords_, mask):
         """
