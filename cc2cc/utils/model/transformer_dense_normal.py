@@ -2,7 +2,6 @@
 Generate list of model.
 """
 
-import torch
 from torch import nn
 
 from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
@@ -27,7 +26,7 @@ class Model(nn.Module):
             num_heads=1,
             mlp_ratio=1,
             drop_rate=0,
-            atte_actv="gelu",
+            atte_actv="mish",
         )
 
         self.densenet = DenseNet(
@@ -35,8 +34,8 @@ class Model(nn.Module):
             mlp=108,
             depth=9,
             drop_rate=0,
-            if_skip_connection_dense=True,
-            dense_actv="gelu",
+            if_skip_connection_dense=1,
+            dense_actv="mish",
         )
 
         self.predictor_center = Extractor(
@@ -47,19 +46,19 @@ class Model(nn.Module):
             num_heads=1,
             mlp_ratio=1,
             drop_rate=0,
-            atte_actv="gelu",
+            atte_actv="mish",
         )
 
         self.densenet_center = DenseNet(
             d_model=4,
             mlp=128,
             depth=9,
-            if_skip_connection_dense=True,
+            if_skip_connection_dense=1,
             drop_rate=0,
-            dense_actv="gelu",
+            dense_actv="mish",
         )
 
-        self.mixing_weight = nn.Linear(4, 2)
+        self.normal_factor = 1.0
 
     def forward(self, x):
         """
@@ -75,9 +74,8 @@ class Model(nn.Module):
         # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 
-        # do mixing x and x_center using Mixture of experts mechanism
-        weight_out = self.mixing_weight(x_center.reshape(-1, 4))
-        weight_out = torch.softmax(weight_out, dim=-1)
+        x = x / self.normalize
+        x_center = x_center / self.normalize
 
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
@@ -103,5 +101,4 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
         # SHAPE x_center = (batch, 1)
 
-        mixed_output = weight_out[:, [0]] * x + weight_out[:, [1]] * x_center
-        return b3lyp_ene * mixed_output
+        return b3lyp_ene * (x + x_center) * self.normalize

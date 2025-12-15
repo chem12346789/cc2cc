@@ -150,7 +150,7 @@ class DataBaseCube(DataBase):
                         break
 
             self.print(
-                f"Atomic systems: {atomic_systems}, Stoichiometry: {atomic_stoichiometry} , AE target: {ae_target * AU2KCALMOL}",
+                f"Atomic systems: {atomic_systems}, Stoichiometry: {atomic_stoichiometry}, AE target: {ae_target * AU2KCALMOL}",
             )
 
         if not self.if_eval and len(output_mat.shape) != 0:

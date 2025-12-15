@@ -148,6 +148,10 @@ def get_veff_modified(
             dtype = np.result_type(*dms)
         if vmat.dtype != dtype:
             vmat = np.asarray(vmat, dtype=dtype)
+
+        if hasattr(modeldict.model, "normal_factor"):
+            modeldict.model.normal_factor = excsum
+
         return nelec, excsum, vmat
 
     def get_veff(
@@ -301,7 +305,7 @@ def get_veff_grad_modified(
                     _, vxc = modeldict.eval_xc_eff(rho, ni, dms, grids, coords_, mask)
                     wv = weight * vxc
                     wv[0] *= 0.5
-                    # _gga_grad_sum_(vmat[idm], mol, ao, wv, mask, ao_loc)
+                    _gga_grad_sum_(vmat[idm], mol, ao, wv, mask, ao_loc)
 
                     # # aow = _scale_ao(ao[:4], wv[:4])
                     # # _d1_dot_(vmat[idm], mol, ao[1:4], aow, mask, ao_loc, True)
@@ -548,6 +552,7 @@ def get_veff_grad_modified_zeros(ks_grad):
     """
     Get the method of "Get the effective potential for the RKS Gradients method".
     This will reurn force without contribution from the DFT functional.
+    For debugging use only.
     """
 
     def get_veff(ks_grad_, mol=None, dm=None):

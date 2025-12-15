@@ -76,6 +76,8 @@ class ABlock(nn.Module):
             self.actv_fn = nn.ReLU()
         elif self.atte_actv == "gelu":
             self.actv_fn = nn.GELU()
+        elif self.atte_actv == "mish":
+            self.actv_fn = nn.Mish()
         else:
             raise ValueError(f"Unknown activation function: {self.actv_fn}")
 

@@ -30,6 +30,8 @@ class DenseNet(nn.Module):
             self.actv_fn = nn.ReLU()
         elif self.dense_actv == "gelu":
             self.actv_fn = nn.GELU()
+        elif self.dense_actv == "mish":
+            self.actv_fn = nn.Mish()
         else:
             raise ValueError(f"Unknown activation function: {self.actv_fn}")
 
