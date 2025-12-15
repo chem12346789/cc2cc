@@ -59,15 +59,7 @@ class Model(nn.Module):
             dense_actv="gelu",
         )
 
-        self.mixing_weight = DenseNet(
-            d_model=2,
-            mlp=2,
-            depth=1,
-            if_skip_connection_dense=False,
-            drop_rate=0,
-            dense_bias=False,
-            dense_actv="gelu",
-        )
+        self.mixing_weight = nn.Linear(4 * CUBE_SIZE**3, 2)
 
     def forward(self, x):
         """
@@ -82,6 +74,10 @@ class Model(nn.Module):
         )
         # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+
+        # do mixing x and x_center using Mixture of experts mechanism
+        weight_out = self.mixing_weight(x.reshape(-1, 4 * CUBE_SIZE**3))
+        weight_out = torch.softmax(weight_out, dim=-1)
 
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
@@ -107,9 +103,5 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
         # SHAPE x_center = (batch, 1)
 
-        # do mixing x and x_center using Mixture of experts mechanism
-        weight = torch.cat([x, x_center], dim=-1)
-        weight = self.mixing_weight(weight)
-        weight = torch.softmax(weight, dim=-1)
-
-        return b3lyp_ene * (weight[:, [0]] * x + weight[:, [1]] * x_center)
+        mixed_output = weight_out[:, [0]] * x + weight_out[:, [1]] * x_center
+        return b3lyp_ene * mixed_output
