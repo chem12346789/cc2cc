@@ -50,23 +50,22 @@ class DataBaseCube(DataBase):
         else:
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 
-        input_mat_index = (
-            np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-10
-        )
-        self.print(f"Total number of input points: {len(input_mat_index)}")
-        self.print(f"Number of non-zero input points: {np.sum(input_mat_index)}")
-        if len(output_mat.shape) != 0:
-            self.print(
-                f"Energy in zero input region: {AU2KCALMOL * np.sum(output_mat[~input_mat_index] * weight_mat[~input_mat_index])}",
-            )
-            output_mat = output_mat[input_mat_index]
-        if len(grad2force) != 0:
-            grad2force = grad2force[:, :, input_mat_index, :]
-        weight_mat = weight_mat[input_mat_index]
-        input_mat = input_mat[input_mat_index]
+        # input_mat_index = (
+        #     np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-10
+        # )
+        # self.print(f"Total number of input points: {len(input_mat_index)}")
+        # self.print(f"Number of non-zero input points: {np.sum(input_mat_index)}")
+        # if len(output_mat.shape) != 0:
+        #     self.print(
+        #         f"Energy in zero input region: {AU2KCALMOL * np.sum(output_mat[~input_mat_index] * weight_mat[~input_mat_index])}",
+        #     )
+        #     output_mat = output_mat[input_mat_index]
+        # if len(grad2force) != 0:
+        #     grad2force = grad2force[:, :, input_mat_index, :]
+        # weight_mat = weight_mat[input_mat_index]
+        # input_mat = input_mat[input_mat_index]
+        # self.print("After filtering:")
 
-        self.print("")
-        self.print("After filtering:")
         self.print(f"max input value: {np.max(input_mat)} at {np.argmax(input_mat)}")
         self.print(f"min input value: {np.min(input_mat)} at {np.argmin(input_mat)}")
         if not self.if_eval and len(output_mat.shape) != 0:

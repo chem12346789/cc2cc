@@ -85,16 +85,15 @@ class DataBase:
 
         if args.loss_ene == "L1Loss":
             self.loss_ene = torch.nn.L1Loss(reduction="sum")
-            self.loss_ene_abs = torch.nn.L1Loss(reduction="sum")
             self.loss_ene_atomic = torch.nn.L1Loss(reduction="sum")
             self.loss_grad = torch.nn.L1Loss(reduction="sum")
         elif args.loss_ene == "MSELoss":
             self.loss_ene = torch.nn.MSELoss(reduction="sum")
-            self.loss_ene_abs = torch.nn.MSELoss(reduction="sum")
             self.loss_ene_atomic = torch.nn.MSELoss(reduction="sum")
             self.loss_grad = torch.nn.MSELoss(reduction="sum")
         else:
             raise ValueError(f"Unknown loss function {args.loss_ene}")
+        self.loss_ene_abs = torch.nn.L1Loss(reduction="sum")
 
         self.print = lambda msg: print(msg, flush=True) if self.verbose else None
 

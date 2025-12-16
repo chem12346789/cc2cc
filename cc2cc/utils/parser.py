@@ -343,6 +343,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--loss_abs_largest_k",
+        type=int,
+        default=0,
+        help="Number of largest absolute energy loss to consider. Default is 0 (all).",
+    )
+
+    parser.add_argument(
         "--if_grad",
         type=str2bool,
         default=False,
