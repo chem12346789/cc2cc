@@ -191,7 +191,7 @@ def get_veff_modified(
             vmat = np.asarray(vmat, dtype=dtype)
 
         if hasattr(modeldict.model, "normal_factor"):
-            modeldict.model.normal_factor = excsum_b3lyp
+            modeldict.model.normal_factor = np.abs(excsum_b3lyp)
 
         return nelec, excsum, vmat
 

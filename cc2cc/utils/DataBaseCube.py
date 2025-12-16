@@ -101,7 +101,7 @@ class DataBaseCube(DataBase):
             f"B3lyp_ene shape after filtering: {b3lyp_ene.shape};"
             f"Weight shape after filtering: {weight_mat.shape}",
         )
-        normal_factor = np.sum(b3lyp_ene * weight_mat)
+        normal_factor = np.abs(np.sum(b3lyp_ene * weight_mat))
         self.print(f"Normal factor: {normal_factor}")
 
         if not self.if_eval:
@@ -163,42 +163,34 @@ class DataBaseCube(DataBase):
         loss_multiplier_grad = self.args.loss_multiplier_grad
         loss_multiplier_atomic = self.args.loss_multiplier_atomic
 
-        if self.args.if_relative_weight and not self.if_eval:
+        if self.args.if_relative_weight:
             epsilon = 1e-10
-            loss_multiplier = self.args.loss_multiplier / (
-                self.loss_ene(
-                    torch.zeros(()),
-                    torch.tensor(energy_target),
-                )
-                + epsilon
+            loss_multiplier = self.args.loss_multiplier / (np.abs(energy_target))
+            loss_multiplier_atomic = self.args.loss_multiplier_atomic / (
+                np.abs(ae_target) + epsilon
             )
+            if np.abs(ae_target) < epsilon:
+                loss_multiplier_atomic = 0
 
-            # loss_multiplier_abs = self.args.loss_multiplier_abs / (
-            #     self.loss_ene_abs(
-            #         torch.zeros((output_mat * weight_mat).shape),
-            #         AU2KCALMOL * torch.tensor(output_mat * weight_mat),
-            #     )
-            #     + epsilon
-            # )
-
-            # if grad_cc_train is not None:
-            #     loss_multiplier_grad = self.args.loss_multiplier_grad / (
-            #         self.loss_grad(
-            #             torch.zeros(grad_cc_train.shape),
-            #             AU2KCALMOL * torch.tensor(grad_cc_train),
+            # if not self.if_eval:
+            #     loss_multiplier_abs = self.args.loss_multiplier_abs / (
+            #         self.loss_ene_abs(
+            #             torch.zeros((output_mat * weight_mat).shape),
+            #             torch.tensor(output_mat * weight_mat),
             #         )
             #         + epsilon
             #     )
-            # else:
-            #     loss_multiplier_grad = 1
 
-            # loss_multiplier_atomic = self.args.loss_multiplier_atomic / (
-            #     self.loss_ene_atomic(
-            #         torch.zeros(()), AU2KCALMOL * torch.tensor(ae_target)
-            #     )
-            # )
-            # if loss_multiplier_atomic > 1 / epsilon:
-            #     loss_multiplier_atomic = 0
+            #     if grad_cc_train is not None:
+            #         loss_multiplier_grad = self.args.loss_multiplier_grad / (
+            #             self.loss_grad(
+            #                 torch.zeros(grad_cc_train.shape),
+            #                 AU2KCALMOL * torch.tensor(grad_cc_train),
+            #             )
+            #             + epsilon
+            #         )
+            #     else:
+            #         loss_multiplier_grad = 1
 
             self.print(
                 f"Relative loss multipliers: {loss_multiplier}, {loss_multiplier_abs}, {loss_multiplier_grad}, {loss_multiplier_atomic}",
