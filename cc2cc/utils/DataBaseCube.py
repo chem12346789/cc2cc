@@ -43,10 +43,11 @@ class DataBaseCube(DataBase):
         weight_mat = data["weights"]
         if self.args.rho_input == "dft":
             input_mat = data["rho_cube_dft"]
-            output_mat = data["exc_cc_grids"]
             energy_target = data["energy_train"]
-            grad2force = data["grad2force"]
-            grad_cc_train = data["grad_cc_train"]
+            if not self.if_eval:
+                output_mat = data["tol_delta_grids"]
+                grad2force = data["grad2force"]
+                grad_cc_train = data["grad_cc_train"]
         else:
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 
@@ -200,19 +201,6 @@ class DataBaseCube(DataBase):
             "weight": torch.tensor(weight_mat.reshape((-1, 1)), dtype=self.dtype)
             .detach()
             .clone(),
-            "output": (
-                torch.tensor(0).detach().clone()
-                if self.if_eval
-                else torch.tensor(output_mat.reshape((-1, 1)), dtype=self.dtype)
-                .detach()
-                .clone()
-            ),
-            "grad2force": (
-                torch.tensor(0).detach().clone()
-                if self.if_eval
-                else torch.tensor(grad2force, dtype=self.dtype).detach().clone()
-            ),
-            "grad_cc_train": grad_cc_train,
             "energy_target": energy_target,
             "ae_target": ae_target,
             "name": name,
@@ -225,6 +213,22 @@ class DataBaseCube(DataBase):
             "loss_multiplier_grad": loss_multiplier_grad,
             "loss_multiplier_atomic": loss_multiplier_atomic,
         }
+        if self.if_eval:
+            data_dict["output"] = torch.tensor(0).detach().clone()
+            data_dict["grad2force"] = torch.tensor(0).detach().clone()
+            data_dict["grad_cc_train"] = torch.tensor(0).detach().clone()
+        else:
+            data_dict["output"] = (
+                torch.tensor(output_mat.reshape((-1, 1)), dtype=self.dtype)
+                .detach()
+                .clone()
+            )
+            data_dict["grad2force"] = (
+                torch.tensor(grad2force, dtype=self.dtype).detach().clone()
+            )
+            data_dict["grad_cc_train"] = (
+                torch.tensor(grad_cc_train, dtype=self.dtype).detach().clone()
+            )
 
         self.print("")
         return num_data_used, data_dict
