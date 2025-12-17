@@ -441,7 +441,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         dm1_cc_mo = None
         dm2_cc = None
         grad_cc = None
-        del t1, t2
+        del t1, t2, eris, mycc
         gc.collect()
     else:
         l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
