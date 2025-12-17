@@ -428,7 +428,8 @@ def cc(mol, grids, name, args, evaluate=False):
         dm1_cc = None
         dm1_cc_mo = None
         dm2_cc = None
-        del t1, t2
+        grad_cc = None
+        del t1, t2, eris, mycc
         gc.collect()
     else:
         l1, l2 = ccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
@@ -495,7 +496,7 @@ def cc(mol, grids, name, args, evaluate=False):
         ) - (e_cc - e_hf)
         print(f"Error HF part: {AU2KCALMOL * error_hf}")
 
-    if "grad2force" in data_dict:
+    if "grad2force" in data_dict and grad_cc is not None:
         # HF gradient
         ghf_hf = pyscf.grad.rhf.Gradients(mf)
         grad_hf = ghf_hf.kernel()
