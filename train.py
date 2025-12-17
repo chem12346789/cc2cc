@@ -1,6 +1,6 @@
 import argparse
 
-from cc2cc.utils import add_args, print_computer_info
+from cc2cc.utils import add_args
 from cc2cc.utils.parser import gen_name_args
 from cc2cc.train_model import train_model
 
@@ -197,7 +197,6 @@ if __name__ == "__main__":
         description="Generate the inversed potential and energy."
     )
     args = add_args(parser)
-    print_computer_info(args.device)
 
     train_str_list = gen_name_args(train_str_list, args.dataset, args.name_mol_reverse)
     train_str_exclude_list = gen_name_args(

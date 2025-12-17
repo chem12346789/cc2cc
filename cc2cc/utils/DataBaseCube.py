@@ -165,12 +165,25 @@ class DataBaseCube(DataBase):
 
         if self.args.if_relative_weight:
             epsilon = 1e-10
-            loss_multiplier = self.args.loss_multiplier / (np.abs(energy_target))
-            loss_multiplier_atomic = self.args.loss_multiplier_atomic / (
-                np.abs(ae_target) + epsilon
+            loss_multiplier = self.args.loss_multiplier / (
+                self.loss_ene(
+                    torch.zeros(()),
+                    torch.tensor(energy_target),
+                )
+                + epsilon
             )
-            if np.abs(ae_target) < epsilon:
-                loss_multiplier_atomic = 0
+
+            # if np.abs(energy_target) < epsilon:
+            #     loss_multiplier = 0
+            # else:
+            #     loss_multiplier = self.args.loss_multiplier / (np.abs(energy_target))
+
+            # if np.abs(ae_target) < epsilon:
+            #     loss_multiplier_atomic = 0
+            # else:
+            #     loss_multiplier_atomic = self.args.loss_multiplier_atomic / (
+            #         np.abs(ae_target)
+            #     )
 
             # if not self.if_eval:
             #     loss_multiplier_abs = self.args.loss_multiplier_abs / (

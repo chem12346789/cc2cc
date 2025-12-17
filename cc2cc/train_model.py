@@ -9,6 +9,7 @@ from torch import distributed as dist
 import wandb
 
 from cc2cc.utils import DataRecord, ModelClass
+from cc2cc.utils import print_computer_info
 from cc2cc.utils.timer import Timer
 
 
@@ -45,6 +46,8 @@ def train_model(train_str_dict, eval_str_dict, args):
         dist.barrier()
 
     if modeldict.local_rank == 0:
+        print_computer_info(args.device)
+
         experiment_dict = {
             "model": args.model,
             "device": args.device,
@@ -283,10 +286,10 @@ def train_model(train_str_dict, eval_str_dict, args):
                     )
 
                 print(
-                    f"Epoch: {epoch:>7}, "
-                    f"Loss: {epoch_train_loss:>7.2e}, "
-                    f"Eval: {epoch_eval_loss:>7.2e}, "
-                    f"lr: {epoch_lr:>5.2e}, "
+                    f"Epoch: {epoch:>9} "
+                    f"Loss: {epoch_train_loss:>9.2e} "
+                    f"Eval: {epoch_eval_loss:>9.2e} "
+                    f"lr: {epoch_lr:>9.2e} "
                     f"{timer.measure()}",
                     flush=True,
                 )
