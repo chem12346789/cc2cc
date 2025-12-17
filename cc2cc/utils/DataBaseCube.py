@@ -67,27 +67,32 @@ class DataBaseCube(DataBase):
         # input_mat = input_mat[input_mat_index]
         # self.print("After filtering:")
 
-        self.print(f"max input value: {np.max(input_mat)} at {np.argmax(input_mat)}")
-        self.print(f"min input value: {np.min(input_mat)} at {np.argmin(input_mat)}")
-        if not self.if_eval and len(output_mat.shape) != 0:
-            self.print(
-                f"max output value: {np.max(output_mat)} at {np.argmax(output_mat)}"
-            )
-            self.print(
-                f"min output value: {np.min(output_mat)} at {np.argmin(output_mat)}"
-            )
         self.print(
-            f"max input value with weight: {np.max(np.einsum('pcxyz,p->pcxyz', input_mat, weight_mat))}"
+            f"max input value: {np.max(input_mat)} at {np.unravel_index(np.argmax(input_mat), input_mat.shape)}"
         )
         self.print(
-            f"min input value with weight: {np.min(np.einsum('pcxyz,p->pcxyz', input_mat, weight_mat))}"
+            f"min input value: {np.min(input_mat)} at {np.unravel_index(np.argmin(input_mat), input_mat.shape)}"
         )
         if not self.if_eval and len(output_mat.shape) != 0:
             self.print(
-                f"max output value with weight: {np.max(output_mat * weight_mat)}"
+                f"max output value: {np.max(output_mat)} at {np.unravel_index(np.argmax(output_mat), output_mat.shape)}"
             )
             self.print(
-                f"min output value with weight: {np.min(output_mat * weight_mat)}"
+                f"min output value: {np.min(output_mat)} at {np.unravel_index(np.argmin(output_mat), output_mat.shape)}"
+            )
+
+        self.print(
+            f"max input value with weight: {np.max(np.einsum('pcxyz,p->pcxyz', input_mat, weight_mat))} at {np.unravel_index(np.argmax(np.einsum('pcxyz,p->pcxyz', input_mat, weight_mat)), input_mat.shape)}"
+        )
+        self.print(
+            f"min input value with weight: {np.min(np.einsum('pcxyz,p->pcxyz', input_mat, weight_mat))} at {np.unravel_index(np.argmin(np.einsum('pcxyz,p->pcxyz', input_mat, weight_mat)), input_mat.shape)}"
+        )
+        if not self.if_eval and len(output_mat.shape) != 0:
+            self.print(
+                f"max output value with weight: {np.max(output_mat * weight_mat)} at {np.unravel_index(np.argmax(output_mat * weight_mat), output_mat.shape)}"
+            )
+            self.print(
+                f"min output value with weight: {np.min(output_mat * weight_mat)} at {np.unravel_index(np.argmin(output_mat * weight_mat), output_mat.shape)}"
             )
 
         b3lyp_ene = (

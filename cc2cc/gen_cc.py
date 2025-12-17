@@ -389,15 +389,12 @@ def cc(mol, grids, name, args, evaluate=False):
     print(f"Generate data for {name}")
     # RHF calculation
     mf = pyscf.scf.RHF(mol)
-    mf.max_cycle = 500
+    mf.max_cycle = 2500
     mf.verbose = 4
     mf.kernel()
     if args.check_convergence and not mf.converged:
-        mf.max_cycle = 500
-        mf.level_shift = 0.5
+        pyscf.scf.addons.dynamic_level_shift_(mf, factor=0.5)
         mf.kernel()
-        if args.check_convergence and not mf.converged:
-            raise ValueError("RHF not converged.")
     dm1_hf = mf.make_rdm1(ao_repr=True)
     e_hf = mf.e_tot
 
