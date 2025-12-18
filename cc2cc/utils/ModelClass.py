@@ -211,16 +211,17 @@ class ModelClass:
             self.loss_ene_atomic = torch.nn.L1Loss(reduction="sum").cuda(
                 self.local_rank
             )
+            self.loss_ene_abs = torch.nn.L1Loss(reduction="sum").cuda(self.local_rank)
             self.loss_grad = torch.nn.L1Loss(reduction="sum").cuda(self.local_rank)
         elif self.args.loss_ene == "MSELoss":
             self.loss_ene = torch.nn.MSELoss(reduction="sum").cuda(self.local_rank)
             self.loss_ene_atomic = torch.nn.MSELoss(reduction="sum").cuda(
                 self.local_rank
             )
+            self.loss_ene_abs = torch.nn.MSELoss(reduction="sum").cuda(self.local_rank)
             self.loss_grad = torch.nn.MSELoss(reduction="sum").cuda(self.local_rank)
         else:
             raise ValueError(f"Unknown loss function {self.args.loss_ene}")
-        self.loss_ene_abs = torch.nn.L1Loss(reduction="sum").cuda(self.local_rank)
 
     def init_database(self, train_str_dict, eval_str_dict):
         """
@@ -326,15 +327,22 @@ class ModelClass:
         if if_train:
             target = batch["output"] * weight
             loss_abs_record = torch.sum(torch.abs(target - output)).item()
+            # len(target.shape) will 0 if target is a dummy tensor
             if len(target.shape) != 0:
-                # len(target.shape) will 0 if target is a dummy tensor
-
-                # only learn the largest K values to save memory
                 if self.args.loss_abs_largest_k > 0:
-                    largest_k = torch.topk(
-                        torch.abs((target - output).reshape(-1)),
-                        k=min(self.args.loss_abs_largest_k, target.shape[0]),
-                    ).values
+                    # only learn the largest K values to make training more stable
+                    if self.args.loss_ene == "L1Loss":
+                        largest_k = torch.topk(
+                            torch.abs((target - output).reshape(-1)),
+                            k=min(self.args.loss_abs_largest_k, target.shape[0]),
+                        ).values
+                    elif self.args.loss_ene == "MSELoss":
+                        largest_k = torch.topk(
+                            (target - output).reshape(-1) ** 2,
+                            k=min(self.args.loss_abs_largest_k, target.shape[0]),
+                        ).values
+                    else:
+                        raise ValueError(f"Unknown loss function {self.args.loss_ene}")
                     tot_loss += loss_multiplier_abs * torch.sum(largest_k)
                 else:
                     tot_loss += loss_multiplier_abs * self.loss_ene_abs(
