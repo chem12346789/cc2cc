@@ -22,7 +22,7 @@ class Timer:
         elapsed_time_latest = time.time() - self.latest_time
         self.latest_time = time.time()
         self.step += 1
-        return f"Latest: {elapsed_time_latest:.1f} s"
+        return f"Latest: {elapsed_time_latest:>6.1f} s"
 
     def measure_all(self):
         """Measure the elapsed time since the timer was started."""
@@ -32,7 +32,7 @@ class Timer:
         elapsed_time_latest = time.time() - self.latest_time
         self.latest_time = time.time()
         self.step += 1
-        return f"Speed: {(elapsed_time / self.step):.1f} s/E, Latest: {elapsed_time_latest:.1f} s"
+        return f"Speed: {(elapsed_time / self.step):>6.1f} s/E, Latest: {elapsed_time_latest:>6.1f} s"
 
     def reset(self):
         """Reset the timer."""
