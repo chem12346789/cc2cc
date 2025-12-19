@@ -444,10 +444,12 @@ def cc(mol, grids, name, args, evaluate=False):
         del t1, t2, l1, l2
         gc.collect()
 
-        dm1_cc_mo = ccsd_rdm._make_rdm1(mycc, d1, True)
+        dm1_cc_mo = ccsd_rdm._make_rdm1(mycc, d1, with_frozen=True, ao_repr=False)
         mo = mycc.mo_coeff
         dm1_cc = np.einsum("pi,ij,qj->pq", mo, dm1_cc_mo, mo.conj())
-        dm2_cc = ccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
+        dm2_cc = ccsd_rdm._make_rdm2(
+            mycc, d1, d2, with_dm1=True, with_dm1=True, ao_repr=True
+        )
         del d1, d2, eris, mycc
         gc.collect()
 

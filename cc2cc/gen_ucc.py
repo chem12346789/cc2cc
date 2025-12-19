@@ -456,7 +456,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         del t1, t2, l1, l2
         gc.collect()
 
-        dm1_cc_mo = uccsd_rdm._make_rdm1(mycc, d1, True)
+        dm1_cc_mo = uccsd_rdm._make_rdm1(mycc, d1, with_frozen=True, ao_repr=False)
         mo_a, mo_b = mycc.mo_coeff
         dm1_cc = np.array(
             [
@@ -464,7 +464,9 @@ def ucc(mol, grids, name, args, evaluate=False):
                 np.einsum("pi,ij,qj->pq", mo_b, dm1_cc_mo[1], mo_b),
             ]
         )
-        dm2_cc = uccsd_rdm._make_rdm2(mycc, d1, d2, True, True, ao_repr=True)
+        dm2_cc = uccsd_rdm._make_rdm2(
+            mycc, d1, d2, with_dm1=True, with_dm1=True, ao_repr=True
+        )
         dm1_cc_mo = np.array(dm1_cc_mo)
         dm2_cc = np.array(dm2_cc)
         del d1, d2, eris, mycc
