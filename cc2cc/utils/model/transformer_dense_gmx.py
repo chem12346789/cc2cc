@@ -128,22 +128,6 @@ class Model(nn.Module):
         x1 = self.densenet1(x1)
         # SHAPE x1 = (batch, 1)
 
-        # x2 = self.predictor1(x_in)
-        # # SHAPE shape = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
-        # # SHAPE x2 = (batch, 4, CUBE_SIZE**3)
-        # x2 = x2.reshape(-1, 4 * CUBE_SIZE**3)
-        # # SHAPE x2 = (batch, 4 * CUBE_SIZE**3)
-        # x2 = self.densenet2(x2)
-        # # SHAPE x2 = (batch, 1)
-
-        # x3 = self.predictor3(x_in)
-        # # SHAPE shape = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
-        # # SHAPE x3 = (batch, 4, CUBE_SIZE**3)
-        # x3 = x3.reshape(-1, 4 * CUBE_SIZE**3)
-        # # SHAPE x3 = (batch, 4 * CUBE_SIZE**3)
-        # x3 = self.densenet3(x3)
-        # # SHAPE x3 = (batch, 1)
-
         # SHAPE x_center = (batch, 4)
         x_center = x_center.reshape(-1, 4, 1)
         # SHAPE x_center = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
@@ -155,11 +139,5 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
         # SHAPE x_center = (batch, 1)
 
-        mixed_output = (
-            weight_out[:, [0]] * x1
-            + weight_out[:, [1]] * x_center
-            # x2
-            # + weight_out[:, [2]] * x3
-            # + weight_out[:, [3]] *
-        )
+        mixed_output = weight_out[:, [0]] * x1 + weight_out[:, [1]] * x_center
         return b3lyp_ene * mixed_output

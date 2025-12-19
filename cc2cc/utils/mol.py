@@ -138,7 +138,7 @@ def gen_basis(basis: str, atom_list: list):
     """
     if "def2" in basis:
         return basis
-    if "cc-pV" in basis:
+    if "cc-" in basis:
         dict_ = {}
         for atom in atom_list:
             if atom in dict_:
@@ -169,7 +169,7 @@ def gen_ecp(basis: str, atom_list: list) -> dict:
         for atom in def_ecp_list:
             dict_[atom] = basis
         return dict_
-    if "cc-pV" in basis:
+    if "cc-" in basis:
         dict_ = {}
         for atom in atom_list:
             if atom in dict_:
@@ -246,7 +246,7 @@ def gen_mole(
         if "def2" in basis:
             if dataset[dataset_name]["charge"][name_mol] < 0:
                 basis = "ma-" + basis
-        if "cc-pV" in basis:
+        if "cc-" in basis:
             if dataset[dataset_name]["charge"][name_mol] < 0:
                 basis = "aug-" + basis
     mol = pyscf.M(
