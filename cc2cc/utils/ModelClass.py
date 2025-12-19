@@ -377,6 +377,8 @@ class ModelClass:
                 )
                 atomic_input_ = atomic_batch["input"]
                 atomic_weight = atomic_batch["weight"]
+                if hasattr(self.model, "normal_factor"):
+                    self.model.normal_factor = atomic_batch["normal_factor"]
                 atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
@@ -464,12 +466,14 @@ class ModelClass:
                 rho, ni, dms, coords=coords_, mask=mask, require_vxc=True
             )
 
-        # return exc_b3lyp, (
-        #     0.08 * vxc_b3lyp[0]
-        #     + 0.19 * vxc_b3lyp[1]
-        #     + 0.72 * vxc_b3lyp[2]
-        #     + 0.81 * vxc_b3lyp[3]
-        # )
+        if hasattr(self.model, "normal_factor"):
+            if self.model.normal_factor == 0:
+                return exc_b3lyp, (
+                    0.08 * vxc_b3lyp[0]
+                    + 0.19 * vxc_b3lyp[1]
+                    + 0.72 * vxc_b3lyp[2]
+                    + 0.81 * vxc_b3lyp[3]
+                )
 
         input_mat = torch.tensor(
             rho_cube,
@@ -510,6 +514,15 @@ class ModelClass:
             rho_b3lyp, exc_b3lyp, vxc_b3lyp = grids.gen_rho_uks(
                 rho, ni, require_vxc=True
             )
+
+        if hasattr(self.model, "normal_factor"):
+            if self.model.normal_factor == 0:
+                return exc_b3lyp, (
+                    0.08 * vxc_b3lyp[0]
+                    + 0.19 * vxc_b3lyp[1]
+                    + 0.72 * vxc_b3lyp[2]
+                    + 0.81 * vxc_b3lyp[3]
+                )
 
         input_mat = torch.tensor(
             rho_b3lyp,

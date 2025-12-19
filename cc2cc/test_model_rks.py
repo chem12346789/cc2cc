@@ -24,11 +24,13 @@ def test_model_rks(
     mdft = pyscf.dft.RKS(mol).density_fit()
     mdft.xc = "b3lyp"
     mdft.grids = grids
+    mdft.verbose = 4
     if modeldict.model_type == "center_4":
         get_veff_modified_rks(mdft, modeldict, max_memory=800)
     elif modeldict.model_type == "cube":
         get_veff_modified_rks(mdft, modeldict, max_memory=80)
-    mdft.verbose = 4
+    if hasattr(modeldict.model, "normal_factor"):
+        modeldict.model.normal_factor = 0
 
     if args.max_cycle == -1:
         mdft.max_cycle = -1
