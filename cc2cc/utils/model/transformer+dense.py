@@ -23,9 +23,7 @@ class Model(nn.Module):
             seq_len=4,
             num_layer=3,
             qkv_bias=False,
-            num_heads=1,
             mlp_ratio=1,
-            drop_rate=0,
             atte_actv="gelu",
         )
 
@@ -33,7 +31,6 @@ class Model(nn.Module):
             d_model=4 * CUBE_SIZE**3,
             mlp=108,
             depth=9,
-            drop_rate=0,
             if_skip_connection_dense=1,
             dense_actv="gelu",
         )
@@ -43,9 +40,7 @@ class Model(nn.Module):
             seq_len=4,
             num_layer=7,
             qkv_bias=False,
-            num_heads=1,
             mlp_ratio=1,
-            drop_rate=0,
             atte_actv="gelu",
         )
 

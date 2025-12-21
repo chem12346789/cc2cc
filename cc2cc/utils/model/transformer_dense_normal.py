@@ -5,7 +5,7 @@ Generate list of model.
 from torch import nn
 
 from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
-from cc2cc.utils.model.model_utils import Extractor, DenseNet
+from cc2cc.utils.model.model_utils import Transformer, DenseNet
 
 
 class Model(nn.Module):
@@ -18,7 +18,7 @@ class Model(nn.Module):
 
         self.model_type = "cube"
 
-        self.predictor = Extractor(
+        self.predictor = Transformer(
             d_model=CUBE_SIZE**3,
             seq_len=4,
             num_layer=3,
@@ -38,7 +38,7 @@ class Model(nn.Module):
             dense_actv="mish",
         )
 
-        self.predictor_center = Extractor(
+        self.predictor_center = Transformer(
             d_model=1,
             seq_len=4,
             num_layer=7,

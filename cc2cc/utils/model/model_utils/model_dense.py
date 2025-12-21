@@ -8,45 +8,40 @@ class DenseNet(nn.Module):
 
     def __init__(self, **kwargs):
         super(DenseNet, self).__init__()
-        self.d_model = kwargs.get("d_model")
-        self.mlp = kwargs.get("mlp")
-        self.depth = kwargs.get("depth")
-        self.drop_rate = kwargs.get("drop_rate", 0.0)
-        self.dense_bias = kwargs.get("dense_bias", True)
-        self.dense_actv = kwargs.get("dense_actv", "gelu")
-        self.dense_normal = kwargs.get("dense_normal", "")
+        d_model = kwargs.get("d_model")
+        mlp = kwargs.get("mlp")
+        depth = kwargs.get("depth")
+        dense_bias = kwargs.get("dense_bias", True)
+        dense_actv = kwargs.get("dense_actv", "gelu")
+        dense_normal = kwargs.get("dense_normal", "")
         self.if_skip_connection_dense = kwargs.get("if_skip_connection_dense", True)
 
-        self.sizes = [self.d_model] + [self.mlp] * (self.depth - 1) + [1]
-
-        self.layers = nn.ModuleList(
-            [
-                nn.Linear(input_size, output_size, bias=self.dense_bias)
-                for input_size, output_size in zip(self.sizes, self.sizes[1:])
-            ]
-        )
-
-        if self.dense_actv == "relu":
+        if dense_actv == "relu":
             self.actv_fn = nn.ReLU()
-        elif self.dense_actv == "gelu":
+        elif dense_actv == "gelu":
             self.actv_fn = nn.GELU()
-        elif self.dense_actv == "mish":
+        elif dense_actv == "mish":
             self.actv_fn = nn.Mish()
         else:
-            raise ValueError(f"Unknown activation function: {self.actv_fn}")
+            raise ValueError(f"Unknown activation function: {dense_actv}")
 
-        if self.dense_normal == "layer":
+        self.sizes = [d_model] + [mlp] * (depth - 1) + [1]
+        if dense_normal == "layer":
             self.norm = nn.ModuleList(
                 [nn.LayerNorm(i_size) for i_size in self.sizes[:-2]]
             )
-        elif self.dense_normal == "rms":
+        elif dense_normal == "rms":
             self.norm = nn.ModuleList(
                 [nn.RMSNorm(i_size) for i_size in self.sizes[:-2]]
             )
         else:
             self.norm = nn.ModuleList([nn.Identity() for _ in self.sizes[:-2]])
-
-        self.dropout = nn.Dropout(self.drop_rate)
+        self.layers = nn.ModuleList(
+            [
+                nn.Linear(input_size, output_size, bias=dense_bias)
+                for input_size, output_size in zip(self.sizes, self.sizes[1:])
+            ]
+        )
 
     def forward(self, x):
         """
@@ -60,7 +55,6 @@ class DenseNet(nn.Module):
             x = layer(x)
             if i < len(self.layers) - 1:
                 x = self.actv_fn(x)
-                x = self.dropout(x)
             if self.if_skip_connection_dense:
                 if self.sizes[i] == self.sizes[i + 1]:
                     x = x + skip
