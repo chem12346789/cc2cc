@@ -58,6 +58,8 @@ def get_veff_modified(
         nelec = np.zeros((2, nset))
         excsum = np.zeros(nset)
         excsum_b3lyp = np.zeros(nset)
+        excsum_2_b3lyp = np.zeros(nset)
+        weight_b3lyp = np.zeros(nset)
         vmat = np.zeros((2, nset, nao, nao))
 
         def block_loop(ao_deriv):
@@ -83,6 +85,8 @@ def get_veff_modified(
                     nelec[1, i] += den_b.sum()
                     excsum[i] += np.dot(weights_, energy_den)
                     excsum_b3lyp[i] += np.dot(weights_, exc_b3lyp)
+                    excsum_2_b3lyp[i] += np.dot(weights_, exc_b3lyp**2)
+                    weight_b3lyp[i] += weights_.sum()
                     wv = weights_ * vxc
                     yield i, ao, mask, wv
 
@@ -184,14 +188,23 @@ def get_veff_modified(
             vmat = vmat[:, 0]
             nelec = nelec.reshape(2)
             excsum = excsum[0]
-            excsum_b3lyp = excsum_b3lyp[0]
+        excsum_b3lyp = np.sum(excsum_b3lyp)
+        excsum_2_b3lyp = np.sum(excsum_2_b3lyp)
+        weight_b3lyp = np.sum(weight_b3lyp)
 
         dtype = np.result_type(dma, dmb)
         if vmat.dtype != dtype:
             vmat = np.asarray(vmat, dtype=dtype)
 
-        if hasattr(modeldict.model, "normal_factor"):
-            modeldict.model.normal_factor = np.abs(excsum_b3lyp)
+        if hasattr(modeldict.model, "normal_mean"):
+            modeldict.model.normal_mean = excsum_b3lyp / weight_b3lyp
+            print(
+                f"Set normal_mean to {modeldict.model.normal_mean} in get_veff_modified"
+            )
+        if hasattr(modeldict.model, "normal_var"):
+            modeldict.model.normal_var = np.sqrt(
+                (excsum_b3lyp / weight_b3lyp) ** 2 - excsum_2_b3lyp / weight_b3lyp
+            )
 
         return nelec, excsum, vmat
 

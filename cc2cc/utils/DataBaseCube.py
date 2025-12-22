@@ -106,8 +106,12 @@ class DataBaseCube(DataBase):
             f"B3lyp_ene shape after filtering: {b3lyp_ene.shape};"
             f"Weight shape after filtering: {weight_mat.shape}",
         )
-        normal_factor = np.abs(np.sum(b3lyp_ene * weight_mat))
-        self.print(f"Normal factor: {normal_factor}")
+        normal_mean = np.sum(b3lyp_ene * weight_mat) / np.sum(weight_mat)
+        normal_var = normal_mean**2 - np.sum(b3lyp_ene**2 * weight_mat) / np.sum(
+            weight_mat
+        )
+        self.print(f"Normal mean: {normal_mean}")
+        self.print(f"Normal var: {normal_var}")
 
         if not self.if_eval:
             error_energy = AU2KCALMOL * abs(
@@ -224,7 +228,8 @@ class DataBaseCube(DataBase):
             "name": name,
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,
-            "normal_factor": normal_factor,
+            "normal_mean": normal_mean,
+            "normal_var": normal_var,
             "data_weight": data_weight,
             "loss_multiplier": loss_multiplier,
             "loss_multiplier_abs": loss_multiplier_abs,

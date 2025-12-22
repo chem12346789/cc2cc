@@ -105,16 +105,18 @@ class ModelClass:
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=False)
-        # else:
-        #     for name, param in self.model.named_parameters():
-        #         if "weight" in name:
-        #             self.print(f"Initialize parameter {name} with shape {param.shape}")
-        #             torch.nn.init.xavier_normal_(param)
-        #         elif "bias" in name:
-        #             self.print(f"Initialize parameter {name} with shape {param.shape}")
-        #             torch.nn.init.zeros_(param)
-        #         else:
-        #             self.print(f"Parameter {name} with shape {param.shape} not initialized")
+        else:
+            for name, param in self.model.named_parameters():
+                if "weight" in name:
+                    self.print(f"Initialize parameter {name} with shape {param.shape}")
+                    torch.nn.init.xavier_normal_(param)
+                elif "bias" in name:
+                    self.print(f"Initialize parameter {name} with shape {param.shape}")
+                    torch.nn.init.zeros_(param)
+                else:
+                    self.print(
+                        f"Parameter {name} with shape {param.shape} not initialized"
+                    )
 
         if (not if_validate) and (not self.args.if_grad):
             # model.compile does not support Double backward which is used in grad.
@@ -297,8 +299,10 @@ class ModelClass:
         loss_multiplier_grad = batch["loss_multiplier_grad"]
         loss_multiplier_atomic = batch["loss_multiplier_atomic"]
 
-        if hasattr(self.model, "normal_factor"):
-            self.model.normal_factor = batch["normal_factor"]
+        if hasattr(self.model, "normal_mean"):
+            self.model.normal_mean = batch["normal_mean"]
+        if hasattr(self.model, "normal_var"):
+            self.model.normal_var = batch["normal_var"]
 
         if if_train:
             input_.requires_grad = True
@@ -377,8 +381,10 @@ class ModelClass:
                 )
                 atomic_input_ = atomic_batch["input"]
                 atomic_weight = atomic_batch["weight"]
-                if hasattr(self.model, "normal_factor"):
-                    self.model.normal_factor = atomic_batch["normal_factor"]
+                if hasattr(self.model, "normal_mean"):
+                    self.model.normal_mean = atomic_batch["normal_mean"]
+                if hasattr(self.model, "normal_var"):
+                    self.model.normal_var = atomic_batch["normal_var"]
                 atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
@@ -466,8 +472,8 @@ class ModelClass:
                 rho, ni, dms, coords=coords_, mask=mask, require_vxc=True
             )
 
-        if hasattr(self.model, "normal_factor"):
-            if self.model.normal_factor == 0:
+        if hasattr(self.model, "normal_init"):
+            if not self.model.normal_init:
                 return exc_b3lyp, (
                     0.08 * vxc_b3lyp[0]
                     + 0.19 * vxc_b3lyp[1]
@@ -515,8 +521,8 @@ class ModelClass:
                 rho, ni, require_vxc=True
             )
 
-        if hasattr(self.model, "normal_factor"):
-            if self.model.normal_factor == 0:
+        if hasattr(self.model, "normal_init"):
+            if not self.model.normal_init:
                 return exc_b3lyp, (
                     0.08 * vxc_b3lyp[0]
                     + 0.19 * vxc_b3lyp[1]
