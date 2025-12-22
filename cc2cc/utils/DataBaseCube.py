@@ -21,6 +21,7 @@ class DataBaseCube(DataBase):
         if_eval=False,
         atomic_name_dict=None,
         atomic_energy_dict=None,
+        calculate_normal=lambda x, y: np.sum(np.array(x) * np.array(y)),
         verbose=False,
     ):
         super().__init__(
@@ -30,6 +31,7 @@ class DataBaseCube(DataBase):
             if_eval=if_eval,
             atomic_name_dict=atomic_name_dict,
             atomic_energy_dict=atomic_energy_dict,
+            calculate_normal=calculate_normal,
             verbose=verbose,
         )
 
@@ -48,6 +50,10 @@ class DataBaseCube(DataBase):
                 output_mat = data["tol_delta_grids"]
                 grad2force = data["grad2force"]
                 grad_cc_train = data["grad_cc_train"]
+            else:
+                output_mat = None
+                grad2force = None
+                grad_cc_train = None
         else:
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 
@@ -73,7 +79,7 @@ class DataBaseCube(DataBase):
         self.print(
             f"min input value: {np.min(input_mat)} at {np.unravel_index(np.argmin(input_mat), input_mat.shape)}"
         )
-        if not self.if_eval and len(output_mat.shape) != 0:
+        if not self.if_eval and output_mat is not None:
             self.print(
                 f"max output value: {np.max(output_mat)} at {np.unravel_index(np.argmax(output_mat), output_mat.shape)}"
             )
@@ -106,12 +112,7 @@ class DataBaseCube(DataBase):
             f"B3lyp_ene shape after filtering: {b3lyp_ene.shape};"
             f"Weight shape after filtering: {weight_mat.shape}",
         )
-        normal_mean = np.sum(b3lyp_ene * weight_mat) / np.sum(weight_mat)
-        normal_var = normal_mean**2 - np.sum(b3lyp_ene**2 * weight_mat) / np.sum(
-            weight_mat
-        )
-        self.print(f"Normal mean: {normal_mean}")
-        self.print(f"Normal var: {normal_var}")
+        normal_factor = self.calculate_normal(b3lyp_ene, weight_mat)
 
         if not self.if_eval:
             error_energy = AU2KCALMOL * abs(
@@ -228,8 +229,7 @@ class DataBaseCube(DataBase):
             "name": name,
             "atomic_systems": atomic_systems,
             "atomic_stoichiometry": atomic_stoichiometry,
-            "normal_mean": normal_mean,
-            "normal_var": normal_var,
+            "normal_factor": normal_factor,
             "data_weight": data_weight,
             "loss_multiplier": loss_multiplier,
             "loss_multiplier_abs": loss_multiplier_abs,

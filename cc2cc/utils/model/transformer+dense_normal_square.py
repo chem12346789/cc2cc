@@ -2,6 +2,7 @@
 Generate list of model.
 """
 
+import numpy as np
 from torch import nn
 
 from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
@@ -23,16 +24,19 @@ class Model(nn.Module):
             seq_len=4,
             num_layer=3,
             qkv_bias=False,
+            num_heads=1,
             mlp_ratio=1,
-            atte_actv="gelu",
+            drop_rate=0,
+            atte_actv="mish",
         )
 
         self.densenet = DenseNet(
             d_model=4 * CUBE_SIZE**3,
             mlp=108,
             depth=9,
+            drop_rate=0,
             if_skip_connection_dense=1,
-            dense_actv="gelu",
+            dense_actv="mish",
         )
 
         self.predictor_center = Transformer(
@@ -40,8 +44,10 @@ class Model(nn.Module):
             seq_len=4,
             num_layer=7,
             qkv_bias=False,
+            num_heads=1,
             mlp_ratio=1,
-            atte_actv="gelu",
+            drop_rate=0,
+            atte_actv="mish",
         )
 
         self.densenet_center = DenseNet(
@@ -50,8 +56,12 @@ class Model(nn.Module):
             depth=9,
             if_skip_connection_dense=1,
             drop_rate=0,
-            dense_actv="gelu",
+            dense_actv="mish",
         )
+
+        self.normal_factor = 0
+        self.normal_init = False
+        self.calculate_normal = lambda x, y: np.sum(np.array(x) ** 2 * np.array(y))
 
     def forward(self, x):
         """
@@ -66,6 +76,13 @@ class Model(nn.Module):
         )
         # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+
+        if not self.normal_init:
+            raise ValueError("normal_factor is not initialized.")
+        if self.normal_factor == 0:
+            raise ValueError("normal_factor is zero.")
+        x = x / self.normal_factor
+        x_center = x_center / np.sqrt(self.normal_factor)
 
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
@@ -91,4 +108,4 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
         # SHAPE x_center = (batch, 1)
 
-        return x + x_center
+        return b3lyp_ene * (x + x_center) * self.normalize

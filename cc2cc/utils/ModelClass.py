@@ -234,6 +234,7 @@ class ModelClass:
             self.database_train = DataBaseCenter(
                 train_str_dict,
                 self.args,
+                calculate_normal=self.model.calculate_normal,
                 verbose=self.verbose,
             )
             self.database_eval = DataBaseCenter(
@@ -243,6 +244,7 @@ class ModelClass:
                 if_eval=True,
                 atomic_name_dict=self.database_train.atomic_name_dict,
                 atomic_energy_dict=self.database_train.atomic_energy_dict,
+                calculate_normal=self.model.calculate_normal,
                 verbose=self.verbose,
             )
         elif self.model_type == "cube":
@@ -250,6 +252,7 @@ class ModelClass:
             self.database_train = DataBaseCube(
                 train_str_dict,
                 self.args,
+                calculate_normal=self.model.calculate_normal,
                 verbose=self.verbose,
             )
             self.database_eval = DataBaseCube(
@@ -259,6 +262,7 @@ class ModelClass:
                 if_eval=True,
                 atomic_name_dict=self.database_train.atomic_name_dict,
                 atomic_energy_dict=self.database_train.atomic_energy_dict,
+                calculate_normal=self.model.calculate_normal,
                 verbose=self.verbose,
             )
         else:
@@ -299,10 +303,8 @@ class ModelClass:
         loss_multiplier_grad = batch["loss_multiplier_grad"]
         loss_multiplier_atomic = batch["loss_multiplier_atomic"]
 
-        if hasattr(self.model, "normal_mean"):
-            self.model.normal_mean = batch["normal_mean"]
-        if hasattr(self.model, "normal_var"):
-            self.model.normal_var = batch["normal_var"]
+        if hasattr(self.model, "normal_factor"):
+            self.model.normal_factor = batch["normal_factor"]
 
         if if_train:
             input_.requires_grad = True
@@ -381,10 +383,8 @@ class ModelClass:
                 )
                 atomic_input_ = atomic_batch["input"]
                 atomic_weight = atomic_batch["weight"]
-                if hasattr(self.model, "normal_mean"):
-                    self.model.normal_mean = atomic_batch["normal_mean"]
-                if hasattr(self.model, "normal_var"):
-                    self.model.normal_var = atomic_batch["normal_var"]
+                if hasattr(self.model, "normal_factor"):
+                    self.model.normal_factor = atomic_batch["normal_factor"]
                 atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
@@ -474,6 +474,7 @@ class ModelClass:
 
         if hasattr(self.model, "normal_init"):
             if not self.model.normal_init:
+                self.model.normal_init = True
                 return exc_b3lyp, (
                     0.08 * vxc_b3lyp[0]
                     + 0.19 * vxc_b3lyp[1]
@@ -523,6 +524,7 @@ class ModelClass:
 
         if hasattr(self.model, "normal_init"):
             if not self.model.normal_init:
+                self.model.normal_init = True
                 return exc_b3lyp, (
                     0.08 * vxc_b3lyp[0]
                     + 0.19 * vxc_b3lyp[1]

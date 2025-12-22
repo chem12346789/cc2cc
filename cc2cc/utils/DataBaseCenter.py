@@ -21,6 +21,7 @@ class DataBaseCenter(DataBase):
         if_eval=False,
         atomic_name_dict=None,
         atomic_energy_dict=None,
+        calculate_normal=lambda x, y: np.sum(np.array(x) * np.array(y)),
         verbose=False,
     ):
         super().__init__(
@@ -30,6 +31,8 @@ class DataBaseCenter(DataBase):
             if_eval=if_eval,
             atomic_name_dict=atomic_name_dict,
             atomic_energy_dict=atomic_energy_dict,
+            calculate_normal=calculate_normal,
+            verbose=verbose,
         )
 
     def load_data(self, mol_info, name):
