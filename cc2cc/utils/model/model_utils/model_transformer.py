@@ -18,7 +18,7 @@ class Attention(nn.Module):
         self.dense_q = nn.Linear(self.d_model, self.d_model, bias=self.qkv_bias)
         self.dense_k = nn.Linear(self.d_model, self.d_model, bias=self.qkv_bias)
         self.dense_v = nn.Linear(self.d_model, self.d_model, bias=self.qkv_bias)
-        self.dense2 = nn.Linear(self.d_model, self.d_model, bias=self.qkv_bias)
+        self.dense_out = nn.Linear(self.d_model, self.d_model, bias=self.qkv_bias)
 
         self.dropout1 = nn.Dropout(self.drop_rate)
         self.dropout2 = nn.Dropout(self.drop_rate)
@@ -40,7 +40,7 @@ class Attention(nn.Module):
         # SHAPE attn = (batch, seq_len, seq_len)
         qkv = torch.einsum("bqk,bkd->bqd", attn, v)
         # SHAPE qkv = (batch, seq_len, d_model)
-        results = self.dense2(qkv)
+        results = self.dense_out(qkv)
         results = self.dropout2(results)
         # SHAPE results = (batch, seq_len, d_model)
         return results
@@ -127,7 +127,10 @@ class Transformer(nn.Module):
 
     def __init__(self, **kwargs):
         super(Transformer, self).__init__()
+        d_model = kwargs.get("d_model")
         num_layer = kwargs.get("num_layer")
+        atte_actv = kwargs.get("atte_actv")
+
         self.layer_blocks = nn.ModuleList([Block(**kwargs) for _ in range(num_layer)])
 
     def forward(self, x):
@@ -138,4 +141,5 @@ class Transformer(nn.Module):
         # SHAPE x = (batch, seq_len, d_model)
         for layer in self.layer_blocks:
             x = layer(x)
+
         return x
