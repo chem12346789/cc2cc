@@ -58,7 +58,9 @@ class Model(nn.Module):
             dense_actv="mish",
         )
 
-        self.normal_factor = 0
+        self.normal_mean = 0
+        self.normal_var = 0
+        self.normal_init = False
 
     def forward(self, x):
         """
@@ -74,10 +76,10 @@ class Model(nn.Module):
         # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 
-        if self.normal_factor == 0:
-            raise ValueError("normal_factor has not been set!")
-        x = x / self.normal_factor
-        x_center = x_center / self.normal_factor
+        if self.normal_var == 0 or self.normal_mean == 0:
+            raise ValueError("normal_var or normal_mean is zero.")
+        x = (x - self.normal_mean) / self.normal_var
+        x_center = (x_center - self.normal_mean) / self.normal_var
 
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)
