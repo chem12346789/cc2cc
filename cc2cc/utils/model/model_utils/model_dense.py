@@ -11,6 +11,7 @@ class DenseNet(nn.Module):
         d_model = kwargs.get("d_model")
         mlp = kwargs.get("mlp")
         depth = kwargs.get("depth")
+        out = kwargs.get("out", 1)
         dense_bias = kwargs.get("dense_bias", True)
         dense_actv = kwargs.get("dense_actv", "gelu")
         dense_normal = kwargs.get("dense_normal", "")
@@ -20,12 +21,12 @@ class DenseNet(nn.Module):
             self.actv_fn = nn.ReLU()
         elif dense_actv == "gelu":
             self.actv_fn = nn.GELU()
-        elif dense_actv == "mish":
+        elif dense_actv == "mish": 
             self.actv_fn = nn.Mish()
         else:
             raise ValueError(f"Unknown activation function: {dense_actv}")
 
-        self.sizes = [d_model] + [mlp] * (depth - 1) + [1]
+        self.sizes = [d_model] + [mlp] * (depth - 1) + [out]
         if dense_normal == "layer":
             self.norm = nn.ModuleList(
                 [nn.LayerNorm(i_size) for i_size in self.sizes[:-2]]

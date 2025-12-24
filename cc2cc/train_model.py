@@ -77,7 +77,6 @@ def train_model(train_str_dict, eval_str_dict, args):
                 if isinstance(modeldict.loss_ene_abs, torch.nn.L1Loss)
                 else "MSELoss"
             ),
-            "iters_to_accumulate": modeldict.iters_to_accumulate,
             "max_norm": modeldict.max_norm,
         }
         print(experiment_dict)

@@ -266,13 +266,6 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--iters_to_accumulate",
-        type=int,
-        default=1,
-        help="Number of iterations to accumulate the gradient. Default is 1.",
-    )
-
-    parser.add_argument(
         "--max_norm",
         type=float,
         default=1.0,

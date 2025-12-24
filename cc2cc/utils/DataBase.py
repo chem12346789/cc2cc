@@ -10,8 +10,9 @@ import torch
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
-from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import gen_mole
+from cc2cc.utils.env_var import DATA_PATH
+from cc2cc.utils.mol import AU2KCALMOL
 
 
 PRINT_DEBUG = False
@@ -65,7 +66,7 @@ class DataBase:
         if_eval=False,
         atomic_name_dict=None,
         atomic_energy_dict=None,
-        calculate_normal=lambda x, y: np.sum(np.array(x) * np.array(y)),
+        process_input=None,
         verbose=False,
     ):
         """
@@ -83,19 +84,13 @@ class DataBase:
         self.if_eval = if_eval
         self.verbose = verbose
         self.array_key = ["input", "weight", "output", "grad2force"]
-        self.calculate_normal = calculate_normal
 
         if args.loss_ene == "L1Loss":
-            self.loss_ene = torch.nn.L1Loss(reduction="sum")
-            self.loss_ene_atomic = torch.nn.L1Loss(reduction="sum")
-            self.loss_grad = torch.nn.L1Loss(reduction="sum")
+            self.loss_ene = lambda x: np.sum(np.abs(x))
         elif args.loss_ene == "MSELoss":
-            self.loss_ene = torch.nn.MSELoss(reduction="sum")
-            self.loss_ene_atomic = torch.nn.MSELoss(reduction="sum")
-            self.loss_grad = torch.nn.MSELoss(reduction="sum")
+            self.loss_ene = lambda x: np.sum(x**2)
         else:
             raise ValueError(f"Unknown loss function {args.loss_ene}")
-        self.loss_ene_abs = torch.nn.L1Loss(reduction="sum")
 
         self.print = lambda msg: print(msg, flush=True) if self.verbose else None
 
@@ -245,6 +240,126 @@ class DataBase:
         """
         Load the data.
         """
-        raise NotImplementedError(
-            "The load_data method should be implemented in the subclass."
-        )
+        self.print("")
+        data = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
+
+        weight_mat = data["weights"]
+        if self.args.rho_input == "dft":
+            input_mat = data["rho_cube_dft"]
+            energy_target = data["energy_train"]
+            if not self.if_eval:
+                output_mat = data["tol_delta_grids"]
+                grad2force = data["grad2force"]
+                grad_cc_train = data["grad_cc_train"]
+            else:
+                output_mat = None
+                grad2force = None
+                grad_cc_train = None
+        else:
+            raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
+
+        # input_mat_index = (
+        #     np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-10
+        # )
+        # self.print(f"Total number of input points: {len(input_mat_index)}")
+        # self.print(f"Number of non-zero input points: {np.sum(input_mat_index)}")
+        # if len(output_mat.shape) != 0:
+        #     self.print(
+        #         f"Energy in zero input region: {AU2KCALMOL * np.sum(output_mat[~input_mat_index] * weight_mat[~input_mat_index])}",
+        #     )
+        #     output_mat = output_mat[input_mat_index]
+        # if len(grad2force) != 0:
+        #     grad2force = grad2force[:, :, input_mat_index, :]
+        # weight_mat = weight_mat[input_mat_index]
+        # input_mat = input_mat[input_mat_index]
+        # self.print("After filtering:")
+
+        if not self.if_eval:
+            error_energy = AU2KCALMOL * abs(
+                energy_target - np.sum(output_mat * weight_mat)
+            )
+            self.print(f"Error energy {error_energy}: {name:>40}")
+
+        atomic_systems = []
+        atomic_stoichiometry = []
+        num_data_used = mol_info["natm"]
+        if num_data_used == 1:
+            data_weight = self.args.atomic_weighting
+        else:
+            data_weight = np.sqrt(num_data_used)
+        for i_atom in range(mol_info["natm"]):
+            atom_name = mol_info["elements"][i_atom]
+            if atom_name not in atomic_systems:
+                atomic_systems.append(atom_name)
+                atomic_stoichiometry.append(1)
+            else:
+                atomic_stoichiometry[atomic_systems.index(atom_name)] += 1
+
+        ae_target = 0.0
+        if self.args.if_atomic:
+            if name in list(self.atomic_name_dict.values()):
+                self.atomic_energy_dict[atom_name] = energy_target
+            else:
+                ae_target += energy_target
+                for i_system in range(len(atomic_systems)):
+                    system_atom = atomic_systems[i_system]
+                    if system_atom in self.atomic_energy_dict:
+                        ae_target -= (
+                            atomic_stoichiometry[i_system]
+                            * self.atomic_energy_dict[system_atom]
+                        )
+                    else:
+                        self.print(
+                            f"Warning: {system_atom} not found in atomic_name_dict, "
+                            "skipping atomic energy calculation."
+                        )
+                        break
+
+        loss_multiplier = self.args.loss_multiplier
+        loss_multiplier_abs = self.args.loss_multiplier_abs
+        loss_multiplier_grad = self.args.loss_multiplier_grad
+        loss_multiplier_atomic = self.args.loss_multiplier_atomic
+
+        if self.args.if_relative_weight:
+            epsilon = 1e-10
+            loss_multiplier /= self.loss_ene(energy_target)
+
+            if np.abs(ae_target) < epsilon:
+                loss_multiplier_atomic = 0
+            else:
+                loss_multiplier_atomic /= self.loss_ene(ae_target)
+
+            self.print(
+                f"Relative loss multipliers: {loss_multiplier}, {loss_multiplier_abs}, {loss_multiplier_grad}, {loss_multiplier_atomic}",
+            )
+
+        data_dict = {
+            "input": process_input(input_mat),
+            "weight": weight_mat.reshape((-1, 1)),
+            "energy_target": energy_target,
+            "ae_target": ae_target,
+            "name": name,
+            "atomic_systems": atomic_systems,
+            "atomic_stoichiometry": atomic_stoichiometry,
+            "data_weight": data_weight,
+            "loss_multiplier": loss_multiplier,
+            "loss_multiplier_abs": loss_multiplier_abs,
+            "loss_multiplier_grad": loss_multiplier_grad,
+            "loss_multiplier_atomic": loss_multiplier_atomic,
+        }
+        if self.if_eval:
+            data_dict["output"] = 0
+            data_dict["grad2force"] = 0
+            data_dict["grad_cc_train"] = 0
+        else:
+            data_dict["output"] = output_mat.reshape((-1, 1))
+            data_dict["grad2force"] = grad2force
+            data_dict["grad_cc_train"] = grad_cc_train
+
+        for key in self.array_key:
+            data_dict[key] = torch.tensor(
+                data_dict[key], dtype=self.dtype, device="cpu"
+            )
+
+        self.print("")
+        return num_data_used, data_dict
