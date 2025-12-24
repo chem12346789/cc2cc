@@ -32,6 +32,7 @@ class Model(nn.Module):
             d_model=4 * CUBE_SIZE**3,
             mlp=108,
             depth=5,
+            dense_bias=False,
             if_skip_connection_dense=1,
             dense_actv="gelu",
         )
@@ -50,6 +51,7 @@ class Model(nn.Module):
             d_model=4,
             mlp=108,
             depth=5,
+            dense_bias=False,
             if_skip_connection_dense=1,
             drop_rate=0,
             dense_actv="gelu",

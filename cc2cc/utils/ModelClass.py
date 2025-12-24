@@ -305,25 +305,9 @@ class ModelClass:
         if if_train:
             target = batch["output"] * weight
             loss_abs_record = torch.sum(torch.abs(target - output)).item()
-            # if self.args.loss_abs_largest_k > 0:
-            #     # only learn the largest K values to make training more stable
-            #     if self.args.loss_ene == "L1Loss":
-            #         largest_k = torch.topk(
-            #             torch.abs((target - output).reshape(-1)),
-            #             k=min(self.args.loss_abs_largest_k, target.shape[0]),
-            #         ).values
-            #     elif self.args.loss_ene == "MSELoss":
-            #         largest_k = torch.topk(
-            #             (target - output).reshape(-1) ** 2,
-            #             k=min(self.args.loss_abs_largest_k, target.shape[0]),
-            #         ).values
-            #     else:
-            #         raise ValueError(f"Unknown loss function {self.args.loss_ene}")
-            #     tot_loss += loss_multiplier_abs * torch.sum(largest_k)
-            # else:
-            #     tot_loss += loss_multiplier_abs * self.loss_ene_abs(
-            #         data_weight * target, data_weight * output
-            #     )
+            tot_loss += loss_multiplier_abs * self.loss_ene_abs(
+                data_weight * target, data_weight * output
+            )
 
             if self.args.if_grad:
                 tot_loss += loss_multiplier_grad * self.loss_grad(grad_cc_train, force)

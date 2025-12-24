@@ -249,7 +249,19 @@ class DataBase:
             input_mat = data["rho_cube_dft"]
             energy_target = data["energy_train"]
             if not self.if_eval:
-                output_mat = data["tol_delta_grids"]
+                # output_mat = data["tol_delta_grids"]
+                output_mat = (
+                    data["exc_cc_grids"]
+                    + data["hatree_cc_grids"]
+                    + data["kin_cc_grids"]
+                    + data["nuc_cc_grids"]
+                ) - (
+                    data["exc_dft_grids"]
+                    + data["exc_k_dft_grids"]
+                    + data["hatree_dft_grids"]
+                    + data["kin_dft_grids"]
+                    + data["nuc_dft_grids"]
+                )
                 grad2force = data["grad2force"]
                 grad_cc_train = data["grad_cc_train"]
             else:
