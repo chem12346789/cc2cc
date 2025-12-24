@@ -66,6 +66,8 @@ class FFN(nn.Module):
             self.actv_fn = nn.ReLU()
         elif atte_actv == "gelu":
             self.actv_fn = nn.GELU()
+        elif atte_actv == "mish":
+            self.actv_fn = nn.Mish()
         else:
             raise ValueError(f"Unknown activation function: {atte_actv}")
 
@@ -132,7 +134,16 @@ class Transformer(nn.Module):
         num_layer = kwargs.get("num_layer")
         atte_actv = kwargs.get("atte_actv")
 
+        self.dense1 = nn.Linear(d_model, d_model)
         self.layer_blocks = nn.ModuleList([Block(**kwargs) for _ in range(num_layer)])
+        if atte_actv == "relu":
+            self.actv_fn = nn.ReLU()
+        elif atte_actv == "gelu":
+            self.actv_fn = nn.GELU()
+        elif atte_actv == "mish":
+            self.actv_fn = nn.Mish()
+        else:
+            raise ValueError(f"Unknown activation function: {atte_actv}")
 
     def forward(self, x):
         """
@@ -140,6 +151,10 @@ class Transformer(nn.Module):
         """
         # do attention only when the feature shape is small enough
         # SHAPE x = (batch, seq_len, d_model)
+
+        x = self.dense1(x)
+        x = self.actv_fn(x)
+
         for layer in self.layer_blocks:
             x = layer(x)
 

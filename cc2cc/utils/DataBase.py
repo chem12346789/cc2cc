@@ -82,6 +82,7 @@ class DataBase:
         else:
             self.dtype = torch.float32
         self.if_eval = if_eval
+        self.process_input = process_input
         self.verbose = verbose
         self.array_key = ["input", "weight", "output", "grad2force"]
 
@@ -240,7 +241,7 @@ class DataBase:
         """
         Load the data.
         """
-        self.print("")
+        self.print(f"\nLoading data {name:<40}")
         data = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
 
         weight_mat = data["weights"]
@@ -278,7 +279,7 @@ class DataBase:
             error_energy = AU2KCALMOL * abs(
                 energy_target - np.sum(output_mat * weight_mat)
             )
-            self.print(f"Error energy {error_energy}: {name:>40}")
+            self.print(f"Error energy: {error_energy:>9.6f} kcal/mol")
 
         atomic_systems = []
         atomic_stoichiometry = []
@@ -330,11 +331,11 @@ class DataBase:
                 loss_multiplier_atomic /= self.loss_ene(ae_target)
 
             self.print(
-                f"Relative loss multipliers: {loss_multiplier}, {loss_multiplier_abs}, {loss_multiplier_grad}, {loss_multiplier_atomic}",
+                f"Relative loss multipliers: {loss_multiplier:>6.3f}, {loss_multiplier_abs:>6.3f}, {loss_multiplier_grad:>6.3f}, {loss_multiplier_atomic:>6.3f}",
             )
 
         data_dict = {
-            "input": process_input(input_mat),
+            "input": self.process_input(input_mat),
             "weight": weight_mat.reshape((-1, 1)),
             "energy_target": energy_target,
             "ae_target": ae_target,
@@ -361,5 +362,4 @@ class DataBase:
                 data_dict[key], dtype=self.dtype, device="cpu"
             )
 
-        self.print("")
         return num_data_used, data_dict
