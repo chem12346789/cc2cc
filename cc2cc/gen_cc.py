@@ -448,7 +448,7 @@ def cc(mol, grids, name, args, evaluate=False):
         mo = mycc.mo_coeff
         dm1_cc = np.einsum("pi,ij,qj->pq", mo, dm1_cc_mo, mo.conj())
         dm2_cc = ccsd_rdm._make_rdm2(
-            mycc, d1, d2, with_dm1=True, with_dm1=True, ao_repr=True
+            mycc, d1, d2, with_dm1=True, with_frozen=True, ao_repr=True
         )
         del d1, d2, eris, mycc
         gc.collect()

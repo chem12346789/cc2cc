@@ -465,7 +465,7 @@ def ucc(mol, grids, name, args, evaluate=False):
             ]
         )
         dm2_cc = uccsd_rdm._make_rdm2(
-            mycc, d1, d2, with_dm1=True, with_dm1=True, ao_repr=True
+            mycc, d1, d2, with_dm1=True, with_frozen=True, ao_repr=True
         )
         dm1_cc_mo = np.array(dm1_cc_mo)
         dm2_cc = np.array(dm2_cc)
