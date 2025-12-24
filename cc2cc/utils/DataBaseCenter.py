@@ -21,7 +21,9 @@ class DataBaseCenter(DataBase):
         if_eval=False,
         atomic_name_dict=None,
         atomic_energy_dict=None,
-        calculate_normal=lambda x, y: np.sum(np.array(x) * np.array(y)),
+        use_normal=False,
+        calculate_normal=None,
+        calculate_normal_final=None,
         verbose=False,
     ):
         super().__init__(
@@ -31,7 +33,9 @@ class DataBaseCenter(DataBase):
             if_eval=if_eval,
             atomic_name_dict=atomic_name_dict,
             atomic_energy_dict=atomic_energy_dict,
+            use_normal=use_normal,
             calculate_normal=calculate_normal,
+            calculate_normal_final=calculate_normal_final,
             verbose=verbose,
         )
 

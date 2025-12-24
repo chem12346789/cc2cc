@@ -76,7 +76,7 @@ def get_veff_modified(
                         den = rho[0] * weights_
                     nelec[i] += den.sum()
                     excsum[i] += np.dot(weights_, energy_den)
-                    excsum_b3lyp[i] += modeldict.model.calculate_normal(
+                    excsum_b3lyp[i] += modeldict.calculate_normal(
                         exc_b3lyp, weights_
                     )
                     wv = weights_ * vxc
@@ -154,8 +154,8 @@ def get_veff_modified(
         if vmat.dtype != dtype:
             vmat = np.asarray(vmat, dtype=dtype)
 
-        if hasattr(modeldict.model, "normal_factor"):
-            modeldict.model.normal_factor = excsum_b3lyp
+        if hasattr(modeldict, "normal_factor"):
+            modeldict.normal_factor = modeldict.calculate_normal_final(excsum_b3lyp)
 
         return nelec, excsum, vmat
 

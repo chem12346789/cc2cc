@@ -57,9 +57,10 @@ class FFN(nn.Module):
         mlp_ratio = kwargs.get("mlp_ratio", 1)
         drop_rate = kwargs.get("drop_rate", 0)
         atte_actv = kwargs.get("atte_actv")
+        ffn_bias = kwargs.get("ffn_bias", True)
 
-        self.dense1 = nn.Linear(d_model, d_model * mlp_ratio)
-        self.dense2 = nn.Linear(d_model * mlp_ratio, d_model)
+        self.dense1 = nn.Linear(d_model, d_model * mlp_ratio, bias=ffn_bias)
+        self.dense2 = nn.Linear(d_model * mlp_ratio, d_model, bias=ffn_bias)
 
         if atte_actv == "relu":
             self.actv_fn = nn.ReLU()

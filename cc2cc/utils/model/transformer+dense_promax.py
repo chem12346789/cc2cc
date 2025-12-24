@@ -2,7 +2,6 @@
 Generate list of model.
 """
 
-import numpy as np
 from torch import nn
 
 from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
@@ -22,8 +21,9 @@ class Model(nn.Module):
         self.predictor = Transformer(
             d_model=CUBE_SIZE**3,
             seq_len=4,
-            num_layer=3,
+            num_layer=7,
             qkv_bias=False,
+            ffn_bias=False,
             mlp_ratio=1,
             atte_actv="gelu",
         )
@@ -31,7 +31,8 @@ class Model(nn.Module):
         self.densenet = DenseNet(
             d_model=4 * CUBE_SIZE**3,
             mlp=108,
-            depth=5,
+            depth=7,
+            dense_bias=False,
             if_skip_connection_dense=1,
             dense_actv="gelu",
         )
@@ -39,49 +40,54 @@ class Model(nn.Module):
         self.predictor_center = Transformer(
             d_model=1,
             seq_len=4,
-            num_layer=3,
+            num_layer=7,
             qkv_bias=False,
+            ffn_bias=False,
             mlp_ratio=1,
             atte_actv="gelu",
         )
 
         self.densenet_center = DenseNet(
             d_model=4,
-            mlp=128,
-            depth=5,
+            mlp=108,
+            depth=7,
+            dense_bias=False,
             if_skip_connection_dense=1,
             drop_rate=0,
             dense_actv="gelu",
         )
 
-        self.calculate_normal = lambda x, y: np.sum(np.array(x) ** 2 * np.array(y))
-        self.calculate_normal_final = lambda x: np.sqrt(x)
+        self.mixing_weight = nn.Linear(4 * CUBE_SIZE**3, 2)
+        self.weight_softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
         """
         Standard forward function, required for all nn.Module classes
         """
-        # Extract the central values for each channel
+        # # Extract the central values for each channel
         b3lyp_ene = (
             0.08 * x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
             + 0.19 * x[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
             + 0.72 * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
             + 0.81 * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         )
-        # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 
-        # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-        x = x.reshape(-1, 4, CUBE_SIZE**3)
-        # SHAPE x = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
-        x = self.predictor(x)
+        # do mixing x and x_center using Mixture of experts mechanism
+        weight_out = self.mixing_weight(x.reshape(-1, 4 * CUBE_SIZE**3))
+        weight_out = self.weight_softmax(weight_out)
+
+        # SHAPE x_cube = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+        x_cube = x.reshape(-1, 4, CUBE_SIZE**3)
+        # SHAPE x_cube = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
+        x_cube = self.predictor(x_cube)
         # SHAPE shape = (N_ATOM * NGRIDS, SEQ_LEN, D_MODEL)
 
-        # SHAPE x = (batch, 4, CUBE_SIZE**3)
-        x = x.reshape(-1, 4 * CUBE_SIZE**3)
-        # SHAPE x = (batch, 4 * CUBE_SIZE**3)
-        x = self.densenet(x)
-        # SHAPE x = (batch, 1)
+        # SHAPE x_cube = (batch, 4, CUBE_SIZE**3)
+        x_cube = x.reshape(-1, 4 * CUBE_SIZE**3)
+        # SHAPE x_cube = (batch, 4 * CUBE_SIZE**3)
+        x_cube = self.densenet(x_cube)
+        # SHAPE x_cube = (batch, 1)
 
         # SHAPE x_center = (batch, 4)
         x_center = x_center.reshape(-1, 4, 1)
@@ -95,4 +101,5 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
         # SHAPE x_center = (batch, 1)
 
-        return x + x_center
+        mixed_output = weight_out[:, [0]] * x_cube + weight_out[:, [1]] * x_center
+        return mixed_output * b3lyp_ene

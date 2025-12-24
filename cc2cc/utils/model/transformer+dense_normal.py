@@ -59,10 +59,6 @@ class Model(nn.Module):
             dense_actv="mish",
         )
 
-        self.normal_factor = 0
-        self.normal_init = False
-        self.calculate_normal = lambda x, y: np.sum(np.array(x) * np.array(y))
-
     def forward(self, x):
         """
         Standard forward function, required for all nn.Module classes
@@ -76,13 +72,6 @@ class Model(nn.Module):
         )
         # b3lyp_ene = x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-
-        if not self.normal_init:
-            raise ValueError("normal_factor is not initialized.")
-        if self.normal_factor == 0:
-            raise ValueError("normal_factor is zero.")
-        x = x / self.normal_factor
-        x_center = x_center / self.normal_factor
 
         # SHAPE x = (batch, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         x = x.reshape(-1, 4, CUBE_SIZE**3)

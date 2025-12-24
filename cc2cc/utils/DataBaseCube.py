@@ -21,7 +21,9 @@ class DataBaseCube(DataBase):
         if_eval=False,
         atomic_name_dict=None,
         atomic_energy_dict=None,
-        calculate_normal=lambda x, y: np.sum(np.array(x) * np.array(y)),
+        use_normal=False,
+        calculate_normal=None,
+        calculate_normal_final=None,
         verbose=False,
     ):
         super().__init__(
@@ -31,7 +33,9 @@ class DataBaseCube(DataBase):
             if_eval=if_eval,
             atomic_name_dict=atomic_name_dict,
             atomic_energy_dict=atomic_energy_dict,
+            use_normal=use_normal,
             calculate_normal=calculate_normal,
+            calculate_normal_final=calculate_normal_final,
             verbose=verbose,
         )
 
@@ -100,19 +104,6 @@ class DataBaseCube(DataBase):
             self.print(
                 f"min output value with weight: {np.min(output_mat * weight_mat)} at {np.unravel_index(np.argmin(output_mat * weight_mat), output_mat.shape)}"
             )
-
-        b3lyp_ene = (
-            0.08 * input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.19 * input_mat[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.72 * input_mat[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.81 * input_mat[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-        )
-        self.print(
-            f"Input shape after filtering: {input_mat.shape};"
-            f"B3lyp_ene shape after filtering: {b3lyp_ene.shape};"
-            f"Weight shape after filtering: {weight_mat.shape}",
-        )
-        normal_factor = self.calculate_normal(b3lyp_ene, weight_mat)
 
         if not self.if_eval:
             error_energy = AU2KCALMOL * abs(
@@ -218,6 +209,19 @@ class DataBaseCube(DataBase):
             self.print(
                 f"Relative loss multipliers: {loss_multiplier}, {loss_multiplier_abs}, {loss_multiplier_grad}, {loss_multiplier_atomic}",
             )
+
+        if self.use_normal:
+            b3lyp_ene = (
+                0.08 * input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+                + 0.19 * input_mat[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+                + 0.72 * input_mat[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+                + 0.81 * input_mat[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            )
+            normal_factor = self.calculate_normal(b3lyp_ene, weight_mat)
+            normal_factor = self.calculate_normal_final(normal_factor)
+            self.print(f"Normal factor calculated from B3LYP energy: {normal_factor}")
+        else:
+            normal_factor = 0.0
 
         data_dict = {
             "input": torch.tensor(input_mat, dtype=self.dtype).detach().clone(),
