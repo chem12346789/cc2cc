@@ -31,7 +31,7 @@ class Model(nn.Module):
             if_skip_connection_dense=1,
             dense_actv="gelu",
         )
-
+    
     def forward(self, x):
         """
         Standard forward function, required for all nn.Module classes

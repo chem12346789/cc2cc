@@ -29,8 +29,6 @@ def test_model_rks(
         get_veff_modified_rks(mdft, modeldict, max_memory=800)
     elif modeldict.model_type == "cube":
         get_veff_modified_rks(mdft, modeldict, max_memory=80)
-    if modeldict.use_normal:
-        modeldict.normal_init = False
 
     if args.max_cycle == -1:
         mdft.max_cycle = -1

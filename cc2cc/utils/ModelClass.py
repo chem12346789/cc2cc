@@ -47,11 +47,6 @@ class ModelClass:
         self.args = args
         self.model_name = self.args.model
         self.load = self.args.load
-        self.calculate_normal = None
-        self.calculate_normal_final = None
-        self.normal_factor = 0
-        self.normal_init = False
-        self.use_normal = False
 
         self.iters_to_accumulate = self.args.iters_to_accumulate
         self.max_norm = self.args.max_norm
@@ -96,11 +91,6 @@ class ModelClass:
         self.device = next(self.model.parameters()).device
         self.dtype = next(self.model.parameters()).dtype
         self.model_type = self.model.model_type
-        if hasattr(self.model, "calculate_normal"):
-            self.calculate_normal = self.model.calculate_normal
-            self.calculate_normal_final = self.model.calculate_normal_final
-            self.use_normal = True
-            print("Using model's calculate_normal function.")
         self.print(f"Model type: {self.model_type}")
 
         if self.args.save_dir is not None and self.args.save_dir != "":
@@ -232,9 +222,6 @@ class ModelClass:
             self.database_train = DataBaseCenter(
                 train_str_dict,
                 self.args,
-                use_normal=self.use_normal,
-                calculate_normal=self.calculate_normal,
-                calculate_normal_final=self.calculate_normal_final,
                 verbose=self.verbose,
             )
             self.database_eval = DataBaseCenter(
@@ -244,9 +231,6 @@ class ModelClass:
                 if_eval=True,
                 atomic_name_dict=self.database_train.atomic_name_dict,
                 atomic_energy_dict=self.database_train.atomic_energy_dict,
-                use_normal=self.use_normal,
-                calculate_normal=self.calculate_normal,
-                calculate_normal_final=self.calculate_normal_final,
                 verbose=self.verbose,
             )
         elif self.model_type == "cube":
@@ -254,9 +238,6 @@ class ModelClass:
             self.database_train = DataBaseCube(
                 train_str_dict,
                 self.args,
-                use_normal=self.use_normal,
-                calculate_normal=self.calculate_normal,
-                calculate_normal_final=self.calculate_normal_final,
                 verbose=self.verbose,
             )
             self.database_eval = DataBaseCube(
@@ -266,9 +247,6 @@ class ModelClass:
                 if_eval=True,
                 atomic_name_dict=self.database_train.atomic_name_dict,
                 atomic_energy_dict=self.database_train.atomic_energy_dict,
-                use_normal=self.use_normal,
-                calculate_normal=self.calculate_normal,
-                calculate_normal_final=self.calculate_normal_final,
                 verbose=self.verbose,
             )
         else:
@@ -308,14 +286,10 @@ class ModelClass:
         loss_multiplier_abs = batch["loss_multiplier_abs"]
         loss_multiplier_grad = batch["loss_multiplier_grad"]
         loss_multiplier_atomic = batch["loss_multiplier_atomic"]
-        normal_factor = batch["normal_factor"]
 
         if if_train:
             input_.requires_grad = True
-            if self.use_normal:
-                output = self.model(input_ / normal_factor) * normal_factor
-            else:
-                output = self.model(input_)
+            output = self.model(input_)
 
             if self.args.if_grad:
                 grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
@@ -329,10 +303,7 @@ class ModelClass:
             output = output * weight
         else:
             with torch.no_grad():
-                if self.use_normal:
-                    output = self.model(input_ / normal_factor) * normal_factor * weight
-                else:
-                    output = self.model(input_) * weight
+                output = self.model(input_) * weight
 
         tot_loss = loss_multiplier * self.loss_ene(
             data_weight * sum_target, data_weight * torch.sum(output)
@@ -390,17 +361,7 @@ class ModelClass:
                 )
                 atomic_input_ = atomic_batch["input"]
                 atomic_weight = atomic_batch["weight"]
-                atomic_normal_factor = atomic_batch["normal_factor"]
-                if self.use_normal:
-                    atomic_output = (
-                        torch.sum(
-                            self.model(atomic_input_ / atomic_normal_factor)
-                            * atomic_weight
-                        )
-                        * atomic_normal_factor
-                    )
-                else:
-                    atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
+                atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
             tot_loss += loss_multiplier_atomic * self.loss_ene_atomic(
@@ -487,21 +448,9 @@ class ModelClass:
                 rho, ni, dms, coords=coords_, mask=mask, require_vxc=True
             )
 
-        if self.use_normal and not self.normal_init:
-            self.normal_init = True
-            return exc_b3lyp, (
-                0.08 * vxc_b3lyp[0]
-                + 0.19 * vxc_b3lyp[1]
-                + 0.72 * vxc_b3lyp[2]
-                + 0.81 * vxc_b3lyp[3]
-            )
-
         input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
         input_mat.requires_grad = True
-        if self.use_normal:
-            output_mat = self.model(input_mat / self.normal_factor) * self.normal_factor
-        else:
-            output_mat = self.model(input_mat)
+        output_mat = self.model(input_mat)
         middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
         middle_mat = grids.get_center_density(middle_cube).detach().cpu().numpy()
         energy_den = exc_b3lyp + output_mat[:, 0].detach().cpu().numpy()
@@ -535,21 +484,9 @@ class ModelClass:
                 rho, ni, require_vxc=True
             )
 
-        if self.use_normal and not self.normal_init:
-            self.normal_init = True
-            return exc_b3lyp, (
-                0.08 * vxc_b3lyp[0]
-                + 0.19 * vxc_b3lyp[1]
-                + 0.72 * vxc_b3lyp[2]
-                + 0.81 * vxc_b3lyp[3]
-            )
-
         input_mat = torch.tensor(rho_b3lyp, dtype=self.dtype, device=self.device)
         input_mat.requires_grad = True
-        if self.use_normal:
-            output_mat = self.model(input_mat / self.normal_factor) * self.normal_factor
-        else:
-            output_mat = self.model(input_mat)
+        output_mat = self.model(input_mat)
         middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
         middle_mat = middle_cube.detach().cpu().numpy()
         energy_den = exc_b3lyp + output_mat[:, 0].detach().cpu().numpy()

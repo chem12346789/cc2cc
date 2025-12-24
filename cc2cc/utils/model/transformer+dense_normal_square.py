@@ -54,9 +54,6 @@ class Model(nn.Module):
             dense_actv="gelu",
         )
 
-        self.calculate_normal = lambda x, y: np.sum(np.array(x) ** 2 * np.array(y))
-        self.calculate_normal_final = lambda x: np.sqrt(x)
-
     def forward(self, x):
         """
         Standard forward function, required for all nn.Module classes

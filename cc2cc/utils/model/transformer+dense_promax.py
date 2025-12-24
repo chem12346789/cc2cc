@@ -32,7 +32,6 @@ class Model(nn.Module):
             d_model=4 * CUBE_SIZE**3,
             mlp=108,
             depth=7,
-            dense_bias=False,
             if_skip_connection_dense=1,
             dense_actv="gelu",
         )
@@ -51,7 +50,6 @@ class Model(nn.Module):
             d_model=4,
             mlp=108,
             depth=7,
-            dense_bias=False,
             if_skip_connection_dense=1,
             drop_rate=0,
             dense_actv="gelu",
@@ -65,12 +63,6 @@ class Model(nn.Module):
         Standard forward function, required for all nn.Module classes
         """
         # # Extract the central values for each channel
-        b3lyp_ene = (
-            0.08 * x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.19 * x[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.72 * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            + 0.81 * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-        )
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
 
         # do mixing x and x_center using Mixture of experts mechanism
@@ -102,4 +94,4 @@ class Model(nn.Module):
         # SHAPE x_center = (batch, 1)
 
         mixed_output = weight_out[:, [0]] * x_cube + weight_out[:, [1]] * x_center
-        return mixed_output * b3lyp_ene
+        return mixed_output

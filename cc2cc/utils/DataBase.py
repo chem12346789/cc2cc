@@ -65,9 +65,6 @@ class DataBase:
         if_eval=False,
         atomic_name_dict=None,
         atomic_energy_dict=None,
-        use_normal=False,
-        calculate_normal=None,
-        calculate_normal_final=None,
         verbose=False,
     ):
         """
@@ -85,9 +82,6 @@ class DataBase:
         self.if_eval = if_eval
         self.verbose = verbose
         self.array_key = ["input", "weight", "output", "grad2force"]
-        self.use_normal = use_normal
-        self.calculate_normal = calculate_normal
-        self.calculate_normal_final = calculate_normal_final
 
         if args.loss_ene == "L1Loss":
             self.loss_ene = torch.nn.L1Loss(reduction="sum")

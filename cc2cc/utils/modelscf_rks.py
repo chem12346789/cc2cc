@@ -57,7 +57,6 @@ def get_veff_modified(
 
         nelec = np.zeros(nset)
         excsum = np.zeros(nset)
-        excsum_b3lyp = np.zeros(nset)
         vmat = np.zeros((nset, nao, nao))
 
         def block_loop(ao_deriv):
@@ -76,9 +75,6 @@ def get_veff_modified(
                         den = rho[0] * weights_
                     nelec[i] += den.sum()
                     excsum[i] += np.dot(weights_, energy_den)
-                    excsum_b3lyp[i] += modeldict.calculate_normal(
-                        exc_b3lyp, weights_
-                    )
                     wv = weights_ * vxc
                     yield i, ao, mask, wv
 
@@ -145,7 +141,6 @@ def get_veff_modified(
             vmat = vmat[0]
             nelec = nelec[0]
             excsum = excsum[0]
-        excsum_b3lyp = np.sum(excsum_b3lyp)
 
         if isinstance(dms, np.ndarray):
             dtype = dms.dtype
@@ -153,9 +148,6 @@ def get_veff_modified(
             dtype = np.result_type(*dms)
         if vmat.dtype != dtype:
             vmat = np.asarray(vmat, dtype=dtype)
-
-        if hasattr(modeldict, "normal_factor"):
-            modeldict.normal_factor = modeldict.calculate_normal_final(excsum_b3lyp)
 
         return nelec, excsum, vmat
 
