@@ -32,25 +32,17 @@ class Model(nn.Module):
             d_model=4 * CUBE_SIZE**3,
             mlp=108,
             depth=5,
-            if_skip_connection_dense=1,
+            dense_bias=False,
+            if_skip_connection_dense=0,
             dense_actv="mish",
-        )
-
-        self.predictor_center = Transformer(
-            d_model=1,
-            seq_len=4,
-            num_layer=5,
-            qkv_bias=False,
-            ffn_bias=False,
-            mlp_ratio=1,
-            atte_actv="mish",
         )
 
         self.densenet_center = DenseNet(
             d_model=4,
             mlp=108,
             depth=5,
-            if_skip_connection_dense=1,
+            dense_bias=False,
+            if_skip_connection_dense=0,
             drop_rate=0,
             dense_actv="mish",
         )
@@ -74,8 +66,6 @@ class Model(nn.Module):
 
         # # Extract the central values for each channel
         x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-        x_center = x_center.reshape(-1, 4, 1)
-        x_center = self.predictor_center(x_center)
         x_center = x_center.reshape(-1, 4 * 1)
         x_center = self.densenet_center(x_center)
 

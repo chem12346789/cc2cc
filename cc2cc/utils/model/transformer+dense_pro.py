@@ -21,7 +21,7 @@ class Model(nn.Module):
         self.predictor = Transformer(
             d_model=CUBE_SIZE**3,
             seq_len=4,
-            num_layer=5,
+            num_layer=7,
             qkv_bias=False,
             ffn_bias=False,
             mlp_ratio=1,
@@ -31,7 +31,7 @@ class Model(nn.Module):
         self.densenet = DenseNet(
             d_model=4 * CUBE_SIZE**3,
             mlp=108,
-            depth=5,
+            depth=7,
             dense_bias=False,
             if_skip_connection_dense=0,
             dense_actv="gelu",
@@ -40,7 +40,7 @@ class Model(nn.Module):
         self.densenet_center = DenseNet(
             d_model=4,
             mlp=108,
-            depth=5,
+            depth=7,
             dense_bias=False,
             if_skip_connection_dense=0,
             drop_rate=0,
