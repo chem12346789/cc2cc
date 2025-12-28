@@ -19,7 +19,7 @@ class Model(nn.Module):
 
         self.model_type = "center_4"
 
-        self.mixing_weight = nn.Linear(4 * CUBE_SIZE**3, 4)
+        self.mixing_weight = nn.Linear(4, 4)
         self.weight_softmax = nn.Softmax(dim=-1)
 
         self.densenet1 = DenseNet(
