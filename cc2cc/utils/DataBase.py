@@ -66,7 +66,7 @@ class DataBase:
         if_eval=False,
         atomic_name_dict=None,
         atomic_energy_dict=None,
-        process_input=None,
+        process_input=lambda x: x,
         verbose=False,
     ):
         """
@@ -205,18 +205,17 @@ class DataBase:
                 if PRINT_DEBUG:
                     self.print(f"key : {key}, len of val : {len(val)}, val : {val}")
                 if isinstance(val, list):
-                    if len(np.shape(val)) == 1:
+                    val_shape = np.shape(val)
+                    if len(val_shape) == 1:
                         batch_gpu[key] = val[0]
-                    elif len(np.shape(val)) == 2:
+                    elif len(val_shape) == 2:
                         batch_gpu[key] = list(np.array(val)[:, 0])
-                    elif len(np.shape(val)) == 3:
+                    elif len(val_shape) == 3:
                         batch_gpu[key] = list(np.array(val)[:, :, 0])
-                    elif len(np.shape(val)) == 4:
+                    elif len(val_shape) == 4:
                         batch_gpu[key] = list(np.array(val)[:, :, :, 0])
                     else:
-                        raise ValueError(
-                            f"Unknown shape for key {val}: {np.shape(val)}"
-                        )
+                        raise ValueError(f"Unknown shape for key {key}: {val_shape}")
                 else:
                     batch_gpu[key] = val[0]
                 if PRINT_DEBUG:
@@ -247,35 +246,9 @@ class DataBase:
         weight_mat = data["weights"]
         if self.args.rho_input == "dft":
             input_mat = data["rho_cube_dft"]
-            energy_target = data["e_cc"] - data["e_dft_d3bj"]
-            if not self.if_eval:
-                # output_mat = data["tol_delta_grids"]
-                output_mat = (
-                    data["exc_cc_grids"]
-                    + data["hatree_cc_grids"]
-                    + data["kin_cc_grids"]
-                    + data["nuc_cc_grids"]
-                ) - (
-                    data["exc_dft_grids"]
-                    + data["exc_k_dft_grids"]
-                    + data["hatree_dft_grids"]
-                    + data["kin_dft_grids"]
-                    + data["nuc_dft_grids"]
-                )
-                grad2force = data["grad2force"]
-                grad_cc_train = data["grad_cc_train"]
-            else:
-                output_mat = None
-                grad2force = None
-                grad_cc_train = None
+            energy_target = data["energy_train"]
         else:
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
-
-        if not self.if_eval:
-            error_energy = AU2KCALMOL * abs(
-                energy_target - np.sum(output_mat * weight_mat)
-            )
-            self.print(f"Error energy: {error_energy:>9.6f} kcal/mol")
 
         atomic_systems = []
         atomic_stoichiometry = []
@@ -295,6 +268,8 @@ class DataBase:
         ae_target = 0.0
         if self.args.if_atomic:
             if name in list(self.atomic_name_dict.values()):
+                assert mol_info["natm"] == 1
+                atom_name = mol_info["elements"][0]
                 self.atomic_energy_dict[atom_name] = energy_target
             else:
                 ae_target += energy_target
@@ -344,11 +319,32 @@ class DataBase:
             "loss_multiplier_grad": loss_multiplier_grad,
             "loss_multiplier_atomic": loss_multiplier_atomic,
         }
+
         if self.if_eval:
             data_dict["output"] = 0
             data_dict["grad2force"] = 0
             data_dict["grad_cc_train"] = 0
         else:
+            # output_mat = data["tol_delta_grids"]
+            output_mat = (
+                data["exc_cc_grids"]
+                + data["hatree_cc_grids"]
+                + data["kin_cc_grids"]
+                + data["nuc_cc_grids"]
+            ) - (
+                data["exc_dft_grids"]
+                + data["exc_k_dft_grids"]
+                + data["hatree_dft_grids"]
+                + data["kin_dft_grids"]
+                + data["nuc_dft_grids"]
+            )
+            grad2force = data["grad2force"]
+            grad_cc_train = data["grad_cc_train"]
+            error_energy = AU2KCALMOL * abs(
+                energy_target - np.sum(output_mat * weight_mat)
+            )
+            self.print(f"Error energy: {error_energy:>9.6f} kcal/mol")
+
             data_dict["output"] = output_mat.reshape((-1, 1))
             data_dict["grad2force"] = grad2force
             data_dict["grad_cc_train"] = grad_cc_train
