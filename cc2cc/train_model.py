@@ -49,36 +49,14 @@ def train_model(train_str_dict, eval_str_dict, args):
         print_computer_info(args.device)
 
         experiment_dict = {
-            "model": args.model,
-            "device": args.device,
-            "batch_size": args.batch_size,
             "n_train": len(modeldict.database_train),
             "n_eval": len(modeldict.database_eval),
-            "precision": args.precision,
-            "basis": args.basis,
-            "weight_decay": args.weight_decay,
-            "load": args.load,
             "jobid": os.environ.get("SLURM_JOB_ID"),
             "pid": os.getpid(),
-            "rho_input": args.rho_input,
             "checkpoint": modeldict.dir_checkpoint.stem,
-            "loss_multiplier": args.loss_multiplier,
-            "loss_multiplier_abs": args.loss_multiplier_abs,
-            "loss_multiplier_atomic": args.loss_multiplier_atomic,
-            "loss_multiplier_grad": args.loss_multiplier_grad,
-            "if_relative_weight": args.if_relative_weight,
-            "loss_ene": (
-                "L1Loss"
-                if isinstance(modeldict.loss_ene, torch.nn.L1Loss)
-                else "MSELoss"
-            ),
-            "loss_ene_abs": (
-                "L1Loss"
-                if isinstance(modeldict.loss_ene_abs, torch.nn.L1Loss)
-                else "MSELoss"
-            ),
-            "max_norm": modeldict.max_norm,
         }
+        for key in vars(args):
+            experiment_dict[key] = getattr(args, key)
         print(experiment_dict)
 
         run = wandb.init(

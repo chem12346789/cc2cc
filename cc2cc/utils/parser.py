@@ -179,6 +179,15 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--normal_loss_ene",
+        type=str,
+        choices=["MSELoss", "L1Loss"],
+        default="MSELoss",
+        help="Loss function for the energy. "
+        "Default is MSELoss. Other options are L1Loss.",
+    )
+
+    parser.add_argument(
         "--model",
         type=str,
         default="densenet",

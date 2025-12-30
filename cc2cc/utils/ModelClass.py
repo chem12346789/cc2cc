@@ -113,18 +113,6 @@ class ModelClass:
                 self.model, device_ids=[self.local_rank]
             )
 
-        if self.model_type == "center_4":
-            input_size = (1, 4)
-        elif self.model_type == "cube":
-            input_size = (1, 4, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-        else:
-            raise ValueError(f"Unknown model type: {self.model_type}")
-
-        self.print(
-            f"Model {self.model_name} initialized with input size {input_size} "
-            f"and model type {self.model_type}."
-        )
-
     def print(self, msg):
         """
         Print message only on the main process.
@@ -229,6 +217,21 @@ class ModelClass:
             process_input = lambda x: x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         elif self.model_type == "cube":
             process_input = lambda x: x
+        elif self.model_type == "cube9":
+            process_input = lambda x: np.stack(
+                [
+                    x[:, :, 0, 0, 0],
+                    x[:, :, 0, 0, 2],
+                    x[:, :, 0, 2, 0],
+                    x[:, :, 0, 2, 2],
+                    x[:, :, 1, 1, 1],
+                    x[:, :, 2, 0, 0],
+                    x[:, :, 2, 0, 2],
+                    x[:, :, 2, 2, 0],
+                    x[:, :, 2, 2, 2],
+                ],
+                axis=-1,
+            )
         else:
             raise ValueError(f"Unknown model type: {self.model_type}")
 
@@ -273,7 +276,6 @@ class ModelClass:
         weight = batch["weight"]
         sum_target = batch["energy_target"].cuda(self.local_rank)
         data_weight = batch["data_weight"]
-        ae_target = batch["ae_target"].cuda(self.local_rank)
         loss_multiplier = batch["loss_multiplier"]
         loss_multiplier_abs = batch["loss_multiplier_abs"]
         loss_multiplier_grad = batch["loss_multiplier_grad"]
@@ -319,6 +321,7 @@ class ModelClass:
             loss_grad_record = 0.0
 
         if self.args.if_atomic:
+            ae_target = batch["ae_target"].cuda(self.local_rank)
             ae_output = torch.sum(output)
 
             for i_system in range(len(batch["atomic_systems"])):

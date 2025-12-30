@@ -86,12 +86,12 @@ class DataBase:
         self.verbose = verbose
         self.array_key = ["input", "weight", "output", "grad2force"]
 
-        if args.loss_ene == "L1Loss":
+        if args.normal_loss_ene == "L1Loss":
             self.loss_ene = lambda x: np.sum(np.abs(x))
-        elif args.loss_ene == "MSELoss":
+        elif args.normal_loss_ene == "MSELoss":
             self.loss_ene = lambda x: np.sum(x**2)
         else:
-            raise ValueError(f"Unknown loss function {args.loss_ene}")
+            raise ValueError(f"Unknown loss function {args.normal_loss_ene}")
 
         self.print = lambda msg: print(msg, flush=True) if self.verbose else None
 
@@ -271,22 +271,6 @@ class DataBase:
         else:
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 
-        # input_mat_index = (
-        #     np.abs(input_mat[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]) > 1e-10
-        # )
-        # self.print(f"Total number of input points: {len(input_mat_index)}")
-        # self.print(f"Number of non-zero input points: {np.sum(input_mat_index)}")
-        # if len(output_mat.shape) != 0:
-        #     self.print(
-        #         f"Energy in zero input region: {AU2KCALMOL * np.sum(output_mat[~input_mat_index] * weight_mat[~input_mat_index])}",
-        #     )
-        #     output_mat = output_mat[input_mat_index]
-        # if len(grad2force) != 0:
-        #     grad2force = grad2force[:, :, input_mat_index, :]
-        # weight_mat = weight_mat[input_mat_index]
-        # input_mat = input_mat[input_mat_index]
-        # self.print("After filtering:")
-
         if not self.if_eval:
             error_energy = AU2KCALMOL * abs(
                 energy_target - np.sum(output_mat * weight_mat)
@@ -371,7 +355,7 @@ class DataBase:
 
         for key in self.array_key:
             data_dict[key] = torch.tensor(
-                data_dict[key], dtype=self.dtype, device="cpu"
+                np.array(data_dict[key]), dtype=self.dtype, device="cpu"
             )
 
         return num_data_used, data_dict
