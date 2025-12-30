@@ -247,7 +247,7 @@ class DataBase:
         weight_mat = data["weights"]
         if self.args.rho_input == "dft":
             input_mat = data["rho_cube_dft"]
-            energy_target = data["energy_train"]
+            energy_target = data["e_cc"] - data["e_dft_d3bj"]
             if not self.if_eval:
                 # output_mat = data["tol_delta_grids"]
                 output_mat = (
