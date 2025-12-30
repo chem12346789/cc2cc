@@ -20,43 +20,43 @@ train_str_list = [
     # #####################
     # ########  0  ########
     # #####################
-    # "molecule0-W4_11",
-    # "AHB21-1A",
-    # "AHB21-4A",
-    # "ALK8-li+",
-    # "W4_11-ch4",
-    # "ALK8-na+",
-    # # "ALKBDE10-ca",
-    # # "ALKBDE10-k",
-    # "ALKBDE10-li",
-    # "ALKBDE10-mg",
-    # "ALKBDE10-na",
-    # # "CHB6-24A",
-    # "DIPCS10-be_2+",
-    # "DIPCS10-mg_2+",
-    # "G21EA-EA_c-",
-    # "G21EA-EA_o-",
-    # "G21EA-EA_p-",
-    # "G21EA-EA_s-",
-    # "G21EA-EA_si-",
-    # "G21IP-al+",
-    # "G21IP-b+",
-    # "G21IP-be+",
-    # "G21IP-c+",
-    # "G21IP-cl+",
-    # "G21IP-f+",
-    # "G21IP-mg+",
-    # "G21IP-n+",
-    # "G21IP-o+",
-    # "G21IP-p+",
-    # "G21IP-s+",
-    # "G21IP-si+",
-    # "HEAVYSB11-br",
-    # "RG18-ar",
-    # "RG18-kr",
-    # "RG18-ne",
-    # "SIE4x4-he",
-    # "SIE4x4-he+",
+    "molecule0-W4_11",
+    "AHB21-1A",
+    "AHB21-4A",
+    "ALK8-li+",
+    "W4_11-ch4",
+    "ALK8-na+",
+    "ALKBDE10-ca",
+    "ALKBDE10-k",
+    "ALKBDE10-li",
+    "ALKBDE10-mg",
+    "ALKBDE10-na",
+    "CHB6-24A",
+    "DIPCS10-be_2+",
+    "DIPCS10-mg_2+",
+    "G21EA-EA_c-",
+    "G21EA-EA_o-",
+    "G21EA-EA_p-",
+    "G21EA-EA_s-",
+    "G21EA-EA_si-",
+    "G21IP-al+",
+    "G21IP-b+",
+    "G21IP-be+",
+    "G21IP-c+",
+    "G21IP-cl+",
+    "G21IP-f+",
+    "G21IP-mg+",
+    "G21IP-n+",
+    "G21IP-o+",
+    "G21IP-p+",
+    "G21IP-s+",
+    "G21IP-si+",
+    "HEAVYSB11-br",
+    "RG18-ar",
+    "RG18-kr",
+    "RG18-ne",
+    "SIE4x4-he",
+    "SIE4x4-he+",
     # #####################
     # ########  1  ########
     # #####################
@@ -151,16 +151,6 @@ if __name__ == "__main__":
         name_mol_list = train_str_list[args.mp_number :: args.mp_total]
         evaluate = False
 
-    name_mol_list = [
-        "W4_11-al",
-        "W4_11-c",
-        "W4_11-h",
-        "W4_11-p",
-        "HEAVYSB11-br",
-        "RG18-ne",
-    ]
-    evaluate = False
-
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
 
@@ -247,10 +237,30 @@ if __name__ == "__main__":
 
             if args.if_continue:
                 if (DATA_PATH / f"data_{name}.npz").exists():
+                    data_frame = np.load(DATA_PATH / f"data_{name}.npz")
+                    if "e_dft_d3bj" in data_frame.keys():
+                        print(f"SKIP: {name} already exists.")
+                    else:
+                        if mol.spin == 0:
+                            mdft_d3bj = pyscf.scf.RKS(mol)
+                            mdft_d3bj.xc = "b3lyp-d3bj"
+                            mdft_d3bj.kernel()
+                            e_dft_d3bj = mdft_d3bj.e_tot
+                        else:
+                            mdft_d3bj = pyscf.scf.UKS(mol)
+                            mdft_d3bj.xc = "b3lyp-d3bj"
+                            mdft_d3bj.kernel()
+                            e_dft_d3bj = mdft_d3bj.e_tot
+                        print(
+                            f"DFT-D3BJ correct energy: {e_dft_d3bj - data_frame['e_dft']}",
+                            flush=True,
+                        )
+                        np.savez_compressed(
+                            DATA_PATH / f"data_{name}.npz",
+                            **data_frame,
+                            e_dft_d3bj=e_dft_d3bj,
+                        )
                     continue
-                    # if mol.charge >= 0:
-                    #     print(f"SKIP: {name_mol} {extend_atom} {extend_xyz} {distance}")
-                    #     continue
 
             grids = Grid(mol, args.grid_level)
             if mol.spin == 0:

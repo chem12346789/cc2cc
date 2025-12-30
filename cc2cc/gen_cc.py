@@ -410,6 +410,14 @@ def cc(mol, grids, name, args, evaluate=False):
     dm1_dft = mdft.make_rdm1(ao_repr=True)
     e_dft = mdft.e_tot
 
+    mdft_d3bj = pyscf.scf.RKS(mol)
+    mdft_d3bj.verbose = 4
+    mdft_d3bj.max_cycle = 200
+    mdft_d3bj.xc = "b3lyp-d3bj"
+    mdft_d3bj.kernel(dm1_dft)
+    e_dft_d3bj = mdft_d3bj.e_tot
+    print(f"DFT-D3BJ correct energy: {e_dft_d3bj - e_dft}")
+
     # CCSD calculation
     mycc = pyscf.cc.CCSD(mf)
     mycc.verbose = 4
@@ -536,6 +544,7 @@ def cc(mol, grids, name, args, evaluate=False):
             "e_cc": e_cc,
             "e_dft": e_dft,
             "e_hf": e_hf,
+            "e_dft_d3bj": e_dft_d3bj,
             "energy_train": energy_train,
             "rho_cube_dft": rho_cube_dft,
             "weights": grids.weights,
