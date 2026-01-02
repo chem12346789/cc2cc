@@ -185,12 +185,13 @@ After the training, the neural network can predict the energy of the molecule gi
 		\node [block, right=of flatten] (linear) {Linear};
 		\node [block, right=of linear, xshift=0.2cm] (output) {ADD};
 		\node [block1, right=of output] (output_final) {};
-		\node [block1, below=of input, yshift=0.5cm] (input1) {};
-		\node [block, below=of transformer, yshift=0.5cm] (flatten1) {Extraction};
-		\node [block, below=of flatten, yshift=0.5cm] (transformer1) {Transformer};
-		\node [block, below=of linear, yshift=0.5cm] (linear1) {Linear};
-		\node [block1, below=of output, yshift=0.5cm] (output1) {};
-		\node [block1, above=of output, xshift=0.5cm] (output2) {};
+		\node [block1, below=of input.center, yshift=0.5cm] (input1) {};
+		\node [block, below=of transformer.center, yshift=0.5cm] (flatten1) {Extraction};
+		\node [block, below=of flatten.center, yshift=0.5cm] (transformer1) {Transformer};
+		\node [block, below=of linear.center, yshift=0.5cm] (linear1) {Linear};
+		\node [block1, below=of output.center, yshift=0.5cm] (output1) {};
+		\node [block1, above=of input.center, yshift=-0.5cm] (input2) {};
+		\node [block1, above=of output.center, yshift=-0.5cm] (output2) {};
 		% connecting the blocks
 		\draw [-] (input-1) -- node[xshift=0.625cm] {$(N, 27, 4)$} (input.center);
 		\draw [->] (input.center) -- (transformer);
@@ -202,9 +203,7 @@ After the training, the neural network can predict the energy of the molecule gi
 		\draw [->] (flatten1) -- node {$(N, 4)$} (transformer1);
 		\draw [->] (transformer1) -- node {$(N, 4)$} (linear1);
 		\draw [->, rounded corners] (linear1) -- node[xshift=0.05cm] {$(N, 1)$} ([xshift=-0.75cm] output1.center) -- ([xshift=-0.75cm] output.center);
-		% \draw [->] (embedding) -- node {$\bm{h}_0$} (transformer);
-		% \draw [->] (transformer) -- node {$\bm{h}_L$} (linear);
-		% \draw [->] (linear) -- node {$E(\brm{r}_i)$} (output);
+		\draw [->, rounded corners] ([xshift=1.25cm] input.center) -- ([xshift=1.25cm] input2.center) -- (output2.center) -- (output);
 	\end{tikzpicture}
 	\caption{
 		% 
