@@ -56,11 +56,11 @@ class Model(nn.Module):
         Standard forward function, required for all nn.Module classes
         """
         x_lda = x[:, 0, :, :, :]
-        x_lda_central = (
-            x_lda[:, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE].unsqueeze(1) - 1e-8
-        )
-        inverse_x_lda_central = 1 / torch.abs(x_lda_central)
-        x = torch.einsum("ipxyz,i->ipxyz", x[:, 1:, :, :, :], inverse_x_lda_central)
+        inverse_x_lda = 1 / x_lda
+        inverse_x_lda[torch.isinf(inverse_x_lda)] = 0
+        x_lda_central = x_lda[:, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE].unsqueeze(-1)
+
+        x = torch.einsum("ipxyz,ixyz->ipxyz", x[:, 1:, :, :, :], inverse_x_lda)
 
         # do mixing x and x_center using Mixture of experts mechanism
         weight_out = self.mixing_weight(x.reshape(-1, 3 * CUBE_SIZE**3))
