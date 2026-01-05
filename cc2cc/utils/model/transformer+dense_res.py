@@ -33,7 +33,7 @@ class Model(nn.Module):
             mlp=108,
             depth=7,
             dense_bias=False,
-            if_skip_connection_dense=0,
+            if_skip_connection_dense=1,
             dense_actv="gelu",
         )
 
@@ -42,7 +42,7 @@ class Model(nn.Module):
             mlp=108,
             depth=7,
             dense_bias=False,
-            if_skip_connection_dense=0,
+            if_skip_connection_dense=1,
             drop_rate=0,
             dense_actv="gelu",
         )
