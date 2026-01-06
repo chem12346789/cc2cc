@@ -157,12 +157,12 @@ parser.add_argument(
 parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--seed", type=int, default=42, help="Random seed")
 parser.add_argument("--dataset", type=str, default="gmtkn-def2", help="Dataset name")
+parser.add_argument("--basis", type=str, default="def2-QZVPP", help="Basis set")
 
 args = parser.parse_args()
-BASIS_SET = "def2-QZVP"
-DATA_PATH = f"validate_hkqai_done/ccdft_{BASIS_SET}_{args.load}_gmtkn-def2.csv"
+DATA_PATH = f"validate_hkqai_done/ccdft_{args.basis}_{args.load}_gmtkn-def2.csv"
 save_para = {}
-SAVE_PARA_PATH = f"validate_hkqai_done/ccdft_{BASIS_SET}_{args.load}_gmtkn-def2.json"
+SAVE_PARA_PATH = f"validate_hkqai_done/ccdft_{args.basis}_{args.load}_gmtkn-def2.json"
 
 
 # Set the random seed for reproducibility
@@ -170,21 +170,15 @@ random.seed(args.seed)
 os.environ["PYTHONHASHSEED"] = str(args.seed)
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
-torch.cuda.manual_seed(args.seed)
-torch.cuda.manual_seed_all(args.seed)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-torch.backends.cudnn.enabled = False
-print("Warning: Using deterministic mode, which may slow down training.", flush=True)
 
 DEVICE = "cuda"
 
 data = pd.read_csv(DATA_PATH)
 
 with open("jupyter-notebook/subset.json", "r", encoding="utf-8") as f:
-    # full_subset_dict = json.load(f)["full_subset_small_dict"]
-    full_subset_dict = json.load(f)["full_subset_dict"]
+    # full_subset_dict = json.load(f)["full_subset_dict"]
     # full_subset_dict = json.load(f)["full_subset_dict_test"]
+    full_subset_dict = json.load(f)["full_subset_small_dict"]
 name_mol_list = []
 for subset in full_subset_dict.values():
     for name_mol in subset:
@@ -319,10 +313,10 @@ for damping, dft_type in product(["bj"], dft_type_list):
         lr=args.lr,
         weight_decay=1e-12,
     )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+    scheduler = torch.optim.lr_scheduler.ConstantLR(
         optimizer,
-        T_max=200,
-        eta_min=1e-8,
+        factor=0.5,
+        total_iters=500,
     )
     loss_function = torch.nn.L1Loss(reduction="sum")
     torch.set_printoptions(precision=5, sci_mode=False)
