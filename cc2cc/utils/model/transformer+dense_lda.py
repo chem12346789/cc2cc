@@ -56,9 +56,10 @@ class Model(nn.Module):
         Standard forward function, required for all nn.Module classes
         """
         x_lda = x[:, 0, :, :, :]
-        inverse_x_lda = 1 / x_lda
-        inverse_x_lda[torch.isinf(inverse_x_lda)] = 0
         x_lda_central = x_lda[:, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE].unsqueeze(-1)
+        inverse_x_lda = torch.zeros_like(x_lda)
+        epsilon_index = torch.abs(x_lda) >= 1e-18
+        inverse_x_lda[epsilon_index] = 1 / x_lda[epsilon_index]
 
         x = torch.einsum("ipxyz,ixyz->ipxyz", x[:, 1:, :, :, :], inverse_x_lda)
 
