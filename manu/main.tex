@@ -186,9 +186,8 @@ After the training, the neural network can predict the energy of the molecule gi
 		\node [block, right=of linear, xshift=0.2cm] (output) {ADD};
 		\node [block1, right=of output] (output_final) {};
 		\node [block1, below=of input.center, yshift=0.5cm] (input1) {};
-		\node [block, below=of transformer.center, yshift=0.5cm] (flatten1) {Extraction};
-		\node [block, below=of flatten.center, yshift=0.5cm] (transformer1) {Transformer};
-		\node [block, below=of linear.center, yshift=0.5cm] (linear1) {Linear};
+		\node [block, below=of flatten.center, xshift=-2cm, yshift=0.5cm] (flatten1) {Flatten};
+		\node [block, below=of linear.center, xshift=-1cm, yshift=0.5cm] (linear1) {Linear};
 		\node [block1, below=of output.center, yshift=0.5cm] (output1) {};
 		\node [block1, above=of input.center, yshift=-0.5cm] (input2) {};
 		\node [block1, above=of output.center, yshift=-0.5cm] (output2) {};
@@ -200,8 +199,7 @@ After the training, the neural network can predict the energy of the molecule gi
 		\draw [->] (linear) -- node[xshift=-0.125cm] {$(N, 1)$} (output);
 		\draw [->] (output) -- node {$(N, 1)$} (output_final);
 		\draw [->, rounded corners] ([xshift=1.25cm] input.center) -- ([xshift=1.25cm] input1.center) -- (flatten1);
-		\draw [->] (flatten1) -- node {$(N, 4)$} (transformer1);
-		\draw [->] (transformer1) -- node {$(N, 4)$} (linear1);
+		\draw [->] (flatten1) -- node {$(N, 4)$} (linear1);
 		\draw [->, rounded corners] (linear1) -- node[xshift=0.05cm] {$(N, 1)$} ([xshift=-0.75cm] output1.center) -- ([xshift=-0.75cm] output.center);
 		\draw [->, rounded corners] ([xshift=1.25cm] input.center) -- ([xshift=1.25cm] input2.center) -- (output2.center) -- (output);
 	\end{tikzpicture}
@@ -324,16 +322,16 @@ The main difference between our method and other machine learning functionals \c
 	}
 	\begin{ruledtabular}
 		\begin{tabular}{lcccc}
-			     & Original Dataset & Size & Number of heavy atoms & Number of hydrogen atoms        \\
+			     & Original Dataset & Size & Number of heavy atoms & Number of hydrogen atoms \\
 			\colrule
-			A    & GMTKN55~$^{1}$   & 55   & $1$                   & $0$                             \\
-			B    & W4-11            & 22   & $1$                   & $>0$                            \\
-			C    & W4-11            & 59   & $2$                   & $>0$                            \\
-			A$'$ & GMTKN55          & 81   & $4$                   & $>0$  and $\leq4$               \\
-			B$'$ & GMTKN55          & 23   & $5$                   & $>0$  and $\leq3$               \\
-			C$'$ & GMTKN55          & 11   & $6$                   & $>0$  and $\leq3$               \\
+			A    & GMTKN55~$^{1}$   & 47   & $1$                   & --                       \\
+			B    & W4-11            & 22   & $1$                   & $\neq0$                  \\
+			C    & W4-11            & 59   & $2$                   & --                       \\
+			A$'$ & GMTKN55          & 81   & $4$                   & $\leq4$                  \\
+			B$'$ & GMTKN55          & 23   & $5$                   & $\leq3$                  \\
+			C$'$ & GMTKN55          & 11   & $6$                   & $\leq3$                  \\
 			\colrule
-			\multicolumn{3}{l}{$^{1}$\footnotesize{Include additional As Ge Se Te I Bi Pb Sb atom.}} \\
+			\multicolumn{3}{l}{$^{1}$\footnotesize{Include anions and cations}}               \\
 		\end{tabular}
 	\end{ruledtabular}
 \end{table*}

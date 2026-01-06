@@ -1,16 +1,16 @@
 # Fdb version 4
-["bibtex main"] 1767333109.21995 "main.aux" "main.bbl" "main" 1767333167.96384 0
-  "./mainNotes.bib" 1767333167.51851 104 4d8bb863c86f3d7b03a471e9d4707f34 ""
+["bibtex main"] 0 "main.aux" "main.bbl" "main" 1767693302.56414 -1
+  "./mainNotes.bib" 1767693302.0539 104 4d8bb863c86f3d7b03a471e9d4707f34 ""
   "./ref.bib" 1763113587.61515 11407 d0f04ed90033f0aea6926d7f61337e24 ""
   "/usr/share/texlive/texmf-dist/bibtex/bst/revtex/apsrev4-2.bst" 1601932770 69609 e9dea59f0e753ccda3ddc8f5806d846d ""
-  "main.aux" 1767333167.51751 6374 0ed38958860d92c5ba2d022cf82bbf46 "pdflatex"
+  "main.aux" 1767693302.0529 6374 0ed38958860d92c5ba2d022cf82bbf46 "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1767333166.82497 "/home/dhem/workspace/2025.1/manu/main.tex" "main.pdf" "main" 1767333167.964 0
+["pdflatex"] 1767693301.40136 "/home/dhem/workspace/2025.1/manu/main.tex" "main.pdf" "main" 1767693302.56438 0
   "/etc/texmf/web2c/texmf.cnf" 1758877047.45371 475 c0e671620eb5563b2130f56340a5fde8 ""
-  "/home/dhem/workspace/2025.1/manu/main.tex" 1767333166.63654 22521 fb9f5809958fed142fecde564cf278a4 ""
+  "/home/dhem/workspace/2025.1/manu/main.tex" 1767693301.21491 22336 d6a107d73d038c4a1757ab4f117e8790 ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy5.tfm" 1246382020 1120 1e8878807317373affa7f7bba4cf2f6a ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy6.tfm" 1246382020 1124 14ccf5552bc7f77ca02a8a402bea8bfb ""
@@ -181,9 +181,9 @@
   "/usr/share/texmf/web2c/texmf.cnf" 1707919699 40399 f2c302f7d2af602abb742093540a5834 ""
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1758877068.1571 5472669 54eaf61a88b6b7896ebd0dac973cb29c ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1758877139 8213214 184b11e4e078570eb3a71b70a2f12006 ""
-  "main.aux" 1767333167.51751 6374 0ed38958860d92c5ba2d022cf82bbf46 "pdflatex"
+  "main.aux" 1767693302.0529 6374 0ed38958860d92c5ba2d022cf82bbf46 "pdflatex"
   "main.bbl" 1767333109.33838 20041 bfbe6bf193e50d242df86f6b3b20ede8 "bibtex main"
-  "main.tex" 1767333166.63654 22521 fb9f5809958fed142fecde564cf278a4 ""
+  "main.tex" 1767693301.21491 22336 d6a107d73d038c4a1757ab4f117e8790 ""
   (generated)
   "main.aux"
   "main.log"
