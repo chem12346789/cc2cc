@@ -274,7 +274,7 @@ The loss function is defined as
 	\label{eq:loss_self_scaled}
 	L_{e} =
 	 & N_{\rm{atom}} \frac{\Big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) \big| \Big)^{2}} \nl
-	 & + N_{\rm{atom}} \frac{\Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) \big| \Big)^{2}} \nl
+	 & + \lambda_{\rm{ABS}} N_{\rm{atom}} \frac{\Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) \big| \Big)^{2}} \nl
 	 & + N_{\rm{atom}} \frac{\Big(\bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{E}^{\rm{AE}}(\brm{r}_{i}) \big| \Big)^{2}} .
 \end{align}
 where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, respectively.
@@ -290,7 +290,7 @@ We set the initial learning rate to be $1 \times 10^{-4}$ and then gradually dec
 %
 The parameters of the AdamW optimizer are set to be $\beta_1 = 0.9$, $\beta_2 = 0.999$, and $\epsilon = 1 \times 10^{-8}$, and the weight decay is set to be $1 \times 10^{-12}$.
 % 
-The weights in the loss function \eq{eq:loss} are set to be $\lambda_{\rm{RE}} = 1$, $\lambda_{\rm{ABS}} = 0.01$, and $\lambda_{\rm{AE}} = 1$ for multi-atom systems.
+The weights in the loss function \eq{eq:loss} are set to be $\lambda_{\rm{ABS}} = 0.01$.
 %
 We use a batch size of $4$ and train the model for $10000$ epochs.
 %
