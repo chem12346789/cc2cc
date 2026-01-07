@@ -245,7 +245,7 @@ class Grid(dft.gen_grid.Grids):
 
         gridcube = self.gen_cube(self.mol, dms, coords, mask)
 
-        input_ = np.zeros((4, len(coords) * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
+        input_ = np.zeros((6, len(coords) * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
         make_rho, nset, nao = ni._gen_rho_evaluator(
             self.mol, dms, hermi, False, gridcube
         )
@@ -254,35 +254,43 @@ class Grid(dft.gen_grid.Grids):
         ):
             for i in range(nset):
                 rho = make_rho(i, ao, mask, ni._xc_type("b3lyp"))
+                rho0 = rho[0]
+
                 exc_lda = ni.eval_xc_eff("LDA,", rho[0], deriv=0, xctype="LDA")[0]
                 exc_vwn = ni.eval_xc_eff(",VWN3", rho[0], deriv=0, xctype="LDA")[0]
                 exc_b88 = ni.eval_xc_eff("B88,", rho, deriv=0, xctype="GGA")[0]
                 exc_lyp = ni.eval_xc_eff(",LYP", rho, deriv=0, xctype="GGA")[0]
-                rho0 = rho[0]
+                exc_pbec = ni.eval_xc_eff("PBE,", rho, deriv=0, xctype="GGA")[0]
+                exc_pbex = ni.eval_xc_eff(",PBE", rho, deriv=0, xctype="GGA")[0]
+
                 input_[0, ip0:ip1] = exc_lda * rho0
                 input_[1, ip0:ip1] = exc_vwn * rho0
                 input_[2, ip0:ip1] = exc_b88 * rho0
                 input_[3, ip0:ip1] = exc_lyp * rho0
-        input_ = input_.reshape((4, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+                input_[4, ip0:ip1] = exc_pbec * rho0
+                input_[5, ip0:ip1] = exc_pbex * rho0
+        del make_rho, nset
+        input_ = input_.reshape((6, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
         input_ = input_.transpose(1, 0, 2, 3, 4)
 
         if require_vxc:
-            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_input[0], deriv=1, xctype="LDA")[
-                :2
-            ]
-            e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_input[0], deriv=1, xctype="LDA")[
-                :2
-            ]
+            rho_lda = rho_input[0]
+            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=1, xctype="LDA")[:2]
+            e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=1, xctype="LDA")[:2]
             e_b88, v_b88 = ni.eval_xc_eff("B88,", rho_input, deriv=1, xctype="GGA")[:2]
             e_lyp, v_lyp = ni.eval_xc_eff(",LYP", rho_input, deriv=1, xctype="GGA")[:2]
+            _, v_pbec = ni.eval_xc_eff("PBE,", rho_input, deriv=1, xctype="GGA")[:2]
+            _, v_pbex = ni.eval_xc_eff(",PBE", rho_input, deriv=1, xctype="GGA")[:2]
 
             exc_b3lyp = 0.08 * e_lda + 0.19 * e_vwn + 0.72 * e_b88 + 0.81 * e_lyp
 
-            vxc_b3lyp = np.zeros((4, 4, len(coords)))
+            vxc_b3lyp = np.zeros((6, 4, len(coords)))
             vxc_b3lyp[0, 0:1, :] = v_lda
             vxc_b3lyp[1, 0:1, :] = v_vwn
             vxc_b3lyp[2, :, :] = v_b88
             vxc_b3lyp[3, :, :] = v_lyp
+            vxc_b3lyp[4, :, :] = v_pbec
+            vxc_b3lyp[5, :, :] = v_pbex
             return input_, exc_b3lyp * rho_input[0], vxc_b3lyp
         return input_
 
@@ -313,7 +321,7 @@ class Grid(dft.gen_grid.Grids):
         ]
         make_rhob = ni._gen_rho_evaluator(self.mol, dmb, hermi, False, gridcube)[0]
 
-        input_ = np.zeros((4, len(gridcube.coords)))
+        input_ = np.zeros((6, len(gridcube.coords)))
 
         for ao, mask, ip0, ip1 in modified_block_loop(ni, self.mol, gridcube, nao, 1):
             for i in range(nset):
@@ -327,40 +335,40 @@ class Grid(dft.gen_grid.Grids):
                 exc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=0, xctype="LDA")[0]
                 exc_b88 = ni.eval_xc_eff("B88,", rho, deriv=0, xctype="GGA")[0]
                 exc_lyp = ni.eval_xc_eff(",LYP", rho, deriv=0, xctype="GGA")[0]
+                exc_pbec = ni.eval_xc_eff("PBE,", rho, deriv=0, xctype="GGA")[0]
+                exc_pbex = ni.eval_xc_eff(",PBE", rho, deriv=0, xctype="GGA")[0]
 
-                input_[:, ip0:ip1] = np.array(
-                    [
-                        exc_lda * rho0,
-                        exc_vwn * rho0,
-                        exc_b88 * rho0,
-                        exc_lyp * rho0,
-                    ]
-                )
+                input_[0, ip0:ip1] = exc_lda * rho0
+                input_[1, ip0:ip1] = exc_vwn * rho0
+                input_[2, ip0:ip1] = exc_b88 * rho0
+                input_[3, ip0:ip1] = exc_lyp * rho0
+                input_[4, ip0:ip1] = exc_pbec * rho0
+                input_[5, ip0:ip1] = exc_pbex * rho0
         del make_rhoa, make_rhob, nset
 
-        input_ = input_.reshape((4, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        input_ = input_.reshape((6, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
         input_ = input_.transpose(1, 0, 2, 3, 4)
 
         if require_vxc:
-            rho_input_lda = (rho_input[0][0], rho_input[1][0])
+            rho_lda = (rho_input[0][0], rho_input[1][0])
             rho_input_0 = rho_input[0][0] + rho_input[1][0]
 
-            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_input_lda, deriv=1, xctype="LDA")[
-                :2
-            ]
-            e_vwn, v_vwn = ni.eval_xc_eff(
-                ",VWN3", rho_input_lda, deriv=1, xctype="LDA"
-            )[:2]
+            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=1, xctype="LDA")[:2]
+            e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=1, xctype="LDA")[:2]
             e_b88, v_b88 = ni.eval_xc_eff("B88,", rho_input, deriv=1, xctype="GGA")[:2]
             e_lyp, v_lyp = ni.eval_xc_eff(",LYP", rho_input, deriv=1, xctype="GGA")[:2]
+            _, v_pbec = ni.eval_xc_eff("PBE,", rho_input, deriv=1, xctype="GGA")[:2]
+            _, v_pbex = ni.eval_xc_eff(",PBE", rho_input, deriv=1, xctype="GGA")[:2]
 
             exc_b3lyp = 0.08 * e_lda + 0.19 * e_vwn + 0.72 * e_b88 + 0.81 * e_lyp
 
-            vxc_b3lyp = np.zeros((4, 2, 4, len(coords)))
+            vxc_b3lyp = np.zeros((6, 2, 4, len(coords)))
             vxc_b3lyp[0, :, 0:1, :] = v_lda
             vxc_b3lyp[1, :, 0:1, :] = v_vwn
             vxc_b3lyp[2, :, :, :] = v_b88
             vxc_b3lyp[3, :, :, :] = v_lyp
+            vxc_b3lyp[4, :, :, :] = v_pbec
+            vxc_b3lyp[5, :, :, :] = v_pbex
 
             return input_, exc_b3lyp * rho_input_0, vxc_b3lyp
 
