@@ -4,6 +4,7 @@ Generate list of model.
 
 from torch import nn
 
+from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
 from cc2cc.utils.model.model_utils import Transformer, DenseNet
 
 
@@ -15,10 +16,11 @@ class Model(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.model_type = "cube9"
+        self.model_type = "cube"
+        self.input_level = 4
 
         self.predictor = Transformer(
-            d_model=9,
+            d_model=CUBE_SIZE**3,
             seq_len=4,
             num_layer=5,
             qkv_bias=False,
@@ -28,7 +30,7 @@ class Model(nn.Module):
         )
 
         self.densenet = DenseNet(
-            d_model=4 * 9,
+            d_model=4 * CUBE_SIZE**3,
             mlp=108,
             depth=5,
             dense_bias=False,
@@ -46,7 +48,7 @@ class Model(nn.Module):
             dense_actv="gelu",
         )
 
-        self.mixing_weight = nn.Linear(4 * 9, 2)
+        self.mixing_weight = nn.Linear(4 * CUBE_SIZE**3, 6)
         self.weight_softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
@@ -55,18 +57,25 @@ class Model(nn.Module):
         """
 
         # do mixing x and x_center using Mixture of experts mechanism
-        weight_out = self.mixing_weight(x.reshape(-1, 4 * 9))
+        weight_out = self.mixing_weight(x.reshape(-1, 4 * CUBE_SIZE**3))
         weight_out = self.weight_softmax(weight_out)
 
-        x_cube = x.reshape(-1, 4, 9)
+        x_cube = x.reshape(-1, 4, CUBE_SIZE**3)
         x_cube = self.predictor(x_cube)
-        x_cube = x_cube.reshape(-1, 4 * 9)
+        x_cube = x_cube.reshape(-1, 4 * CUBE_SIZE**3)
         x_cube = self.densenet(x_cube)
 
         # # Extract the central values for each channel
-        x_center = x[:, :, 4]
+        x_center = x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         x_center = x_center.reshape(-1, 4 * 1)
         x_center = self.densenet_center(x_center)
 
-        mixed_output = weight_out[:, [0]] * x_cube + weight_out[:, [1]] * x_center
+        mixed_output = (
+            weight_out[:, [0]] * x_cube
+            + weight_out[:, [1]] * x_center
+            + weight_out[:, [2]] * x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + weight_out[:, [3]] * x[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + weight_out[:, [4]] * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + weight_out[:, [5]] * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+        )
         return mixed_output

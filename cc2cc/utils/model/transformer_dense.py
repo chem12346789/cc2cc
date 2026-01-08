@@ -255,6 +255,7 @@ class Model(nn.Module):
         super().__init__()
 
         self.model_type = "cube"
+        self.input_level = 4
 
         self.predictor = Extractor(
             d_model=CUBE_SIZE**3,

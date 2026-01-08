@@ -35,8 +35,8 @@ SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
 
 @njit(fastmath=True)
 def gen_cube_njit(
-    rho_input_2,
-    rho_input_1,
+    rho_in_2,
+    rho_in_1,
     coords,
     coor_cube,
 ):
@@ -44,11 +44,11 @@ def gen_cube_njit(
     Generate the cube coordinates for the given molecule.
     """
     for p in range(len(coords)):
-        norm_2d = rho_input_2[:, :, p]
+        norm_2d = rho_in_2[:, :, p]
         eig_val, eig_vec = np.linalg.eigh(norm_2d)
         eig_val_sort = np.argsort(eig_val)
         eig_vec = eig_vec[:, eig_val_sort]
-        norm_1d = rho_input_1[:, p]
+        norm_1d = rho_in_1[:, p]
         for i in range(3):
             if eig_vec[:, i] @ norm_1d < 0:
                 eig_vec[:, i] *= -1
@@ -139,12 +139,27 @@ class Grid(dft.gen_grid.Grids):
     Documentation for a class.
 
     This class is modified from pyscf.dft.gen_grid.Grids. Some default parameters are changed.
+    New attributes:
+    input_level:
+        The input level for the grid generation.
+        For example, 4 means the input is 4 energy density used by b3lyp functional.
+    --------------------------------------------------------------------------
+    Methods:
+    gen_cube: Generate the cube coordinates for the given molecule.
+    get_center_density: Get the center density of the cube.
+    gen_cube_rho_rks: Generate the cube density for the given molecule in RKS.
+    gen_cube_rho_uks: Generate the cube density for the given molecule in UKS.
+    gen_rho_rks: Generate the center density for the given molecule in RKS.
+    gen_rho_uks: Generate the center density for the given molecule in UKS.
     """
 
-    def __init__(self, mol, level, test=False):
+    def __init__(self, mol, level, input_level=4, test=False):
         super().__init__(mol)
 
         self.level = level
+        self.input_level = input_level
+
+        # Set default parameters, please refer to pyscf.dft.gen_grid.Grids for details.
         self.radi_method = dft.radi.gauss_chebyshev
         self.becke_scheme = dft.gen_grid.original_becke
         self.atomic_radii = None
@@ -159,7 +174,7 @@ class Grid(dft.gen_grid.Grids):
         self,
         mol,
         dms,
-        coords=None,
+        coords,
         screen_index=None,
     ):
         """
@@ -190,32 +205,32 @@ class Grid(dft.gen_grid.Grids):
         shls_slice = (0, mol.nbas)
         ao_loc = mol.ao_loc_nr()
 
-        rho_input_1 = np.zeros((3, len(coords)))
-        rho_input_2 = np.zeros((3, 3, len(coords)))
+        rho_in_1 = np.zeros((3, len(coords)))
+        rho_in_2 = np.zeros((3, 3, len(coords)))
         ao = pyscf.dft.numint.eval_ao(mol, coords, deriv=2)
 
         c0 = _dot_ao_dm(mol, ao[0], dm, screen_index, shls_slice, ao_loc)
-        rho_input_1[0, :] = 2 * _contract_rho(ao[1], c0)
-        rho_input_1[1, :] = 2 * _contract_rho(ao[2], c0)
-        rho_input_1[2, :] = 2 * _contract_rho(ao[3], c0)
+        rho_in_1[0, :] = 2 * _contract_rho(ao[1], c0)
+        rho_in_1[1, :] = 2 * _contract_rho(ao[2], c0)
+        rho_in_1[2, :] = 2 * _contract_rho(ao[3], c0)
 
         c1 = _dot_ao_dm(mol, ao[1], dm, screen_index, shls_slice, ao_loc)
         c2 = _dot_ao_dm(mol, ao[2], dm, screen_index, shls_slice, ao_loc)
         c3 = _dot_ao_dm(mol, ao[3], dm, screen_index, shls_slice, ao_loc)
 
-        rho_input_2[0, 0, :] = _contract_rho(ao[4], c0) + _contract_rho(ao[1], c1)
-        rho_input_2[0, 1, :] = _contract_rho(ao[5], c0) + _contract_rho(ao[1], c2)
-        rho_input_2[0, 2, :] = _contract_rho(ao[6], c0) + _contract_rho(ao[1], c3)
-        rho_input_2[1, 1, :] = _contract_rho(ao[7], c0) + _contract_rho(ao[2], c2)
-        rho_input_2[1, 2, :] = _contract_rho(ao[8], c0) + _contract_rho(ao[2], c3)
-        rho_input_2[2, 2, :] = _contract_rho(ao[9], c0) + _contract_rho(ao[3], c3)
+        rho_in_2[0, 0, :] = _contract_rho(ao[4], c0) + _contract_rho(ao[1], c1)
+        rho_in_2[0, 1, :] = _contract_rho(ao[5], c0) + _contract_rho(ao[1], c2)
+        rho_in_2[0, 2, :] = _contract_rho(ao[6], c0) + _contract_rho(ao[1], c3)
+        rho_in_2[1, 1, :] = _contract_rho(ao[7], c0) + _contract_rho(ao[2], c2)
+        rho_in_2[1, 2, :] = _contract_rho(ao[8], c0) + _contract_rho(ao[2], c3)
+        rho_in_2[2, 2, :] = _contract_rho(ao[9], c0) + _contract_rho(ao[3], c3)
 
-        rho_input_2[1, 0, :] = rho_input_2[0, 1, :]
-        rho_input_2[2, 0, :] = rho_input_2[0, 2, :]
-        rho_input_2[2, 1, :] = rho_input_2[1, 2, :]
+        rho_in_2[1, 0, :] = rho_in_2[0, 1, :]
+        rho_in_2[2, 0, :] = rho_in_2[0, 2, :]
+        rho_in_2[2, 1, :] = rho_in_2[1, 2, :]
 
         coor_cube = np.zeros((len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
-        gen_cube_njit(rho_input_2, rho_input_1, coords, coor_cube)
+        gen_cube_njit(rho_in_2, rho_in_1, coords, coor_cube)
 
         return GridCube(coor_cube, cutoff=self.cutoff)
 
@@ -227,7 +242,7 @@ class Grid(dft.gen_grid.Grids):
 
     def gen_cube_rho_rks(
         self,
-        rho_input,
+        rho_in,
         ni,
         dms,
         coords=None,
@@ -245,7 +260,9 @@ class Grid(dft.gen_grid.Grids):
 
         gridcube = self.gen_cube(self.mol, dms, coords, mask)
 
-        input_ = np.zeros((6, len(coords) * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE))
+        input_ = np.zeros(
+            (self.input_level, len(coords) * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE)
+        )
         make_rho, nset, nao = ni._gen_rho_evaluator(
             self.mol, dms, hermi, False, gridcube
         )
@@ -260,43 +277,58 @@ class Grid(dft.gen_grid.Grids):
                 exc_vwn = ni.eval_xc_eff(",VWN3", rho[0], deriv=0, xctype="LDA")[0]
                 exc_b88 = ni.eval_xc_eff("B88,", rho, deriv=0, xctype="GGA")[0]
                 exc_lyp = ni.eval_xc_eff(",LYP", rho, deriv=0, xctype="GGA")[0]
-                exc_pbec = ni.eval_xc_eff("PBE,", rho, deriv=0, xctype="GGA")[0]
-                exc_pbex = ni.eval_xc_eff(",PBE", rho, deriv=0, xctype="GGA")[0]
 
                 input_[0, ip0:ip1] = exc_lda * rho0
                 input_[1, ip0:ip1] = exc_vwn * rho0
                 input_[2, ip0:ip1] = exc_b88 * rho0
                 input_[3, ip0:ip1] = exc_lyp * rho0
-                input_[4, ip0:ip1] = exc_pbec * rho0
-                input_[5, ip0:ip1] = exc_pbex * rho0
+
+                if self.input_level > 4:
+                    exc_pbec = ni.eval_xc_eff("PBE,", rho, deriv=0, xctype="GGA")[0]
+                    input_[4, ip0:ip1] = exc_pbec * rho0
+                if self.input_level > 5:
+                    exc_pbex = ni.eval_xc_eff(",PBE", rho, deriv=0, xctype="GGA")[0]
+                    input_[5, ip0:ip1] = exc_pbex * rho0
+                if self.input_level > 6:
+                    exc_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho, deriv=0, xctype="GGA")[
+                        0
+                    ]
+                    input_[6, ip0:ip1] = exc_tfk * rho0
         del make_rho, nset
-        input_ = input_.reshape((6, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        input_ = input_.reshape(
+            (self.input_level, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+        )
         input_ = input_.transpose(1, 0, 2, 3, 4)
 
         if require_vxc:
-            rho_lda = rho_input[0]
-            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=1, xctype="LDA")[:2]
-            e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=1, xctype="LDA")[:2]
-            e_b88, v_b88 = ni.eval_xc_eff("B88,", rho_input, deriv=1, xctype="GGA")[:2]
-            e_lyp, v_lyp = ni.eval_xc_eff(",LYP", rho_input, deriv=1, xctype="GGA")[:2]
-            _, v_pbec = ni.eval_xc_eff("PBE,", rho_input, deriv=1, xctype="GGA")[:2]
-            _, v_pbex = ni.eval_xc_eff(",PBE", rho_input, deriv=1, xctype="GGA")[:2]
+            rho_lda = rho_in[0]
+            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
+            e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
+            e_b88, v_b88 = ni.eval_xc_eff("B88,", rho_in, xctype="GGA")[:2]
+            e_lyp, v_lyp = ni.eval_xc_eff(",LYP", rho_in, xctype="GGA")[:2]
 
             exc_b3lyp = 0.08 * e_lda + 0.19 * e_vwn + 0.72 * e_b88 + 0.81 * e_lyp
-
-            vxc_b3lyp = np.zeros((6, 4, len(coords)))
+            vxc_b3lyp = np.zeros((self.input_level, 4, len(coords)))
             vxc_b3lyp[0, 0:1, :] = v_lda
             vxc_b3lyp[1, 0:1, :] = v_vwn
             vxc_b3lyp[2, :, :] = v_b88
             vxc_b3lyp[3, :, :] = v_lyp
-            vxc_b3lyp[4, :, :] = v_pbec
-            vxc_b3lyp[5, :, :] = v_pbex
-            return input_, exc_b3lyp * rho_input[0], vxc_b3lyp
+
+            if self.input_level > 4:
+                _, v_pbec = ni.eval_xc_eff("PBE,", rho_in, xctype="GGA")[:2]
+                vxc_b3lyp[4, :, :] = v_pbec
+            if self.input_level > 5:
+                _, v_pbex = ni.eval_xc_eff(",PBE", rho_in, xctype="GGA")[:2]
+                vxc_b3lyp[5, :, :] = v_pbex
+            if self.input_level > 6:
+                _, v_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho_in, xctype="MGGA")[:2]
+                vxc_b3lyp[6, :, :] = v_tfk
+            return input_, exc_b3lyp * rho_in[0], vxc_b3lyp
         return input_
 
     def gen_cube_rho_uks(
         self,
-        rho_input,
+        rho_in,
         ni,
         dms,
         coords=None,
@@ -321,7 +353,7 @@ class Grid(dft.gen_grid.Grids):
         ]
         make_rhob = ni._gen_rho_evaluator(self.mol, dmb, hermi, False, gridcube)[0]
 
-        input_ = np.zeros((6, len(gridcube.coords)))
+        input_ = np.zeros((self.input_level, len(gridcube.coords)))
 
         for ao, mask, ip0, ip1 in modified_block_loop(ni, self.mol, gridcube, nao, 1):
             for i in range(nset):
@@ -335,48 +367,64 @@ class Grid(dft.gen_grid.Grids):
                 exc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=0, xctype="LDA")[0]
                 exc_b88 = ni.eval_xc_eff("B88,", rho, deriv=0, xctype="GGA")[0]
                 exc_lyp = ni.eval_xc_eff(",LYP", rho, deriv=0, xctype="GGA")[0]
-                exc_pbec = ni.eval_xc_eff("PBE,", rho, deriv=0, xctype="GGA")[0]
-                exc_pbex = ni.eval_xc_eff(",PBE", rho, deriv=0, xctype="GGA")[0]
 
                 input_[0, ip0:ip1] = exc_lda * rho0
                 input_[1, ip0:ip1] = exc_vwn * rho0
                 input_[2, ip0:ip1] = exc_b88 * rho0
                 input_[3, ip0:ip1] = exc_lyp * rho0
-                input_[4, ip0:ip1] = exc_pbec * rho0
-                input_[5, ip0:ip1] = exc_pbex * rho0
+
+                if self.input_level > 4:
+                    exc_pbec = ni.eval_xc_eff("PBE,", rho, deriv=0, xctype="GGA")[0]
+                    input_[4, ip0:ip1] = exc_pbec * rho0
+                if self.input_level > 5:
+                    exc_pbex = ni.eval_xc_eff(",PBE", rho, deriv=0, xctype="GGA")[0]
+                    input_[5, ip0:ip1] = exc_pbex * rho0
+                if self.input_level > 6:
+                    exc_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho, deriv=0, xctype="GGA")[
+                        0
+                    ]
+                    input_[6, ip0:ip1] = exc_tfk * rho0
         del make_rhoa, make_rhob, nset
 
-        input_ = input_.reshape((6, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        input_ = input_.reshape(
+            (self.input_level, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+        )
         input_ = input_.transpose(1, 0, 2, 3, 4)
 
         if require_vxc:
-            rho_lda = (rho_input[0][0], rho_input[1][0])
-            rho_input_0 = rho_input[0][0] + rho_input[1][0]
+            rho_lda = (rho_in[0][0], rho_in[1][0])
+            rho_in_0 = rho_in[0][0] + rho_in[1][0]
 
-            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=1, xctype="LDA")[:2]
-            e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=1, xctype="LDA")[:2]
-            e_b88, v_b88 = ni.eval_xc_eff("B88,", rho_input, deriv=1, xctype="GGA")[:2]
-            e_lyp, v_lyp = ni.eval_xc_eff(",LYP", rho_input, deriv=1, xctype="GGA")[:2]
-            _, v_pbec = ni.eval_xc_eff("PBE,", rho_input, deriv=1, xctype="GGA")[:2]
-            _, v_pbex = ni.eval_xc_eff(",PBE", rho_input, deriv=1, xctype="GGA")[:2]
+            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
+            e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
+            e_b88, v_b88 = ni.eval_xc_eff("B88,", rho_in, xctype="GGA")[:2]
+            e_lyp, v_lyp = ni.eval_xc_eff(",LYP", rho_in, xctype="GGA")[:2]
 
             exc_b3lyp = 0.08 * e_lda + 0.19 * e_vwn + 0.72 * e_b88 + 0.81 * e_lyp
 
-            vxc_b3lyp = np.zeros((6, 2, 4, len(coords)))
+            vxc_b3lyp = np.zeros((self.input_level, 2, 4, len(coords)))
             vxc_b3lyp[0, :, 0:1, :] = v_lda
             vxc_b3lyp[1, :, 0:1, :] = v_vwn
             vxc_b3lyp[2, :, :, :] = v_b88
             vxc_b3lyp[3, :, :, :] = v_lyp
-            vxc_b3lyp[4, :, :, :] = v_pbec
-            vxc_b3lyp[5, :, :, :] = v_pbex
 
-            return input_, exc_b3lyp * rho_input_0, vxc_b3lyp
+            if self.input_level > 4:
+                v_pbec = ni.eval_xc_eff("PBE,", rho_in, xctype="GGA")[1]
+                vxc_b3lyp[4, :, :, :] = v_pbec
+            if self.input_level > 5:
+                v_pbex = ni.eval_xc_eff(",PBE", rho_in, xctype="GGA")[1]
+                vxc_b3lyp[5, :, :, :] = v_pbex
+            if self.input_level > 6:
+                v_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho_in, xctype="GGA")[1]
+                vxc_b3lyp[6, :, :, :] = v_tfk
+
+            return input_, exc_b3lyp * rho_in_0, vxc_b3lyp
 
         return input_
 
     def gen_rho_rks(
         self,
-        rho_input,
+        rho_in,
         ni,
         hermi=1,
         require_vxc=False,
@@ -384,13 +432,13 @@ class Grid(dft.gen_grid.Grids):
         """
         Generate the cube density for the given molecule.
         """
-        rho_lda = rho_input[0]
-        rho0 = rho_input[0]
+        rho_lda = rho_in[0]
+        rho0 = rho_in[0]
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=1, xctype="LDA")[:2]
         exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=1, xctype="LDA")[:2]
-        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho_input, deriv=1, xctype="GGA")[:2]
-        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho_input, deriv=1, xctype="GGA")[:2]
+        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho_in, deriv=1, xctype="GGA")[:2]
+        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho_in, deriv=1, xctype="GGA")[:2]
 
         input_ = np.array(
             [exc_lda * rho0, exc_vwn * rho0, exc_b88 * rho0, exc_lyp * rho0]
@@ -417,7 +465,7 @@ class Grid(dft.gen_grid.Grids):
 
     def gen_rho_uks(
         self,
-        rho_input,
+        rho_in,
         ni,
         hermi=1,
         require_vxc=False,
@@ -425,13 +473,13 @@ class Grid(dft.gen_grid.Grids):
         """
         Generate the cube density for the given molecule.
         """
-        rho_lda = (rho_input[0][0], rho_input[1][0])
-        rho0 = rho_input[0][0] + rho_input[1][0]
+        rho_lda = (rho_in[0][0], rho_in[1][0])
+        rho0 = rho_in[0][0] + rho_in[1][0]
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=1, xctype="LDA")[:2]
         exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=1, xctype="LDA")[:2]
-        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho_input, deriv=1, xctype="GGA")[:2]
-        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho_input, deriv=1, xctype="GGA")[:2]
+        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho_in, deriv=1, xctype="GGA")[:2]
+        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho_in, deriv=1, xctype="GGA")[:2]
 
         input_ = np.array(
             [exc_lda * rho0, exc_vwn * rho0, exc_b88 * rho0, exc_lyp * rho0]

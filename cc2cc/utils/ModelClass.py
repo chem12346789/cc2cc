@@ -87,6 +87,7 @@ class ModelClass:
         self.device = next(self.model.parameters()).device
         self.dtype = next(self.model.parameters()).dtype
         self.model_type = self.model.model_type
+        self.input_level = self.model.input_level
         self.print(f"Model type: {self.model_type}")
 
         if self.args.save_dir is not None and self.args.save_dir != "":
@@ -214,21 +215,23 @@ class ModelClass:
         Initialize the database.
         """
         if self.model_type == "center_4":
-            process_input = lambda x: x[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            process_input = lambda x: x[
+                : self.input_level, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE
+            ]
         elif self.model_type == "cube":
-            process_input = lambda x: x
+            process_input = lambda x: x[: self.input_level, :, :, :, :]
         elif self.model_type == "cube9":
             process_input = lambda x: np.stack(
                 [
-                    x[:, :, 0, 0, 0],
-                    x[:, :, 0, 0, 2],
-                    x[:, :, 0, 2, 0],
-                    x[:, :, 0, 2, 2],
-                    x[:, :, 1, 1, 1],
-                    x[:, :, 2, 0, 0],
-                    x[:, :, 2, 0, 2],
-                    x[:, :, 2, 2, 0],
-                    x[:, :, 2, 2, 2],
+                    x[: self.input_level, :, 0, 0, 0],
+                    x[: self.input_level, :, 0, 0, 2],
+                    x[: self.input_level, :, 0, 2, 0],
+                    x[: self.input_level, :, 0, 2, 2],
+                    x[: self.input_level, :, 1, 1, 1],
+                    x[: self.input_level, :, 2, 0, 0],
+                    x[: self.input_level, :, 2, 0, 2],
+                    x[: self.input_level, :, 2, 2, 0],
+                    x[: self.input_level, :, 2, 2, 2],
                 ],
                 axis=-1,
             )
