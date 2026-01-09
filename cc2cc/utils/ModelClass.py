@@ -216,22 +216,22 @@ class ModelClass:
         """
         if self.model_type == "center_4":
             process_input = lambda x: x[
-                : self.input_level, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE
+                :, : self.input_level, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE
             ]
         elif self.model_type == "cube":
-            process_input = lambda x: x[: self.input_level, :, :, :, :]
+            process_input = lambda x: x[:, : self.input_level, :, :, :]
         elif self.model_type == "cube9":
             process_input = lambda x: np.stack(
                 [
-                    x[: self.input_level, :, 0, 0, 0],
-                    x[: self.input_level, :, 0, 0, 2],
-                    x[: self.input_level, :, 0, 2, 0],
-                    x[: self.input_level, :, 0, 2, 2],
-                    x[: self.input_level, :, 1, 1, 1],
-                    x[: self.input_level, :, 2, 0, 0],
-                    x[: self.input_level, :, 2, 0, 2],
-                    x[: self.input_level, :, 2, 2, 0],
-                    x[: self.input_level, :, 2, 2, 2],
+                    x[:, : self.input_level, 0, 0, 0],
+                    x[:, : self.input_level, 0, 0, 2],
+                    x[:, : self.input_level, 0, 2, 0],
+                    x[:, : self.input_level, 0, 2, 2],
+                    x[:, : self.input_level, 1, 1, 1],
+                    x[:, : self.input_level, 2, 0, 0],
+                    x[:, : self.input_level, 2, 0, 2],
+                    x[:, : self.input_level, 2, 2, 0],
+                    x[:, : self.input_level, 2, 2, 2],
                 ],
                 axis=-1,
             )

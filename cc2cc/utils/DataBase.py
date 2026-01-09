@@ -329,15 +329,15 @@ class DataBase:
             # output_mat = data["tol_delta_grids"]
             output_mat = (
                 data["exc_cc_grids"]
-                # + data["hatree_cc_grids"]
-                # + data["kin_cc_grids"]
-                # + data["nuc_cc_grids"]
+                + data["hatree_cc_grids"]
+                + data["kin_cc_grids"]
+                + data["nuc_cc_grids"]
             ) - (
                 data["exc_dft_grids"]
                 + data["exc_k_dft_grids"]
-                # + data["hatree_dft_grids"]
-                # + data["kin_dft_grids"]
-                # + data["nuc_dft_grids"]
+                + data["hatree_dft_grids"]
+                + data["kin_dft_grids"]
+                + data["nuc_dft_grids"]
             )
             grad2force = data["grad2force"]
             grad_cc_train = data["grad_cc_train"]
@@ -345,6 +345,13 @@ class DataBase:
                 energy_target - np.sum(output_mat * weight_mat)
             )
             self.print(f"Error energy: {error_energy:>9.6f} kcal/mol")
+
+            if self.args.if_relative_weight:
+                epsilon = 1e-10
+                if self.loss_ene(energy_target) < epsilon:
+                    loss_multiplier_abs = 0
+                else:
+                    loss_multiplier_abs /= self.loss_ene(energy_target)
 
             data_dict["output"] = output_mat.reshape((-1, 1))
             data_dict["grad2force"] = grad2force

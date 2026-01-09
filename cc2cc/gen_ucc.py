@@ -1,6 +1,6 @@
 # pylint: disable=W0212
 import gc
-from itertools import product
+from math import erf
 
 import numpy as np
 import opt_einsum as oe
@@ -53,6 +53,7 @@ def get_dft_energy(
     )
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
     ao_value = ao_value[:4]
+    ao_1 = ao_value[1:4]
 
     rho_dft = [
         pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft[0], xctype="GGA"),
@@ -304,6 +305,9 @@ def get_dft_energy(
         kin_cc_grids = np.zeros_like(exc_dft_grids)
         kin_dft_grids = np.zeros_like(exc_dft_grids)
         kin_hf_grids = np.zeros_like(exc_dft_grids)
+        kinl_cc_grids = np.zeros_like(exc_dft_grids)
+        kinl_dft_grids = np.zeros_like(exc_dft_grids)
+        kinl_hf_grids = np.zeros_like(exc_dft_grids)
         for i_spin in range(2):
             eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo[i_spin])
             eigs_v_dm1 = mf_mo_coeff[i_spin] @ eigs_v_dm1
@@ -317,6 +321,15 @@ def get_dft_energy(
                 )
                 kin_cc_grids -= part * eigs_e_dm1[i] / 2
 
+                partl = oe.contract(
+                    "xpm,m,n,xpn->p",
+                    ao_1,
+                    eigs_v_dm1[:, i],
+                    eigs_v_dm1[:, i],
+                    ao_1,
+                )
+                kinl_cc_grids += partl * eigs_e_dm1[i] / 2
+
             for i in range(mol.nelec[i_spin]):
                 part = oe.contract(
                     "pm,m,n,pn->p",
@@ -326,6 +339,15 @@ def get_dft_energy(
                     ao_2_diag,
                 )
                 kin_dft_grids -= part / 2
+
+                partl = oe.contract(
+                    "xpm,m,n,xpn->p",
+                    ao_1,
+                    dft_mo_coeff[i_spin][:, i],
+                    dft_mo_coeff[i_spin][:, i],
+                    ao_1,
+                )
+                kinl_dft_grids += partl / 2
 
             for i in range(mol.nelec[i_spin]):
                 part = oe.contract(
@@ -337,14 +359,26 @@ def get_dft_energy(
                 )
                 kin_hf_grids -= part / 2
 
+                partl = oe.contract(
+                    "xpm,m,n,xpn->p",
+                    ao_1,
+                    mf_mo_coeff[i_spin][:, i],
+                    mf_mo_coeff[i_spin][:, i],
+                    ao_1,
+                )
+                kinl_hf_grids += partl / 2
+
         # nuclear part
         nuc_cc_grids = np.zeros_like(exc_dft_grids)
         nuc_dft_grids = np.zeros_like(exc_dft_grids)
         nuc_hf_grids = np.zeros_like(exc_dft_grids)
+        nuc_cc_erf_grids = np.zeros_like(exc_dft_grids)
+        nuc_dft_erf_grids = np.zeros_like(exc_dft_grids)
+        nuc_hf_erf_grids = np.zeros_like(exc_dft_grids)
         for i, coord in enumerate(grids.coords):
             for i_atom in range(mol.natm):
                 distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
-                if distance > 1e-5:
+                if distance > 1e-8:
                     nuc_cc_grids[i] -= (
                         (rho_cc[0][0][i] + rho_cc[1][0][i])
                         * mol.atom_charges()[i_atom]
@@ -360,6 +394,46 @@ def get_dft_energy(
                         * mol.atom_charges()[i_atom]
                         / distance
                     )
+                    nuc_cc_erf_grids[i] -= (
+                        (rho_cc[0][0][i] + rho_cc[1][0][i])
+                        * mol.atom_charges()[i_atom]
+                        * erf(1e2 * distance)
+                        / distance
+                    )
+                    nuc_dft_erf_grids[i] -= (
+                        (rho_dft[0][0][i] + rho_dft[1][0][i])
+                        * mol.atom_charges()[i_atom]
+                        * erf(1e2 * distance)
+                        / distance
+                    )
+                    nuc_hf_erf_grids[i] -= (
+                        (rho_hf[0][0][i] + rho_hf[1][0][i])
+                        * mol.atom_charges()[i_atom]
+                        * erf(1e2 * distance)
+                        / distance
+                    )
+        real_nuc_cc = np.einsum(
+            "pq,pq->", mol.intor("int1e_nuc"), dm1_cc[0] + dm1_cc[1]
+        )
+        real_nuc_dft = np.einsum(
+            "pq,pq->", mol.intor("int1e_nuc"), dm1_dft[0] + dm1_dft[1]
+        )
+        real_nuc_hf = np.einsum(
+            "pq,pq->", mol.intor("int1e_nuc"), dm1_hf[0] + dm1_hf[1]
+        )
+        nuc_cc_erf_scale = real_nuc_cc / np.sum(nuc_cc_erf_grids * grids.weights)
+        nuc_cc_erf_grids *= nuc_cc_erf_scale
+        nuc_dft_erf_scale = real_nuc_dft / np.sum(nuc_dft_erf_grids * grids.weights)
+        nuc_dft_erf_grids *= nuc_dft_erf_scale
+        nuc_hf_erf_scale = real_nuc_hf / np.sum(nuc_hf_erf_grids * grids.weights)
+        nuc_hf_erf_grids *= nuc_hf_erf_scale
+        print(
+            "Nuclear scale factors (cc/dft/hf):",
+            nuc_cc_erf_scale,
+            nuc_dft_erf_scale,
+            nuc_hf_erf_scale,
+        )
+        print("Nuclear part done.\n")
 
         tol_cc_grids = exc_cc_grids + hatree_cc_grids + kin_cc_grids + nuc_cc_grids
         tol_dft_grids = (
@@ -377,16 +451,22 @@ def get_dft_energy(
                 "exc_cc_grids": exc_cc_grids,
                 "hatree_cc_grids": hatree_cc_grids,
                 "kin_cc_grids": kin_cc_grids,
+                "kinl_cc_grids": kinl_cc_grids,
                 "nuc_cc_grids": nuc_cc_grids,
+                "nuc_cc_erf_grids": nuc_cc_erf_grids,
                 "exc_dft_grids": exc_dft_grids,
                 "exc_k_dft_grids": exc_k_dft_grids,
                 "hatree_dft_grids": hatree_dft_grids,
                 "kin_dft_grids": kin_dft_grids,
+                "kinl_dft_grids": kinl_dft_grids,
                 "nuc_dft_grids": nuc_dft_grids,
+                "nuc_dft_erf_grids": nuc_dft_erf_grids,
                 "exc_k_hf_grids": exc_k_hf_grids,
                 "hatree_hf_grids": hatree_hf_grids,
                 "kin_hf_grids": kin_hf_grids,
+                "kinl_hf_grids": kinl_hf_grids,
                 "nuc_hf_grids": nuc_hf_grids,
+                "nuc_hf_erf_grids": nuc_hf_erf_grids,
                 "tol_delta_grids": tol_delta_grids,
                 "grad2force": grad2force,
             },

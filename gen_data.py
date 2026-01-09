@@ -233,69 +233,6 @@ if __name__ == "__main__":
 
             if args.if_continue:
                 if (DATA_PATH / f"data_{name}.npz").exists():
-                    data_frame = np.load(DATA_PATH / f"data_{name}.npz")
-                    if "e_dft_d3bj" in data_frame.keys():
-                        print(f"SKIP: {name} already exists.")
-                    else:
-                        grids = Grid(mol, args.grid_level, 7)
-
-                        if mol.spin == 0:
-                            mdft = pyscf.scf.RKS(mol)
-                            mdft.xc = "b3lyp"
-                            mdft.kernel()
-                            e_dft = mdft.e_tot
-                            dm1_dft = mdft.make_rdm1()
-
-                            ao_value = pyscf.dft.numint.eval_ao(
-                                mol, grids.coords, deriv=1
-                            )
-                            rho_dft = pyscf.dft.numint.eval_rho(
-                                mol, ao_value, dm1_dft, xctype="GGA"
-                            )
-                            rho_cube_dft = grids.gen_cube_rho_rks(
-                                rho_dft, mdft._numint, dm1_dft
-                            )
-
-                            mdft_d3bj = pyscf.scf.RKS(mol)
-                            mdft_d3bj.xc = "b3lyp-d3bj"
-                            mdft_d3bj.kernel(dm0=dm1_dft)
-                            e_dft_d3bj = mdft_d3bj.e_tot
-                        else:
-                            mdft = pyscf.scf.UKS(mol)
-                            mdft.xc = "b3lyp"
-                            mdft.kernel()
-                            e_dft = mdft.e_tot
-                            dm1_dft = mdft.make_rdm1()
-
-                            mdft_d3bj = pyscf.scf.UKS(mol)
-                            mdft_d3bj.xc = "b3lyp-d3bj"
-                            mdft_d3bj.kernel(dm0=dm1_dft)
-                            e_dft_d3bj = mdft_d3bj.e_tot
-
-                            ao_value = pyscf.dft.numint.eval_ao(
-                                mol, grids.coords, deriv=1
-                            )
-                            rho_dft = [
-                                pyscf.dft.numint.eval_rho(
-                                    mol, ao_value, dm1_dft[0], xctype="GGA"
-                                ),
-                                pyscf.dft.numint.eval_rho(
-                                    mol, ao_value, dm1_dft[1], xctype="GGA"
-                                ),
-                            ]
-                            rho_cube_dft = grids.gen_cube_rho_uks(
-                                rho_dft, mdft._numint, dm1_dft
-                            )
-                        print(
-                            f"DFT-D3BJ correct energy: {e_dft_d3bj - data_frame['e_dft']}",
-                            flush=True,
-                        )
-                        data_frame["rho_cube_dft"] = rho_cube_dft
-                        data_frame["e_dft"] = e_dft
-                        data_frame["e_dft_d3bj"] = e_dft_d3bj
-                        np.savez_compressed(
-                            DATA_PATH / f"data_{name}.npz", **data_frame
-                        )
                     continue
 
             grids = Grid(mol, args.grid_level, 7)
