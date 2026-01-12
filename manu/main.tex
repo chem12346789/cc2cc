@@ -296,7 +296,7 @@ We use a batch size of $4$ and train the model for $10000$ epochs.
 %
 The training process is monitored using the validation set every $50$ epochs, and the model with the lowest validation loss is selected as the final model.
 
-The training is performed on a single NVIDIA A100 GPU with 80GB memory with double precision training using PyTorch \cite{paszkePyTorchImperativeStyle2019-12-03} and the training takes around $96$ hours to complete. The version of PyTorch used is $2.8.0$, and CUDA version is $12.2$.
+The training is performed on a single NVIDIA A100 GPU with 80GB memory with double precision training using PyTorch \cite{paszkePyTorchImperativeStyle2019-12-03} and the training takes around $96$ hours to complete. The version of PyTorch used is $2.8.0$, and CUDA version is $12.2$, the version of driver is $535.129.03$.
 
 \subsection{Comparison with other machine learning functionals}
 The main difference between our method and other machine learning functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07} is that we use the energy density as the target of the neural network instead of the total energy.
