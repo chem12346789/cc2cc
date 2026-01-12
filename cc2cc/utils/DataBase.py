@@ -326,19 +326,22 @@ class DataBase:
             data_dict["grad2force"] = 0
             data_dict["grad_cc_train"] = 0
         else:
-            # output_mat = data["tol_delta_grids"]
-            output_mat = (
-                data["exc_cc_grids"]
-                + data["hatree_cc_grids"]
-                + data["kin_cc_grids"]
-                + data["nuc_cc_grids"]
-            ) - (
-                data["exc_dft_grids"]
-                + data["exc_k_dft_grids"]
-                + data["hatree_dft_grids"]
-                + data["kin_dft_grids"]
-                + data["nuc_dft_grids"]
-            )
+            if self.args.output_target == "tol_delta_grids":
+                output_mat = data["tol_delta_grids"]
+            elif self.args.output_target == "exc_cc_grids":
+                output_mat = (data["exc_cc_grids"]) - (
+                    data["exc_dft_grids"] + data["exc_k_dft_grids"]
+                )
+            elif self.args.output_target == "exc_cc_grids_normal":
+                output_mat = (data["exc_cc_grids"]) - (
+                    data["exc_dft_grids"] + data["exc_k_dft_grids"]
+                )
+                output_mat *= energy_target / np.sum(output_mat * weight_mat)
+            else:
+                raise ValueError(
+                    f"Unknown output target: {self.args.output_target}",
+                )
+
             grad2force = data["grad2force"]
             grad_cc_train = data["grad_cc_train"]
             error_energy = AU2KCALMOL * abs(

@@ -17,6 +17,7 @@ class Model(nn.Module):
         super().__init__()
 
         self.model_type = "cube"
+        self.input_level = 4
 
         self.predictor1 = Transformer(
             d_model=CUBE_SIZE**3,
@@ -100,7 +101,7 @@ class Model(nn.Module):
             dense_actv="gelu",
         )
 
-        self.mixing_weight = nn.Linear(4 * CUBE_SIZE**3, 5)
+        self.mixing_weight = nn.Linear(4 * CUBE_SIZE**3, 10)
         self.weight_softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
@@ -111,6 +112,9 @@ class Model(nn.Module):
         # do mixing x and x_center using Mixture of experts mechanism
         weight_out = self.mixing_weight(x.reshape(-1, 4 * CUBE_SIZE**3))
         weight_out = self.weight_softmax(weight_out)
+
+        x_cube_den = x.reshape(-1, 4 * CUBE_SIZE**3)
+        x_cube_den = self.densenet1(x_cube_den)
 
         x_cube1 = x.reshape(-1, 4, CUBE_SIZE**3)
         x_cube1 = self.predictor1(x_cube1)
@@ -138,10 +142,15 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
 
         mixed_output = (
-            weight_out[:, [0]] * x_cube1
-            + weight_out[:, [1]] * x_cube2
-            + weight_out[:, [2]] * x_cube3
-            + weight_out[:, [3]] * x_cube4
+            weight_out[:, [0]] * x[:, [0], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + weight_out[:, [1]] * x[:, [1], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + weight_out[:, [2]] * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            + weight_out[:, [3]] * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
             + weight_out[:, [4]] * x_center
+            + weight_out[:, [5]] * x_cube_den
+            + weight_out[:, [6]] * x_cube1
+            + weight_out[:, [7]] * x_cube2
+            + weight_out[:, [8]] * x_cube3
+            + weight_out[:, [9]] * x_cube4
         )
         return mixed_output

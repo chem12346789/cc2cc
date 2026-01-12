@@ -317,6 +317,14 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--output_target",
+        type=str,
+        default="tol_delta_grids",
+        choices=["tol_delta_grids", "exc_cc_grids", "exc_cc_grids_normal"],
+        help="Target for the output. Default is tol_delta_grids.",
+    )
+
+    parser.add_argument(
         "--loss_multiplier",
         type=float,
         default=1.0,
