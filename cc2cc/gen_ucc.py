@@ -372,9 +372,9 @@ def get_dft_energy(
         nuc_cc_grids = np.zeros_like(exc_dft_grids)
         nuc_dft_grids = np.zeros_like(exc_dft_grids)
         nuc_hf_grids = np.zeros_like(exc_dft_grids)
-        nuc_cc_erf_grids = np.zeros_like(exc_dft_grids)
-        nuc_dft_erf_grids = np.zeros_like(exc_dft_grids)
-        nuc_hf_erf_grids = np.zeros_like(exc_dft_grids)
+        nuc_erf_cc_grids = np.zeros_like(exc_dft_grids)
+        nuc_erf_dft_grids = np.zeros_like(exc_dft_grids)
+        nuc_erf_hf_grids = np.zeros_like(exc_dft_grids)
         for i, coord in enumerate(grids.coords):
             for i_atom in range(mol.natm):
                 distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
@@ -394,19 +394,19 @@ def get_dft_energy(
                         * mol.atom_charges()[i_atom]
                         / distance
                     )
-                    nuc_cc_erf_grids[i] -= (
+                    nuc_erf_cc_grids[i] -= (
                         (rho_cc[0][0][i] + rho_cc[1][0][i])
                         * mol.atom_charges()[i_atom]
                         * erf(1e2 * distance)
                         / distance
                     )
-                    nuc_dft_erf_grids[i] -= (
+                    nuc_erf_dft_grids[i] -= (
                         (rho_dft[0][0][i] + rho_dft[1][0][i])
                         * mol.atom_charges()[i_atom]
                         * erf(1e2 * distance)
                         / distance
                     )
-                    nuc_hf_erf_grids[i] -= (
+                    nuc_erf_hf_grids[i] -= (
                         (rho_hf[0][0][i] + rho_hf[1][0][i])
                         * mol.atom_charges()[i_atom]
                         * erf(1e2 * distance)
@@ -421,17 +421,17 @@ def get_dft_energy(
         real_nuc_hf = np.einsum(
             "pq,pq->", mol.intor("int1e_nuc"), dm1_hf[0] + dm1_hf[1]
         )
-        nuc_cc_erf_scale = real_nuc_cc / np.sum(nuc_cc_erf_grids * grids.weights)
-        nuc_cc_erf_grids *= nuc_cc_erf_scale
-        nuc_dft_erf_scale = real_nuc_dft / np.sum(nuc_dft_erf_grids * grids.weights)
-        nuc_dft_erf_grids *= nuc_dft_erf_scale
-        nuc_hf_erf_scale = real_nuc_hf / np.sum(nuc_hf_erf_grids * grids.weights)
-        nuc_hf_erf_grids *= nuc_hf_erf_scale
+        nuc_erf_cc_scale = real_nuc_cc / np.sum(nuc_erf_cc_grids * grids.weights)
+        nuc_erf_cc_grids *= nuc_erf_cc_scale
+        nuc_erf_dft_scale = real_nuc_dft / np.sum(nuc_erf_dft_grids * grids.weights)
+        nuc_erf_dft_grids *= nuc_erf_dft_scale
+        nuc_erf_hf_scale = real_nuc_hf / np.sum(nuc_erf_hf_grids * grids.weights)
+        nuc_erf_hf_grids *= nuc_erf_hf_scale
         print(
             "Nuclear scale factors (cc/dft/hf):",
-            nuc_cc_erf_scale,
-            nuc_dft_erf_scale,
-            nuc_hf_erf_scale,
+            nuc_erf_cc_scale,
+            nuc_erf_dft_scale,
+            nuc_erf_hf_scale,
         )
         print("Nuclear part done.\n")
 
@@ -453,20 +453,20 @@ def get_dft_energy(
                 "kin_cc_grids": kin_cc_grids,
                 "kinl_cc_grids": kinl_cc_grids,
                 "nuc_cc_grids": nuc_cc_grids,
-                "nuc_cc_erf_grids": nuc_cc_erf_grids,
+                "nuc_erf_cc_grids": nuc_erf_cc_grids,
                 "exc_dft_grids": exc_dft_grids,
                 "exc_k_dft_grids": exc_k_dft_grids,
                 "hatree_dft_grids": hatree_dft_grids,
                 "kin_dft_grids": kin_dft_grids,
                 "kinl_dft_grids": kinl_dft_grids,
                 "nuc_dft_grids": nuc_dft_grids,
-                "nuc_dft_erf_grids": nuc_dft_erf_grids,
+                "nuc_erf_dft_grids": nuc_erf_dft_grids,
                 "exc_k_hf_grids": exc_k_hf_grids,
                 "hatree_hf_grids": hatree_hf_grids,
                 "kin_hf_grids": kin_hf_grids,
                 "kinl_hf_grids": kinl_hf_grids,
                 "nuc_hf_grids": nuc_hf_grids,
-                "nuc_hf_erf_grids": nuc_hf_erf_grids,
+                "nuc_erf_hf_grids": nuc_erf_hf_grids,
                 "tol_delta_grids": tol_delta_grids,
                 "grad2force": grad2force,
             },
@@ -601,6 +601,29 @@ def ucc(mol, grids, name, args, evaluate=False):
             * grids.weights
         ) - (e_cc - e_hf)
         print(f"Error HF part: {AU2KCALMOL * error_hf}")
+
+        error_exc_lerf = (
+            np.sum(
+                (
+                    (
+                        data_dict["exc_cc_grids"]
+                        + data_dict["hatree_cc_grids"]
+                        + data_dict["kinl_cc_grids"]
+                        + data_dict["nuc_erf_cc_grids"]
+                    )
+                    - (
+                        data_dict["exc_dft_grids"]
+                        + data_dict["exc_k_dft_grids"]
+                        + data_dict["hatree_dft_grids"]
+                        + data_dict["kinl_dft_grids"]
+                        + data_dict["nuc_erf_dft_grids"]
+                    )
+                )
+                * grids.weights
+            )
+            - energy_train
+        )
+        print(f"Error exc_lerf part: {AU2KCALMOL * error_exc_lerf}")
 
     if "grad2force" in data_dict and grad_cc is not None:
         # HF gradient
