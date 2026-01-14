@@ -147,6 +147,8 @@ if __name__ == "__main__":
         name_mol_list = train_str_list[args.mp_number :: args.mp_total]
         evaluate = False
 
+    name_mol_list = ["W4_11-clo"]
+
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
 
