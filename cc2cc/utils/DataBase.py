@@ -303,7 +303,7 @@ class DataBase:
                 loss_multiplier_atomic /= self.loss_ene(ae_target)
 
             self.print(
-                f"Relative loss multipliers: {loss_multiplier:>6.3f}, {loss_multiplier_abs:>6.3f}, {loss_multiplier_grad:>6.3f}, {loss_multiplier_atomic:>6.3f}",
+                f"Adjusted loss_multiplier: {loss_multiplier:>6.3f}, loss_multiplier_grad {loss_multiplier_grad:>6.3f}, loss_multiplier_atomic {loss_multiplier_atomic:>6.3f}",
             )
 
         data_dict = {
@@ -349,12 +349,18 @@ class DataBase:
             )
             self.print(f"Error energy: {error_energy:>9.6f} kcal/mol")
 
-            if self.args.if_relative_weight:
-                epsilon = 1e-10
-                if self.loss_ene(energy_target) < epsilon:
-                    loss_multiplier_abs = 0
-                else:
-                    loss_multiplier_abs /= self.loss_ene(energy_target)
+            # if self.args.if_relative_weight:
+            #     epsilon = 1e-10
+            #     if self.loss_ene(energy_target) < epsilon:
+            #         loss_multiplier_abs = 0
+            #     else:
+            #         loss_multiplier_abs /= self.loss_ene(
+            #             np.abs(output_mat * weight_mat)
+            #         )
+            #     self.print(
+            #         f"Adjusted loss_multiplier_abs: {loss_multiplier_abs:>6.3f}",
+            #     )
+            #     data_dict["loss_multiplier_abs"] = loss_multiplier_abs
 
             data_dict["output"] = output_mat.reshape((-1, 1))
             data_dict["grad2force"] = grad2force
