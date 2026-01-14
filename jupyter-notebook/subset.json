@@ -99,7 +99,6 @@
             "BSR36",
             "CDIE20",
             "ISO34",
-            "ISOL24",
             "C60ISO",
             "PArel"
         ],
@@ -196,7 +195,6 @@
             "IDISP",
             "ICONF",
             "ACONF",
-            "Amino20x4",
             "PCONF21",
             "MCONF",
             "SCONF",
