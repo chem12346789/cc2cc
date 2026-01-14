@@ -1,6 +1,7 @@
 import sys
 from itertools import product
 import os
+from skala.pyscf import SkalaKS
 
 os.environ["PYSCF_MAX_MEMORY"] = "25000"
 os.environ["OMP_NUM_THREADS"] = "64"
