@@ -99,6 +99,7 @@
             "BSR36",
             "CDIE20",
             "ISO34",
+            "ISOL24",
             "C60ISO",
             "PArel"
         ],
@@ -165,7 +166,6 @@
             "BSR36",
             "CDIE20",
             "ISO34",
-            "ISOL24",
             "PArel"
         ],
         "sub3": [
@@ -195,6 +195,7 @@
             "IDISP",
             "ICONF",
             "ACONF",
+            "Amino20x4",
             "PCONF21",
             "MCONF",
             "SCONF",

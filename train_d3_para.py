@@ -426,7 +426,7 @@ for damping, dft_type in product(["bj"], dft_type_list):
         data_dft_disp.append(energy.item() / AU2KCALMOL)
 
     data[f"modified_{"ai" if dft_type == "scf" else dft_type}_d3{damping}"] = (
-        data_dft_disp
+        np.array(data_dft_disp) + data[f"{dft_type}_ene"].to_numpy()
     )
 
 data.to_csv(DATA_PATH, index=False)
