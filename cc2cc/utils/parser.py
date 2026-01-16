@@ -320,7 +320,13 @@ def add_args(parser: argparse.ArgumentParser):
         "--output_target",
         type=str,
         default="tol_delta_grids",
-        choices=["tol_delta_grids", "exc_cc_grids", "exc_cc_grids_normal"],
+        choices=[
+            "tol_delta_grids",
+            "tol_delta_grids_l",
+            "tol_delta_grids_l_erf",
+            "exc_cc_grids",
+            "exc_cc_grids_normal",
+        ],
         help="Target for the output. Default is tol_delta_grids.",
     )
 

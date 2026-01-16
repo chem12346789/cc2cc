@@ -302,10 +302,6 @@ class DataBase:
             else:
                 loss_multiplier_atomic /= self.loss_ene(ae_target)
 
-            self.print(
-                f"Adjusted loss_multiplier: {loss_multiplier:>6.3f}, loss_multiplier_grad {loss_multiplier_grad:>6.3f}, loss_multiplier_atomic {loss_multiplier_atomic:>6.3f}",
-            )
-
         data_dict = {
             "input": self.process_input(input_mat),
             "weight": weight_mat.reshape((-1, 1)),
@@ -328,6 +324,32 @@ class DataBase:
         else:
             if self.args.output_target == "tol_delta_grids":
                 output_mat = data["tol_delta_grids"]
+            elif self.args.output_target == "tol_delta_grids_l":
+                output_mat = (
+                    data["exc_cc_grids"]
+                    + data["hatree_cc_grids"]
+                    + data["kinl_cc_grids"]
+                    + data["nuc_cc_grids"]
+                ) - (
+                    data["exc_dft_grids"]
+                    + data["exc_k_dft_grids"]
+                    + data["hatree_dft_grids"]
+                    + data["kinl_dft_grids"]
+                    + data["nuc_dft_grids"]
+                )
+            elif self.args.output_target == "tol_delta_grids_l_erf":
+                output_mat = (
+                    data["exc_cc_grids"]
+                    + data["hatree_cc_grids"]
+                    + data["kinl_cc_grids"]
+                    + data["nuc_erf_cc_grids"]
+                ) - (
+                    data["exc_dft_grids"]
+                    + data["exc_k_dft_grids"]
+                    + data["hatree_dft_grids"]
+                    + data["kinl_dft_grids"]
+                    + data["nuc_erf_dft_grids"]
+                )
             elif self.args.output_target == "exc_cc_grids":
                 output_mat = (data["exc_cc_grids"]) - (
                     data["exc_dft_grids"] + data["exc_k_dft_grids"]
@@ -365,6 +387,10 @@ class DataBase:
             data_dict["output"] = output_mat.reshape((-1, 1))
             data_dict["grad2force"] = grad2force
             data_dict["grad_cc_train"] = grad_cc_train
+
+        self.print(
+            f"Adjusted loss_multiplier: {loss_multiplier:>6.3f}, loss_multiplier_grad {loss_multiplier_grad:>6.3f}, loss_multiplier_atomic {loss_multiplier_atomic:>6.3f}",
+        )
 
         for key in self.array_key:
             data_dict[key] = torch.tensor(
