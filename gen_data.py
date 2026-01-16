@@ -147,8 +147,6 @@ if __name__ == "__main__":
         name_mol_list = train_str_list[args.mp_number :: args.mp_total]
         evaluate = False
 
-    # name_mol_list = ["W4_11-clo"]
-
     error_molecule = []
     print(f"Name Molecule List: {name_mol_list}")
 
@@ -236,6 +234,15 @@ if __name__ == "__main__":
             if args.if_continue:
                 if (DATA_PATH / f"data_{name}.npz").exists():
                     continue
+
+            if name_mol in [
+                "W4_11-clo",
+                "W4_11-sif",
+                "W4_11-s2",
+                "W4_11-so",
+            ]:
+                # these molecules experience memory issue in rdm calculation
+                raise RuntimeError("Skip due to memory issue in rdm calculation.")
 
             grids = Grid(mol, args.grid_level, 7)
             if mol.spin == 0:
