@@ -8,6 +8,8 @@ import torch
 from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
 from cc2cc.utils.model.model_utils import Transformer, DenseNet
 
+ESP = 1e-8
+
 
 class Model(nn.Module):
     """
@@ -64,7 +66,7 @@ class Model(nn.Module):
         )
         x_norm = torch.einsum(
             "x,x...->x...",
-            1 / (x_norm_factor + 1e-14),
+            1 / (x_norm_factor + ESP),
             x,
         )
 
@@ -85,7 +87,7 @@ class Model(nn.Module):
         mixed_output = weight_out[:, [0]] * x_cube + weight_out[:, [1]] * x_center
         mixed_output = torch.einsum(
             "x,x...->x...",
-            (x_norm_factor + 1e-14),
+            (x_norm_factor + ESP),
             mixed_output,
         )
         return mixed_output * x_norm_factor

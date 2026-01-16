@@ -308,6 +308,12 @@ def add_args(parser: argparse.ArgumentParser):
         default=False,
         help="Whether to use relative weight for the loss function. Default is False.",
     )
+    parser.add_argument(
+        "--if_relative_weight_abs",
+        type=str2bool,
+        default=False,
+        help="Whether to use relative weight for the absolute loss function. Default is False.",
+    )
 
     parser.add_argument(
         "--atomic_weighting",
