@@ -241,10 +241,7 @@ The energy density at the grid point $\mathbf{r}_{i}$, denoted as $e(\brm{r}_{i}
 % 
 \begin{align}
 	e(\brm{r}_{i})
-	= & {\rm{NN}}\big( \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w \big) \tilde{\bm{e}}_{\rm{B3LYP}}(\brm{r}_{i}) \nl
-	= & {\rm{NN}}\big( \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w \big)  \big( 0.08 e_{\rm{LDA}}(\brm{r}_{i}) \nl
-	  & + 0.19 e_{\rm{VWN3}}(\brm{r}_{i}) + 0.72 e_{\rm{B88}}(\brm{r}_{i}) \nl
-	  & + 0.81 e_{\rm{LYP}}(\brm{r}_{i}) \big),
+	= & {\rm{NN}}\big( \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w \big),
 \end{align}
 % 
 where ${\rm{NN}}(\tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w)$ is the output of neural network with the parameters $\w$ and input $\tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i})$, $\tilde{\bm{e}}_{\rm{B3LYP}}(\brm{r}_{i})$ is the energy density calculated by the original B3LYP functional \cite{perdewAtomsMoleculesSolids1992-09-15}.
@@ -258,24 +255,24 @@ The dataset we use to train the neural network is listed in the Appendix.
 %
 We use 128 molecules which consistent of less than 3 heavy atoms as the training set and 115 molecules contain 4-5 heavy atoms as the validation set.
 % 
-In this article, we use the CCSD(T)/Def2-QZVP (except the anions) and CCSD(T)/Ma-Def2-QZVP (the anions) \cite{bartlettCoupledclusterTheoryQuantum2007-02-22,weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} to calculate the electron density and the energy density of the molecules.
+In this article, we use the CCSD(T)/Def2-QZVPPD \cite{bartlettCoupledclusterTheoryQuantum2007-02-22,weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} to calculate the electron density and the energy density of the molecules.
 %
 The electron density will be used as the calculation of the input of the neural network and the energy density will be used as the target of the neural network.
 
 The loss function is defined as
-\begin{align}
-	\label{eq:loss}
-	L_{e} =
-	 & \lambda_{\rm{RE}} N_{\rm{atom}} \Big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \Big)^2 \nl
-	 & + \lambda_{\rm{ABS}} N_{\rm{atom}} \Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2 \nl
-	 & + \lambda_{\rm{AE}} N_{\rm{atom}} \Big(\bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2 .
-\end{align}
+% \begin{align}
+% 	\label{eq:loss}
+% 	L_{e} =
+% 	 & \lambda_{\rm{RE}} N_{\rm{atom}} \Big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \Big)^2 \nl
+% 	 & + \lambda_{\rm{ABS}} N_{\rm{atom}} \Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2 \nl
+% 	 & + \lambda_{\rm{AE}} N_{\rm{atom}} \Big(\bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2 .
+% \end{align}
 \begin{align}
 	\label{eq:loss_self_scaled}
 	L_{e} =
 	 & N_{\rm{atom}} \frac{\Big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) \big| \Big)^{2}} \nl
-	 & + \lambda_{\rm{ABS}} N_{\rm{atom}} \frac{\Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) \big| \Big)^{2}} \nl
-	 & + N_{\rm{atom}} \frac{\Big(\bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{E}^{\rm{AE}}(\brm{r}_{i}) \big| \Big)^{2}} .
+	 & + N_{\rm{atom}} \frac{\Big(\bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{E}^{\rm{AE}}(\brm{r}_{i}) \big| \Big)^{2}} \nl
+	 & + \lambda_{\rm{ABS}} N_{\rm{atom}} \frac{\Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) \big| \Big)^{2}} .
 \end{align}
 where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, respectively.
 %
@@ -346,7 +343,7 @@ This lead to $136$ molecules in the training set and $115$ molecules in the vali
 % % TODO: ablation study on the dataset size.
 % To improve training efficiency and balance the dataset across different atom species, we augment the training set by adding 9 additional copies of dataset A.
 
-In this article, we use the electron density and energy density from CCSD(T)/Def2-QZVP (except the anions) and CCSD(T)/Ma-Def2-QZVP (the anions) \cite{bartlettCoupledclusterTheoryQuantum2007-02-22,weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} as the input and target of the molecules.
+In this article, we use the electron density and energy density from CCSD(T)/Def2-QZVPPD (except the anions) and CCSD(T)/Ma-Def2-QZVPPD (the anions) \cite{bartlettCoupledclusterTheoryQuantum2007-02-22,weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} as the input and target of the molecules.
 %
 This leads to a significant label error, which is estimated to be 2.33 kcal/mol as the mean absolute error (MAE) for the W4-11 dataset.
 
