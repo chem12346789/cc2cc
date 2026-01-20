@@ -513,7 +513,7 @@ def ucc(mol, grids, name, args, evaluate=False):
     # UCCSD calculation
     mycc = pyscf.cc.UCCSD(mf)
     mycc.verbose = 9
-    mycc.direct = False
+    mycc.direct = True
     _, t1, t2 = mycc.kernel()
     eris = mycc.ao2mo()
     e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
