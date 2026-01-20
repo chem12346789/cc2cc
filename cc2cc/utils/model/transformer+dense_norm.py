@@ -62,7 +62,6 @@ class Model(nn.Module):
         x_norm_factor = torch.sum(
             torch.abs(x[:, :, :, :, :]),
             dim=(1, 2, 3, 4),
-            keepdim=True,
         )
         x_norm = torch.einsum(
             "x,x...->x...",
@@ -85,9 +84,8 @@ class Model(nn.Module):
         x_center = self.densenet_center(x_center)
 
         mixed_output = weight_out[:, [0]] * x_cube + weight_out[:, [1]] * x_center
-        mixed_output = torch.einsum(
+        return torch.einsum(
             "x,x...->x...",
             (x_norm_factor + ESP),
             mixed_output,
         )
-        return mixed_output * x_norm_factor

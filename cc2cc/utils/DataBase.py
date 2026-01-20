@@ -358,7 +358,9 @@ class DataBase:
                 output_mat = (data["exc_cc_grids"]) - (
                     data["exc_dft_grids"] + data["exc_k_dft_grids"]
                 )
-                output_mat *= energy_target / np.sum(output_mat * weight_mat)
+                corrected_energy = energy_target / np.sum(output_mat * weight_mat)
+                print(f"Corrected energy: {corrected_energy}")
+                output_mat *= corrected_energy
             else:
                 raise ValueError(
                     f"Unknown output target: {self.args.output_target}",
