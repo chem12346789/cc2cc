@@ -215,26 +215,33 @@ class ModelClass:
         Initialize the database.
         """
         if self.model_type == "center_4":
-            process_input = lambda x: x[
-                :, : self.input_level, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE
-            ]
+
+            def process_input(x):
+                return x[:, : self.input_level, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+
         elif self.model_type == "cube":
-            process_input = lambda x: x[:, : self.input_level, :, :, :]
+
+            def process_input(x):
+                return x[:, : self.input_level, :, :, :]
+
         elif self.model_type == "cube9":
-            process_input = lambda x: np.stack(
-                [
-                    x[:, : self.input_level, 0, 0, 0],
-                    x[:, : self.input_level, 0, 0, 2],
-                    x[:, : self.input_level, 0, 2, 0],
-                    x[:, : self.input_level, 0, 2, 2],
-                    x[:, : self.input_level, 1, 1, 1],
-                    x[:, : self.input_level, 2, 0, 0],
-                    x[:, : self.input_level, 2, 0, 2],
-                    x[:, : self.input_level, 2, 2, 0],
-                    x[:, : self.input_level, 2, 2, 2],
-                ],
-                axis=-1,
-            )
+
+            def process_input(x):
+                return np.stack(
+                    [
+                        x[:, : self.input_level, 0, 0, 0],
+                        x[:, : self.input_level, 0, 0, 2],
+                        x[:, : self.input_level, 0, 2, 0],
+                        x[:, : self.input_level, 0, 2, 2],
+                        x[:, : self.input_level, 1, 1, 1],
+                        x[:, : self.input_level, 2, 0, 0],
+                        x[:, : self.input_level, 2, 0, 2],
+                        x[:, : self.input_level, 2, 2, 0],
+                        x[:, : self.input_level, 2, 2, 2],
+                    ],
+                    axis=-1,
+                )
+
         else:
             raise ValueError(f"Unknown model type: {self.model_type}")
 
