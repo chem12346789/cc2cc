@@ -323,7 +323,19 @@ class Collect_info:
                 )
         wtmad_2_scf_ene_summary = wtmad_2_subset["scf_ene"].loc["summary"]
 
-        for name_set in list(self.full_subset_dict.keys()) + ["summary"]:
+        for name_set in list(self.full_subset_dict.keys()):
+            if (
+                wtmad_1_subset.loc[name_set, "Processed"].split("/")[0].strip()
+                == wtmad_1_subset.loc[name_set, "Processed"].split("/")[1].strip()
+            ):
+                wtmad_1_subset.loc[name_set, "Processed"] = "DONE"
+            if (
+                wtmad_2_subset.loc[name_set, "Processed"].split("/")[0].strip()
+                == wtmad_2_subset.loc[name_set, "Processed"].split("/")[1].strip()
+            ):
+                wtmad_2_subset.loc[name_set, "Processed"] = "DONE"
+
+        for name_set in ["summary"]:
             if (
                 wtmad_1_subset.loc[name_set, "Processed"].split("/")[0].strip()
                 == wtmad_1_subset.loc[name_set, "Processed"].split("/")[1].strip()
@@ -335,6 +347,7 @@ class Collect_info:
                 == wtmad_2_subset.loc[name_set, "Processed"].split("/")[1].strip()
             ):
                 wtmad_2_subset.loc[name_set, "Processed"] = "DONE"
+                self.if_done = True
 
         print(
             f"{wtmad_2_scf_ene_summary:6.2f}"
@@ -451,3 +464,5 @@ if __name__ == "__main__":
         time.sleep(
             parse_time(args.frequency)
         )  # Sleep for the specified duration before checking again
+
+    print("All data processed. Exiting.")
