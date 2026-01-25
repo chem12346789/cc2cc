@@ -240,10 +240,13 @@ if __name__ == "__main__":
                 "W4_11-sif",
                 "W4_11-s2",
                 "W4_11-so",
-                "W4_11-ch2nh2",
-                "W4_11-hcnh",
                 "W4_11-t-hcoh",
                 "W4_11-nh2cl",
+                "W4_11-ch3nh",
+                "W4_11-ch2nh2",
+                "W4_11-ch3nh",
+                "W4_11-hcnh",
+                "W4_11-b2h6",
             ]:
                 # these molecules experience memory issue in rdm calculation
                 raise RuntimeError("Skip due to memory issue in rdm calculation.")
