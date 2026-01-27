@@ -158,6 +158,9 @@ parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--seed", type=int, default=42, help="Random seed")
 parser.add_argument("--dataset", type=str, default="gmtkn-def2", help="Dataset name")
 parser.add_argument("--basis", type=str, default="def2-QZVPP", help="Basis set")
+parser.add_argument(
+    "--damping", type=str, choices=["bj", "zero"], default="bj", help="Damping type"
+)
 
 args = parser.parse_args()
 DATA_PATH = f"validate_hkqai_done/ccdft_{args.basis}_{args.load}_gmtkn-def2.csv"
@@ -202,7 +205,7 @@ if args.load == "":
     dft_type_list = ["b3lyp"]
 else:
     dft_type_list = ["scf"]
-for damping, dft_type in product(["bj"], dft_type_list):
+for damping, dft_type in product([args.damping], dft_type_list):
     data_name_list = (data["name"].str.split("_def2").str[0]).to_numpy()
     data_dft_ene = data[f"{dft_type}_ene"].to_numpy() * AU2KCALMOL
 
@@ -211,12 +214,13 @@ for damping, dft_type in product(["bj"], dft_type_list):
     weight_batch_list = {}
     mean_absolute_deviation = []
 
+    load_para_disp = {}
     if load_para is not None:
-        load_para_disp = load_para[
-            f"{"ai" if dft_type == "scf" else dft_type}_d3{damping}"
-        ]
-    else:
-        load_para_disp = {}
+        if f'{"ai" if dft_type == "scf" else dft_type}_d3{damping}' in load_para:
+            load_para_disp = load_para[
+                f"{"ai" if dft_type == "scf" else dft_type}_d3{damping}"
+            ]
+
     model = Model(device=DEVICE, damping=damping, **load_para_disp)
     model.compile(mode="max-autotune-no-cudagraphs")
     for name_mol in data_name_list:
@@ -251,11 +255,7 @@ for damping, dft_type in product(["bj"], dft_type_list):
             stoichiometry_list = i_reaction["stoichiometry"]
 
             for i in range(len(systems_list)):
-                mole_name = (
-                    f"{systems_list[i]}"
-                    if i_subset == "BH76RC"
-                    else f"{i_subset}-{systems_list[i]}"
-                )
+                mole_name = f"{i_subset_name}-{systems_list[i]}"
                 stoichiometry = int(stoichiometry_list[i])
 
                 if mole_name in json_data:
@@ -286,10 +286,7 @@ for damping, dft_type in product(["bj"], dft_type_list):
             weight_batch[i_reaction_name] = i_reaction["reference"]
             energy_batch_target[i_subset][i_reaction_name] = i_reaction["reference"]
             for i in range(len(systems_list)):
-                if i_subset == "BH76RC":
-                    mole_name = f"{systems_list[i]}"
-                else:
-                    mole_name = f"{i_subset}-{systems_list[i]}"
+                mole_name = f"{i_subset_name}-{systems_list[i]}"
                 stoichiometry = int(stoichiometry_list[i])
 
                 if mole_name in json_data:
@@ -332,6 +329,7 @@ for damping, dft_type in product(["bj"], dft_type_list):
         loss = 0.0
         optimizer.zero_grad()
         for i_subset in batch_subset:
+            i_subset_name = "BH76" if i_subset == "BH76RC" else i_subset
             energy = model(input_batch[i_subset])
 
             reaction_dict = json_data[f"reaction-{i_subset}"]
@@ -345,11 +343,7 @@ for damping, dft_type in product(["bj"], dft_type_list):
                 stoichiometry_list = i_reaction["stoichiometry"]
 
                 for i in range(len(systems_list)):
-                    mole_name = (
-                        f"{systems_list[i]}"
-                        if i_subset == "BH76RC"
-                        else f"{i_subset}-{systems_list[i]}"
-                    )
+                    mole_name = f"{i_subset_name}-{systems_list[i]}"
                     stoichiometry = int(stoichiometry_list[i])
 
                     if mole_name in json_data:
