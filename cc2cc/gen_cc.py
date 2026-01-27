@@ -8,16 +8,21 @@ import opt_einsum as oe
 import torch
 
 import pyscf
+from pyscf import lib
+
 from pyscf.cc import ccsd_t_lambda
 from pyscf.cc import ccsd_t
 from pyscf.cc import ccsd_rdm
-from pyscf.cc.ccsd_t_rdm import _gamma1_intermediates
+
+# from pyscf.cc.ccsd_t_rdm import _gamma1_intermediates
 from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
 from pyscf.grad import ccsd_t as ccsd_t_grad
+from pyscf.grad import ccsd as ccsd_grad
 
 from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.modelscf_rks import get_veff_grad_modified_zeros
+from cc2cc.utils.pyscf_ccsd_t_rdm import _gamma1_intermediates
 
 
 def block_loop_rdm2(nao):
@@ -513,8 +518,15 @@ def cc(mol, grids, name, args, evaluate=False):
         gc.collect()
     else:
         l1, l2 = ccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
-        d1 = _gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
-        d2 = _gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
+        (doo, dov, dvo, dvv), goo, gvv = _gamma1_intermediates(
+            mycc, t1, t2, l1, l2, eris
+        )
+        doo_grad, dvv_grad = doo.copy(), dvv.copy()
+        nocc, nvir = t1.shape
+        doo[np.diag_indices(nocc)] -= goo.diagonal() * 0.5
+        dvv[np.diag_indices(nvir)] += gvv.diagonal() * 0.5
+        d1 = (doo, dov, dvo, dvv)
+        d2 = _gamma2_intermediates(mycc, t1, t2, l1, l2, eris, compress_vvvv=False)
         # CC gradient
         if mol.natm == 1:
             grad_cc = np.zeros((mol.natm, 3))  # Fallback to zero gradients
@@ -522,8 +534,33 @@ def cc(mol, grids, name, args, evaluate=False):
             ghf = pyscf.grad.rhf.Gradients(mf)
             grad_cc = ghf.kernel()
         else:
-            gcc = ccsd_t_grad.Gradients(mycc)
-            grad_cc = gcc.kernel(t1, t2, l1, l2, eris=eris)
+            # gcc = ccsd_t_grad.Gradients(mycc)
+            # grad_cc = gcc.kernel(t1, t2, l1, l2, eris=eris)
+
+            doo_grad -= goo * 0.5
+            dvv_grad += gvv * 0.5
+            d1_grad = (doo_grad, dov, dvo, dvv_grad)
+
+            dovov, dvvvv, doooo, doovv, dovvo, dvvov, dovvv, dooov = d2
+            nvir = mycc.nmo - mycc.nocc
+            idx = np.tril_indices(nvir)
+            vidx = idx[0] * nvir + idx[1]
+            dvvvv = dvvvv + dvvvv.transpose(1, 0, 2, 3)
+            dvvvv = dvvvv + dvvvv.transpose(0, 1, 3, 2)
+            dvvvv = lib.take_2d(dvvvv.reshape(nvir**2, nvir**2), vidx, vidx)
+            dvvvv *= 0.25
+            d2_grad = (dovov, dvvvv, doooo, doovv, dovvo, dvvov, dovvv, dooov)
+
+            cc_grad = ccsd_grad.Gradients(mycc)
+            de = ccsd_grad.grad_elec(
+                cc_grad, t1, t2, l1, l2, eris, d1=d1_grad, d2=d2_grad
+            )
+            cc_grad.de = de + cc_grad.grad_nuc(atmlst=cc_grad.atmlst)
+            if cc_grad.mol.symmetry:
+                cc_grad.de = cc_grad.symmetrize(cc_grad.de, cc_grad.atmlst)
+            cc_grad._finalize()
+            grad_cc = cc_grad.de
+
         del t1, t2, l1, l2
         gc.collect()
 

@@ -64,7 +64,9 @@ train_str_list = [
     # #####################
     # ########  2  ########
     # #####################
-    "molecule2-W4_11",
+    # "molecule2-W4_11",
+    "W4_11-o2",
+    # "W4_11-n2",
 ]
 
 eval_str_list = [
@@ -235,18 +237,18 @@ if __name__ == "__main__":
                 if (DATA_PATH / f"data_{name}.npz").exists():
                     continue
 
-            if name_mol in [
-                "W4_11-clo",
-                "W4_11-sif",
-                "W4_11-s2",
-                "W4_11-so",
-                "W4_11-ch2nh2",
-                "W4_11-hcnh",
-                "W4_11-t-hcoh",
-                "W4_11-nh2cl",
-            ]:
-                # these molecules experience memory issue in rdm calculation
-                raise RuntimeError("Skip due to memory issue in rdm calculation.")
+            # if name_mol in [
+            #     "W4_11-clo",
+            #     "W4_11-sif",
+            #     "W4_11-s2",
+            #     "W4_11-so",
+            #     "W4_11-ch2nh2",
+            #     "W4_11-hcnh",
+            #     "W4_11-t-hcoh",
+            #     "W4_11-nh2cl",
+            # ]:
+            #     # these molecules experience memory issue in rdm calculation
+            #     raise RuntimeError("Skip due to memory issue in rdm calculation.")
 
             grids = Grid(mol, args.grid_level, 7)
             if mol.spin == 0:
