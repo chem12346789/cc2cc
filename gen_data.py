@@ -155,7 +155,8 @@ if __name__ == "__main__":
     for name_mol in name_mol_list:
         name = f"{name_mol}_{args.basis}"
 
-        try:
+        # try:
+        if True:
             mol = gen_mole(
                 name_mol,
                 args.basis,
@@ -241,15 +242,15 @@ if __name__ == "__main__":
             if mol.spin == 0:
                 cc(mol, grids, name, args, evaluate=evaluate)
             else:
-                continue
-                # ucc(mol, grids, name, args, evaluate=evaluate)
-        except (ValueError, RuntimeError) as e:
-            print(f"ERROR: {name_mol} {args.md_number}")
-            print(e)
-            error_molecule.append(name)
-            print(f"Error molecule: {error_molecule}")
-        finally:
-            print(f"Processed: {name_mol} {args.md_number}")
-        print()
+                # continue
+                ucc(mol, grids, name, args, evaluate=evaluate)
+        # except (ValueError, RuntimeError) as e:
+        #     print(f"ERROR: {name_mol} {args.md_number}")
+        #     print(e)
+        #     error_molecule.append(name)
+        #     print(f"Error molecule: {error_molecule}")
+        # finally:
+        #     print(f"Processed: {name_mol} {args.md_number}")
+        # print()
 
     print(f"Error molecule: {error_molecule}")
