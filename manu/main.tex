@@ -380,18 +380,18 @@ We set all the weights of the auxiliary grid points ($w_{i;\rm{aux}}$) to be zer
 \begin{align}
 	E'_{\rm{xc}} =
 	  & \int e(\mathbf{r}_{i;\rm{cube}}) \d \mathbf{r}_{i;\rm{cube}} \nl
-	= & \sum_{i} w_{i} e(\brm{r}_{i}) + \sum_{i} \sum_{\brm{r}'_{i} \in \brm{r}_{i;\rm{aux}}} w_{i;\rm{aux}} e(\brm{r}'_{i}) \nl
-	= & \sum_{i} w_{i} e(\brm{r}_{i}).
+	= & \sum_{i} \Big( w_{i} e(\brm{r}_{i}) + \sum_{\brm{r}'_{i} \in \brm{r}_{i;\rm{aux}}} w_{i;\rm{aux}} e(\brm{r}'_{i}) \Big) \nl
+	= & \sum_{i} w_{i} e(\brm{r}_{i} | \brm{r}_{i;\rm{cube}} ; \w_{\rm{ML}} ).
 \end{align}
 % 
 As a result, the auxiliary grid points influence the potential but do not affect the fock matrix or the total energy. It makes the procedure remains consistent with the standard DFT calculation.
 % 
 \begin{align}
-	v'_{\rm{xc}}(\brm{r}_{i}) =
-	  & \frac{\delta E'_{\rm{xc}}}{\delta \rho(\brm{r}_{i})} \nl
-	= & \sum_{j} w_{j} \frac{\delta e(\brm{r}_{j})}{\delta \rho(\brm{r}_{i})} \nl
-	= & \sum_{j} w_{j} \frac{\delta {\rm{NN}}\big( \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w \big)}{\delta \rho(\brm{r}_{i})} \nl
-	= & \sum_{j} w_{j} \frac{\partial {\rm{NN}}\big( \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w \big)}{\partial \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i})} \frac{\delta \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i})}{\delta \rho(\brm{r}_{i})}
+	v'_{\rm{xc}}(\brm{r}_{i;\rm{cube}}) =
+	  & \frac{\delta E'_{\rm{xc}}}{\delta \rho(\brm{r}_{i;\rm{cube}})} \nl
+	= & \sum_{i} w_{i} \frac{\delta e(\brm{r}_{i})}{\delta \rho(\brm{r}_{i})} \nl
+	= & \sum_{i} w_{i} \frac{\delta {\rm{NN}}\big( \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w \big)}{\delta \rho(\brm{r}_{i})} \nl
+	= & \sum_{i} w_{i} \frac{\partial {\rm{NN}}\big( \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w \big)}{\partial \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i})} \frac{\delta \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i})}{\delta \rho(\brm{r}_{i})}
 \end{align}
 
 To make the neural network can capture the rotational variance, we set the cube to be aligned with the main rotation axis of the secondary derivative matrix of the electron density at the grid point $\brm{r}_{i}$.
