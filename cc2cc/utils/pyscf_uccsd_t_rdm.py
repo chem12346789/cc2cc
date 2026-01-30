@@ -45,7 +45,6 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     blksize = min(
         nvira, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**3 * nvira)) ** (1 / 2))
     )
-    blksize = 5
     if blksize < nvira:
         blksize = min(blksize, (nvira + 1) // 2)
         blksize = max(blksize, 1)
@@ -216,7 +215,6 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     blksize = min(
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**3 * nvirb)) ** (1 / 2))
     )
-    blksize = 5
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
@@ -387,7 +385,6 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**2 * noccb)) ** (1 / 3))
     )
     blksize = min(nvira, blksize)
-    blksize = 5
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
@@ -609,10 +606,9 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         )
 
     blksize = min(
-        noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**2 * noccb)) ** (1 / 3))
+        noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nvira**2 * nvirb)) ** (1 / 3))
     )
     blksize = min(nocca, blksize)
-    blksize = 5
     if blksize < nocca or blksize < noccb:
         blksize = min(blksize, (nocca + 1) // 2)
         blksize = min(blksize, (noccb + 1) // 2)
@@ -627,9 +623,9 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         blksize,
     )
     time2 = logger.process_clock(), logger.perf_counter()
-    for i0, i1 in lib.prange(0, nvirb, blksize):
-        for j0, j1 in lib.prange(0, nvira, blksize):
-            for k0, k1 in lib.prange(0, nvira, blksize):
+    for i0, i1 in lib.prange(0, noccb, blksize):
+        for j0, j1 in lib.prange(0, nocca, blksize):
+            for k0, k1 in lib.prange(0, nocca, blksize):
                 w_blk = (
                     numpy.einsum(
                         "jIeA,kceb->IjkAbc",
@@ -845,10 +841,13 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         )
 
     blksize = min(
-        noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**2 * noccb)) ** (1 / 3))
+        noccb,
+        int(
+            ((max_memory * 0.9e6 / 8) / 6.0 / (nocca * noccb * nvira * nvirb))
+            ** (1 / 3)
+        ),
     )
     blksize = min(nocca, blksize)
-    blksize = 5
     if blksize < noccb or blksize < nocca:
         blksize = min(blksize, (nocca + 1) // 2)
         blksize = min(blksize, (noccb + 1) // 2)
@@ -864,7 +863,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     )
     time2 = logger.process_clock(), logger.perf_counter()
     for c0, c1 in lib.prange(0, nvira, blksize):
-        for k0, k1 in lib.prange(0, nvira, blksize):
+        for k0, k1 in lib.prange(0, nocca, blksize):
             w_blk = (
                 numpy.einsum(
                     "jIeA,kceb->IjkAbc",
@@ -1079,18 +1078,10 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         )
 
     # bba
-    goo = numpy.zeros((nocca, nocca), dtype=t1a.dtype)
-    gOO = numpy.zeros((noccb, noccb), dtype=t1b.dtype)
-    gvv = numpy.zeros((nvira, nvira), dtype=t1a.dtype)
-    gVV = numpy.zeros((nvirb, nvirb), dtype=t1b.dtype)
-    gvo = numpy.zeros((nvira, nocca), dtype=t1a.dtype)
-    gVO = numpy.zeros((nvirb, noccb), dtype=t1b.dtype)
-
     blksize = min(
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**2 * nocca)) ** (1 / 3))
     )
     blksize = min(nvira, blksize)
-    blksize = 5
     if blksize < nvira or blksize < nvirb:
         blksize = min(blksize, (nvira + 1) // 2)
         blksize = min(blksize, (nvirb + 1) // 2)
@@ -1321,10 +1312,9 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         )
 
     blksize = min(
-        noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**2 * nocca)) ** (1 / 3))
+        noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nvirb**2 * nvira)) ** (1 / 3))
     )
     blksize = min(nocca, blksize)
-    blksize = 5
     if blksize < nocca or blksize < noccb:
         blksize = min(blksize, (nocca + 1) // 2)
         blksize = min(blksize, (noccb + 1) // 2)
@@ -1339,9 +1329,9 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         blksize,
     )
     time2 = logger.process_clock(), logger.perf_counter()
-    for i0, i1 in lib.prange(0, nvira, blksize):
-        for j0, j1 in lib.prange(0, nvirb, blksize):
-            for k0, k1 in lib.prange(0, nvirb, blksize):
+    for i0, i1 in lib.prange(0, nocca, blksize):
+        for j0, j1 in lib.prange(0, noccb, blksize):
+            for k0, k1 in lib.prange(0, noccb, blksize):
                 w_blk = (
                     numpy.einsum(
                         "ijae,kceb->ijkabc",
@@ -1554,10 +1544,13 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 gVV += numpy.einsum("ijkcda,ijkcdb->ab", wvd, rw) * 0.25
 
     blksize = min(
-        noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**2 * noccb)) ** (1 / 3))
+        noccb,
+        int(
+            ((max_memory * 0.9e6 / 8) / 6.0 / (nocca * noccb * nvira * nvirb))
+            ** (1 / 3)
+        ),
     )
     blksize = min(nocca, blksize)
-    blksize = 5
     if blksize < noccb or blksize < nocca:
         blksize = min(blksize, (nocca + 1) // 2)
         blksize = min(blksize, (noccb + 1) // 2)
@@ -1572,8 +1565,8 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         blksize,
     )
     time2 = logger.process_clock(), logger.perf_counter()
-    for c0, c1 in lib.prange(0, nvira, blksize):
-        for k0, k1 in lib.prange(0, nvira, blksize):
+    for c0, c1 in lib.prange(0, nvirb, blksize):
+        for k0, k1 in lib.prange(0, noccb, blksize):
             w_blk = (
                 numpy.einsum(
                     "ijae,kceb->ijkabc",
@@ -1618,190 +1611,171 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
             )
             v_blk = numpy.einsum(
                 "jbkc,ia->ijkabc",
-                eris_OVOV,
-                t1a,
+                eris_OVOV[:, :, k0:k1, c0:c1],
+                t1a[:, :],
             )
             v_blk += numpy.einsum(
                 "iakc,jb->ijkabc",
-                eris_ovOV,
-                t1b,
+                eris_ovOV[:, :, k0:k1, c0:c1],
+                t1b[:, :],
             )
             v_blk += numpy.einsum(
                 "iakc,jb->ijkabc",
-                eris_ovOV,
-                t1b,
+                eris_ovOV[:, :, k0:k1, c0:c1],
+                t1b[:, :],
             )
             v_blk += (
                 numpy.einsum(
                     "JKBC,ai->iJKaBC",
-                    t2bb,
-                    fvo,
+                    t2bb[:, k0:k1, :, c0:c1],
+                    fvo[:, :],
                 )
                 * 0.5
             )
             v_blk += (
                 numpy.einsum(
                     "iKaC,BJ->iJKaBC",
-                    t2ab,
-                    fVO,
+                    t2ab[:, k0:k1, :, c0:c1],
+                    fVO[:, :],
                 )
                 * 2
             )
+            d3 = lib.direct_sum(
+                "ia+jb+kc->ijkabc", eia[:, :], eIA[:, :], eIA[k0:k1, c0:c1]
+            )
+            wvd = (w_blk + v_blk) / d3
 
             w_blk -= (
                 numpy.einsum(
                     "ikae,jceb->ijkabc",
-                    t2ab,
-                    eris_OVVV,
+                    t2ab[:, k0:k1, :, :],
+                    eris_OVVV[:, c0:c1, :, :],
                 )
                 * 2
             )
             w_blk -= (
                 numpy.einsum(
                     "ikeb,jcea->ijkabc",
-                    t2ab,
-                    eris_OVvv,
+                    t2ab[:, k0:k1, :, :],
+                    eris_OVvv[:, c0:c1, :, :],
                 )
                 * 2
             )
             w_blk -= numpy.einsum(
                 "kjbe,iaec->ijkabc",
-                t2bb,
-                eris_ovVV,
+                t2bb[k0:k1, :, :, :],
+                eris_ovVV[:, :, :, c0:c1],
             )
             w_blk += (
                 numpy.einsum(
                     "imab,jckm->ijkabc",
-                    t2ab,
-                    eris_OVOO,
+                    t2ab[:, :, :, :],
+                    eris_OVOO[:, c0:c1, k0:k1, :],
                 )
                 * 2
             )
             w_blk += (
                 numpy.einsum(
                     "mkab,jcim->ijkabc",
-                    t2ab,
-                    eris_OVoo,
+                    t2ab[:, k0:k1, :, :],
+                    eris_OVoo[:, c0:c1, :, :],
                 )
                 * 2
             )
             w_blk += numpy.einsum(
                 "kmbc,iajm->ijkabc",
-                t2bb,
-                eris_ovOO,
+                t2bb[k0:k1, :, :, c0:c1],
+                eris_ovOO[:, :, :, :],
             )
 
             w_blk += (
                 numpy.einsum(
                     "ikae,jbec->ijkabc",
-                    t2ab,
-                    eris_OVVV,
+                    t2ab[:, k0:k1, :, :],
+                    eris_OVVV[:, :, :, c0:c1],
                 )
                 * 2
             )
             w_blk += (
                 numpy.einsum(
                     "ikec,jbea->ijkabc",
-                    t2ab,
-                    eris_OVvv,
+                    t2ab[:, k0:k1, :, c0:c1],
+                    eris_OVvv[:, :, :, :],
                 )
                 * 2
             )
             w_blk += numpy.einsum(
                 "kjce,iaeb->ijkabc",
-                t2bb,
-                eris_ovVV,
+                t2bb[k0:k1, :, c0:c1, :],
+                eris_ovVV[:, :, :, :],
             )
             w_blk -= (
                 numpy.einsum(
                     "imac,jbkm->ijkabc",
-                    t2ab,
-                    eris_OVOO,
+                    t2ab[:, :, :, c0:c1],
+                    eris_OVOO[:, :, k0:k1, :],
                 )
                 * 2
             )
             w_blk -= (
                 numpy.einsum(
                     "mkac,jbim->ijkabc",
-                    t2ab,
-                    eris_OVoo,
+                    t2ab[:, k0:k1, :, c0:c1],
+                    eris_OVoo[:, :, :, :],
                 )
                 * 2
             )
             w_blk -= numpy.einsum(
                 "kmcb,iajm->ijkabc",
-                t2bb,
-                eris_ovOO,
+                t2bb[k0:k1, :, c0:c1, :],
+                eris_ovOO[:, :, :, :],
             )
 
             w_blk -= (
                 numpy.einsum(
                     "ijae,kbec->ijkabc",
-                    t2ab,
-                    eris_OVVV,
+                    t2ab[:, :, :, :],
+                    eris_OVVV[k0:k1, :, :, c0:c1],
                 )
                 * 2
             )
             w_blk -= (
                 numpy.einsum(
                     "ijec,kbea->ijkabc",
-                    t2ab,
-                    eris_OVvv,
+                    t2ab[:, :, :, c0:c1],
+                    eris_OVvv[k0:k1, :, :, :],
                 )
                 * 2
             )
             w_blk -= numpy.einsum(
                 "jkce,iaeb->ijkabc",
-                t2bb,
-                eris_ovVV,
+                t2bb[:, k0:k1, c0:c1, :],
+                eris_ovVV[:, :, :, :],
             )
             w_blk += (
                 numpy.einsum(
                     "imac,kbjm->ijkabc",
-                    t2ab,
-                    eris_OVOO,
+                    t2ab[:, :, :, c0:c1],
+                    eris_OVOO[k0:k1, :, :, :],
                 )
                 * 2
             )
             w_blk += (
                 numpy.einsum(
                     "mjac,kbim->ijkabc",
-                    t2ab,
-                    eris_OVoo,
+                    t2ab[:, :, :, c0:c1],
+                    eris_OVoo[k0:k1, :, :, :],
                 )
                 * 2
             )
             w_blk += numpy.einsum(
                 "jmcb,iakm->ijkabc",
-                t2bb,
-                eris_ovOO,
+                t2bb[:, :, c0:c1, :],
+                eris_ovOO[:, :, k0:k1, :],
             )
-
-    w = numpy.einsum("ijae,kceb->ijkabc", t2ab, eris_OVVV) * 2
-    w += numpy.einsum("ijeb,kcea->ijkabc", t2ab, eris_OVvv) * 2
-    w += numpy.einsum("jkbe,iaec->ijkabc", t2bb, eris_ovVV)
-    w -= numpy.einsum("imab,kcjm->ijkabc", t2ab, eris_OVOO) * 2
-    w -= numpy.einsum("mjab,kcim->ijkabc", t2ab, eris_OVoo) * 2
-    w -= numpy.einsum("jmbc,iakm->ijkabc", t2bb, eris_ovOO)
-    v = numpy.einsum("jbkc,ia->ijkabc", eris_OVOV, t1a)
-    v += numpy.einsum("iakc,jb->ijkabc", eris_ovOV, t1b)
-    v += numpy.einsum("iakc,jb->ijkabc", eris_ovOV, t1b)
-    v += numpy.einsum("JKBC,ai->iJKaBC", t2bb, fvo) * 0.5
-    v += numpy.einsum("iKaC,BJ->iJKaBC", t2ab, fVO) * 2
-    d3 = lib.direct_sum("ia+jb+kc->ijkabc", eia, eIA, eIA)
-    wvd = (w + v) / d3
-    rw = r4(w) / d3
-    print(numpy.allclose(gvv, numpy.einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.25))
-    print(
-        numpy.allclose(
-            gVV,
-            numpy.einsum("ijkcad,ijkcbd->ab", wvd, rw) * 0.25
-            + numpy.einsum("ijkcda,ijkcdb->ab", wvd, rw) * 0.25,
-        )
-    )
-    raise Exception("stop here")
-    # gVO += numpy.einsum("ikac,ijkabc->bj", t2ab, rw) * 0.5
-    # gvo += numpy.einsum("jkbc,ijkabc->ai", t2bb, rw) * 0.125
+            rw = w_blk / d3
+            gVO += numpy.einsum("ikac,ijkabc->bj", t2ab[:, k0:k1, :, c0:c1], rw) * 0.5
+            gvo += numpy.einsum("jkbc,ijkabc->ai", t2bb[:, k0:k1, :, c0:c1], rw) * 0.125
 
     doo, dOO = d1[0]
     dov, dOV = d1[1]
