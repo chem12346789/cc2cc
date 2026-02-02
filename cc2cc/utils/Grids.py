@@ -7,16 +7,19 @@ More details.
 # pylint: disable=W0212
 
 import numpy as np
+import torch
 from numba import njit
 
 import pyscf
 from pyscf import dft, gto, lib
+import pyscf.dft.numint
 from pyscf.dft.numint import (
     _dot_ao_dm,
     _contract_rho,
     _sparse_enough,
     _empty_aligned,
     _format_uks_dm,
+    eval_ao,
     _dot_ao_dm_sparse,
     _contract_rho_sparse,
 )
@@ -126,12 +129,137 @@ class GridCube:
     This class is used to hack the modified_block_loop as the duck typing.
     """
 
-    def __init__(self, coords, non0tab=None, cutoff=None):
-        self.weights = None
+    def __init__(self, coords, grid):
+        self.weights = grid.weights
+        self.number_of_cube = len(coords)
+        # size of coords: (number * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE, 3)
+        self.input_level = grid.input_level
         self.coords = coords.reshape((-1, 3))
-        self.non0tab = non0tab
-        self.mol = None
-        self.cutoff = cutoff
+        self.mol = grid.mol
+        self.cutoff = grid.cutoff
+        self.non0tab = grid.make_mask(self.mol, self.coords)
+
+    def gen_cube_rho_rks(self, ni: pyscf.dft.numint.NumInt, dms, require_vxc=False):
+        """
+        Generate the cube density for the given molecule.
+        """
+        input_mat = np.zeros((self.input_level, len(self.coords)))
+        vxc_mat = np.zeros((self.input_level, 4, len(self.coords)))
+
+        ao_value = ni.eval_ao(self.mol, self.coords, deriv=1)
+        rho = ni.eval_rho(self.mol, ao_value, dms, xctype="GGA")
+        rho0 = rho[0]
+
+        exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho0, xctype="LDA")[:2]
+        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho0, xctype="LDA")[:2]
+        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
+        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
+
+        input_mat[0] = exc_lda * rho0
+        input_mat[1] = exc_vwn * rho0
+        input_mat[2] = exc_b88 * rho0
+        input_mat[3] = exc_lyp * rho0
+
+        vxc_mat[0, 0:1, :] = vxc_lda
+        vxc_mat[1, 0:1, :] = vxc_vwn
+        vxc_mat[2, :, :] = vxc_b88
+        vxc_mat[3, :, :] = vxc_lyp
+
+        if self.input_level > 4:
+            exc_pbec, vxc_pbec = ni.eval_xc_eff("PBE,", rho, xctype="GGA")[:2]
+            input_mat[4] = exc_pbec * rho0
+            vxc_mat[4, :, :] = vxc_pbec
+
+        if self.input_level > 5:
+            exc_pbex, vxc_pbex = ni.eval_xc_eff(",PBE", rho, xctype="GGA")[:2]
+            input_mat[5] = exc_pbex * rho0
+            vxc_mat[5, :, :] = vxc_pbex
+
+        if self.input_level > 6:
+            exc_tfk, vxc_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho, xctype="GGA")[:2]
+            input_mat[6] = exc_tfk * rho0
+            vxc_mat[6, :, :] = vxc_tfk
+
+        input_mat = input_mat.reshape(
+            (self.input_level, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+        )
+        input_mat = input_mat.transpose(1, 0, 2, 3, 4)
+
+        vxc_mat = vxc_mat.reshape(
+            (self.input_level, 4, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+        )
+
+        if require_vxc:
+            return input_mat, vxc_mat, ao_value
+        else:
+            return input_mat
+
+    def gen_cube_rho_uks(self, ni: pyscf.dft.numint.NumInt, dms, require_vxc=False):
+        """
+        Generate the cube density for the given molecule.
+        """
+        input_mat = np.zeros((self.input_level, len(self.coords)))
+        vxc_mat = np.zeros((self.input_level, 2, 4, len(self.coords)))
+
+        dma, dmb = _format_uks_dm(dms)
+
+        ao_value = ni.eval_ao(self.mol, self.coords, deriv=1)
+        rho_a = ni.eval_rho(self.mol, ao_value, dma, xctype="GGA")
+        rho_b = ni.eval_rho(self.mol, ao_value, dmb, xctype="GGA")
+        rho = (rho_a, rho_b)
+        rho_lda = (rho_a[0], rho_b[0])
+        rho0 = rho_a[0] + rho_b[0]
+
+        exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
+        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
+        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
+        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
+        input_mat[0] = exc_lda * rho0
+        input_mat[1] = exc_vwn * rho0
+        input_mat[2] = exc_b88 * rho0
+        input_mat[3] = exc_lyp * rho0
+
+        vxc_mat[0, :, 0:1, :] = vxc_lda
+        vxc_mat[1, :, 0:1, :] = vxc_vwn
+        vxc_mat[2, :, :, :] = vxc_b88
+        vxc_mat[3, :, :, :] = vxc_lyp
+
+        if self.input_level > 4:
+            exc_pbec, vxc_pbec = ni.eval_xc_eff("PBE,", rho, xctype="GGA")[:2]
+            input_mat[4] = exc_pbec * rho0
+            vxc_mat[4, :, :, :] = vxc_pbec
+
+        if self.input_level > 5:
+            exc_pbex, vxc_pbex = ni.eval_xc_eff(",PBE", rho, xctype="GGA")[:2]
+            input_mat[5] = exc_pbex * rho0
+            vxc_mat[5, :, :, :] = vxc_pbex
+
+        if self.input_level > 6:
+            exc_tfk, vxc_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho, xctype="GGA")[:2]
+            input_mat[6] = exc_tfk * rho0
+            vxc_mat[6, :, :, :] = vxc_tfk
+
+        input_mat = input_mat.reshape(
+            (self.input_level, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+        )
+        input_mat = input_mat.transpose(1, 0, 2, 3, 4)
+
+        vxc_mat = vxc_mat.reshape(
+            (
+                self.input_level,
+                2,
+                4,
+                self.number_of_cube,
+                CUBE_SIZE,
+                CUBE_SIZE,
+                CUBE_SIZE,
+            )
+        )
+
+        if require_vxc:
+            return input_mat, vxc_mat, ao_value
+
+        return input_mat
 
 
 class Grid(dft.gen_grid.Grids):
@@ -184,9 +312,6 @@ class Grid(dft.gen_grid.Grids):
             mol: An instance of :class:`Mole'.
             dms: Density matrix, 2D array with shape (nao, nao). The orientation of the cube is determined by the eigenvectors of the Hessian matrix(secondary derivation of the density).
         """
-        if getattr(dms, "mo_coeff", None) is None:
-            print("Warning: dms.mo_coeff is None.")
-
         if mol.spin == 0:
             assert (
                 np.linalg.norm(dms.conj().T - dms) < 1e-10
@@ -207,7 +332,7 @@ class Grid(dft.gen_grid.Grids):
 
         rho_in_1 = np.zeros((3, len(coords)))
         rho_in_2 = np.zeros((3, 3, len(coords)))
-        ao = pyscf.dft.numint.eval_ao(mol, coords, deriv=2)
+        ao = eval_ao(mol, coords, deriv=2)
 
         c0 = _dot_ao_dm(mol, ao[0], dm, screen_index, shls_slice, ao_loc)
         rho_in_1[0, :] = 2 * _contract_rho(ao[1], c0)
@@ -232,195 +357,7 @@ class Grid(dft.gen_grid.Grids):
         coor_cube = np.zeros((len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
         gen_cube_njit(rho_in_2, rho_in_1, coords, coor_cube)
 
-        return GridCube(coor_cube, cutoff=self.cutoff)
-
-    def get_center_density(self, den_cube):
-        """
-        Get the center density of the cube.
-        """
-        return den_cube[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-
-    def gen_cube_rho_rks(
-        self,
-        rho_in,
-        ni,
-        dms,
-        coords=None,
-        mask=None,
-        hermi=1,
-        require_vxc=False,
-    ):
-        """
-        Generate the cube density for the given molecule.
-        """
-        if coords is None:
-            coords = self.coords
-        if mask is None:
-            mask = self.non0tab
-
-        gridcube = self.gen_cube(self.mol, dms, coords, mask)
-
-        input_ = np.zeros(
-            (self.input_level, len(coords) * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE)
-        )
-        make_rho, nset, nao = ni._gen_rho_evaluator(
-            self.mol, dms, hermi, False, gridcube
-        )
-        for ao, mask, ip0, ip1 in modified_block_loop(
-            ni, self.mol, gridcube, nao, deriv=1, non0tab=gridcube.non0tab
-        ):
-            for i in range(nset):
-                rho = make_rho(i, ao, mask, ni._xc_type("b3lyp"))
-                rho0 = rho[0]
-
-                exc_lda = ni.eval_xc_eff("LDA,", rho[0], deriv=0, xctype="LDA")[0]
-                exc_vwn = ni.eval_xc_eff(",VWN3", rho[0], deriv=0, xctype="LDA")[0]
-                exc_b88 = ni.eval_xc_eff("B88,", rho, deriv=0, xctype="GGA")[0]
-                exc_lyp = ni.eval_xc_eff(",LYP", rho, deriv=0, xctype="GGA")[0]
-
-                input_[0, ip0:ip1] = exc_lda * rho0
-                input_[1, ip0:ip1] = exc_vwn * rho0
-                input_[2, ip0:ip1] = exc_b88 * rho0
-                input_[3, ip0:ip1] = exc_lyp * rho0
-
-                if self.input_level > 4:
-                    exc_pbec = ni.eval_xc_eff("PBE,", rho, deriv=0, xctype="GGA")[0]
-                    input_[4, ip0:ip1] = exc_pbec * rho0
-                if self.input_level > 5:
-                    exc_pbex = ni.eval_xc_eff(",PBE", rho, deriv=0, xctype="GGA")[0]
-                    input_[5, ip0:ip1] = exc_pbex * rho0
-                if self.input_level > 6:
-                    exc_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho, deriv=0, xctype="GGA")[
-                        0
-                    ]
-                    input_[6, ip0:ip1] = exc_tfk * rho0
-        del make_rho, nset
-        input_ = input_.reshape(
-            (self.input_level, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-        )
-        input_ = input_.transpose(1, 0, 2, 3, 4)
-
-        if require_vxc:
-            rho_lda = rho_in[0]
-            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
-            e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
-            e_b88, v_b88 = ni.eval_xc_eff("B88,", rho_in, xctype="GGA")[:2]
-            e_lyp, v_lyp = ni.eval_xc_eff(",LYP", rho_in, xctype="GGA")[:2]
-
-            exc_b3lyp = 0.08 * e_lda + 0.19 * e_vwn + 0.72 * e_b88 + 0.81 * e_lyp
-            vxc_b3lyp = np.zeros((self.input_level, 4, len(coords)))
-            vxc_b3lyp[0, 0:1, :] = v_lda
-            vxc_b3lyp[1, 0:1, :] = v_vwn
-            vxc_b3lyp[2, :, :] = v_b88
-            vxc_b3lyp[3, :, :] = v_lyp
-
-            if self.input_level > 4:
-                _, v_pbec = ni.eval_xc_eff("PBE,", rho_in, xctype="GGA")[:2]
-                vxc_b3lyp[4, :, :] = v_pbec
-            if self.input_level > 5:
-                _, v_pbex = ni.eval_xc_eff(",PBE", rho_in, xctype="GGA")[:2]
-                vxc_b3lyp[5, :, :] = v_pbex
-            if self.input_level > 6:
-                _, v_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho_in, xctype="MGGA")[:2]
-                vxc_b3lyp[6, :, :] = v_tfk
-            return input_, exc_b3lyp * rho_in[0], vxc_b3lyp
-        return input_
-
-    def gen_cube_rho_uks(
-        self,
-        rho_in,
-        ni,
-        dms,
-        coords=None,
-        mask=None,
-        hermi=1,
-        require_vxc=False,
-    ):
-        """
-        Generate the cube density for the given molecule.
-        """
-        if coords is None:
-            coords = self.coords
-        if mask is None:
-            mask = self.non0tab
-
-        gridcube = self.gen_cube(self.mol, dms, coords, mask)
-
-        dma, dmb = _format_uks_dm(dms)
-        nao = dma.shape[-1]
-        make_rhoa, nset = ni._gen_rho_evaluator(self.mol, dma, hermi, False, gridcube)[
-            :2
-        ]
-        make_rhob = ni._gen_rho_evaluator(self.mol, dmb, hermi, False, gridcube)[0]
-
-        input_ = np.zeros((self.input_level, len(gridcube.coords)))
-
-        for ao, mask, ip0, ip1 in modified_block_loop(ni, self.mol, gridcube, nao, 1):
-            for i in range(nset):
-                rho_a = make_rhoa(i, ao, mask, ni._xc_type("b3lyp"))
-                rho_b = make_rhob(i, ao, mask, ni._xc_type("b3lyp"))
-                rho = (rho_a, rho_b)
-                rho_lda = (rho_a[0], rho_b[0])
-                rho0 = rho_a[0] + rho_b[0]
-
-                exc_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=0, xctype="LDA")[0]
-                exc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=0, xctype="LDA")[0]
-                exc_b88 = ni.eval_xc_eff("B88,", rho, deriv=0, xctype="GGA")[0]
-                exc_lyp = ni.eval_xc_eff(",LYP", rho, deriv=0, xctype="GGA")[0]
-
-                input_[0, ip0:ip1] = exc_lda * rho0
-                input_[1, ip0:ip1] = exc_vwn * rho0
-                input_[2, ip0:ip1] = exc_b88 * rho0
-                input_[3, ip0:ip1] = exc_lyp * rho0
-
-                if self.input_level > 4:
-                    exc_pbec = ni.eval_xc_eff("PBE,", rho, deriv=0, xctype="GGA")[0]
-                    input_[4, ip0:ip1] = exc_pbec * rho0
-                if self.input_level > 5:
-                    exc_pbex = ni.eval_xc_eff(",PBE", rho, deriv=0, xctype="GGA")[0]
-                    input_[5, ip0:ip1] = exc_pbex * rho0
-                if self.input_level > 6:
-                    exc_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho, deriv=0, xctype="GGA")[
-                        0
-                    ]
-                    input_[6, ip0:ip1] = exc_tfk * rho0
-        del make_rhoa, make_rhob, nset
-
-        input_ = input_.reshape(
-            (self.input_level, len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-        )
-        input_ = input_.transpose(1, 0, 2, 3, 4)
-
-        if require_vxc:
-            rho_lda = (rho_in[0][0], rho_in[1][0])
-            rho_in_0 = rho_in[0][0] + rho_in[1][0]
-
-            e_lda, v_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
-            e_vwn, v_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
-            e_b88, v_b88 = ni.eval_xc_eff("B88,", rho_in, xctype="GGA")[:2]
-            e_lyp, v_lyp = ni.eval_xc_eff(",LYP", rho_in, xctype="GGA")[:2]
-
-            exc_b3lyp = 0.08 * e_lda + 0.19 * e_vwn + 0.72 * e_b88 + 0.81 * e_lyp
-
-            vxc_b3lyp = np.zeros((self.input_level, 2, 4, len(coords)))
-            vxc_b3lyp[0, :, 0:1, :] = v_lda
-            vxc_b3lyp[1, :, 0:1, :] = v_vwn
-            vxc_b3lyp[2, :, :, :] = v_b88
-            vxc_b3lyp[3, :, :, :] = v_lyp
-
-            if self.input_level > 4:
-                v_pbec = ni.eval_xc_eff("PBE,", rho_in, xctype="GGA")[1]
-                vxc_b3lyp[4, :, :, :] = v_pbec
-            if self.input_level > 5:
-                v_pbex = ni.eval_xc_eff(",PBE", rho_in, xctype="GGA")[1]
-                vxc_b3lyp[5, :, :, :] = v_pbex
-            if self.input_level > 6:
-                v_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho_in, xctype="GGA")[1]
-                vxc_b3lyp[6, :, :, :] = v_tfk
-
-            return input_, exc_b3lyp * rho_in_0, vxc_b3lyp
-
-        return input_
+        return GridCube(coor_cube, self)
 
     def gen_rho_rks(
         self,
@@ -435,10 +372,10 @@ class Grid(dft.gen_grid.Grids):
         rho_lda = rho_in[0]
         rho0 = rho_in[0]
 
-        exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=1, xctype="LDA")[:2]
-        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=1, xctype="LDA")[:2]
-        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho_in, deriv=1, xctype="GGA")[:2]
-        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho_in, deriv=1, xctype="GGA")[:2]
+        exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
+        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
+        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho_in, xctype="GGA")[:2]
+        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho_in, xctype="GGA")[:2]
 
         input_ = np.array(
             [exc_lda * rho0, exc_vwn * rho0, exc_b88 * rho0, exc_lyp * rho0]
@@ -476,10 +413,10 @@ class Grid(dft.gen_grid.Grids):
         rho_lda = (rho_in[0][0], rho_in[1][0])
         rho0 = rho_in[0][0] + rho_in[1][0]
 
-        exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, deriv=1, xctype="LDA")[:2]
-        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, deriv=1, xctype="LDA")[:2]
-        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho_in, deriv=1, xctype="GGA")[:2]
-        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho_in, deriv=1, xctype="GGA")[:2]
+        exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
+        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
+        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho_in, xctype="GGA")[:2]
+        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho_in, xctype="GGA")[:2]
 
         input_ = np.array(
             [exc_lda * rho0, exc_vwn * rho0, exc_b88 * rho0, exc_lyp * rho0]
