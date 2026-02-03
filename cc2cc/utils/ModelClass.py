@@ -17,25 +17,13 @@ import torch.distributed as dist
 from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, CUBE_SIZE, CUBE_MIDDLE
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBase import DataBase
+from cc2cc.utils.Grids import Grid
 
 
 class ModelClass:
     """
     Model_Class
     """
-
-    optimizer: torch.optim.Optimizer
-    scheduler: torch.optim.lr_scheduler._LRScheduler
-    loss_ene: torch.nn.Module
-    loss_ene_abs: torch.nn.Module
-    loss_ene_atomic: torch.nn.Module
-    loss_grad: torch.nn.Module
-    database_train: DataBase
-    database_eval: DataBase
-    model: torch.nn.Module
-    device: str
-    dtype: str
-    model_type: str
 
     def __init__(self, args):
         """
@@ -48,7 +36,10 @@ class ModelClass:
         self.load = self.args.load
         self.max_norm = self.args.max_norm
 
-        self.dir_checkpoint = None
+        self.dir_checkpoint = (
+            CHECKPOINTS_PATH
+            / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
+        ).resolve()
         self.state_dict = None
 
         # for distributed training
@@ -94,14 +85,9 @@ class ModelClass:
             self.dir_checkpoint = (
                 CHECKPOINTS_PATH / f"checkpoint_{self.args.save_dir}"
             ).resolve()
-        else:
-            self.dir_checkpoint = (
-                CHECKPOINTS_PATH
-                / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
-            ).resolve()
 
         if self.state_dict is not None:
-            self.model.load_state_dict(self.state_dict, strict=False)
+            self.model.load_state_dict(self.state_dict, strict=True)
 
         # if (not if_validate) and (not self.args.if_grad):
         #     # model.compile does not support Double backward which is used in grad.
@@ -214,19 +200,13 @@ class ModelClass:
         """
         Initialize the database.
         """
-        if self.model_type == "center_4":
 
-            def process_input(x):
+        def process_input(x):
+            if self.model_type == "center_4":
                 return x[:, : self.input_level, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-
-        elif self.model_type == "cube":
-
-            def process_input(x):
+            if self.model_type == "cube":
                 return x[:, : self.input_level, :, :, :]
-
-        elif self.model_type == "cube9":
-
-            def process_input(x):
+            if self.model_type == "cube9":
                 return np.stack(
                     [
                         x[:, : self.input_level, 0, 0, 0],
@@ -241,8 +221,6 @@ class ModelClass:
                     ],
                     axis=-1,
                 )
-
-        else:
             raise ValueError(f"Unknown model type: {self.model_type}")
 
         self.database_train = DataBase(
@@ -295,15 +273,15 @@ class ModelClass:
             input_.requires_grad = True
             output = self.model(input_)
 
-            if self.args.if_grad:
-                grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
-                middle_ = torch.autograd.grad(
-                    torch.sum(output), input_, create_graph=True
-                )[0]
-                if self.model_type == "cube":
-                    middle_ = middle_[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-                grad2force = batch["grad2force"]
-                force = torch.einsum("pm,impx->ix", middle_, grad2force)
+            # if self.args.if_grad:
+            #     grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
+            #     middle_ = torch.autograd.grad(
+            #         torch.sum(output), input_, create_graph=True
+            #     )[0]
+            #     if self.model_type == "cube":
+            #         middle_ = middle_[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+            #     grad2force = batch["grad2force"]
+            #     force = torch.einsum("pm,impx->ix", middle_, grad2force)
             output = output * weight
         else:
             with torch.no_grad():
@@ -321,11 +299,11 @@ class ModelClass:
                 data_weight * target, data_weight * output
             )
 
-            if self.args.if_grad:
-                tot_loss += loss_multiplier_grad * self.loss_grad(grad_cc_train, force)
-                loss_grad_record = torch.sum(torch.abs(grad_cc_train - force)).item()
-            else:
-                loss_grad_record = 0.0
+            # if self.args.if_grad:
+            #     tot_loss += loss_multiplier_grad * self.loss_grad(grad_cc_train, force)
+            #     loss_grad_record = torch.sum(torch.abs(grad_cc_train - force)).item()
+            # else:
+            loss_grad_record = 0.0
         else:
             loss_abs_record = 0.0
             loss_grad_record = 0.0
@@ -408,43 +386,24 @@ class ModelClass:
             data_record_l.append(data_record)
         return data_record_l
 
-    def eval_xc_eff_cube(self, rho, ni, dms, grids, coords_, mask):
+    def eval_xc_eff_cube(self, rho_cube):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
         Args:
-            mol: PySCF molecule object.
-            dms: Density matrices.
-            ni: NumInt object.
-            coords_: Coordinates of the grid points.
-            weights_: Weights of the grid points.
+            rho_cube: Electron density on the cube grid.
         Returns:
             exc: Exchange-correlation energy.
             vxc: Exchange-correlation potential.
         """
-        if grids.mol.spin == 0:
-            rho_cube, exc_b3lyp, vxc_b3lyp = grids.gen_cube_rho_rks(
-                rho, ni, dms, coords=coords_, mask=mask, require_vxc=True
-            )
-        else:
-            rho_cube, exc_b3lyp, vxc_b3lyp = grids.gen_cube_rho_uks(
-                rho, ni, dms, coords=coords_, mask=mask, require_vxc=True
-            )
-
         input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
         input_mat.requires_grad = True
-        output_mat = self.model(input_mat)
-        middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
-        middle_mat = grids.get_center_density(middle_cube).detach().cpu().numpy()
-        energy_den = exc_b3lyp + output_mat[:, 0].detach().cpu().numpy()
-        vxc = (
-            (0.08 + middle_mat[:, 0]) * vxc_b3lyp[0]
-            + (0.19 + middle_mat[:, 1]) * vxc_b3lyp[1]
-            + (0.72 + middle_mat[:, 2]) * vxc_b3lyp[2]
-            + (0.81 + middle_mat[:, 3]) * vxc_b3lyp[3]
-        )
-        return exc_b3lyp, energy_den, vxc
+        exc_cube = self.model(input_mat)
+        middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
+        exc_cube = exc_cube.detach().cpu().numpy().squeeze(-1)
+        middle_cube = middle_cube.detach().cpu().numpy()
+        return exc_cube, middle_cube
 
-    def eval_xc_eff_4(self, rho, ni, dms, grids, coords_, mask):
+    def eval_xc_eff_4(self, rho):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
         Args:
@@ -457,31 +416,15 @@ class ModelClass:
             exc: Exchange-correlation energy.
             vxc: Exchange-correlation potential.
         """
-        if grids.mol.spin == 0:
-            rho_b3lyp, exc_b3lyp, vxc_b3lyp = grids.gen_rho_rks(
-                rho, ni, require_vxc=True
-            )
-        else:
-            rho_b3lyp, exc_b3lyp, vxc_b3lyp = grids.gen_rho_uks(
-                rho, ni, require_vxc=True
-            )
-
-        input_mat = torch.tensor(rho_b3lyp, dtype=self.dtype, device=self.device)
+        input_mat = torch.tensor(rho, dtype=self.dtype, device=self.device)
         input_mat.requires_grad = True
-        output_mat = self.model(input_mat)
-        middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
-        middle_mat = middle_cube.detach().cpu().numpy()
-        energy_den = exc_b3lyp + output_mat[:, 0].detach().cpu().numpy()
+        exc_cube = self.model(input_mat)
+        vxc_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
+        exc_cube = exc_cube.detach().cpu().numpy().squeeze(-1)
+        vxc_cube = vxc_cube.detach().cpu().numpy()
+        return exc_cube, vxc_cube
 
-        vxc = (
-            (0.08 + middle_mat[:, 0]) * vxc_b3lyp[0]
-            + (0.19 + middle_mat[:, 1]) * vxc_b3lyp[1]
-            + (0.72 + middle_mat[:, 2]) * vxc_b3lyp[2]
-            + (0.81 + middle_mat[:, 3]) * vxc_b3lyp[3]
-        )
-        return exc_b3lyp, energy_den, vxc
-
-    def eval_xc_eff(self, rho, ni, dms, grids, coords_, mask):
+    def eval_xc_eff(self, rho):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
         Args:
@@ -495,8 +438,8 @@ class ModelClass:
             vxc: Exchange-correlation potential.
         """
         if self.model_type == "center_4":
-            return self.eval_xc_eff_4(rho, ni, dms, grids, coords_, mask)
+            return self.eval_xc_eff_4(rho)
         elif self.model_type == "cube":
-            return self.eval_xc_eff_cube(rho, ni, dms, grids, coords_, mask)
+            return self.eval_xc_eff_cube(rho)
         else:
             raise ValueError(f"Unknown model {self.model_name} for eval_xc_eff")
