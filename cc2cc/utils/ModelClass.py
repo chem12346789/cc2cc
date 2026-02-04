@@ -221,6 +221,17 @@ class ModelClass:
                     ],
                     axis=-1,
                 )
+            if self.model_type == "cube5":
+                return np.stack(
+                    [
+                        x[:, : self.input_level, 0, 0, 0],
+                        x[:, : self.input_level, 0, 2, 2],
+                        x[:, : self.input_level, 1, 1, 1],
+                        x[:, : self.input_level, 2, 2, 0],
+                        x[:, : self.input_level, 2, 0, 2],
+                    ],
+                    axis=-1,
+                )
             raise ValueError(f"Unknown model type: {self.model_type}")
 
         self.database_train = DataBase(

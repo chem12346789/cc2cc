@@ -30,17 +30,16 @@ def get_veff_modified(
     modeldict: ModelClass,
     lambda_rho=None,
     dm_tar=None,
-    max_memory=800,
 ):
     """
     Get the method of "Get the effective potential for the UKS method".
-    Note the max_memory=800 use around 8GB gpu memory.
+    Note the max_memory=2000 use around 8GB gpu memory.
     """
 
     def nr_uks(
         modeldict: ModelClass,
         ni: pyscf.dft.numint.NumInt,
-        mol,
+        mol: pyscf.gto.Mole,
         grids: Grid,
         xc_code,
         dms,
@@ -70,7 +69,7 @@ def get_veff_modified(
                 grids,
                 nao,
                 ao_deriv,
-                max_memory=max_memory / (CUBE_SIZE**3),
+                max_memory=max_memory // (CUBE_SIZE**3),
                 non0tab=grids.non0tab,
             ):
                 for i in range(nset):
@@ -105,7 +104,6 @@ def get_veff_modified(
                     )
                     wv = wv.reshape(2, 4, len(gridcube.coords))  # slpabc -> slP
                     yield i, ao_value, gridcube.non0tab, wv
-
 
         pair_mask = mol.get_overlap_cond() < -np.log(ni.cutoff)
         aow = None
@@ -169,58 +167,69 @@ def get_veff_modified(
 
         if dm is None:
             dm = ks_.make_rdm1()
+        # ks_.initialize_grids(mol, dm)
+
+        t0 = (logger.process_clock(), logger.perf_counter())
 
         ground_state = dm.ndim == 3 and dm.shape[0] == 2
+
         ni = ks_._numint
+        if hermi == 2:  # because rho = 0
+            n, exc, vxc = (0, 0), 0, 0
+        else:
+            max_memory = ks_.max_memory - lib.current_memory()[0]
+            n, exc, vxc = nr_uks(
+                modeldict,
+                ni,
+                mol,
+                ks_.grids,
+                ks_.xc,
+                dm,
+                max_memory=max_memory,
+                hermi=hermi,
+            )
+            logger.debug(ks_, "nelec by numeric integration = %s", n)
+            t0 = logger.timer(ks_, "vxc", *t0)
 
-        nelec, exc, vxc = nr_uks(
-            modeldict,
-            ni,
-            mol,
-            ks_.grids,
-            ks_.xc,
-            dm,
-            max_memory=max_memory,
-            hermi=hermi,
+        incremental_jk = (
+            ks_._eri is None
+            and ks_.direct_scf
+            and getattr(vhf_last, "vj", None) is not None
         )
+        if incremental_jk:
+            _dm = np.asarray(dm) - np.asarray(dm_last)
+        else:
+            _dm = dm
 
-        if not ni.libxc.is_hybrid_xc(ks_.xc):
+        if not ni.libxc.is_hybrid_xc(ks.xc):
             vk = None
-            if (
-                ks_._eri is None
-                and ks_.direct_scf
-                and getattr(vhf_last, "vj", None) is not None
-            ):
-                ddm = np.asarray(dm) - np.asarray(dm_last)
-                vj = ks_.get_j(mol, ddm[0] + ddm[1], hermi)
+            vj = ks.get_j(mol, _dm[0] + _dm[1], hermi)
+            if incremental_jk:
                 vj += vhf_last.vj
-            else:
-                vj = ks_.get_j(mol, dm[0] + dm[1], hermi)
             vxc += vj
         else:
-            omega, alpha, hyb = ni.rsh_and_hybrid_coeff(ks_.xc, spin=mol.spin)
-            if (
-                ks_._eri is None
-                and ks_.direct_scf
-                and getattr(vhf_last, "vk", None) is not None
-            ):
-                ddm = np.asarray(dm) - np.asarray(dm_last)
-                vj, vk = ks_.get_jk(mol, ddm, hermi)
+            omega, alpha, hyb = ni.rsh_and_hybrid_coeff(ks.xc, spin=mol.spin)
+            if omega == 0:
+                vj, vk = ks.get_jk(mol, _dm, hermi)
                 vk *= hyb
-                if omega != 0:
-                    vklr = ks_.get_k(mol, ddm, hermi, omega)
-                    vklr *= alpha - hyb
-                    vk += vklr
-                vj = vj[0] + vj[1] + vhf_last.vj
+            elif alpha == 0:  # LR=0, only SR exchange
+                vj = ks.get_j(mol, _dm, hermi)
+                vk = ks.get_k(mol, _dm, hermi, omega=-omega)
+                vk *= hyb
+            elif hyb == 0:  # SR=0, only LR exchange
+                vj = ks.get_j(mol, _dm, hermi)
+                vk = ks.get_k(mol, _dm, hermi, omega=omega)
+                vk *= alpha
+            else:  # SR and LR exchange with different ratios
+                vj, vk = ks.get_jk(mol, _dm, hermi)
+                vk *= hyb
+                vklr = ks.get_k(mol, _dm, hermi, omega=omega)
+                vklr *= alpha - hyb
+                vk += vklr
+            vj = vj[0] + vj[1]
+            if incremental_jk:
+                vj += vhf_last.vj
                 vk += vhf_last.vk
-            else:
-                vj, vk = ks_.get_jk(mol, dm, hermi)
-                vj = vj[0] + vj[1]
-                vk *= hyb
-                if omega != 0:
-                    vklr = ks_.get_k(mol, dm, hermi, omega)
-                    vklr *= alpha - hyb
-                    vk += vklr
             vxc += vj - vk
 
             if ground_state:
@@ -246,7 +255,7 @@ def get_veff_modified(
 def get_veff_grad_modified(
     ks_grad,
     modeldict,
-    max_memory=800,
+    max_memory=2000,
     dm_ks=None,
 ):
     """

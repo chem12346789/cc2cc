@@ -68,200 +68,6 @@ def gen_cube_njit(
                     )
 
 
-def modified_block_loop(
-    ni,
-    mol,
-    grids,
-    nao=None,
-    deriv=0,
-    max_memory=500,
-    non0tab=None,
-    blksize=None,
-    buf=None,
-):
-    """Define this macro to loop over grids by blocks."""
-    if grids.coords is None:
-        grids.build(with_non0tab=True)
-    if nao is None:
-        nao = mol.nao
-    ngrids = grids.coords.shape[0]
-    comp = (deriv + 1) * (deriv + 2) * (deriv + 3) // 6
-    # NOTE to index grids.non0tab, the blksize needs to be an integer
-    # multiplier of BLKSIZE
-    if blksize is None:
-        blksize = int(max_memory * 1e6 / ((comp + 1) * nao * 8 * BLKSIZE))
-        blksize = max(4, min(blksize, ngrids // BLKSIZE + 1, 1200)) * BLKSIZE
-    assert blksize % BLKSIZE == 0
-
-    if non0tab is None and mol is grids.mol:
-        non0tab = grids.non0tab
-    if non0tab is None:
-        non0tab = np.empty(
-            ((ngrids + BLKSIZE - 1) // BLKSIZE, mol.nbas), dtype=np.uint8
-        )
-        non0tab[:] = NBINS + 1  # Corresponding to AO value ~= 1
-    screen_index = non0tab
-
-    # the xxx_sparse() functions require ngrids 8-byte aligned
-    allow_sparse = ngrids % ALIGNMENT_UNIT == 0 and nao > SWITCH_SIZE
-
-    if buf is None:
-        buf = _empty_aligned(comp * blksize * nao)
-    for ip0, ip1 in lib.prange(0, ngrids, blksize):
-        coords = grids.coords[ip0:ip1]
-        mask = screen_index[ip0 // BLKSIZE :]
-        # TODO: pass grids.cutoff to eval_ao
-        ao = ni.eval_ao(
-            mol, coords, deriv=deriv, non0tab=mask, cutoff=grids.cutoff, out=buf
-        )
-        if not allow_sparse and not _sparse_enough(mask):
-            # Unset mask for dense AO tensor. It determines which eval_rho
-            # to be called in make_rho
-            mask = None
-        yield ao, mask, ip0, ip1
-
-
-class GridCube:
-    """
-    Generate the Grids for the cube.
-    Note that the no center weights are 0.
-    The cutoff is the cutoff for the cube.
-    This class is used to hack the modified_block_loop as the duck typing.
-    """
-
-    def __init__(self, coords, grid):
-        self.weights = grid.weights
-        self.number_of_cube = len(coords)
-        # size of coords: (number * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE, 3)
-        self.input_level = grid.input_level
-        self.coords = coords.reshape((-1, 3))
-        self.mol = grid.mol
-        self.cutoff = grid.cutoff
-        self.non0tab = grid.make_mask(self.mol, self.coords)
-
-    def gen_cube_rho_rks(self, ni: pyscf.dft.numint.NumInt, dms, require_vxc=False):
-        """
-        Generate the cube density for the given molecule.
-        """
-        input_mat = np.zeros((self.input_level, len(self.coords)))
-        vxc_mat = np.zeros((self.input_level, 4, len(self.coords)))
-
-        ao_value = ni.eval_ao(self.mol, self.coords, deriv=1)
-        rho = ni.eval_rho(self.mol, ao_value, dms, xctype="GGA")
-        rho0 = rho[0]
-
-        exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho0, xctype="LDA")[:2]
-        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho0, xctype="LDA")[:2]
-        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
-        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
-
-        input_mat[0] = exc_lda * rho0
-        input_mat[1] = exc_vwn * rho0
-        input_mat[2] = exc_b88 * rho0
-        input_mat[3] = exc_lyp * rho0
-
-        vxc_mat[0, 0:1, :] = vxc_lda
-        vxc_mat[1, 0:1, :] = vxc_vwn
-        vxc_mat[2, :, :] = vxc_b88
-        vxc_mat[3, :, :] = vxc_lyp
-
-        if self.input_level > 4:
-            exc_pbec, vxc_pbec = ni.eval_xc_eff("PBE,", rho, xctype="GGA")[:2]
-            input_mat[4] = exc_pbec * rho0
-            vxc_mat[4, :, :] = vxc_pbec
-
-        if self.input_level > 5:
-            exc_pbex, vxc_pbex = ni.eval_xc_eff(",PBE", rho, xctype="GGA")[:2]
-            input_mat[5] = exc_pbex * rho0
-            vxc_mat[5, :, :] = vxc_pbex
-
-        if self.input_level > 6:
-            exc_tfk, vxc_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho, xctype="GGA")[:2]
-            input_mat[6] = exc_tfk * rho0
-            vxc_mat[6, :, :] = vxc_tfk
-
-        input_mat = input_mat.reshape(
-            (self.input_level, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-        )
-        input_mat = input_mat.transpose(1, 0, 2, 3, 4)
-
-        vxc_mat = vxc_mat.reshape(
-            (self.input_level, 4, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-        )
-
-        if require_vxc:
-            return input_mat, vxc_mat, ao_value
-        else:
-            return input_mat
-
-    def gen_cube_rho_uks(self, ni: pyscf.dft.numint.NumInt, dms, require_vxc=False):
-        """
-        Generate the cube density for the given molecule.
-        """
-        input_mat = np.zeros((self.input_level, len(self.coords)))
-        vxc_mat = np.zeros((self.input_level, 2, 4, len(self.coords)))
-
-        dma, dmb = _format_uks_dm(dms)
-
-        ao_value = ni.eval_ao(self.mol, self.coords, deriv=1)
-        rho_a = ni.eval_rho(self.mol, ao_value, dma, xctype="GGA")
-        rho_b = ni.eval_rho(self.mol, ao_value, dmb, xctype="GGA")
-        rho = (rho_a, rho_b)
-        rho_lda = (rho_a[0], rho_b[0])
-        rho0 = rho_a[0] + rho_b[0]
-
-        exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
-        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
-        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
-        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
-        input_mat[0] = exc_lda * rho0
-        input_mat[1] = exc_vwn * rho0
-        input_mat[2] = exc_b88 * rho0
-        input_mat[3] = exc_lyp * rho0
-
-        vxc_mat[0, :, 0:1, :] = vxc_lda
-        vxc_mat[1, :, 0:1, :] = vxc_vwn
-        vxc_mat[2, :, :, :] = vxc_b88
-        vxc_mat[3, :, :, :] = vxc_lyp
-
-        if self.input_level > 4:
-            exc_pbec, vxc_pbec = ni.eval_xc_eff("PBE,", rho, xctype="GGA")[:2]
-            input_mat[4] = exc_pbec * rho0
-            vxc_mat[4, :, :, :] = vxc_pbec
-
-        if self.input_level > 5:
-            exc_pbex, vxc_pbex = ni.eval_xc_eff(",PBE", rho, xctype="GGA")[:2]
-            input_mat[5] = exc_pbex * rho0
-            vxc_mat[5, :, :, :] = vxc_pbex
-
-        if self.input_level > 6:
-            exc_tfk, vxc_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho, xctype="GGA")[:2]
-            input_mat[6] = exc_tfk * rho0
-            vxc_mat[6, :, :, :] = vxc_tfk
-
-        input_mat = input_mat.reshape(
-            (self.input_level, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-        )
-        input_mat = input_mat.transpose(1, 0, 2, 3, 4)
-
-        vxc_mat = vxc_mat.reshape(
-            (
-                self.input_level,
-                2,
-                4,
-                self.number_of_cube,
-                CUBE_SIZE,
-                CUBE_SIZE,
-                CUBE_SIZE,
-            )
-        )
-
-        if require_vxc:
-            return input_mat, vxc_mat, ao_value
-
-        return input_mat
-
-
 class Grid(dft.gen_grid.Grids):
     """
     Documentation for a class.
@@ -440,3 +246,143 @@ class Grid(dft.gen_grid.Grids):
             return input_, exc_b3lyp, vxc_b3lyp
 
         return input_
+
+
+class GridCube:
+    """
+    Generate the Grids for the cube.
+    Note that the no center weights are 0.
+    The cutoff is the cutoff for the cube.
+    """
+
+    def __init__(self, coords, grid: Grid):
+        self.weights = grid.weights
+        self.number_of_cube = len(coords)
+        # size of coords: (number * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE, 3)
+        self.input_level = grid.input_level
+        self.coords = coords.reshape((-1, 3))
+        self.mol = grid.mol
+        self.cutoff = grid.cutoff
+        self.non0tab = grid.make_mask(self.mol, self.coords)
+
+    def gen_cube_rho_rks(self, ni: pyscf.dft.numint.NumInt, dms, require_vxc=False):
+        """
+        Generate the cube density for the given molecule.
+        """
+        input_mat = np.zeros((self.input_level, len(self.coords)))
+        vxc_mat = np.zeros((self.input_level, 4, len(self.coords)))
+
+        ao_value = ni.eval_ao(self.mol, self.coords, deriv=1, non0tab=self.non0tab)
+        rho = ni.eval_rho(self.mol, ao_value, dms, non0tab=self.non0tab, xctype="GGA")
+        rho0 = rho[0]
+
+        exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho0, xctype="LDA")[:2]
+        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho0, xctype="LDA")[:2]
+        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
+        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
+
+        input_mat[0] = exc_lda * rho0
+        input_mat[1] = exc_vwn * rho0
+        input_mat[2] = exc_b88 * rho0
+        input_mat[3] = exc_lyp * rho0
+
+        vxc_mat[0, 0:1, :] = vxc_lda
+        vxc_mat[1, 0:1, :] = vxc_vwn
+        vxc_mat[2, :, :] = vxc_b88
+        vxc_mat[3, :, :] = vxc_lyp
+
+        if self.input_level > 4:
+            exc_pbec, vxc_pbec = ni.eval_xc_eff("PBE,", rho, xctype="GGA")[:2]
+            input_mat[4] = exc_pbec * rho0
+            vxc_mat[4, :, :] = vxc_pbec
+
+        if self.input_level > 5:
+            exc_pbex, vxc_pbex = ni.eval_xc_eff(",PBE", rho, xctype="GGA")[:2]
+            input_mat[5] = exc_pbex * rho0
+            vxc_mat[5, :, :] = vxc_pbex
+
+        if self.input_level > 6:
+            exc_tfk, vxc_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho, xctype="GGA")[:2]
+            input_mat[6] = exc_tfk * rho0
+            vxc_mat[6, :, :] = vxc_tfk
+
+        input_mat = input_mat.reshape(
+            (self.input_level, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+        )
+        input_mat = input_mat.transpose(1, 0, 2, 3, 4)
+
+        vxc_mat = vxc_mat.reshape(
+            (self.input_level, 4, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+        )
+
+        if require_vxc:
+            return input_mat, vxc_mat, ao_value
+        else:
+            return input_mat
+
+    def gen_cube_rho_uks(self, ni: pyscf.dft.numint.NumInt, dms, require_vxc=False):
+        """
+        Generate the cube density for the given molecule.
+        """
+        input_mat = np.zeros((self.input_level, len(self.coords)))
+        vxc_mat = np.zeros((self.input_level, 2, 4, len(self.coords)))
+
+        dma, dmb = _format_uks_dm(dms)
+
+        ao_value = ni.eval_ao(self.mol, self.coords, deriv=1, non0tab=self.non0tab)
+        rho_a = ni.eval_rho(self.mol, ao_value, dma, non0tab=self.non0tab, xctype="GGA")
+        rho_b = ni.eval_rho(self.mol, ao_value, dmb, non0tab=self.non0tab, xctype="GGA")
+        rho = (rho_a, rho_b)
+        rho_lda = (rho_a[0], rho_b[0])
+        rho0 = rho_a[0] + rho_b[0]
+
+        exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
+        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
+        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
+        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
+        input_mat[0] = exc_lda * rho0
+        input_mat[1] = exc_vwn * rho0
+        input_mat[2] = exc_b88 * rho0
+        input_mat[3] = exc_lyp * rho0
+
+        vxc_mat[0, :, 0:1, :] = vxc_lda
+        vxc_mat[1, :, 0:1, :] = vxc_vwn
+        vxc_mat[2, :, :, :] = vxc_b88
+        vxc_mat[3, :, :, :] = vxc_lyp
+
+        if self.input_level > 4:
+            exc_pbec, vxc_pbec = ni.eval_xc_eff("PBE,", rho, xctype="GGA")[:2]
+            input_mat[4] = exc_pbec * rho0
+            vxc_mat[4, :, :, :] = vxc_pbec
+
+        if self.input_level > 5:
+            exc_pbex, vxc_pbex = ni.eval_xc_eff(",PBE", rho, xctype="GGA")[:2]
+            input_mat[5] = exc_pbex * rho0
+            vxc_mat[5, :, :, :] = vxc_pbex
+
+        if self.input_level > 6:
+            exc_tfk, vxc_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho, xctype="GGA")[:2]
+            input_mat[6] = exc_tfk * rho0
+            vxc_mat[6, :, :, :] = vxc_tfk
+
+        input_mat = input_mat.reshape(
+            (self.input_level, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+        )
+        input_mat = input_mat.transpose(1, 0, 2, 3, 4)
+
+        vxc_mat = vxc_mat.reshape(
+            (
+                self.input_level,
+                2,
+                4,
+                self.number_of_cube,
+                CUBE_SIZE,
+                CUBE_SIZE,
+                CUBE_SIZE,
+            )
+        )
+
+        if require_vxc:
+            return input_mat, vxc_mat, ao_value
+
+        return input_mat

@@ -24,6 +24,7 @@ from pyscf.dft.gen_grid import NBINS
 
 from cc2cc.utils.env_var import CUBE_MIDDLE, CUBE_SIZE
 from cc2cc.utils.ModelClass import ModelClass
+from cc2cc.utils.Grids import Grid
 
 # from pyscf.grad.rks import _d1_dot_, _gga_grad_sum_, _make_dR_dao_w
 
@@ -33,7 +34,6 @@ def get_veff_modified(
     modeldict,
     lambda_rho=None,
     dm_tar=None,
-    max_memory=800,
 ):
     """
     Get the method of "Get the effective potential for the RKS method".
@@ -43,7 +43,7 @@ def get_veff_modified(
         modeldict: ModelClass,
         ni: NumInt,
         mol: pyscf.gto.Mole,
-        grids,
+        grids: Grid,
         xc_code,
         dms,
         max_memory,
@@ -51,7 +51,7 @@ def get_veff_modified(
     ):
         """
         Get the effective potential for the RKS method.
-        Note the max_memory=800 use around 8GB gpu memory.
+        Note the max_memory=2000 use around 8GB gpu memory.
         Modified from pyscf.dft.numint.nr_rks (https://github.com/pyscf/pyscf/blob/v2.9.0/pyscf/dft/numint.py)
         """
         xctype = ni._xc_type(xc_code)
@@ -70,7 +70,7 @@ def get_veff_modified(
                 grids,
                 nao,
                 ao_deriv,
-                max_memory=max_memory / (CUBE_SIZE**3),
+                max_memory=max_memory // (CUBE_SIZE**3),
                 non0tab=grids.non0tab,
             ):
                 for i in range(nset):
@@ -170,6 +170,7 @@ def get_veff_modified(
         if hermi == 2:  # because rho = 0
             n, exc, vxc = 0, 0, 0
         else:
+            max_memory = ks_.max_memory - lib.current_memory()[0]
             n, exc, vxc = nr_rks(
                 modeldict,
                 ni,
@@ -225,7 +226,6 @@ def get_veff_modified(
 
             if ground_state:
                 exc -= np.einsum("ij,ji", dm, vk).real * 0.5 * 0.5
-
         if ground_state:
             ecoul = np.einsum("ij,ji", dm, vj).real * 0.5
         else:
@@ -244,7 +244,7 @@ def get_veff_modified(
 def get_veff_grad_modified(
     ks_grad,
     modeldict,
-    max_memory=800,
+    max_memory=2000,
     dm_ks=None,
 ):
     """

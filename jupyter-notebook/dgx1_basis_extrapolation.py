@@ -34,7 +34,6 @@ for basis_iter, name_mol in product(range(len(basis_iter_list)), name_mol_list):
     mol = gen_mole(
         name_mol,
         basis_iter_list[basis_iter],
-        ma_basis=False,
         dataset_name="gmtkn-def2",
         if_rotate=True,
         if_rotate_random=True,
