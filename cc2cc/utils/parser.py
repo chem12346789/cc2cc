@@ -308,6 +308,7 @@ def add_args(parser: argparse.ArgumentParser):
         default=False,
         help="Whether to use relative weight for the loss function. Default is False.",
     )
+
     parser.add_argument(
         "--if_relative_weight_abs",
         type=str2bool,
@@ -376,6 +377,13 @@ def add_args(parser: argparse.ArgumentParser):
         type=str2bool,
         default=False,
         help="Whether to calculate the atomic energy. Default is False.",
+    )
+
+    parser.add_argument(
+        "--if_abs",
+        type=str2bool,
+        default=False,
+        help="Whether to calculate the absolute energy. Default is False.",
     )
 
     parser.add_argument(
