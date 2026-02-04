@@ -5,12 +5,11 @@ from timeit import default_timer as timer
 import pyscf
 
 from cc2cc.utils import get_veff_modified_rks, get_veff_grad_modified_rks
-from cc2cc.utils import TestDataDFT
+from cc2cc.utils import Grid, TestDataDFT
 
 
 def test_model_rks(
     mol,
-    grids,
     name,
     modeldict,
     data_record,
@@ -23,28 +22,31 @@ def test_model_rks(
     time_ai_start = timer()
     mdft = pyscf.dft.RKS(mol).density_fit()
     mdft.xc = "b3lyp"
-    mdft.grids = grids
+    mdft.grids = Grid(mol, args.grid_level, modeldict.input_level, test=False)
+
     mdft.verbose = 4
+    mdft.diis_space = 12
+    mdft.conv_tol = 1e-7
+    mdft.conv_tol_grad = 1e-3
+
     if modeldict.model_type == "center_4":
-        get_veff_modified_rks(mdft, modeldict, max_memory=800)
+        get_veff_modified_rks(mdft, modeldict)
     elif modeldict.model_type == "cube":
-        get_veff_modified_rks(mdft, modeldict, max_memory=80)
+        get_veff_modified_rks(mdft, modeldict)
 
     if args.max_cycle == -1:
         mdft.max_cycle = -1
-        mdft.conv_tol = 1e-7
         if_retry = False
         test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
         mdft.kernel(dm0=test_data.dm1_dft)
     else:
         mdft.max_cycle = args.max_cycle
-        mdft.conv_tol = 1e-7
         if_retry = True
         mdft.kernel()
 
     if mdft.converged is False and if_retry:
         print("RKS not converged. First try.")
-        mdft.diis_damp = 0.5
+        mdft.diis_damp = 0.8
         mdft.kernel()
         if mdft.converged is False:
             print("RKS not converged. Second try.")
@@ -73,14 +75,14 @@ def test_model_rks(
             get_veff_grad_modified_rks(
                 g,
                 modeldict,
-                max_memory=8000,
+                max_memory=2000,
                 # dm_ks=test_data.dm1_dft,
             )
         elif modeldict.model_type == "cube":
             get_veff_grad_modified_rks(
                 g,
                 modeldict,
-                max_memory=800,
+                max_memory=2000,
                 # dm_ks=test_data.dm1_dft,
             )
         grad_mdft = g.kernel()

@@ -410,8 +410,8 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--max_cycle",
         type=int,
-        default=50,
-        help="Maximum number of SCF cycles. Default is 50 (use default in PySCF) and -1 for no iteration.",
+        default=250,
+        help="Maximum number of SCF cycles. Default is 250 and -1 for no iteration.",
     )
 
     parser.add_argument(

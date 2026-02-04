@@ -6,7 +6,7 @@ Other parameter are from the argparse.
 import argparse
 
 from cc2cc.utils import gen_mole, print_computer_info, add_args
-from cc2cc.utils import Grid, ModelClass, DataRecord
+from cc2cc.utils import ModelClass, DataRecord
 from cc2cc.utils import MAIN_PATH
 from cc2cc.test_model_rks import test_model_rks
 from cc2cc.test_model_uks import test_model_uks
@@ -45,7 +45,6 @@ if __name__ == "__main__":
         mol = gen_mole(
             name_mol,
             args.basis,
-            # ma_basis=True,
             dataset_name=args.dataset,
             if_rotate=args.if_rotate,
             if_rotate_random=args.if_rotate_random,
@@ -62,13 +61,11 @@ if __name__ == "__main__":
                 print(f"SKIP: {name}")
                 continue
 
-        grids = Grid(mol, args.grid_level, modeldict.input_level, test=True)
-
-        try:
+        # try:
+        if True:
             if mol.spin == 0:
                 test_model_rks(
                     mol,
-                    grids,
                     name,
                     modeldict,
                     data_record,
@@ -77,19 +74,18 @@ if __name__ == "__main__":
             else:
                 test_model_uks(
                     mol,
-                    grids,
                     name,
                     modeldict,
                     data_record,
                     args,
                 )
-        except (ValueError, RuntimeError) as e:
-            print(f"ERROR: {name_mol}")
-            print(e)
-            error_molecule.append(name)
-            print(f"Error molecule: {error_molecule}")
-        finally:
-            print(f"Processed: {name_mol}")
-        print()
+        # except (ValueError, RuntimeError) as e:
+        #     print(f"ERROR: {name_mol}")
+        #     print(e)
+        #     error_molecule.append(name)
+        #     print(f"Error molecule: {error_molecule}")
+        # finally:
+        #     print(f"Processed: {name_mol}")
+        # print()
 
     print(f"Error molecule: {error_molecule}")

@@ -453,6 +453,8 @@ if __name__ == "__main__":
         verbose=args.verbose,
     )
 
+    time.sleep(parse_time("1h"))
+
     while not collector.if_done:
         collector.reset()
         collector.aggregate_data()

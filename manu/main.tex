@@ -30,28 +30,6 @@ reprint,%
   decorations.pathmorphing,
   shapes.geometric}
 
-\definecolor{b0}{HTML}{6200EA}
-\definecolor{b1}{HTML}{651FFF}
-\definecolor{b2}{HTML}{7C4DFF}
-\definecolor{b3}{HTML}{B388FF}
-\definecolor{g0}{HTML}{B9F6CA}
-\definecolor{g1}{HTML}{69F0AE}
-\definecolor{g2}{HTML}{00E676}
-\definecolor{g3}{HTML}{00C853}
-\definecolor{r0}{HTML}{FF8A80}
-\definecolor{r1}{HTML}{FF5252}
-\definecolor{r2}{HTML}{FF1744}
-\definecolor{r3}{HTML}{C51162}
-\definecolor{lr0}{HTML}{FF9E80}
-\definecolor{lr1}{HTML}{FF6E40}
-\definecolor{lr2}{HTML}{FF3D00}
-\definecolor{lr3}{HTML}{DD2C00}
-\definecolor{y0}{HTML}{FFE57F}
-\definecolor{y1}{HTML}{FFD740}
-\definecolor{y2}{HTML}{FFC400}
-\definecolor{y3}{HTML}{FFAB00}
-
-
 \renewcommand{\d}{{\rm d}}
 \newcommand{\w}{\omega}
 \newcommand{\wti}{\widetilde}
@@ -139,8 +117,6 @@ reprint,%
 
 \maketitle
 
-\allowdisplaybreaks
-
 \section{Introduction}
 The well-known Kohn--Sham equation \cite{kohnSelfConsistentEquationsIncluding1965-11-15} is
 \begin{align}
@@ -221,30 +197,31 @@ The architecture of the neural network is shown in \Fig{fig:arch}.
 % 
 The total number of parameters in the neural network is around $1.2$ million.
 %
-The input of the neural network is a set of the energy density ${\tilde{\bm{e}}_{\rm{cube}}(\brm{r}_i)}$ with the size of $(N, 27, 4)$, and the output is the energy density ${e(\brm{r}_i)}$ with the size of $(N, 1)$.
+The input of the neural network is a set of the energy density ${\tilde{\bm{e}}_{\rm{cube}}(\brm{r})}$ with the size of $(N, 27, 4)$, and the output is the energy density ${e(\brm{r})}$ with the size of $(N, 1)$.
 % 
 N is the number of the grid points in the normal dft procedure.
 %
 \begin{align}
-	\tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}) =
-	 & \big\{ \tilde{e}(\mathbf{r}'_{i}) \text{ for } \mathbf{r}'_{i} \in \mathbf{r}_{i;\rm{cube}} \big\}.
+	\tilde{\bm{e}}(\brm{r}_{\rm{cube}}) =
+	 & \big\{ \tilde{e}(\mathbf{r}'_{c}) \text{ for } \mathbf{r}'_{c} \in \mathbf{r}_{\rm{cube}} \big\} \nl
+	 & = \big\{ \tilde{e}(\mathbf{r}), \tilde{e}(\mathbf{r}_{\rm{aux}}) \big\} .
 \end{align}
 The $\tilde{e}(\brm{r})$ is the energy density calculated by the 4 functionals (LDA, VWN3, B88 and LYP) from the original B3LYP functional \cite{perdewAtomsMoleculesSolids1992-09-15}.
 % 
-The $\mathbf{r}_{i;\rm{cube}}$ is a cube around the grid point $\mathbf{r}_{i}$ with the size of $3 \times 3 \times 3$ and the distance between two adjacent grid points is $d$.
+The $\mathbf{r}_{\rm{cube}}$ is a cube around the grid point $\mathbf{r}$ with the size of $3 \times 3 \times 3$ and the distance between two adjacent grid points is $d$.
 %
-This means that for each grid point $\mathbf{r}_{i}$, we consider a small region around it to capture the local environment and provide more features for the neural network.
+This means that for each grid point $\mathbf{r}$, we consider a small region around it to capture the local environment and provide more features for the neural network.
 % 
-We refer to the grid points within the cube, excluding the central point, as auxiliary grid points. Details of their contributions to the energy density are provided in the Appendix.
+We refer to the grid points within the cube, excluding the central point, as auxiliary grid points. Details of their contributions to the energy density and potential are provided in the Appendix.
 % 
-The energy density at the grid point $\mathbf{r}_{i}$, denoted as $e(\brm{r}_{i})$, can be predicted by the neural network as
+The energy density at the grid point $\mathbf{r}$, denoted as $e(\brm{r})$, can be predicted by the neural network as
 % 
 \begin{align}
-	e(\brm{r}_{i})
-	= & {\rm{NN}}\big( \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w \big),
+	e_{\rm{NN}}(\brm{r})
+	= & {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big),
 \end{align}
 % 
-where ${\rm{NN}}(\tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w)$ is the output of neural network with the parameters $\w$ and input $\tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i})$, $\tilde{\bm{e}}_{\rm{B3LYP}}(\brm{r}_{i})$ is the energy density calculated by the original B3LYP functional \cite{perdewAtomsMoleculesSolids1992-09-15}.
+where ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)$ represents the neural network function parameterized by $\w$, taking $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$ as input.
 % 
 The total exchange-correlation energy is obtained by integrating the energy density over the entire grid.
 % 
@@ -379,20 +356,26 @@ We set all the weights of the auxiliary grid points ($w_{i;\rm{aux}}$) to be zer
 % 
 \begin{align}
 	E'_{\rm{xc}} =
-	  & \int e(\mathbf{r}_{i;\rm{cube}}) \d \mathbf{r}_{i;\rm{cube}} \nl
-	= & \sum_{i} \Big( w_{i} e(\brm{r}_{i}) + \sum_{\brm{r}'_{i} \in \brm{r}_{i;\rm{aux}}} w_{i;\rm{aux}} e(\brm{r}'_{i}) \Big) \nl
-	= & \sum_{i} w_{i} e(\brm{r}_{i} | \brm{r}_{i;\rm{cube}} ; \w_{\rm{ML}} ).
+	 & \int e_{\rm{NN}}(\mathbf{r}) \d \mathbf{r}.
 \end{align}
+Consequently, while the auxiliary grid points influence the potential through the functional derivative, they do not directly contribute to the total energy integration. This ensures the procedure remains consistent with the standard DFT framework.
 % 
-As a result, the auxiliary grid points influence the potential but do not affect the fock matrix or the total energy. It makes the procedure remains consistent with the standard DFT calculation.
+The $\mu \nu$-th element of Fock matrix which contributed by the ML exchange-correlation, ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)$,  is calculated as
 % 
 \begin{align}
-	v'_{\rm{xc}}(\brm{r}_{i;\rm{cube}}) =
-	  & \frac{\delta E'_{\rm{xc}}}{\delta \rho(\brm{r}_{i;\rm{cube}})} \nl
-	= & \sum_{i} w_{i} \frac{\delta e(\brm{r}_{i})}{\delta \rho(\brm{r}_{i})} \nl
-	= & \sum_{i} w_{i} \frac{\delta {\rm{NN}}\big( \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w \big)}{\delta \rho(\brm{r}_{i})} \nl
-	= & \sum_{i} w_{i} \frac{\partial {\rm{NN}}\big( \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i}); \w \big)}{\partial \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i})} \frac{\delta \tilde{\bm{e}}_{\rm{cube}}(\brm{r}_{i})}{\delta \rho(\brm{r}_{i})}
+	F_{\mu \nu}^{\rm{ML}}
+	= & \frac{\delta E'_{\rm{xc}}}{\delta P_{\mu \nu}} \nl
+	= & \int \d \brm{r} \frac{\delta e_{\rm{NN}}(\brm{r})}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r}) \nl
+	= & \int \d \brm{r} \frac{\delta {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r}) \nl
+	= & \int \d \brm{r} \frac{\partial {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)}{\partial \tilde{e}(\brm{r})} \frac{\delta \tilde{e}(\brm{r})}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r})
 \end{align}
+% 
+% \begin{align}
+% 	v'_{\rm{xc}}(\brm{r})
+% 	 & = \frac{\delta E'_{\rm{xc}}}{\delta \rho(\brm{r})} \nl
+% 	 & = \int \frac{\delta e_{\rm{NN}}(\mathbf{r}_{\rm{cube}}) }{\delta \rho(\brm{r})} \d \mathbf{r}_{\rm{cube}}
+% \end{align}
+
 
 To make the neural network can capture the rotational variance, we set the cube to be aligned with the main rotation axis of the secondary derivative matrix of the electron density at the grid point $\brm{r}_{i}$.
 %

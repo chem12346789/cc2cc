@@ -5,6 +5,7 @@ import json
 import os
 import importlib.resources
 from pathlib import Path
+import re
 
 import numpy as np
 
@@ -220,7 +221,6 @@ def gen_mole(
     name_mol: str,
     basis: str,
     dataset_name: str,
-    ma_basis: bool = False,
     verbose=0,
     if_rotate=False,
     if_rotate_random=False,
@@ -242,13 +242,13 @@ def gen_mole(
         solve_symmetry=solve_symmetry,
     )
 
-    if ma_basis:
-        if "def2" in basis:
-            if dataset[dataset_name]["charge"][name_mol] < 0:
-                basis = "ma-" + basis
-        if "cc-" in basis:
-            if dataset[dataset_name]["charge"][name_mol] < 0:
-                basis = "aug-" + basis
+    match = re.search(r"\(.*\)", basis)
+    if match:
+        if dataset[dataset_name]["charge"][name_mol] >= 0:
+            basis = basis[: match.start()] + basis[match.end() :]
+        else:
+            basis = basis.replace("(", "").replace(")", "")
+
     mol = pyscf.M(
         atom=molecule,
         basis=gen_basis(basis, [atom[0] for atom in molecule]),
