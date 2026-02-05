@@ -22,10 +22,9 @@ def test_model_uks(
     time_ai_start = timer()
     mdft = pyscf.dft.UKS(mol).density_fit()
     mdft.xc = "b3lyp"
-    mdft.grids = Grid(mol, args.grid_level, modeldict.input_level, test=False)
+    mdft.grids = Grid(mol, args.grid_level, modeldict.input_level, test=True)
 
     mdft.verbose = 4
-    mdft.diis_space = 6
     mdft.conv_tol = 1e-7
     mdft.conv_tol_grad = 1e-2
 

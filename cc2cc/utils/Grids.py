@@ -112,7 +112,9 @@ class Grid(dft.gen_grid.Grids):
         self.becke_scheme = dft.gen_grid.original_becke
         self.atomic_radii = None
         self.radii_adjust = None
-        if not test:
+        if test:
+            self.prune = None
+        else:
             self.prune = None
         self.build(with_non0tab=True, sort_grids=False)
         self.non0tab = self.make_mask(mol, self.coords)
@@ -282,7 +284,7 @@ class GridCube:
         self.coords = coords.reshape((-1, 3))
         self.mol = grid.mol
         self.cutoff = grid.cutoff
-        self.non0tab = grid.make_mask(self.mol, self.coords)
+        self.non0tab = None
 
     def gen_cube_rho_rks(self, ni: pyscf.dft.numint.NumInt, dms, require_vxc=False):
         """

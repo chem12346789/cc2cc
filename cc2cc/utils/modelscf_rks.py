@@ -23,12 +23,13 @@ from pyscf.dft.numint import (
     # _tau_dot_sparse,
 )
 from pyscf.dft.gen_grid import NBINS
+from pyscf.grad.rks import _d1_dot_, _gga_grad_sum_, _make_dR_dao_w
 
 from cc2cc.utils.env_var import CUBE_MIDDLE, CUBE_SIZE
 from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.Grids import Grid
 
-# from pyscf.grad.rks import _d1_dot_, _gga_grad_sum_, _make_dR_dao_w
+lib.logger.TIMER_LEVEL = 4
 
 
 def get_veff_modified(
@@ -58,9 +59,6 @@ def get_veff_modified(
         """
         xctype = ni._xc_type(xc_code)
         make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, grids)
-        ao_loc = mol.ao_loc_nr()
-        cutoff = grids.cutoff * 1e2
-        nbins = NBINS * 2 - int(NBINS * np.log(cutoff) / np.log(grids.cutoff))
 
         nelec = np.zeros(nset)
         excsum = np.zeros(nset)
@@ -84,21 +82,23 @@ def get_veff_modified(
                     rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(
                         ni, dms, require_vxc=True
                     )
-                    exc_cube, middle_cube = modeldict.eval_xc_eff(rho_cube)
-                    middle_cube = np.zeros_like(rho_cube)
+                    energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube)
+                    # energy_den = np.zeros_like(
+                    #     rho_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+                    # )
+                    # middle_cube = np.zeros_like(rho_cube)
 
                     middle_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
                     middle_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
                     middle_cube[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.72
                     middle_cube[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.81
 
-                    energy_den = (
+                    energy_den += (
                         rho_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.08
                         + rho_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.19
                         + rho_cube[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.72
                         + rho_cube[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.81
                     )
-                    energy_den += exc_cube
                     excsum[i] += np.dot(weights_, energy_den)
 
                     wv = np.einsum(
@@ -108,7 +108,6 @@ def get_veff_modified(
                     yield i, ao_value, gridcube.non0tab, wv
 
         aow = None
-        pair_mask = mol.get_overlap_cond() < -np.log(ni.cutoff)
 
         if xctype == "GGA":
             ao_deriv = 1

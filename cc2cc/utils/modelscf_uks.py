@@ -26,6 +26,8 @@ from cc2cc.utils.env_var import CUBE_MIDDLE, CUBE_SIZE
 from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.Grids import Grid
 
+lib.logger.TIMER_LEVEL = 4
+
 
 def get_veff_modified(
     ks,
@@ -52,9 +54,6 @@ def get_veff_modified(
         Obtain the nelec, excsum, and vmat.
         """
         xctype = ni._xc_type(xc_code)
-        ao_loc = mol.ao_loc_nr()
-        cutoff = grids.cutoff * 1e2
-        nbins = NBINS * 2 - int(NBINS * np.log(cutoff) / np.log(grids.cutoff))
 
         dma, dmb = _format_uks_dm(dms)
         nao = dma.shape[-1]
@@ -86,19 +85,23 @@ def get_veff_modified(
                     rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_uks(
                         ni, dms, require_vxc=True
                     )
-                    exc_cube, middle_cube = modeldict.eval_xc_eff(rho_cube)
+                    energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube)
+                    # energy_den = np.zeros_like(
+                    #     rho_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+                    # )
+                    # middle_cube = np.zeros_like(rho_cube)
+
                     middle_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
                     middle_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
                     middle_cube[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.72
                     middle_cube[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.81
 
-                    energy_den = (
+                    energy_den += (
                         rho_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.08
                         + rho_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.19
                         + rho_cube[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.72
                         + rho_cube[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.81
                     )
-                    energy_den += exc_cube
                     excsum[i] += np.dot(weights_, energy_den)
 
                     wv = np.einsum(
@@ -107,7 +110,6 @@ def get_veff_modified(
                     wv = wv.reshape(2, 4, len(gridcube.coords))  # slpabc -> slP
                     yield i, ao_value, gridcube.non0tab, wv
 
-        pair_mask = mol.get_overlap_cond() < -np.log(ni.cutoff)
         aow = None
 
         ao_deriv = 1
