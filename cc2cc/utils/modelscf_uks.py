@@ -10,8 +10,10 @@ from pyscf import lib
 from pyscf.lib import logger
 import pyscf.dft.numint
 from pyscf.dft.numint import (
-    _dot_ao_ao,
+    _scale_ao,
     _scale_ao_sparse,
+    _dot_ao_ao,
+    _dot_ao_ao_dense,
     _dot_ao_ao_sparse,
     _tau_dot_sparse,
     _format_uks_dm,
@@ -112,30 +114,10 @@ def get_veff_modified(
         for i, ao, mask, wv in block_loop(ao_deriv):
             wv[:, 0] *= 0.5
             wva, wvb = wv
-            aow = _scale_ao_sparse(ao, wva, mask, ao_loc, out=aow)
-            _dot_ao_ao_sparse(
-                ao[0],
-                aow,
-                None,
-                nbins,
-                mask,
-                pair_mask,
-                ao_loc,
-                hermi=0,
-                out=vmat[0, i],
-            )
-            aow = _scale_ao_sparse(ao, wvb, mask, ao_loc, out=aow)
-            _dot_ao_ao_sparse(
-                ao[0],
-                aow,
-                None,
-                nbins,
-                mask,
-                pair_mask,
-                ao_loc,
-                hermi=0,
-                out=vmat[1, i],
-            )
+            aow = _scale_ao(ao, wva, out=aow)
+            _dot_ao_ao_dense(ao[0], aow, None, out=vmat[0, i])
+            aow = _scale_ao(ao, wvb, out=aow)
+            _dot_ao_ao_dense(ao[0], aow, None, out=vmat[1, i])
         vmat = lib.hermi_sum(vmat.reshape((-1, nao, nao)), axes=(0, 2, 1)).reshape(
             2, nset, nao, nao
         )

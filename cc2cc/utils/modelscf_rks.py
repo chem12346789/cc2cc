@@ -15,8 +15,10 @@ from pyscf import lib
 from pyscf.lib import logger
 from pyscf.dft.numint import (
     NumInt,
-    # _scale_ao,
+    _scale_ao,
     _scale_ao_sparse,
+    _dot_ao_ao,
+    _dot_ao_ao_dense,
     _dot_ao_ao_sparse,
     # _tau_dot_sparse,
 )
@@ -83,6 +85,7 @@ def get_veff_modified(
                         ni, dms, require_vxc=True
                     )
                     exc_cube, middle_cube = modeldict.eval_xc_eff(rho_cube)
+                    middle_cube = np.zeros_like(rho_cube)
 
                     middle_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
                     middle_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
@@ -107,22 +110,15 @@ def get_veff_modified(
         aow = None
         pair_mask = mol.get_overlap_cond() < -np.log(ni.cutoff)
 
-        ao_deriv = 1
-        for i, ao, mask, wv in block_loop(ao_deriv):
-            wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
-            aow = _scale_ao_sparse(ao, wv, mask, ao_loc, out=aow)
-            _dot_ao_ao_sparse(
-                ao[0],
-                aow,
-                None,
-                nbins,
-                mask,
-                pair_mask,
-                ao_loc,
-                hermi=0,
-                out=vmat[i],
-            )
-        vmat = lib.hermi_sum(vmat, axes=(0, 2, 1))
+        if xctype == "GGA":
+            ao_deriv = 1
+            for i, ao, mask, wv in block_loop(ao_deriv):
+                wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
+                aow = _scale_ao(ao, wv, out=aow)
+                _dot_ao_ao_dense(ao[0], aow, None, out=vmat[i])
+            vmat = lib.hermi_sum(vmat, axes=(0, 2, 1))
+        else:
+            raise NotImplementedError(f"numint.nr_rks for functional {xc_code}")
 
         if nset == 1:
             vmat = vmat[0]

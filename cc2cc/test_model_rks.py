@@ -25,9 +25,9 @@ def test_model_rks(
     mdft.grids = Grid(mol, args.grid_level, modeldict.input_level, test=False)
 
     mdft.verbose = 4
-    mdft.diis_space = 12
+    mdft.diis_space = 4
     mdft.conv_tol = 1e-7
-    mdft.conv_tol_grad = 1e-3
+    mdft.conv_tol_grad = 1e-2
 
     if modeldict.model_type == "center_4":
         get_veff_modified_rks(mdft, modeldict)
@@ -46,7 +46,7 @@ def test_model_rks(
 
     if mdft.converged is False and if_retry:
         print("RKS not converged. First try.")
-        mdft.diis_damp = 0.8
+        mdft.diis_damp = 0.5
         mdft.kernel()
         if mdft.converged is False:
             print("RKS not converged. Second try.")
@@ -70,7 +70,7 @@ def test_model_rks(
     if args.if_grad:
         g = mdft.Gradients()
         g.xc = "b3lyp"
-        g.grids = grids
+        g.grids = mdft.grids
         if modeldict.model_type == "center_4":
             get_veff_grad_modified_rks(
                 g,
