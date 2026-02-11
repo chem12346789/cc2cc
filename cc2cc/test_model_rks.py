@@ -3,6 +3,7 @@
 from timeit import default_timer as timer
 
 import pyscf
+import pyscf.dft
 
 from cc2cc.utils import get_veff_modified_rks, get_veff_grad_modified_rks
 from cc2cc.utils import Grid, TestDataDFT
@@ -25,6 +26,8 @@ def test_model_rks(
     mdft.grids = Grid(mol, args.grid_level, modeldict.input_level, test=True)
 
     mdft.verbose = 4
+    mdft.mol.verbose = 4
+    mdft.diis_space = 6
     mdft.conv_tol = 1e-7
     mdft.conv_tol_grad = 1e-2
 

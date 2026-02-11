@@ -1,8 +1,9 @@
-"""Test the model. Restrict Khon-Sham (no spin)."""
+"""Test the model. Unrestricted Khon-Sham (with spin)."""
 
 from timeit import default_timer as timer
 
 import pyscf
+import pyscf.dft
 
 from cc2cc.utils import get_veff_modified_uks, get_veff_grad_modified_uks
 from cc2cc.utils import Grid, TestDataDFT
@@ -16,7 +17,7 @@ def test_model_uks(
     args,
 ):
     """
-    Test the model. Restrict Khon-Sham (no spin).
+    Test the model. Unrestricted Khon-Sham (with spin).
     """
     # 2.0 Prepare
     time_ai_start = timer()
@@ -25,6 +26,8 @@ def test_model_uks(
     mdft.grids = Grid(mol, args.grid_level, modeldict.input_level, test=True)
 
     mdft.verbose = 4
+    mdft.mol.verbose = 4
+    mdft.diis_space = 6
     mdft.conv_tol = 1e-7
     mdft.conv_tol_grad = 1e-2
 

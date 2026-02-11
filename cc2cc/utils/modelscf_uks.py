@@ -54,6 +54,9 @@ def get_veff_modified(
         Obtain the nelec, excsum, and vmat.
         """
         xctype = ni._xc_type(xc_code)
+        ao_loc = mol.ao_loc_nr()
+        cutoff = grids.cutoff * 1e2
+        nbins = NBINS * 2 - int(NBINS * np.log(cutoff) / np.log(grids.cutoff))
 
         dma, dmb = _format_uks_dm(dms)
         nao = dma.shape[-1]
@@ -73,6 +76,7 @@ def get_veff_modified(
                 max_memory=max_memory // (CUBE_SIZE**3),
                 non0tab=grids.non0tab,
             ):
+                t0 = (logger.process_clock(), logger.perf_counter())
                 for i in range(nset):
                     rho_a = make_rhoa(i, ao, mask, xctype)
                     rho_b = make_rhob(i, ao, mask, xctype)
@@ -82,10 +86,13 @@ def get_veff_modified(
                     nelec[1, i] += den_b.sum()
 
                     gridcube = grids.gen_cube(mol, dms, coords_, mask)
+                    t0 = logger.timer(mol, "    gen cube", *t0)
                     rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_uks(
                         ni, dms, require_vxc=True
                     )
+                    t0 = logger.timer(mol, "    cube rho vxc", *t0)
                     energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube)
+                    t0 = logger.timer(mol, "    model eval", *t0)
                     # energy_den = np.zeros_like(
                     #     rho_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
                     # )
@@ -107,22 +114,59 @@ def get_veff_modified(
                     wv = np.einsum(
                         "p,islpabc,piabc->slpabc", weights_, vxc_mat, middle_cube
                     )
+
                     wv = wv.reshape(2, 4, len(gridcube.coords))  # slpabc -> slP
+                    t0 = logger.timer(mol, "    post model eval", *t0)
                     yield i, ao_value, gridcube.non0tab, wv
 
-        aow = None
+                    # wv = wv[:, :, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+                    # t0 = logger.timer(mol, "    post model eval", *t0)
+                    # yield i, ao, mask, wv
 
-        ao_deriv = 1
-        for i, ao, mask, wv in block_loop(ao_deriv):
-            wv[:, 0] *= 0.5
-            wva, wvb = wv
-            aow = _scale_ao(ao, wva, out=aow)
-            _dot_ao_ao_dense(ao[0], aow, None, out=vmat[0, i])
-            aow = _scale_ao(ao, wvb, out=aow)
-            _dot_ao_ao_dense(ao[0], aow, None, out=vmat[1, i])
-        vmat = lib.hermi_sum(vmat.reshape((-1, nao, nao)), axes=(0, 2, 1)).reshape(
-            2, nset, nao, nao
-        )
+        aow = None
+        pair_mask = mol.get_overlap_cond() < -np.log(ni.cutoff)
+
+        t0 = (logger.process_clock(), logger.perf_counter())
+        if xctype == "GGA":
+            ao_deriv = 1
+            for i, ao, mask, wv in block_loop(ao_deriv):
+                t0 = logger.timer(mol, "  vxc on grids", *t0)
+                wv[:, 0] *= 0.5
+                wva, wvb = wv
+                aow = _scale_ao(ao, wva, out=aow)
+                _dot_ao_ao_dense(ao[0], aow, None, out=vmat[0, i])
+                aow = _scale_ao(ao, wvb, out=aow)
+                _dot_ao_ao_dense(ao[0], aow, None, out=vmat[1, i])
+                # aow = _scale_ao_sparse(ao, wva, mask, ao_loc, out=aow)
+                # _dot_ao_ao_sparse(
+                #     ao[0],
+                #     aow,
+                #     None,
+                #     nbins,
+                #     mask,
+                #     pair_mask,
+                #     ao_loc,
+                #     hermi=0,
+                #     out=vmat[0, i],
+                # )
+                # aow = _scale_ao_sparse(ao, wvb, mask, ao_loc, out=aow)
+                # _dot_ao_ao_sparse(
+                #     ao[0],
+                #     aow,
+                #     None,
+                #     nbins,
+                #     mask,
+                #     pair_mask,
+                #     ao_loc,
+                #     hermi=0,
+                #     out=vmat[1, i],
+                # )
+                t0 = logger.timer(mol, "  vxc mat", *t0)
+            vmat = lib.hermi_sum(vmat.reshape((-1, nao, nao)), axes=(0, 2, 1)).reshape(
+                2, nset, nao, nao
+            )
+        else:
+            raise NotImplementedError(f"numint.nr_rks for functional {xc_code}")
 
         if isinstance(dma, np.ndarray) and dma.ndim == 2:
             vmat = vmat[:, 0]
@@ -173,7 +217,7 @@ def get_veff_modified(
                 hermi=hermi,
             )
             logger.debug(ks_, "nelec by numeric integration = %s", n)
-            t0 = logger.timer(ks_, "vxc", *t0)
+            t0 = logger.timer(ks_, "  vxc", *t0)
 
         incremental_jk = (
             ks_._eri is None
@@ -229,6 +273,7 @@ def get_veff_modified(
         if lambda_rho is not None and dm_tar is not None:
             delta_j = ks_.get_j(mol, dm - dm_tar, hermi=hermi)
             vxc = vxc + lambda_rho * delta_j
+        t0 = logger.timer(ks_, "  jk", *t0)
 
         vxc = lib.tag_array(vxc, ecoul=ecoul, exc=exc, vj=vj, vk=vk)
         return vxc

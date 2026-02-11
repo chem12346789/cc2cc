@@ -12,6 +12,7 @@ from numba import njit, prange
 
 import pyscf
 from pyscf import dft, gto, lib
+from pyscf.lib import logger
 import pyscf.dft.numint
 from pyscf.dft.numint import (
     _dot_ao_dm,
@@ -116,8 +117,8 @@ class Grid(dft.gen_grid.Grids):
             self.prune = None
         else:
             self.prune = None
-        self.build(with_non0tab=True, sort_grids=False)
-        self.non0tab = self.make_mask(mol, self.coords)
+        self.build(with_non0tab=False, sort_grids=False)
+        self.non0tab = None
         self.screen_index = self.non0tab
 
     def gen_cube(
@@ -290,6 +291,7 @@ class GridCube:
         """
         Generate the cube density for the given molecule.
         """
+        t0 = (logger.process_clock(), logger.perf_counter())
         input_mat = np.zeros((self.input_level, len(self.coords)))
         vxc_mat = np.zeros((self.input_level, 4, len(self.coords)))
 
@@ -301,6 +303,7 @@ class GridCube:
         exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho0, xctype="LDA")[:2]
         exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
         exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
+        t0 = logger.timer(self.mol, "      gen input", *t0)
 
         input_mat[0] = exc_lda * rho0
         input_mat[1] = exc_vwn * rho0
@@ -336,6 +339,7 @@ class GridCube:
             (self.input_level, 4, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         )
 
+        t0 = logger.timer(self.mol, "      gen exc and vxc", *t0)
         if require_vxc:
             return input_mat, vxc_mat, ao_value
         else:
@@ -345,6 +349,7 @@ class GridCube:
         """
         Generate the cube density for the given molecule.
         """
+        t0 = (logger.process_clock(), logger.perf_counter())
         input_mat = np.zeros((self.input_level, len(self.coords)))
         vxc_mat = np.zeros((self.input_level, 2, 4, len(self.coords)))
 
@@ -356,6 +361,7 @@ class GridCube:
         rho = (rho_a, rho_b)
         rho_lda = (rho_a[0], rho_b[0])
         rho0 = rho_a[0] + rho_b[0]
+        t0 = logger.timer(self.mol, "      gen input", *t0)
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
         exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
@@ -403,6 +409,7 @@ class GridCube:
             )
         )
 
+        t0 = logger.timer(self.mol, "      gen exc and vxc", *t0)
         if require_vxc:
             return input_mat, vxc_mat, ao_value
 
