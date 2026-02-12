@@ -93,22 +93,9 @@ def get_veff_modified(
                     t0 = logger.timer(mol, "    cube rho vxc", *t0)
                     energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube)
                     t0 = logger.timer(mol, "    model eval", *t0)
-                    # energy_den = np.zeros_like(
-                    #     rho_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-                    # )
-                    # middle_cube = np.zeros_like(rho_cube)
 
-                    middle_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
-                    middle_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
-                    middle_cube[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.72
-                    middle_cube[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.81
-
-                    energy_den += (
-                        rho_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.08
-                        + rho_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.19
-                        + rho_cube[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.72
-                        + rho_cube[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.81
-                    )
+                    middle_cube = modeldict.modified_b3lyp_potential(middle_cube)
+                    energy_den += modeldict.get_b3lyp_ene(rho_cube)
                     excsum[i] += np.dot(weights_, energy_den)
 
                     wv = np.einsum(

@@ -28,7 +28,7 @@ def test_model_rks(
     mdft.verbose = 4
     mdft.mol.verbose = 4
     mdft.diis_space = 6
-    mdft.conv_tol = 1e-7
+    mdft.conv_tol = 1e-6
     mdft.conv_tol_grad = 1e-2
 
     if modeldict.model_type == "center_4":

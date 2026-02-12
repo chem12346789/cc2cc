@@ -398,6 +398,41 @@ class ModelClass:
             data_record_l.append(data_record)
         return data_record_l
 
+    def get_b3lyp_ene(self, rho_cube):
+        if self.model_type == "center_4":
+            return (
+                rho_cube[:, 0] * 0.08
+                + rho_cube[:, 1] * 0.19
+                + rho_cube[:, 2] * 0.72
+                + rho_cube[:, 3] * 0.81
+            )
+        elif self.model_type == "cube":
+            return (
+                rho_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.08
+                + rho_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.19
+                + rho_cube[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.72
+                + rho_cube[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.81
+            )
+        # elif self.model_type == "cube9":
+        # elif self.model_type == "cube5":
+        else:
+            raise ValueError(f"Unknown model type: {self.model_type}")
+
+    def modified_b3lyp_potential(self, middle_cube):
+        if self.model_type == "center_4":
+            middle_cube[:, 0] += 0.08
+            middle_cube[:, 1] += 0.19
+            middle_cube[:, 2] += 0.72
+            middle_cube[:, 3] += 0.81
+        elif self.model_type == "cube":
+            middle_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
+            middle_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
+            middle_cube[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.72
+            middle_cube[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.81
+        else:
+            raise ValueError(f"Unknown model type: {self.model_type}")
+        return middle_cube
+
     def eval_xc_eff_cube(self, rho_cube):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.

@@ -101,7 +101,9 @@ class Collect_info:
     def get_wtmad_2(self):
         dft_type_list = ["scf_ene", "scf_d3bj_ene"]
         header = dft_type_list + ["Processed"]
-        data_name = (self.data["name"].str.split(f"_{self.basis}").str[0]).to_numpy()
+        data_name = self.data["name"].to_numpy()
+        for iter_ in range(len(data_name)):
+            data_name[iter_] = data_name[iter_].split(f"_{self.basis}")[0]
         data_subset = {}
 
         with open(
@@ -131,7 +133,9 @@ class Collect_info:
                     col = np.where(data_name == i_molecule_name)[0]
                     if col.size != 1:
                         if self.verbose > 0:
-                            print(f"Warning: {i_molecule_name} not found in data file")
+                            print(
+                                f"Warning: {i_molecule_name} not found in data file with name {name_subset}, ERROR"
+                            )
                         continue
 
                 reaction_dict = json_gmtkn[f"reaction-{i_subset_}"]
@@ -370,6 +374,43 @@ class Collect_info:
             )
         self.run.log(log_dict)
 
+        date = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+
+        # check if the df is the sota version by checking if the summary of scf_ene in wtmad_2_subset is smaller than the sota version
+        if (
+            wtmad_2_subset.loc["summary", "scf_ene"]
+            < wtmad_2_subset.loc["summary", "scf_ene_sota"]
+        ) and self.if_done:
+            print("New sota achieved, updating sota backup files.")
+            summary_subset_sota = summary_subset.copy()
+            summary_wtmad_2_subset_sota = summary_wtmad_2_subset.copy()
+            wtmad_1_subset_sota = wtmad_1_subset.copy()
+            wtmad_2_subset_sota = wtmad_2_subset.copy()
+            for df in [
+                summary_subset_sota,
+                summary_wtmad_2_subset_sota,
+                wtmad_1_subset_sota,
+                wtmad_2_subset_sota,
+            ]:
+                # delete the scf_ene_sota and scf_d3bj_ene_sota columns if exist in the dataframe
+                for col in ["scf_ene_sota", "scf_d3bj_ene_sota"]:
+                    if col in df.columns:
+                        df.drop(columns=[col], inplace=True)
+                # rename the scf_ene and scf_d3bj_ene columns to include sota suffix
+                if "scf_ene" in df.columns:
+                    df.rename(columns={"scf_ene": "scf_ene_sota"}, inplace=True)
+                if "scf_d3bj_ene" in df.columns:
+                    df.rename(
+                        columns={"scf_d3bj_ene": "scf_d3bj_ene_sota"}, inplace=True
+                    )
+            print(f"Saving csv backup files with timestamp: {date}")
+            summary_subset_sota.to_csv(f"validate_hkqai/csv_backup/summary_subset.csv")
+            summary_wtmad_2_subset_sota.to_csv(
+                f"validate_hkqai/csv_backup/summary_subset_wtmad_2.csv"
+            )
+            wtmad_1_subset_sota.to_csv(f"validate_hkqai/csv_backup/wtmad_1_subset.csv")
+            wtmad_2_subset_sota.to_csv(f"validate_hkqai/csv_backup/wtmad_2_subset.csv")
+
         for df in [
             summary_subset,
             summary_wtmad_2_subset,
@@ -380,7 +421,6 @@ class Collect_info:
                 if col != "Processed":
                     df[col] = df[col].map("{:.2f}".format)
 
-        date = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
         print(f"Saving excel backup files with timestamp: {date}")
         summary_subset.to_excel(
             f"validate_hkqai/excel_backup/summary_subset_{date}.xlsx"
@@ -452,8 +492,6 @@ if __name__ == "__main__":
         basis=args.basis,
         verbose=args.verbose,
     )
-
-    time.sleep(parse_time("1h"))
 
     while not collector.if_done:
         collector.reset()
