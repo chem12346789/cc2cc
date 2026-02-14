@@ -48,24 +48,18 @@ def test_model_uks(
 
     if mdft.converged is False and if_retry:
         print("UKS not converged. First try.")
-        mdft.diis_damp = 0.5
+        mdft.diis_damp = 0.75
         mdft.kernel()
         if mdft.converged is False:
             print("UKS not converged. Second try.")
-            mdft.diis_damp = 0
             pyscf.scf.addons.dynamic_level_shift_(mdft, factor=0.5)
             mdft.kernel()
             if mdft.converged is False:
-                print("UKS not converged. Third try.")
-                mdft.level_shift = 0
-                mdft = mdft.newton()
-                mdft.kernel()
-                if mdft.converged is False:
-                    print("Error: UKS not converged!!! Restart without SCF procedure.")
-                    test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
-                    mdft.max_cycle = -1
-                    mdft.conv_tol = 1e-7
-                    mdft.kernel(dm0=test_data.dm1_dft)
+                print("Error: UKS not converged!!! Restart without SCF procedure.")
+                test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
+                mdft.max_cycle = -1
+                mdft.conv_tol = 1e-7
+                mdft.kernel(dm0=test_data.dm1_dft)
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
 

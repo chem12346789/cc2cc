@@ -61,8 +61,7 @@ if __name__ == "__main__":
                 print(f"SKIP: {name}")
                 continue
 
-        # try:
-        if True:
+        try:
             if mol.spin == 0:
                 test_model_rks(
                     mol,
@@ -79,13 +78,13 @@ if __name__ == "__main__":
                     data_record,
                     args,
                 )
-        # except (ValueError, RuntimeError) as e:
-        #     print(f"ERROR: {name_mol}")
-        #     print(e)
-        #     error_molecule.append(name)
-        #     print(f"Error molecule: {error_molecule}")
-        # finally:
-        #     print(f"Processed: {name_mol}")
-        # print()
+        except (ValueError, RuntimeError) as e:
+            print(f"ERROR: {name_mol}")
+            print(e)
+            error_molecule.append(name)
+            print(f"Error molecule: {error_molecule}")
+        finally:
+            print(f"Processed: {name_mol}")
+        print()
 
     print(f"Error molecule: {error_molecule}")

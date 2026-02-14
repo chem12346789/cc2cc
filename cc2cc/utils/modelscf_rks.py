@@ -103,10 +103,6 @@ def get_veff_modified(
                     t0 = logger.timer(mol, "    post model eval", *t0)
                     yield i, ao_value, gridcube.non0tab, wv
 
-                    # wv = wv[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-                    # t0 = logger.timer(mol, "    post model eval", *t0)
-                    # yield i, ao, mask, wv
-
         aow = None
         pair_mask = mol.get_overlap_cond() < -np.log(ni.cutoff)
 
@@ -116,20 +112,18 @@ def get_veff_modified(
             for i, ao, mask, wv in block_loop(ao_deriv):
                 t0 = logger.timer(mol, "  vxc on grids", *t0)
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
-                aow = _scale_ao(ao, wv, out=aow)
-                _dot_ao_ao_dense(ao[0], aow, None, out=vmat[i])
-                # aow = _scale_ao_sparse(ao, wv, mask, ao_loc, out=aow)
-                # _dot_ao_ao_sparse(
-                #     ao[0],
-                #     aow,
-                #     None,
-                #     nbins,
-                #     mask,
-                #     pair_mask,
-                #     ao_loc,
-                #     hermi=0,
-                #     out=vmat[i],
-                # )
+                aow = _scale_ao_sparse(ao, wv, mask, ao_loc, out=aow)
+                _dot_ao_ao_sparse(
+                    ao[0],
+                    aow,
+                    None,
+                    nbins,
+                    mask,
+                    pair_mask,
+                    ao_loc,
+                    hermi=0,
+                    out=vmat[i],
+                )
                 t0 = logger.timer(mol, "  vxc mat", *t0)
             vmat = lib.hermi_sum(vmat, axes=(0, 2, 1))
         else:

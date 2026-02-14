@@ -414,7 +414,13 @@ class ModelClass:
                 + rho_cube[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.81
             )
         # elif self.model_type == "cube9":
-        # elif self.model_type == "cube5":
+        elif self.model_type == "cube5":
+            return (
+                rho_cube[:, 0, self.model.cube_middle]
+                + rho_cube[:, 1, self.model.cube_middle]
+                + rho_cube[:, 2, self.model.cube_middle]
+                + rho_cube[:, 3, self.model.cube_middle]
+            )
         else:
             raise ValueError(f"Unknown model type: {self.model_type}")
 
@@ -429,6 +435,11 @@ class ModelClass:
             middle_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
             middle_cube[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.72
             middle_cube[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.81
+        elif self.model_type == "cube5":
+            middle_cube[:, 0, self.model.cube_middle] += 0.08
+            middle_cube[:, 1, self.model.cube_middle] += 0.19
+            middle_cube[:, 2, self.model.cube_middle] += 0.72
+            middle_cube[:, 3, self.model.cube_middle] += 0.81
         else:
             raise ValueError(f"Unknown model type: {self.model_type}")
         return middle_cube

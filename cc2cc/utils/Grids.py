@@ -115,8 +115,6 @@ class Grid(dft.gen_grid.Grids):
         self.radii_adjust = None
         if test:
             self.prune = None
-        else:
-            self.prune = None
         self.build(with_non0tab=False, sort_grids=False)
         self.non0tab = None
         self.screen_index = self.non0tab
@@ -285,6 +283,8 @@ class GridCube:
         self.coords = coords.reshape((-1, 3))
         self.mol = grid.mol
         self.cutoff = grid.cutoff
+        # sparse version seems to be not pallelized, and is slower than dense version. 
+        # So we use dense version here (set non0tab tobe None) for all system sizes.
         self.non0tab = None
 
     def gen_cube_rho_rks(self, ni: pyscf.dft.numint.NumInt, dms, require_vxc=False):
