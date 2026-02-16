@@ -332,7 +332,7 @@ def add_args(parser: argparse.ArgumentParser):
             "tol_delta_grids_l",
             "tol_delta_grids_l_erf",
             "exc_cc_grids",
-            "exc_cc_grids_normal",
+            "b3lyp",
         ],
         help="Target for the output. Default is tol_delta_grids.",
     )
