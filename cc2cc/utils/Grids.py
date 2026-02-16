@@ -8,10 +8,11 @@ More details.
 
 import numpy as np
 import torch
-from numba import njit
+from numba import njit, prange
 
 import pyscf
 from pyscf import dft, gto, lib
+from pyscf.lib import logger
 import pyscf.dft.numint
 from pyscf.dft.numint import (
     _dot_ao_dm,
@@ -36,7 +37,7 @@ OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
 SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
 
 
-@njit(fastmath=True)
+@njit(fastmath=True, parallel=True)
 def gen_cube_njit(
     rho_in_2,
     rho_in_1,
@@ -46,14 +47,14 @@ def gen_cube_njit(
     """
     Generate the cube coordinates for the given molecule.
     """
-    for p in range(len(coords)):
+    for p in prange(len(coords)):
         norm_2d = rho_in_2[:, :, p]
         eig_val, eig_vec = np.linalg.eigh(norm_2d)
         eig_val_sort = np.argsort(eig_val)
         eig_vec = eig_vec[:, eig_val_sort]
         norm_1d = rho_in_1[:, p]
         for i in range(3):
-            if eig_vec[:, i] @ norm_1d < 0:
+            if np.sum(eig_vec[:, i] * norm_1d) < 0:
                 eig_vec[:, i] *= -1
 
         p_coords = coords[p]
@@ -66,6 +67,19 @@ def gen_cube_njit(
                         + (j - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 1]
                         + (k - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 2]
                     )
+
+
+@njit(fastmath=True, parallel=True)
+def gen_center_njit(
+    rho_in_2,
+    rho_in_1,
+    coords,
+    coor_cube,
+):
+    """
+    Generate the center coordinates for the given molecule.
+    """
+    coor_cube = coords.copy()
 
 
 class Grid(dft.gen_grid.Grids):
@@ -87,21 +101,22 @@ class Grid(dft.gen_grid.Grids):
     gen_rho_uks: Generate the center density for the given molecule in UKS.
     """
 
-    def __init__(self, mol, level, input_level=4, test=False):
+    def __init__(self, mol, level, input_level=4, cube_type="cube", test=False):
         super().__init__(mol)
 
         self.level = level
         self.input_level = input_level
+        self.cube_type = cube_type
 
         # Set default parameters, please refer to pyscf.dft.gen_grid.Grids for details.
         self.radi_method = dft.radi.gauss_chebyshev
         self.becke_scheme = dft.gen_grid.original_becke
         self.atomic_radii = None
         self.radii_adjust = None
-        if not test:
+        if test:
             self.prune = None
-        self.build(with_non0tab=True, sort_grids=False)
-        self.non0tab = self.make_mask(mol, self.coords)
+        self.build(with_non0tab=False, sort_grids=False)
+        self.non0tab = None
         self.screen_index = self.non0tab
 
     def gen_cube(
@@ -160,8 +175,14 @@ class Grid(dft.gen_grid.Grids):
         rho_in_2[2, 0, :] = rho_in_2[0, 2, :]
         rho_in_2[2, 1, :] = rho_in_2[1, 2, :]
 
-        coor_cube = np.zeros((len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
-        gen_cube_njit(rho_in_2, rho_in_1, coords, coor_cube)
+        if self.cube_type == "center":
+            coor_cube = np.zeros((len(coords), 1, 1, 1, 3))
+            gen_center_njit(rho_in_2, rho_in_1, coords, coor_cube)
+        elif self.cube_type == "cube":
+            coor_cube = np.zeros((len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
+            gen_cube_njit(rho_in_2, rho_in_1, coords, coor_cube)
+        else:
+            raise ValueError("Unknown cube type.")
 
         return GridCube(coor_cube, self)
 
@@ -256,19 +277,21 @@ class GridCube:
     """
 
     def __init__(self, coords, grid: Grid):
-        self.weights = grid.weights
         self.number_of_cube = len(coords)
         # size of coords: (number * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE, 3)
         self.input_level = grid.input_level
         self.coords = coords.reshape((-1, 3))
         self.mol = grid.mol
         self.cutoff = grid.cutoff
-        self.non0tab = grid.make_mask(self.mol, self.coords)
+        # sparse version seems to be not pallelized, and is slower than dense version. 
+        # So we use dense version here (set non0tab tobe None) for all system sizes.
+        self.non0tab = None
 
     def gen_cube_rho_rks(self, ni: pyscf.dft.numint.NumInt, dms, require_vxc=False):
         """
         Generate the cube density for the given molecule.
         """
+        t0 = (logger.process_clock(), logger.perf_counter())
         input_mat = np.zeros((self.input_level, len(self.coords)))
         vxc_mat = np.zeros((self.input_level, 4, len(self.coords)))
 
@@ -280,6 +303,7 @@ class GridCube:
         exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho0, xctype="LDA")[:2]
         exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
         exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
+        t0 = logger.timer(self.mol, "      gen input", *t0)
 
         input_mat[0] = exc_lda * rho0
         input_mat[1] = exc_vwn * rho0
@@ -315,6 +339,7 @@ class GridCube:
             (self.input_level, 4, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         )
 
+        t0 = logger.timer(self.mol, "      gen exc and vxc", *t0)
         if require_vxc:
             return input_mat, vxc_mat, ao_value
         else:
@@ -324,6 +349,7 @@ class GridCube:
         """
         Generate the cube density for the given molecule.
         """
+        t0 = (logger.process_clock(), logger.perf_counter())
         input_mat = np.zeros((self.input_level, len(self.coords)))
         vxc_mat = np.zeros((self.input_level, 2, 4, len(self.coords)))
 
@@ -335,6 +361,7 @@ class GridCube:
         rho = (rho_a, rho_b)
         rho_lda = (rho_a[0], rho_b[0])
         rho0 = rho_a[0] + rho_b[0]
+        t0 = logger.timer(self.mol, "      gen input", *t0)
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
         exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
@@ -382,6 +409,7 @@ class GridCube:
             )
         )
 
+        t0 = logger.timer(self.mol, "      gen exc and vxc", *t0)
         if require_vxc:
             return input_mat, vxc_mat, ao_value
 

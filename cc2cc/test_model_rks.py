@@ -3,6 +3,7 @@
 from timeit import default_timer as timer
 
 import pyscf
+import pyscf.dft
 
 from cc2cc.utils import get_veff_modified_rks, get_veff_grad_modified_rks
 from cc2cc.utils import Grid, TestDataDFT
@@ -22,12 +23,13 @@ def test_model_rks(
     time_ai_start = timer()
     mdft = pyscf.dft.RKS(mol).density_fit()
     mdft.xc = "b3lyp"
-    mdft.grids = Grid(mol, args.grid_level, modeldict.input_level, test=False)
+    mdft.grids = Grid(mol, args.grid_level, modeldict.input_level, test=True)
 
     mdft.verbose = 4
-    mdft.diis_space = 12
-    mdft.conv_tol = 1e-7
-    mdft.conv_tol_grad = 1e-3
+    mdft.mol.verbose = 4
+    mdft.diis_space = 6
+    mdft.conv_tol = 1e-6
+    mdft.conv_tol_grad = 1e-2
 
     if modeldict.model_type == "center_4":
         get_veff_modified_rks(mdft, modeldict)
@@ -46,31 +48,24 @@ def test_model_rks(
 
     if mdft.converged is False and if_retry:
         print("RKS not converged. First try.")
-        mdft.diis_damp = 0.8
+        mdft.diis_damp = 0.75
         mdft.kernel()
         if mdft.converged is False:
             print("RKS not converged. Second try.")
-            mdft.diis_damp = 0
             pyscf.scf.addons.dynamic_level_shift_(mdft, factor=0.5)
             mdft.kernel()
             if mdft.converged is False:
-                print("RKS not converged. Third try.")
-                mdft.level_shift = 0
-                mdft = mdft.newton()
-                mdft.kernel()
-                if mdft.converged is False:
-                    print("Error: RKS not converged!!! Restart without SCF procedure.")
-                    test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
-                    mdft.max_cycle = -1
-                    mdft.conv_tol = 1e-7
-                    mdft.kernel(dm0=test_data.dm1_dft)
+                print("Error: RKS not converged!!! Restart without SCF procedure.")
+                test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
+                mdft.max_cycle = -1
+                mdft.kernel(dm0=test_data.dm1_dft)
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
 
     if args.if_grad:
         g = mdft.Gradients()
         g.xc = "b3lyp"
-        g.grids = grids
+        g.grids = mdft.grids
         if modeldict.model_type == "center_4":
             get_veff_grad_modified_rks(
                 g,
