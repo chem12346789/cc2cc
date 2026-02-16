@@ -73,7 +73,7 @@ def get_veff_modified(
                 grids,
                 nao,
                 ao_deriv,
-                max_memory=max_memory // (CUBE_SIZE**3),
+                max_memory=max_memory // (2 * CUBE_SIZE**3),
                 non0tab=grids.non0tab,
             ):
                 t0 = (logger.process_clock(), logger.perf_counter())
@@ -96,7 +96,11 @@ def get_veff_modified(
                     excsum[i] += np.dot(weights_, energy_den)
 
                     wv = np.einsum(
-                        "p,ilpabc,piabc->lpabc", weights_, vxc_mat, middle_cube
+                        "p,ilpabc,piabc->lpabc",
+                        weights_,
+                        vxc_mat,
+                        middle_cube,
+                        optimize=True,
                     )
 
                     wv = wv.reshape(4, len(gridcube.coords))  # lpabc -> lP
@@ -112,18 +116,20 @@ def get_veff_modified(
             for i, ao, mask, wv in block_loop(ao_deriv):
                 t0 = logger.timer(mol, "  vxc on grids", *t0)
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
-                aow = _scale_ao_sparse(ao, wv, mask, ao_loc, out=aow)
-                _dot_ao_ao_sparse(
-                    ao[0],
-                    aow,
-                    None,
-                    nbins,
-                    mask,
-                    pair_mask,
-                    ao_loc,
-                    hermi=0,
-                    out=vmat[i],
-                )
+                aow = np.einsum("xgi,xg->gi", ao, wv, optimize=True)
+                vmat[i] = np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
+                # aow = _scale_ao_sparse(ao, wv, mask, ao_loc, out=aow)
+                # _dot_ao_ao_sparse(
+                #     ao[0],
+                #     aow,
+                #     None,
+                #     nbins,
+                #     mask,
+                #     pair_mask,
+                #     ao_loc,
+                #     hermi=0,
+                #     out=vmat[i],
+                # )
                 t0 = logger.timer(mol, "  vxc mat", *t0)
             vmat = lib.hermi_sum(vmat, axes=(0, 2, 1))
         else:
@@ -150,8 +156,6 @@ def get_veff_modified(
         dm_last=0,
         vhf_last=0,
         hermi=1,
-        lambda_rho=lambda_rho,
-        dm_tar=dm_tar,
     ):
         """
         # Get the effective potential for the RKS method.
@@ -236,9 +240,6 @@ def get_veff_modified(
         else:
             ecoul = None
 
-        if lambda_rho is not None and dm_tar is not None:
-            delta_j = ks_.get_j(mol, dm - dm_tar, hermi=hermi)
-            vxc = vxc + lambda_rho * delta_j
         t0 = logger.timer(ks_, "jk", *t0)
 
         vxc = lib.tag_array(vxc, ecoul=ecoul, exc=exc, vj=vj, vk=vk)
