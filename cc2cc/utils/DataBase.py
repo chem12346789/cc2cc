@@ -240,6 +240,10 @@ class DataBase:
         """
         Load the data.
         """
+        loss_multiplier = self.args.loss_multiplier
+        loss_multiplier_abs = self.args.loss_multiplier_abs
+        loss_multiplier_grad = self.args.loss_multiplier_grad
+        loss_multiplier_atomic = self.args.loss_multiplier_atomic
         self.print(f"\nLoading data {name:<40}")
         data = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
 
@@ -251,70 +255,9 @@ class DataBase:
         else:
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 
-        atomic_systems = []
-        atomic_stoichiometry = []
-        num_data_used = mol_info["natm"]
-        if num_data_used == 1:
-            data_weight = self.args.atomic_weighting
-        else:
-            data_weight = np.sqrt(num_data_used)
-        for i_atom in range(mol_info["natm"]):
-            atom_name = mol_info["elements"][i_atom]
-            if atom_name not in atomic_systems:
-                atomic_systems.append(atom_name)
-                atomic_stoichiometry.append(1)
-            else:
-                atomic_stoichiometry[atomic_systems.index(atom_name)] += 1
-
-        ae_target = 0.0
-        if self.args.if_atomic:
-            if name in list(self.atomic_name_dict.values()):
-                assert mol_info["natm"] == 1
-                atom_name = mol_info["elements"][0]
-                self.atomic_energy_dict[atom_name] = energy_target
-            else:
-                ae_target += energy_target
-                for i_system in range(len(atomic_systems)):
-                    system_atom = atomic_systems[i_system]
-                    if system_atom in self.atomic_energy_dict:
-                        ae_target -= (
-                            atomic_stoichiometry[i_system]
-                            * self.atomic_energy_dict[system_atom]
-                        )
-                    else:
-                        self.print(
-                            f"Warning: {system_atom} not found in atomic_name_dict, "
-                            "skipping atomic energy calculation."
-                        )
-                        break
-
-        loss_multiplier = self.args.loss_multiplier
-        loss_multiplier_abs = self.args.loss_multiplier_abs
-        loss_multiplier_grad = self.args.loss_multiplier_grad
-        loss_multiplier_atomic = self.args.loss_multiplier_atomic
-
-        if self.args.if_relative_weight:
-            epsilon = 1e-10
-            loss_multiplier /= self.loss_ene(energy_target)
-
-            if np.abs(ae_target) < epsilon:
-                loss_multiplier_atomic = 0
-            else:
-                loss_multiplier_atomic /= self.loss_ene(ae_target)
-
         data_dict = {
             "input": self.process_input(input_mat),
             "weight": weight_mat.reshape((-1, 1)),
-            "energy_target": energy_target,
-            "ae_target": ae_target,
-            "name": name,
-            "atomic_systems": atomic_systems,
-            "atomic_stoichiometry": atomic_stoichiometry,
-            "data_weight": data_weight,
-            "loss_multiplier": loss_multiplier,
-            "loss_multiplier_abs": loss_multiplier_abs,
-            "loss_multiplier_grad": loss_multiplier_grad,
-            "loss_multiplier_atomic": loss_multiplier_atomic,
         }
 
         if self.if_eval:
@@ -354,13 +297,9 @@ class DataBase:
                 output_mat = (data["exc_cc_grids"]) - (
                     data["exc_dft_grids"] + data["exc_k_dft_grids"]
                 )
-            elif self.args.output_target == "exc_cc_grids_normal":
-                output_mat = (data["exc_cc_grids"]) - (
-                    data["exc_dft_grids"] + data["exc_k_dft_grids"]
-                )
-                corrected_energy = energy_target / np.sum(output_mat * weight_mat)
-                print(f"Corrected energy: {corrected_energy}")
-                output_mat *= corrected_energy
+            elif self.args.output_target == "b3lyp":
+                output_mat = data["exc_dft_grids"] + data["exc_k_dft_grids"]
+                energy_target = np.sum(output_mat * weight_mat)
             else:
                 raise ValueError(
                     f"Unknown output target: {self.args.output_target}",
@@ -374,13 +313,7 @@ class DataBase:
             self.print(f"Error energy: {error_energy:>9.6f} kcal/mol")
 
             if self.args.if_relative_weight_abs:
-                epsilon = 1e-10
-                if self.loss_ene(energy_target) < epsilon:
-                    loss_multiplier_abs = 0
-                else:
-                    loss_multiplier_abs /= self.loss_ene(
-                        np.abs(output_mat * weight_mat)
-                    )
+                loss_multiplier_abs /= self.loss_ene(np.abs(output_mat * weight_mat))
                 self.print(
                     f"Adjusted loss_multiplier_abs: {loss_multiplier_abs:>6.3f}",
                 )
@@ -389,6 +322,63 @@ class DataBase:
             data_dict["output"] = output_mat.reshape((-1, 1))
             data_dict["grad2force"] = grad2force
             data_dict["grad_cc_train"] = grad_cc_train
+
+        atomic_systems = []
+        atomic_stoichiometry = []
+        num_data_used = mol_info["natm"]
+        if num_data_used == 1:
+            data_weight = self.args.atomic_weighting
+        else:
+            data_weight = np.sqrt(num_data_used)
+        for i_atom in range(mol_info["natm"]):
+            atom_name = mol_info["elements"][i_atom]
+            if atom_name not in atomic_systems:
+                atomic_systems.append(atom_name)
+                atomic_stoichiometry.append(1)
+            else:
+                atomic_stoichiometry[atomic_systems.index(atom_name)] += 1
+
+        ae_target = 0.0
+        if self.args.if_atomic:
+            if name in list(self.atomic_name_dict.values()):
+                assert mol_info["natm"] == 1
+                atom_name = mol_info["elements"][0]
+                self.atomic_energy_dict[atom_name] = energy_target
+            else:
+                ae_target += energy_target
+                for i_system in range(len(atomic_systems)):
+                    system_atom = atomic_systems[i_system]
+                    if system_atom in self.atomic_energy_dict:
+                        ae_target -= (
+                            atomic_stoichiometry[i_system]
+                            * self.atomic_energy_dict[system_atom]
+                        )
+                    else:
+                        self.print(
+                            f"Warning: {system_atom} not found in atomic_name_dict, "
+                            "skipping atomic energy calculation."
+                        )
+                        break
+
+        data_dict["energy_target"] = energy_target
+        data_dict["ae_target"] = ae_target
+        data_dict["name"] = name
+        data_dict["atomic_systems"] = atomic_systems
+        data_dict["atomic_stoichiometry"] = atomic_stoichiometry
+        data_dict["data_weight"] = data_weight
+
+        if self.args.if_relative_weight:
+            loss_multiplier /= self.loss_ene(energy_target)
+
+            if np.abs(ae_target) < 1e-10:
+                loss_multiplier_atomic = 0
+            else:
+                loss_multiplier_atomic /= self.loss_ene(ae_target)
+
+        data_dict["loss_multiplier"] = loss_multiplier
+        data_dict["loss_multiplier_abs"] = loss_multiplier_abs
+        data_dict["loss_multiplier_grad"] = loss_multiplier_grad
+        data_dict["loss_multiplier_atomic"] = loss_multiplier_atomic
 
         self.print(
             f"Adjusted loss_multiplier: {loss_multiplier:>6.3f}, loss_multiplier_grad {loss_multiplier_grad:>6.3f}, loss_multiplier_atomic {loss_multiplier_atomic:>6.3f}",

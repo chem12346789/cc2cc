@@ -310,6 +310,8 @@ class ModelClass:
                 tot_loss += loss_multiplier_abs * self.loss_ene_abs(
                     data_weight * target, data_weight * output
                 )
+            else:
+                loss_abs_record = 0.0
 
             # if self.args.if_grad:
             #     tot_loss += loss_multiplier_grad * self.loss_grad(grad_cc_train, force)
