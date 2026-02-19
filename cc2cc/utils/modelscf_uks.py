@@ -74,7 +74,7 @@ def get_veff_modified(
                 nao,
                 ao_deriv,
                 max_memory=max_memory // (2 * CUBE_SIZE**3),
-                non0tab=grids.non0tab,
+                non0tab=None,
             ):
                 t0 = (logger.process_clock(), logger.perf_counter())
                 for i in range(nset):
@@ -121,9 +121,9 @@ def get_veff_modified(
                 wv[:, 0] *= 0.5
                 wva, wvb = wv
                 aow = np.einsum("xgi,xg->gi", ao, wva, optimize=True)
-                vmat[0, i] = np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
+                vmat[0, i] += np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
                 aow = np.einsum("xgi,xg->gi", ao, wvb, optimize=True)
-                vmat[1, i] = np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
+                vmat[1, i] += np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
                 # aow = _scale_ao_sparse(ao, wva, mask, ao_loc, out=aow)
                 # _dot_ao_ao_sparse(
                 #     ao[0],

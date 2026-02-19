@@ -26,8 +26,8 @@ def test_model_uks(
     mdft.grids = Grid(mol, args.grid_level, modeldict.input_level, test=True)
 
     mdft.verbose = 4
-    # mdft.mol.verbose = 4
-    mdft.diis_space = 8
+    mdft.mol.verbose = 4
+    mdft.diis_space = 4
     mdft.conv_tol = 1e-6
     mdft.conv_tol_grad = 1e-2
 

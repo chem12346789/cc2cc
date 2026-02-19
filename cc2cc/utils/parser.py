@@ -387,6 +387,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--topk_abs",
+        type=int,
+        default=-1,
+        help="Top k for the absolute energy loss. Default is -1 (use all).",
+    )
+
+    parser.add_argument(
         "--load",
         type=str,
         default="",

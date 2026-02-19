@@ -307,9 +307,18 @@ class ModelClass:
             if self.args.if_abs:
                 target = batch["output"] * weight
                 loss_abs_record = torch.sum(torch.abs(target - output)).item()
-                tot_loss += loss_multiplier_abs * self.loss_ene_abs(
-                    data_weight * target, data_weight * output
-                )
+                if self.args.topk_abs > 0:
+                    topk_indices = torch.topk(
+                        torch.abs(target - output).sum(dim=1), self.args.topk_abs
+                    ).indices
+                    tot_loss += loss_multiplier_abs * self.loss_ene_abs(
+                        data_weight * target[topk_indices],
+                        data_weight * output[topk_indices],
+                    )
+                else:
+                    tot_loss += loss_multiplier_abs * self.loss_ene_abs(
+                        data_weight * target, data_weight * output
+                    )
             else:
                 loss_abs_record = 0.0
 

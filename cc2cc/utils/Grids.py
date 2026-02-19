@@ -37,7 +37,7 @@ OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
 SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
 
 
-@njit(fastmath=True, parallel=True)
+@njit(fastmath=True)
 def gen_cube_njit(
     rho_in_2,
     rho_in_1,
@@ -47,7 +47,7 @@ def gen_cube_njit(
     """
     Generate the cube coordinates for the given molecule.
     """
-    for p in prange(len(coords)):
+    for p in range(len(coords)):
         norm_2d = rho_in_2[:, :, p]
         eig_val, eig_vec = np.linalg.eigh(norm_2d)
         eig_val_sort = np.argsort(eig_val)
@@ -113,8 +113,7 @@ class Grid(dft.gen_grid.Grids):
         self.becke_scheme = dft.gen_grid.original_becke
         self.atomic_radii = None
         self.radii_adjust = None
-        if test:
-            self.prune = None
+        self.prune = None
         self.build(with_non0tab=False, sort_grids=False)
         self.non0tab = None
         self.screen_index = self.non0tab

@@ -264,6 +264,9 @@ class DataBase:
             data_dict["output"] = 0
             data_dict["grad2force"] = 0
             data_dict["grad_cc_train"] = 0
+            if self.args.output_target == "b3lyp" and "exc_dft_grids" in data:
+                output_mat = data["exc_dft_grids"]
+                energy_target = np.sum(output_mat * weight_mat)
         else:
             if self.args.output_target == "tol_delta_grids":
                 output_mat = data["tol_delta_grids"]
@@ -298,7 +301,7 @@ class DataBase:
                     data["exc_dft_grids"] + data["exc_k_dft_grids"]
                 )
             elif self.args.output_target == "b3lyp":
-                output_mat = data["exc_dft_grids"] + data["exc_k_dft_grids"]
+                output_mat = data["exc_dft_grids"]
                 energy_target = np.sum(output_mat * weight_mat)
             else:
                 raise ValueError(

@@ -74,7 +74,7 @@ def get_veff_modified(
                 nao,
                 ao_deriv,
                 max_memory=max_memory // (2 * CUBE_SIZE**3),
-                non0tab=grids.non0tab,
+                non0tab=None,
             ):
                 t0 = (logger.process_clock(), logger.perf_counter())
                 for i in range(nset):
@@ -91,8 +91,8 @@ def get_veff_modified(
                     energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube)
                     t0 = logger.timer(mol, "    model eval", *t0)
 
-                    middle_cube = modeldict.modified_b3lyp_potential(middle_cube)
-                    energy_den += modeldict.get_b3lyp_ene(rho_cube)
+                    # middle_cube = modeldict.modified_b3lyp_potential(middle_cube)
+                    # energy_den += modeldict.get_b3lyp_ene(rho_cube)
                     excsum[i] += np.dot(weights_, energy_den)
 
                     wv = np.einsum(
@@ -107,6 +107,10 @@ def get_veff_modified(
                     t0 = logger.timer(mol, "    post model eval", *t0)
                     yield i, ao_value, gridcube.non0tab, wv
 
+                    # wv = wv[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
+                    # t0 = logger.timer(mol, "    post model eval", *t0)
+                    # yield i, ao, mask, wv
+
         aow = None
         pair_mask = mol.get_overlap_cond() < -np.log(ni.cutoff)
 
@@ -117,7 +121,7 @@ def get_veff_modified(
                 t0 = logger.timer(mol, "  vxc on grids", *t0)
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
                 aow = np.einsum("xgi,xg->gi", ao, wv, optimize=True)
-                vmat[i] = np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
+                vmat[i] += np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
                 # aow = _scale_ao_sparse(ao, wv, mask, ao_loc, out=aow)
                 # _dot_ao_ao_sparse(
                 #     ao[0],
