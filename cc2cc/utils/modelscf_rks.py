@@ -88,16 +88,12 @@ def get_veff_modified(
                         ni, dms, require_vxc=True
                     )
                     t0 = logger.timer(mol, "    cube rho vxc", *t0)
-                    energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube)
+                    energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
                     t0 = logger.timer(mol, "    model eval", *t0)
 
-                    # middle_cube = modeldict.modified_b3lyp_potential(middle_cube)
-                    # energy_den += modeldict.get_b3lyp_ene(rho_cube)
-                    excsum[i] += np.dot(weights_, energy_den)
-
+                    excsum[i] += np.sum(energy_den)
                     wv = np.einsum(
-                        "p,ilpabc,piabc->lpabc",
-                        weights_,
+                        "ilpabc,piabc->lpabc",
                         vxc_mat,
                         middle_cube,
                         optimize=True,
@@ -252,299 +248,143 @@ def get_veff_modified(
     ks.get_veff = types.MethodType(get_veff, ks)
 
 
-def get_veff_grad_modified(
-    ks_grad,
-    modeldict,
-    max_memory=2000,
-    dm_ks=None,
-):
+def get_veff_grad_modified(ks_grad, modeldict):
     """
     Get the method of "Get the effective potential for the RKS Gradients method".
     """
-    raise NotImplementedError("This function is not yet implemented.")
 
+    def get_vxc(
+        ni: NumInt,
+        mol,
+        grids: Grid,
+        xc_code,
+        dms,
+        max_memory,
+        relativity=0,
+        hermi=1,
+        verbose=None,
+    ):
+        xctype = ni._xc_type(xc_code)
+        make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, grids)
+        ao_loc = mol.ao_loc_nr()
 
-#     def get_vxc(
-#         ni,
-#         mol,
-#         grids,
-#         xc_code,
-#         dms,
-#         relativity=0,
-#         hermi=1,
-#         max_memory=max_memory,
-#         verbose=None,
-#     ):
-#         xctype = ni._xc_type(xc_code)
-#         make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, grids)
-#         ao_loc = mol.ao_loc_nr()
+        vmat = np.zeros((nset, 3, nao, nao))
 
-#         vmat = np.zeros((nset, 3, nao, nao))
-#         # if xctype == "LDA":
-#         #     ao_deriv = 1
-#         #     for ao, mask, weight, coords in ni.block_loop(
-#         #         mol, grids, nao, ao_deriv, max_memory
-#         #     ):
-#         #         for idm in range(nset):
-#         #             rho = make_rho(idm, ao[0], mask, xctype)
-#         #             vxc = ni.eval_xc_eff(xc_code, rho, 1, xctype=xctype)[1]
-#         #             wv = weight * vxc[0]
-#         #             aow = numint._scale_ao(ao[0], wv)
-#         #             _d1_dot_(vmat[idm], mol, ao[1:4], aow, mask, ao_loc, True)
+        if xctype == "GGA":
+            ao_deriv = 2
+            for ao, mask, weights_, coords_ in ni.block_loop(
+                mol,
+                grids,
+                nao,
+                ao_deriv,
+                max_memory=max_memory // (2 * CUBE_SIZE**3),
+                non0tab=None,
+            ):
+                for idm in range(nset):
+                    gridcube = grids.gen_cube(mol, dms, coords_, mask)
+                    rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(
+                        ni, dms, ao_deriv=ao_deriv, require_vxc=True
+                    )
+                    _, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
 
-#         if xctype == "GGA":
-#             ao_deriv = 2
-#             for ao, mask, weight, coords_ in ni.block_loop(
-#                 mol, grids, nao, ao_deriv, max_memory
-#             ):
-#                 for idm in range(nset):
-#                     rho = make_rho(idm, ao[:4], mask, xctype)
-#                     _, _, vxc = modeldict.eval_xc_eff(
-#                         rho, ni, dms, grids, coords_, mask
-#                     )
-#                     wv = weight * vxc
-#                     wv[0] *= 0.5
-#                     _gga_grad_sum_(vmat[idm], mol, ao, wv, mask, ao_loc)
+                    wv = np.einsum(
+                        "ilpabc,piabc->lpabc",
+                        vxc_mat,
+                        middle_cube,
+                        optimize=True,
+                    )
+                    wv[0] *= 0.5
+                    wv = wv.reshape(4, len(gridcube.coords))  # lpabc -> lP
+                    _gga_grad_sum_(vmat[idm], mol, ao_value, wv, None, ao_loc)
 
-#                     # # aow = _scale_ao(ao[:4], wv[:4])
-#                     # # _d1_dot_(vmat[idm], mol, ao[1:4], aow, mask, ao_loc, True)
-#                     # # # ##### in np.einsum #####
-#                     # vmat[idm] += np.einsum(
-#                     #     "np,p,xpi,npj->xij",
-#                     #     vxc,
-#                     #     weight,
-#                     #     ao[1:4],
-#                     #     ao_array,
-#                     #     optimize=True,
-#                     # )
+                    # # aow = _scale_ao(ao[:4], wv[:4])
+                    # # _d1_dot_(vmat[idm], mol, ao[1:4], aow, mask, ao_loc, True)
+                    # # # ##### in np.einsum #####
+                    # vmat[idm] += np.einsum(
+                    #     "np,p,xpi,npj->xij",
+                    #     vxc,
+                    #     weight,
+                    #     ao[1:4],
+                    #     ao_array,
+                    #     optimize=True,
+                    # )
 
-#                     # # aow = _make_dR_dao_w(ao, wv[:4])
-#                     # # _d1_dot_(vmat[idm], mol, aow, ao[0], mask, ao_loc, True)
-#                     # # # ##### in np.einsum #####
-#                     # vmat[idm] += np.einsum(
-#                     #     "np,p,nxpi,pj->xij",
-#                     #     vxc,
-#                     #     weight,
-#                     #     ao_mat,
-#                     #     ao[0],
-#                     #     optimize=True,
-#                     # )
+                    # # aow = _make_dR_dao_w(ao, wv[:4])
+                    # # _d1_dot_(vmat[idm], mol, aow, ao[0], mask, ao_loc, True)
+                    # # # ##### in np.einsum #####
+                    # vmat[idm] += np.einsum(
+                    #     "np,p,nxpi,pj->xij",
+                    #     vxc,
+                    #     weight,
+                    #     ao_mat,
+                    #     ao[0],
+                    #     optimize=True,
+                    # )
 
-#         # elif xctype == "MGGA":
-#         #     ao_deriv = 2
-#         #     for ao, mask, weight, coords in ni.block_loop(
-#         #         mol, grids, nao, ao_deriv, max_memory
-#         #     ):
-#         #         for idm in range(nset):
-#         #             rho = make_rho(idm, ao[:10], mask, xctype)
-#         #             vxc = ni.eval_xc_eff(xc_code, rho, 1, xctype=xctype)[1]
-#         #             wv = weight * vxc
-#         #             wv[0] *= 0.5
-#         #             wv[4] *= 0.5  # for the factor 1/2 in tau
-#         #             _gga_grad_sum_(vmat[idm], mol, ao, wv, mask, ao_loc)
-#         #             _tau_grad_dot_(vmat[idm], mol, ao, wv[4], mask, ao_loc, True)
+        exc = None
+        if nset == 1:
+            vmat = vmat[0]
+        # - sign because nabla_X = -nabla_x
+        return exc, -vmat
 
-#         exc = None
-#         if nset == 1:
-#             vmat = vmat[0]
-#         # - sign because nabla_X = -nabla_x
-#         return exc, -vmat
+    def get_veff(ks_grad_, mol=None, dm=None):
+        """
+        First order derivative of DFT effective potential matrix (wrt electron coordinates)
 
-#     def get_veff(ks_grad_, mol=None, dm=None):
-#         """
-#         First order derivative of DFT effective potential matrix (wrt electron coordinates)
+        Args:
+            ks_grad_ : grad.uhf.Gradients or grad.uks.Gradients object
+        """
+        if mol is None:
+            mol = ks_grad_.mol
+        if dm is None:
+            dm = ks_grad_.base.make_rdm1()
+        t0 = (logger.process_clock(), logger.perf_counter())
 
-#         Args:
-#             ks_grad_ : grad.uhf.Gradients or grad.uks.Gradients object
-#         """
-#         if mol is None:
-#             mol = ks_grad_.mol
-#         if dm is None:
-#             dm = ks_grad_.base.make_rdm1()
-#         t0 = (logger.process_clock(), logger.perf_counter())
+        mf = ks_grad_.base
+        ni = mf._numint
 
-#         mf = ks_grad_.base
-#         ni = mf._numint
-#         # grids, nlcgrids = _initialize_grids(ks_grad_)
+        max_memory = ks_grad_.max_memory * 0.9 - lib.current_memory()[0]
+        exc, vxc = get_vxc(
+            ni,
+            mol,
+            ks_grad_.grids,
+            mf.xc,
+            dm,
+            max_memory,
+            verbose=ks_grad_.verbose,
+        )
+        t0 = logger.timer(ks_grad_, "vxc", *t0)
 
-#         mem_now = lib.current_memory()[0]
-#         max_memory = max(2000, ks_grad_.max_memory * 0.9 - mem_now)
-#         exc, vxc = get_vxc(
-#             ni,
-#             mol,
-#             ks_grad_.grids,
-#             mf.xc,
-#             dm,
-#             max_memory=max_memory,
-#             verbose=ks_grad_.verbose,
-#         )
-#         # if ks_grad_.grid_response:
-#         #     exc, vxc = get_vxc_full_response(
-#         #         ni,
-#         #         mol,
-#         #         grids,
-#         #         mf.xc,
-#         #         dm,
-#         #         max_memory=max_memory,
-#         #         verbose=ks_grad_.verbose,
-#         #     )
-#         #     if mf.do_nlc():
-#         #         if ni.libxc.is_nlc(mf.xc):
-#         #             xc = mf.xc
-#         #         else:
-#         #             xc = mf.nlc
-#         #         enlc, vnlc = get_nlc_vxc_full_response(
-#         #             ni,
-#         #             mol,
-#         #             nlcgrids,
-#         #             xc,
-#         #             dm,
-#         #             max_memory=max_memory,
-#         #             verbose=ks_grad_.verbose,
-#         #         )
-#         #         exc += enlc
-#         #         vxc += vnlc
-#         #     logger.debug1(ks_grad_, "sum(grids response) %s", exc.sum(axis=0))
-#         # else:
-#         #     exc, vxc = get_vxc(
-#         #         ni,
-#         #         mol,
-#         #         grids,
-#         #         mf.xc,
-#         #         dm,
-#         #         max_memory=max_memory,
-#         #         verbose=ks_grad_.verbose,
-#         #     )
-#         #     if mf.do_nlc():
-#         #         if ni.libxc.is_nlc(mf.xc):
-#         #             xc = mf.xc
-#         #         else:
-#         #             xc = mf.nlc
-#         #         enlc, vnlc = get_nlc_vxc(
-#         #             ni,
-#         #             mol,
-#         #             nlcgrids,
-#         #             xc,
-#         #             dm,
-#         #             max_memory=max_memory,
-#         #             verbose=ks_grad_.verbose,
-#         #         )
-#         #         vxc += vnlc
-#         t0 = logger.timer(ks_grad_, "vxc", *t0)
+        if not ni.libxc.is_hybrid_xc(mf.xc):
+            vj = ks_grad_.get_j(mol, dm)
+            vxc += vj
+            if ks_grad_.auxbasis_response:
+                e1_aux = vj.aux.sum((0, 1))
+        else:
+            omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mf.xc, spin=mol.spin)
+            vj, vk = ks_grad_.get_jk(mol, dm)
+            if ks_grad_.auxbasis_response:
+                vk.aux *= hyb
+            vk[:] *= hyb  # Don't erase the .aux tags!
+            if omega != 0:  # For range separated Coulomb operator
+                # TODO: replaced with vk_sr which is numerically more stable for
+                # inv(int2c2e)
+                vk_lr = ks_grad_.get_k(mol, dm, omega=omega)
+                vk[:] += vk_lr * (alpha - hyb)
+                if ks_grad_.auxbasis_response:
+                    vk.aux[:] += vk_lr.aux * (alpha - hyb)
+            vxc += vj - vk * 0.5
+            if ks_grad_.auxbasis_response:
+                e1_aux = (vj.aux - vk.aux * 0.5).sum((0, 1))
 
-#         if not ni.libxc.is_hybrid_xc(mf.xc):
-#             vj = ks_grad_.get_j(mol, dm)
-#             vxc += vj
-#         else:
-#             omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mf.xc, spin=mol.spin)
-#             vj, vk = ks_grad_.get_jk(mol, dm)
-#             vk *= hyb
-#             if omega != 0:
-#                 vk += ks_grad_.get_k(mol, dm, omega=omega) * (alpha - hyb)
-#             vxc += vj - vk * 0.5
+        if ks_grad_.auxbasis_response:
+            logger.debug1(ks_grad_, "sum(auxbasis response) %s", e1_aux.sum(axis=0))
+            vxc = lib.tag_array(vxc, exc1_grid=exc, aux=e1_aux)
+        else:
+            vxc = lib.tag_array(vxc, exc1_grid=exc)
+        return lib.tag_array(vxc, exc1_grid=exc)
 
-#         return lib.tag_array(vxc, exc1_grid=exc)
-
-#     def extra_force(ks_grad_, atom_id, envs):
-#         """
-#         First order derivative of DFT effective potential matrix (wrt electron coordinates)
-
-#         Args:
-#             ks_grad_ : grad.uhf.Gradients or grad.uks.Gradients object
-#         """
-#         mol = ks_grad_.base.mol
-
-#         if dm_ks is None:
-#             dm = ks_grad_.base.make_rdm1()
-#         else:
-#             dm = dm_ks
-
-#         mf = ks_grad_.base
-#         ni = mf._numint
-
-#         xctype = ni._xc_type(mf.xc)
-
-#         force = np.zeros((3))
-#         aoslices = mol.aoslice_by_atom()
-#         p0, p1 = aoslices[atom_id, 2:]
-
-#         ao_deriv = 2
-
-#         weight = ks_grad_.grids.weights
-#         coords_ = ks_grad_.grids.coords
-#         mask = ks_grad_.grids.non0tab
-
-#         ao = pyscf.dft.numint.eval_ao(mol, coords_, deriv=ao_deriv)
-#         rho = pyscf.dft.numint.eval_rho(mol, ao[:4], dm, xctype=xctype)
-
-#         rho_cube, _, vxc_b3lyp = ks_grad_.grids.gen_cube_rho_rks(
-#             rho, ni, dm, coords=coords_, mask=mask, require_vxc=True
-#         )
-#         input_mat = torch.tensor(
-#             rho_cube,
-#             dtype=modeldict.dtype,
-#             device=modeldict.device,
-#         )
-#         input_mat.requires_grad = True
-#         output_mat = modeldict.model(input_mat)[:, 0]
-#         middle_cube = torch.autograd.grad(torch.sum(output_mat), input_mat)[0]
-#         middle_mat = (
-#             ks_grad_.grids.get_center_density(middle_cube).detach().cpu().numpy()
-#         )
-#         grad_mat = np.array(
-#             [
-#                 0.08 + middle_mat[:, 0],
-#                 0.19 + middle_mat[:, 1],
-#                 0.72 + middle_mat[:, 2],
-#                 0.81 + middle_mat[:, 3],
-#             ]
-#         )
-
-#         wv = weight * vxc_b3lyp
-#         wv[:, 0, :] *= 0.5
-
-#         # # dX, dY, dZ = 1, 2, 3
-#         # # XX, XY, XZ = 4, 5, 6
-#         # # YX, YY, YZ = 5, 7, 8
-#         # # ZX, ZY, ZZ = 6, 8, 9
-#         ao_array = np.array([ao[0], ao[1], ao[2], ao[3]])
-#         ao_mat = np.array(
-#             [
-#                 [ao[1], ao[2], ao[3]],
-#                 [ao[4], ao[5], ao[6]],
-#                 [ao[5], ao[7], ao[8]],
-#                 [ao[6], ao[8], ao[9]],
-#             ]
-#         )
-
-#         # summation of above three parts
-#         grad2force = np.einsum(
-#             "mnp,xpi,npj,ij->mpx",
-#             wv,
-#             ao[1:4, :, p0:p1],
-#             ao_array,
-#             dm[p0:p1],
-#             optimize=True,
-#         ) + np.einsum(
-#             "mnp,nxpi,pj,ij->mpx",
-#             wv,
-#             ao_mat[:, :, :, p0:p1],
-#             ao[0],
-#             dm[p0:p1],
-#             optimize=True,
-#         )
-#         grad2force = -grad2force * 2
-#         force = np.einsum(
-#             "mp,mpx->x",
-#             grad_mat,
-#             grad2force,
-#             optimize=True,
-#         )
-
-#         return force
-
-#     ks_grad.get_veff = types.MethodType(get_veff, ks_grad)
-#     # ks_grad.extra_force = types.MethodType(extra_force, ks_grad)
+    ks_grad.get_veff = types.MethodType(get_veff, ks_grad)
 
 
 def get_veff_grad_modified_zeros(ks_grad):

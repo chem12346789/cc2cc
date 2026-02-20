@@ -1,12 +1,13 @@
 """Test the model. Unrestricted Khon-Sham (with spin)."""
 
+import numpy as np
 from timeit import default_timer as timer
 
 import pyscf
 import pyscf.dft
 
-from cc2cc.utils import get_veff_modified_uks, get_veff_grad_modified_uks
-from cc2cc.utils import Grid, TestDataDFT
+from cc2cc.utils import get_veff_modified_uks, get_veff_grad_modified_uks, diff_rho
+from cc2cc.utils import Grid, TestDataDFT, DATA_PATH
 
 
 def test_model_uks(
@@ -68,19 +69,9 @@ def test_model_uks(
         g.xc = "b3lyp"
         g.grids = mdft.grids
         if modeldict.model_type == "center_4":
-            get_veff_grad_modified_uks(
-                g,
-                modeldict,
-                max_memory=2000,
-                # dm_ks=test_data.dm1_dft,
-            )
+            get_veff_grad_modified_uks(g, modeldict)
         elif modeldict.model_type == "cube":
-            get_veff_grad_modified_uks(
-                g,
-                modeldict,
-                max_memory=2000,
-                # dm_ks=test_data.dm1_dft,
-            )
+            get_veff_grad_modified_uks(g, modeldict)
         grad_mdft = g.kernel()
     else:
         grad_mdft = None
@@ -104,6 +95,30 @@ def test_model_uks(
             dict_.update({"grad_scf": grad_mdft})
         else:
             dict_.update({"grad_scf": 0})
+
+    if (DATA_PATH / f"data_{name}.npz").exists():
+        data = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
+        print(data["mol"])
+        print(mol.tostring(format="xyz"))
+        print(
+            f"electronic density (ai vs dft) {diff_rho(mol, data["dm1_dft"], mdft.make_rdm1(), mdft.grids)}"
+        )
+        print(
+            f"electronic density (ai vs cc) {diff_rho(mol, data["dm1_cc"], mdft.make_rdm1(), mdft.grids)}"
+        )
+        print(
+            f"electronic density (dft vs cc) {diff_rho(mol, data["dm1_cc"], data["dm1_dft"], mdft.grids)}"
+        )
+        print(f"energy (ai vs dft) {(e_scf - data['e_dft']) * 627.509} Kcal/mol")
+        print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * 627.509} Kcal/mol")
+        if args.if_grad:
+            print(
+                f"gradient (ai vs dft) {np.linalg.norm(grad_mdft - data['grad_dft'])}"
+            )
+            print(f"gradient (ai vs cc) {np.linalg.norm(grad_mdft - data['grad_cc'])}")
+            print(
+                f"gradient (dft vs cc) {np.linalg.norm(data['grad_dft'] - data['grad_cc'])}"
+            )
 
     data_record.add_data(dict_)
     data_record.save_csv()

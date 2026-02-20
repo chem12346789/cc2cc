@@ -282,21 +282,23 @@ class ModelClass:
 
         if if_train:
             input_.requires_grad = True
-            output = self.model(input_)
+            if self.model.before_weight:
+                output = self.model(torch.einsum("p...,pi->p...", input_, weight))
+            else:
+                output = self.model(input_) * weight
 
             # if self.args.if_grad:
             #     grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
+            #     grad2force = batch["grad2force"]
             #     middle_ = torch.autograd.grad(
             #         torch.sum(output), input_, create_graph=True
             #     )[0]
-            #     if self.model_type == "cube":
-            #         middle_ = middle_[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            #     grad2force = batch["grad2force"]
-            #     force = torch.einsum("pm,impx->ix", middle_, grad2force)
-            output = output * weight
         else:
             with torch.no_grad():
-                output = self.model(input_) * weight
+                if self.model.before_weight:
+                    output = self.model(torch.einsum("p...,pi->p...", input_, weight))
+                else:
+                    output = self.model(input_) * weight
 
         tot_loss = loss_multiplier * self.loss_ene(
             data_weight * sum_target, data_weight * torch.sum(output)
@@ -351,7 +353,14 @@ class ModelClass:
                 )
                 atomic_input_ = atomic_batch["input"]
                 atomic_weight = atomic_batch["weight"]
-                atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
+                if self.model.before_weight:
+                    atomic_output = torch.sum(
+                        self.model(
+                            torch.einsum("p...,pi->p...", atomic_input_, atomic_weight)
+                        )
+                    )
+                else:
+                    atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
             tot_loss += loss_multiplier_atomic * self.loss_ene_atomic(
@@ -424,7 +433,6 @@ class ModelClass:
                 + rho_cube[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.72
                 + rho_cube[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.81
             )
-        # elif self.model_type == "cube9":
         elif self.model_type == "cube5":
             return (
                 rho_cube[:, 0, self.model.cube_middle]
@@ -455,7 +463,7 @@ class ModelClass:
             raise ValueError(f"Unknown model type: {self.model_type}")
         return middle_cube
 
-    def eval_xc_eff_cube(self, rho_cube):
+    def eval_xc_eff_cube(self, rho_cube, weights_):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
         Args:
@@ -465,14 +473,21 @@ class ModelClass:
             vxc: Exchange-correlation potential.
         """
         input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
+        weights_mat = torch.tensor(
+            weights_.reshape((-1, 1)), dtype=self.dtype, device=self.device
+        )
         input_mat.requires_grad = True
-        exc_cube = self.model(input_mat)
+        if self.model.before_weight:
+            exc_cube = self.model(input_mat * weights_mat)
+        else:
+            exc_cube = self.model(input_mat) * weights_mat
+        exc_cube += torch.einsum("i,ij->ij", self.get_b3lyp_ene(input_mat), weights_mat)
         middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
         exc_cube = exc_cube.detach().cpu().numpy().squeeze(-1)
         middle_cube = middle_cube.detach().cpu().numpy()
         return exc_cube, middle_cube
 
-    def eval_xc_eff_4(self, rho):
+    def eval_xc_eff_4(self, rho, weights_):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
         Args:
@@ -493,7 +508,7 @@ class ModelClass:
         vxc_cube = vxc_cube.detach().cpu().numpy()
         return exc_cube, vxc_cube
 
-    def eval_xc_eff(self, rho):
+    def eval_xc_eff(self, rho, weights_):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
         Args:
@@ -507,8 +522,8 @@ class ModelClass:
             vxc: Exchange-correlation potential.
         """
         if self.model_type == "center_4":
-            return self.eval_xc_eff_4(rho)
+            return self.eval_xc_eff_4(rho, weights_)
         elif self.model_type == "cube":
-            return self.eval_xc_eff_cube(rho)
+            return self.eval_xc_eff_cube(rho, weights_)
         else:
             raise ValueError(f"Unknown model {self.model_name} for eval_xc_eff")

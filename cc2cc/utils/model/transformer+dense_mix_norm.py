@@ -2,10 +2,14 @@
 Generate list of model.
 """
 
+import torch
 from torch import nn
+
 
 from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
 from cc2cc.utils.model.model_utils import Transformer, DenseNet
+
+ESP = 1e-8
 
 
 class Model(nn.Module):
@@ -18,7 +22,7 @@ class Model(nn.Module):
 
         self.model_type = "cube"
         self.input_level = 4
-        self.before_weight = False
+        self.before_weight = True
 
         self.predictor = Transformer(
             d_model=CUBE_SIZE**3,
@@ -56,6 +60,15 @@ class Model(nn.Module):
         """
         Standard forward function, required for all nn.Module classes
         """
+        x_norm_factor = torch.sum(
+            torch.abs(x[:, :, :, :, :]),
+            dim=(1, 2, 3, 4),
+        )
+        x = torch.einsum(
+            "x,x...->x...",
+            1 / (x_norm_factor + ESP),
+            x,
+        )
 
         # do mixing x and x_center using Mixture of experts mechanism
         weight_out = self.mixing_weight(x.reshape(-1, 4 * CUBE_SIZE**3))
@@ -79,4 +92,8 @@ class Model(nn.Module):
             + weight_out[:, [4]] * x[:, [2], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
             + weight_out[:, [5]] * x[:, [3], CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
         )
-        return mixed_output
+        return torch.einsum(
+            "x,x...->x...",
+            (x_norm_factor + ESP),
+            mixed_output,
+        )
