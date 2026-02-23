@@ -64,7 +64,7 @@ def test_model_uks(
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
 
-    if args.if_grad:
+    if args.if_grad and args.max_cycle != -1:
         g = mdft.Gradients()
         g.xc = "b3lyp"
         g.grids = mdft.grids
