@@ -14,6 +14,9 @@ from cc2cc.utils import Grid, DATA_PATH
 from cc2cc.utils.parser import gen_name_args
 from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc
+from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
+from cc2cc.utils.modelscf_rks import get_veff_grad_modified_zeros
+import warnings
 
 
 train_str_list = [
@@ -66,7 +69,7 @@ train_str_list = [
     # #####################
     # "molecule2-W4_11",
     "W4_11-o2",
-    # "W4_11-n2",
+    "W4_11-n2",
 ]
 
 eval_str_list = [
@@ -143,10 +146,16 @@ if __name__ == "__main__":
     eval_str_list = gen_name_args(eval_str_list, args.dataset, args.name_mol_reverse)
 
     if args.if_eval:
-        name_mol_list = eval_str_list[args.mp_number :: args.mp_total]
+        if args.mp_total != 0:
+            name_mol_list = eval_str_list[args.mp_number :: args.mp_total]
+        else:
+            name_mol_list = eval_str_list
         evaluate = True
     else:
-        name_mol_list = train_str_list[args.mp_number :: args.mp_total]
+        if args.mp_total != 0:
+            name_mol_list = train_str_list[args.mp_number :: args.mp_total]
+        else:
+            name_mol_list = train_str_list
         evaluate = False
 
     error_molecule = []
@@ -155,8 +164,8 @@ if __name__ == "__main__":
     for name_mol in name_mol_list:
         name = f"{name_mol}_{args.basis}"
 
-        # try:
-        if True:
+        # if True:
+        try:
             mol = gen_mole(
                 name_mol,
                 args.basis,
@@ -236,21 +245,218 @@ if __name__ == "__main__":
 
             if args.if_continue:
                 if (DATA_PATH / f"data_{name}.npz").exists():
+                    # continue
+                    data_dict = dict(
+                        np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
+                    )
+                    dm1_dft = data_dict["dm1_dft"]
+                    mdft = pyscf.scf.RKS(mol)
+                    mdft.xc = "b3lyp"
+                    mdft.verbose = 4
+                    mdft.kernel(dm1_dft)
+                    grids = Grid(mol, args.grid_level, 7)
+                    if mol.spin == 0:
+                        gridcube = grids.gen_cube(
+                            mol, dm1_dft, grids.coords, grids.screen_index
+                        )
+                        rho_cube_dft, wv, ao_value_cube = gridcube.gen_cube_rho_rks(
+                            mdft._numint, dm1_dft, ao_deriv=2, require_vxc=True
+                        )
+
+                        wv[:, 0, :] *= 0.5
+                        wv = wv.reshape(gridcube.input_level, 4, len(gridcube.coords))
+
+                        atmlst = range(mol.natm)
+                        grad2force = np.zeros(
+                            (len(atmlst), gridcube.input_level, len(gridcube.coords), 3)
+                        )
+                        ao_array = np.array(
+                            [
+                                ao_value_cube[0],
+                                ao_value_cube[1],
+                                ao_value_cube[2],
+                                ao_value_cube[3],
+                            ]
+                        )
+                        ao_mat = np.array(
+                            [
+                                [ao_value_cube[1], ao_value_cube[2], ao_value_cube[3]],
+                                [ao_value_cube[4], ao_value_cube[5], ao_value_cube[6]],
+                                [ao_value_cube[5], ao_value_cube[7], ao_value_cube[8]],
+                                [ao_value_cube[6], ao_value_cube[8], ao_value_cube[9]],
+                            ]
+                        )
+                        for k, ia in enumerate(atmlst):
+                            p0, p1 = mol.aoslice_by_atom()[ia, 2:]
+                            grad2force[k] = np.einsum(
+                                "inp,xpu,npv,uv->ipx",
+                                wv,
+                                ao_value_cube[1:4, :, p0:p1],
+                                ao_array,
+                                dm1_dft[p0:p1],
+                                optimize=True,
+                            ) + np.einsum(
+                                "inp,nxpu,pv,uv->ipx",
+                                wv,
+                                ao_mat[:, :, :, p0:p1],
+                                ao_value_cube[0],
+                                dm1_dft[p0:p1],
+                                optimize=True,
+                            )
+                        grad2force = -grad2force * 2
+                        data_dict["grad2force"] = np.reshape(
+                            grad2force,
+                            (
+                                len(atmlst),
+                                gridcube.input_level,
+                                len(grids.coords),
+                                CUBE_SIZE,
+                                CUBE_SIZE,
+                                CUBE_SIZE,
+                                3,
+                            ),
+                        )
+
+                        # Test force
+                        grad_mat = np.zeros(
+                            (
+                                gridcube.input_level,
+                                len(grids.coords),
+                                CUBE_SIZE,
+                                CUBE_SIZE,
+                                CUBE_SIZE,
+                            )
+                        )
+                        grad_mat[0, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
+                        grad_mat[1, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
+                        grad_mat[2, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.72
+                        grad_mat[3, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.81
+                        force = np.einsum(
+                            "p,ipabc,tipabcx->tx",
+                            grids.weights,
+                            grad_mat,
+                            data_dict["grad2force"],
+                            optimize=True,
+                        )
+
+                        gdft = mdft.Gradients()
+                        grad_dft = gdft.kernel()
+                        get_veff_grad_modified_zeros(gdft)
+                        grad_dft_zeros = gdft.kernel()
+                        print(
+                            "Error force DFT: ",
+                            np.linalg.norm(force - (grad_dft - grad_dft_zeros)),
+                        )
+
+                        np.savez_compressed(DATA_PATH / f"data_{name}.npz", **data_dict)
+                    else:
+                        gridcube = grids.gen_cube(
+                            mol, dm1_dft, grids.coords, grids.screen_index
+                        )
+                        rho_cube_dft, wv, ao_value_cube = gridcube.gen_cube_rho_uks(
+                            mdft._numint, dm1_dft, ao_deriv=2, require_vxc=True
+                        )
+                        wv[:, :, 0, :] *= 0.5
+                        wv = wv.reshape(
+                            gridcube.input_level, 2, 4, len(gridcube.coords)
+                        )
+
+                        atmlst = range(mol.natm)
+                        grad2force = np.zeros(
+                            (len(atmlst), gridcube.input_level, len(gridcube.coords), 3)
+                        )
+                        ao_array = np.array(
+                            [
+                                ao_value_cube[0],
+                                ao_value_cube[1],
+                                ao_value_cube[2],
+                                ao_value_cube[3],
+                            ]
+                        )
+                        ao_mat = np.array(
+                            [
+                                [ao_value_cube[1], ao_value_cube[2], ao_value_cube[3]],
+                                [ao_value_cube[4], ao_value_cube[5], ao_value_cube[6]],
+                                [ao_value_cube[5], ao_value_cube[7], ao_value_cube[8]],
+                                [ao_value_cube[6], ao_value_cube[8], ao_value_cube[9]],
+                            ]
+                        )
+                        for k, ia in enumerate(atmlst):
+                            p0, p1 = mol.aoslice_by_atom()[ia, 2:]
+                            grad2force[k] = np.einsum(
+                                "isnp,xpu,npv,suv->ipx",
+                                wv,
+                                ao_value_cube[1:4, :, p0:p1],
+                                ao_array,
+                                dm1_dft[:, p0:p1],
+                                optimize=True,
+                            ) + np.einsum(
+                                "isnp,nxpu,pv,suv->ipx",
+                                wv,
+                                ao_mat[:, :, :, p0:p1],
+                                ao_value_cube[0],
+                                dm1_dft[:, p0:p1],
+                                optimize=True,
+                            )
+                        grad2force = -grad2force * 2
+                        data_dict["grad2force"] = np.reshape(
+                            grad2force,
+                            (
+                                len(atmlst),
+                                gridcube.input_level,
+                                len(grids.coords),
+                                CUBE_SIZE,
+                                CUBE_SIZE,
+                                CUBE_SIZE,
+                                3,
+                            ),
+                        )
+
+                        # Test force
+                        grad_mat = np.zeros(
+                            (
+                                gridcube.input_level,
+                                len(grids.coords),
+                                CUBE_SIZE,
+                                CUBE_SIZE,
+                                CUBE_SIZE,
+                            )
+                        )
+                        grad_mat[0, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
+                        grad_mat[1, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
+                        grad_mat[2, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.72
+                        grad_mat[3, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.81
+                        force = np.einsum(
+                            "p,ipabc,tipabcx->tx",
+                            grids.weights,
+                            grad_mat,
+                            data_dict["grad2force"],
+                            optimize=True,
+                        )
+
+                        gdft = mdft.Gradients()
+                        grad_dft = gdft.kernel()
+                        get_veff_grad_modified_zeros(gdft)
+                        grad_dft_zeros = gdft.kernel()
+                        print(
+                            "Error force DFT: ",
+                            np.linalg.norm(force - (grad_dft - grad_dft_zeros)),
+                        )
+
                     continue
 
             grids = Grid(mol, args.grid_level, 7)
             if mol.spin == 0:
                 cc(mol, grids, name, args, evaluate=evaluate)
             else:
-                # continue
                 ucc(mol, grids, name, args, evaluate=evaluate)
-        # except (ValueError, RuntimeError) as e:
-        #     print(f"ERROR: {name_mol} {args.md_number}")
-        #     print(e)
-        #     error_molecule.append(name)
-        #     print(f"Error molecule: {error_molecule}")
-        # finally:
-        #     print(f"Processed: {name_mol} {args.md_number}")
-        # print()
+        except (ValueError, RuntimeError) as e:
+            print(f"ERROR: {name_mol} {args.md_number}")
+            print(e)
+            error_molecule.append(name)
+            print(f"Error molecule: {error_molecule}")
+        finally:
+            print(f"Processed: {name_mol} {args.md_number}")
+        print()
 
     print(f"Error molecule: {error_molecule}")

@@ -3,7 +3,6 @@ import gc
 from itertools import product
 from math import erf
 
-from cc2cc.utils.env_var import CUBE_MIDDLE, CUBE_SIZE
 import numpy as np
 import opt_einsum as oe
 import torch
@@ -24,6 +23,7 @@ from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.modelscf_rks import get_veff_grad_modified_zeros
 from cc2cc.utils.pyscf_ccsd_t_rdm import _gamma1_intermediates
+from cc2cc.utils.env_var import CUBE_MIDDLE, CUBE_SIZE
 
 
 def block_loop_rdm2(nao):
@@ -595,16 +595,15 @@ def cc(mol, grids, name, args, evaluate=False):
 
     # Generate input data
     gridcube = grids.gen_cube(mol, dm1_dft, grids.coords, grids.screen_index)
-    rho_cube_dft, vxc_mat, ao_value_cube = gridcube.gen_cube_rho_rks(
-        rho_dft, mdft._numint, dm1_dft, require_vxc=True
+    rho_cube_dft, wv, ao_value_cube = gridcube.gen_cube_rho_rks(
+        mdft._numint, dm1_dft, ao_deriv=2, require_vxc=True
     )
 
-    wv = np.einsum("p,ilpabc->ilpabc", grids.weights, vxc_mat)
     wv[:, 0, :] *= 0.5
     wv = wv.reshape(gridcube.input_level, 4, len(gridcube.coords))
 
     atmlst = range(mol.natm)
-    grad2force = np.zeros((len(atmlst), 4, len(gridcube.coords), 3))
+    grad2force = np.zeros((len(atmlst), gridcube.input_level, len(gridcube.coords), 3))
     ao_array = np.array(
         [ao_value_cube[0], ao_value_cube[1], ao_value_cube[2], ao_value_cube[3]]
     )
@@ -636,7 +635,15 @@ def cc(mol, grids, name, args, evaluate=False):
     grad2force = -grad2force * 2
     data_dict["grad2force"] = np.reshape(
         grad2force,
-        (len(atmlst), 4, len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3),
+        (
+            len(atmlst),
+            gridcube.input_level,
+            len(grids.coords),
+            CUBE_SIZE,
+            CUBE_SIZE,
+            CUBE_SIZE,
+            3,
+        ),
     )
 
     if "grad2force" in data_dict and grad_cc is not None:
@@ -654,13 +661,16 @@ def cc(mol, grids, name, args, evaluate=False):
         data_dict["grad_cc"] = grad_cc
 
         # Test force
-        grad_mat = np.zeros((4, len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        grad_mat = np.zeros(
+            (gridcube.input_level, len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+        )
         grad_mat[0, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
         grad_mat[1, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
         grad_mat[2, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.72
         grad_mat[3, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.81
         force = np.einsum(
-            "ipabc,tipabcx->tx",
+            "p,ipabc,tipabcx->tx",
+            grids.weights,
             grad_mat,
             data_dict["grad2force"],
             optimize=True,
