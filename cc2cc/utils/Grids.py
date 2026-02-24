@@ -351,7 +351,11 @@ class GridCube:
             return input_mat
 
     def gen_cube_rho_uks(
-        self, ni: pyscf.dft.numint.NumInt, dms, ao_deriv=1, require_vxc=False
+        self,
+        ni: pyscf.dft.numint.NumInt,
+        dms,
+        ao_deriv=1,
+        require_vxc=False,
     ):
         """
         Generate the cube density for the given molecule.
@@ -362,9 +366,15 @@ class GridCube:
 
         dma, dmb = _format_uks_dm(dms)
 
-        ao_value = ni.eval_ao(self.mol, self.coords, deriv=ao_deriv, non0tab=self.non0tab)
-        rho_a = ni.eval_rho(self.mol, ao_value[:4], dma, non0tab=self.non0tab, xctype="GGA")
-        rho_b = ni.eval_rho(self.mol, ao_value[:4], dmb, non0tab=self.non0tab, xctype="GGA")
+        ao_value = ni.eval_ao(
+            self.mol, self.coords, deriv=ao_deriv, non0tab=self.non0tab
+        )
+        rho_a = ni.eval_rho(
+            self.mol, ao_value[:4], dma, non0tab=self.non0tab, xctype="GGA"
+        )
+        rho_b = ni.eval_rho(
+            self.mol, ao_value[:4], dmb, non0tab=self.non0tab, xctype="GGA"
+        )
         rho = (rho_a, rho_b)
         rho_lda = (rho_a[0], rho_b[0])
         rho0 = rho_a[0] + rho_b[0]

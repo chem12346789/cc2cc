@@ -3,6 +3,7 @@ import gc
 from itertools import product
 from math import erf
 
+from cc2cc.utils.env_var import CUBE_MIDDLE, CUBE_SIZE
 import numpy as np
 import opt_einsum as oe
 import torch
@@ -76,15 +77,6 @@ def get_dft_energy(
     backends = "torch" if torch.cuda.is_available() else "numpy"
     print(f"Using backend: {backends} for get_dft_energy\n")
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
-    ao_array = np.array([ao_value[0], ao_value[1], ao_value[2], ao_value[3]])
-    ao_mat = np.array(
-        [
-            [ao_value[1], ao_value[2], ao_value[3]],
-            [ao_value[4], ao_value[5], ao_value[6]],
-            [ao_value[5], ao_value[7], ao_value[8]],
-            [ao_value[6], ao_value[8], ao_value[9]],
-        ]
-    )
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
     ao_value = ao_value[:4]
     ao_1 = ao_value[1:4]
@@ -95,44 +87,8 @@ def get_dft_energy(
     if evaluate:
         return rho_dft, {}
     else:
-        ni = mdft._numint
         dft_mo_coeff = mdft.mo_coeff
         mf_mo_coeff = mf.mo_coeff
-
-        vxc_lda = ni.eval_xc_eff("LDA,", rho_dft[0], deriv=1, xctype="LDA")[1]
-        vxc_vwn = ni.eval_xc_eff(",VWN3", rho_dft[0], deriv=1, xctype="LDA")[1]
-        vxc_b88 = ni.eval_xc_eff("B88,", rho_dft, deriv=1, xctype="GGA")[1]
-        vxc_lyp = ni.eval_xc_eff(",LYP", rho_dft, deriv=1, xctype="GGA")[1]
-
-        vxc_b3lyp = np.zeros((4, 4, len(grids.coords)))
-        vxc_b3lyp[0, 0:1, :] = vxc_lda
-        vxc_b3lyp[1, 0:1, :] = vxc_vwn
-        vxc_b3lyp[2, :, :] = vxc_b88
-        vxc_b3lyp[3, :, :] = vxc_lyp
-
-        wv = grids.weights * vxc_b3lyp
-        wv[:, 0, :] *= 0.5
-
-        atmlst = range(mol.natm)
-        grad2force = np.zeros((len(atmlst), 4, len(grids.coords), 3))
-        for k, ia in enumerate(atmlst):
-            p0, p1 = mol.aoslice_by_atom()[ia, 2:]
-            grad2force[k] = np.einsum(
-                "mnp,xpi,npj,ij->mpx",
-                wv,
-                ao_value[1:4, :, p0:p1],
-                ao_array,
-                dm1_dft[p0:p1],
-                optimize=True,
-            ) + np.einsum(
-                "mnp,nxpi,pj,ij->mpx",
-                wv,
-                ao_mat[:, :, :, p0:p1],
-                ao_value[0],
-                dm1_dft[p0:p1],
-                optimize=True,
-            )
-        grad2force = -grad2force * 2
 
         rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
         exc_dft_grids = pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0]
@@ -456,14 +412,13 @@ def get_dft_energy(
                 "nuc_hf_grids": nuc_hf_grids,
                 "nuc_erf_hf_grids": nuc_erf_hf_grids,
                 "tol_delta_grids": tol_delta_grids,
-                "grad2force": grad2force,
             },
         )
 
 
 def cc(mol, grids, name, args, evaluate=False):
     """
-    Generate data for the CCSD method. (Restrict scenario to spin 0).
+    Generate data for the CCSD method. (Restrict scenario to spin = 0).
     """
 
     print(f"Generate data for {name}")
@@ -638,6 +593,52 @@ def cc(mol, grids, name, args, evaluate=False):
         )
         print(f"Error exc_lerf part: {AU2KCALMOL * error_exc_lerf}")
 
+    # Generate input data
+    gridcube = grids.gen_cube(mol, dm1_dft, grids.coords, grids.screen_index)
+    rho_cube_dft, vxc_mat, ao_value_cube = gridcube.gen_cube_rho_rks(
+        rho_dft, mdft._numint, dm1_dft, require_vxc=True
+    )
+
+    wv = np.einsum("p,ilpabc->ilpabc", grids.weights, vxc_mat)
+    wv[:, 0, :] *= 0.5
+    wv = wv.reshape(gridcube.input_level, 4, len(gridcube.coords))
+
+    atmlst = range(mol.natm)
+    grad2force = np.zeros((len(atmlst), 4, len(gridcube.coords), 3))
+    ao_array = np.array(
+        [ao_value_cube[0], ao_value_cube[1], ao_value_cube[2], ao_value_cube[3]]
+    )
+    ao_mat = np.array(
+        [
+            [ao_value_cube[1], ao_value_cube[2], ao_value_cube[3]],
+            [ao_value_cube[4], ao_value_cube[5], ao_value_cube[6]],
+            [ao_value_cube[5], ao_value_cube[7], ao_value_cube[8]],
+            [ao_value_cube[6], ao_value_cube[8], ao_value_cube[9]],
+        ]
+    )
+    for k, ia in enumerate(atmlst):
+        p0, p1 = mol.aoslice_by_atom()[ia, 2:]
+        grad2force[k] = np.einsum(
+            "inp,xpu,npv,uv->ipx",
+            wv,
+            ao_value_cube[1:4, :, p0:p1],
+            ao_array,
+            dm1_dft[p0:p1],
+            optimize=True,
+        ) + np.einsum(
+            "inp,nxpu,pv,uv->ipx",
+            wv,
+            ao_mat[:, :, :, p0:p1],
+            ao_value_cube[0],
+            dm1_dft[p0:p1],
+            optimize=True,
+        )
+    grad2force = -grad2force * 2
+    data_dict["grad2force"] = np.reshape(
+        grad2force,
+        (len(atmlst), 4, len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3),
+    )
+
     if "grad2force" in data_dict and grad_cc is not None:
         # HF gradient
         ghf_hf = pyscf.grad.rhf.Gradients(mf)
@@ -653,23 +654,21 @@ def cc(mol, grids, name, args, evaluate=False):
         data_dict["grad_cc"] = grad_cc
 
         # Test force
-        grad_mat = np.array(
-            [
-                0.08 * np.ones(len(grids.coords)),
-                0.19 * np.ones(len(grids.coords)),
-                0.72 * np.ones(len(grids.coords)),
-                0.81 * np.ones(len(grids.coords)),
-            ]
-        )
+        grad_mat = np.zeros((4, len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE))
+        grad_mat[0, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
+        grad_mat[1, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
+        grad_mat[2, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.72
+        grad_mat[3, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.81
         force = np.einsum(
-            "mp,impx->ix", grad_mat, data_dict["grad2force"], optimize=True
+            "ipabc,tipabcx->tx",
+            grad_mat,
+            data_dict["grad2force"],
+            optimize=True,
         )
+
         get_veff_grad_modified_zeros(gdft)
         grad_dft_zeros = gdft.kernel()
         print("Error force DFT: ", np.linalg.norm(force - (grad_dft - grad_dft_zeros)))
-
-    # Generate input data
-    rho_cube_dft = grids.gen_cube_rho_rks(rho_dft, mdft._numint, dm1_dft)
 
     data_dict.update(
         {
