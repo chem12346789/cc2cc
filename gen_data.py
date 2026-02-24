@@ -23,53 +23,51 @@ train_str_list = [
     # #####################
     # ########  0  ########
     # #####################
-    # "molecule0-W4_11",
-    # "AHB21-1A",
-    # "AHB21-4A",
-    # "ALK8-li+",
-    # "W4_11-ch4",
-    # "ALK8-na+",
-    # "ALKBDE10-ca",
-    # "ALKBDE10-k",
-    # "ALKBDE10-li",
-    # "ALKBDE10-mg",
-    # "ALKBDE10-na",
-    # "CHB6-24A",
-    # "DIPCS10-be_2+",
-    # "DIPCS10-mg_2+",
-    # "G21EA-EA_c-",
-    # "G21EA-EA_o-",
-    # "G21EA-EA_p-",
-    # "G21EA-EA_s-",
-    # "G21EA-EA_si-",
-    # "G21IP-al+",
-    # "G21IP-b+",
-    # "G21IP-be+",
-    # "G21IP-c+",
-    # "G21IP-cl+",
-    # "G21IP-f+",
-    # "G21IP-mg+",
-    # "G21IP-n+",
-    # "G21IP-o+",
-    # "G21IP-p+",
-    # "G21IP-s+",
-    # "G21IP-si+",
-    # "HEAVYSB11-br",
-    # "RG18-ar",
-    # "RG18-kr",
-    # "RG18-ne",
-    # "SIE4x4-he",
-    # "SIE4x4-he+",
+    "molecule0-W4_11",
+    "AHB21-1A",
+    "AHB21-4A",
+    "ALK8-li+",
+    "W4_11-ch4",
+    "ALK8-na+",
+    "ALKBDE10-ca",
+    "ALKBDE10-k",
+    "ALKBDE10-li",
+    "ALKBDE10-mg",
+    "ALKBDE10-na",
+    "CHB6-24A",
+    "DIPCS10-be_2+",
+    "DIPCS10-mg_2+",
+    "G21EA-EA_c-",
+    "G21EA-EA_o-",
+    "G21EA-EA_p-",
+    "G21EA-EA_s-",
+    "G21EA-EA_si-",
+    "G21IP-al+",
+    "G21IP-b+",
+    "G21IP-be+",
+    "G21IP-c+",
+    "G21IP-cl+",
+    "G21IP-f+",
+    "G21IP-mg+",
+    "G21IP-n+",
+    "G21IP-o+",
+    "G21IP-p+",
+    "G21IP-s+",
+    "G21IP-si+",
+    "HEAVYSB11-br",
+    "RG18-ar",
+    "RG18-kr",
+    "RG18-ne",
+    "SIE4x4-he",
+    "SIE4x4-he+",
     # #####################
     # ########  1  ########
     # #####################
-    # "molecule1-W4_11",
+    "molecule1-W4_11",
     # #####################
     # ########  2  ########
     # #####################
-    # "molecule2-W4_11",
-    "W4_11-o2",
-    "W4_11-n2",
+    "molecule2-W4_11",
 ]
 
 eval_str_list = [
@@ -164,7 +162,6 @@ if __name__ == "__main__":
     for name_mol in name_mol_list:
         name = f"{name_mol}_{args.basis}"
 
-        # if True:
         try:
             mol = gen_mole(
                 name_mol,
@@ -443,6 +440,9 @@ if __name__ == "__main__":
                             np.linalg.norm(force - (grad_dft - grad_dft_zeros)),
                         )
 
+                    continue
+                else:
+                    print(f"SKIP: {name_mol} due to file not already exists.")
                     continue
 
             grids = Grid(mol, args.grid_level, 7)
