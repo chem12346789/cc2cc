@@ -416,6 +416,149 @@ def get_dft_energy(
         )
 
 
+def get_dft_grad(mol, grids, mdft, dm1_dft, data_dict, max_memory=16 * 1024**3):
+    mdft = pyscf.scf.UKS(mol)
+    mdft.xc = "b3lyp"
+    mdft.verbose = 4
+    mdft.kernel(dm1_dft)
+    gdft = mdft.Gradients()
+    grad_dft = gdft.kernel()
+    get_veff_grad_modified_zeros(gdft)
+    grad_dft_zeros = gdft.kernel()
+
+    atmlst = range(mol.natm)
+    grad2force = np.zeros(
+        (
+            len(atmlst),
+            grids.input_level,
+            len(grids.coords) * CUBE_SIZE**3,
+            3,
+        )
+    )
+
+    ao_deriv = 2
+    ni = mdft._numint
+    make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, grids)
+    p0, p1 = 0, 0
+    for ao, mask, weights_, coords_ in ni.block_loop(
+        mol,
+        grids,
+        nao,
+        ao_deriv,
+        max_memory=max_memory // (2 * CUBE_SIZE**3),
+        non0tab=None,
+    ):
+        gridcube = grids.gen_cube(mol, dm1_dft, coords_, mask)
+        _, wv, ao_value_cube = gridcube.gen_cube_rho_uks(
+            ni, dm1_dft, ao_deriv=2, require_vxc=True
+        )
+        wv[:, :, 0, :] *= 0.5
+        wv = wv.reshape(gridcube.input_level, 2, 4, len(gridcube.coords))
+        p1 += len(gridcube.coords)
+
+        ao_array = np.array(
+            [
+                ao_value_cube[0],
+                ao_value_cube[1],
+                ao_value_cube[2],
+                ao_value_cube[3],
+            ]
+        )
+        ao_mat = np.array(
+            [
+                [
+                    ao_value_cube[1],
+                    ao_value_cube[2],
+                    ao_value_cube[3],
+                ],
+                [
+                    ao_value_cube[4],
+                    ao_value_cube[5],
+                    ao_value_cube[6],
+                ],
+                [
+                    ao_value_cube[5],
+                    ao_value_cube[7],
+                    ao_value_cube[8],
+                ],
+                [
+                    ao_value_cube[6],
+                    ao_value_cube[8],
+                    ao_value_cube[9],
+                ],
+            ]
+        )
+
+        for k, ia in enumerate(atmlst):
+            p0, p1 = mol.aoslice_by_atom()[ia, 2:]
+            grad2force[k, p0:p1, :] = -2 * (
+                np.einsum(
+                    "isnp,xpu,npv,suv->ipx",
+                    wv,
+                    ao_value_cube[1:4, :, p0:p1],
+                    ao_array,
+                    dm1_dft[:, p0:p1],
+                    optimize=True,
+                )
+                + np.einsum(
+                    "isnp,nxpu,pv,suv->ipx",
+                    wv,
+                    ao_mat[:, :, :, p0:p1],
+                    ao_value_cube[0],
+                    dm1_dft[:, p0:p1],
+                    optimize=True,
+                )
+            )
+        p0 += len(gridcube.coords)
+        print(
+            f"current p0: {p0}, p1: {p1}, current size: {lib.current_memory()[0] / 1024:.2f} GB"
+        )
+
+    data_dict["grad2force"] = np.reshape(
+        grad2force,
+        (
+            len(atmlst),
+            grids.input_level,
+            len(grids.coords),
+            CUBE_SIZE,
+            CUBE_SIZE,
+            CUBE_SIZE,
+            3,
+        ),
+    )
+
+    # Test force
+    grad_mat = np.zeros(
+        (
+            grids.input_level,
+            len(grids.coords),
+            CUBE_SIZE,
+            CUBE_SIZE,
+            CUBE_SIZE,
+        )
+    )
+    grad_mat[0, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
+    grad_mat[1, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
+    grad_mat[2, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.72
+    grad_mat[3, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.81
+    force = np.einsum(
+        "p,ipabc,tipabcx->tx",
+        grids.weights,
+        grad_mat,
+        data_dict["grad2force"],
+        optimize=True,
+    )
+
+    print(
+        f"Memory check, current grad2force size: {grad2force.nbytes / 1024**3:.2f} GB, grad_mat: {grad_mat.nbytes / 1024**3:.2f} GB current size: {lib.current_memory()[0] / 1024:.2f} GB"
+    )
+
+    print(
+        "Error force DFT: ",
+        np.linalg.norm(force - (grad_dft - grad_dft_zeros)),
+    )
+
+
 def cc(mol, grids, name, args, evaluate=False):
     """
     Generate data for the CCSD method. (Restrict scenario to spin = 0).
