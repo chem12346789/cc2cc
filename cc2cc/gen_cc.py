@@ -389,35 +389,35 @@ def get_dft_energy(
         )
         tol_delta_grids = tol_cc_grids - tol_dft_grids
 
-        return (
-            rho_dft,
-            {
-                "exc_cc_grids": exc_cc_grids,
-                "hatree_cc_grids": hatree_cc_grids,
-                "kin_cc_grids": kin_cc_grids,
-                "kinl_cc_grids": kinl_cc_grids,
-                "nuc_cc_grids": nuc_cc_grids,
-                "nuc_erf_cc_grids": nuc_erf_cc_grids,
-                "exc_dft_grids": exc_dft_grids,
-                "exc_k_dft_grids": exc_k_dft_grids,
-                "hatree_dft_grids": hatree_dft_grids,
-                "kin_dft_grids": kin_dft_grids,
-                "kinl_dft_grids": kinl_dft_grids,
-                "nuc_dft_grids": nuc_dft_grids,
-                "nuc_erf_dft_grids": nuc_erf_dft_grids,
-                "exc_k_hf_grids": exc_k_hf_grids,
-                "hatree_hf_grids": hatree_hf_grids,
-                "kin_hf_grids": kin_hf_grids,
-                "kinl_hf_grids": kinl_hf_grids,
-                "nuc_hf_grids": nuc_hf_grids,
-                "nuc_erf_hf_grids": nuc_erf_hf_grids,
-                "tol_delta_grids": tol_delta_grids,
-            },
-        )
+        return {
+            "exc_cc_grids": exc_cc_grids,
+            "hatree_cc_grids": hatree_cc_grids,
+            "kin_cc_grids": kin_cc_grids,
+            "kinl_cc_grids": kinl_cc_grids,
+            "nuc_cc_grids": nuc_cc_grids,
+            "nuc_erf_cc_grids": nuc_erf_cc_grids,
+            "exc_dft_grids": exc_dft_grids,
+            "exc_k_dft_grids": exc_k_dft_grids,
+            "hatree_dft_grids": hatree_dft_grids,
+            "kin_dft_grids": kin_dft_grids,
+            "kinl_dft_grids": kinl_dft_grids,
+            "nuc_dft_grids": nuc_dft_grids,
+            "nuc_erf_dft_grids": nuc_erf_dft_grids,
+            "exc_k_hf_grids": exc_k_hf_grids,
+            "hatree_hf_grids": hatree_hf_grids,
+            "kin_hf_grids": kin_hf_grids,
+            "kinl_hf_grids": kinl_hf_grids,
+            "nuc_hf_grids": nuc_hf_grids,
+            "nuc_erf_hf_grids": nuc_erf_hf_grids,
+            "tol_delta_grids": tol_delta_grids,
+        }
 
 
-def get_dft_grad(mol, grids, mdft, dm1_dft, data_dict, max_memory=16 * 1024**3):
-    mdft = pyscf.scf.UKS(mol)
+def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=2000):
+    """
+    Calculate the gradient of (exchange-correlation energy - DFT energy) on the grids.
+    """
+    mdft = pyscf.scf.RKS(mol)
     mdft.xc = "b3lyp"
     mdft.verbose = 4
     mdft.kernel(dm1_dft)
@@ -431,111 +431,75 @@ def get_dft_grad(mol, grids, mdft, dm1_dft, data_dict, max_memory=16 * 1024**3):
         (
             len(atmlst),
             grids.input_level,
-            len(grids.coords) * CUBE_SIZE**3,
+            len(grids.coords),
+            CUBE_SIZE,
+            CUBE_SIZE,
+            CUBE_SIZE,
             3,
         )
     )
 
-    ao_deriv = 2
     ni = mdft._numint
-    make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, grids)
-    p0, p1 = 0, 0
-    for ao, mask, weights_, coords_ in ni.block_loop(
-        mol,
-        grids,
-        nao,
-        ao_deriv,
-        max_memory=max_memory // (2 * CUBE_SIZE**3),
-        non0tab=None,
-    ):
+    step = int(max_memory * 1024**2 / (dm1_dft.shape[0] * CUBE_SIZE**3 * 32 * 8))
+    # 32 is the number of elements in the ao_array and ao_mat, 8 is the size of float64 in bytes
+    print(f"Step size: {step}")
+    for p0, p1 in lib.prange(0, len(grids.coords), step):
+        if grids.screen_index is None:
+            mask = None
+        else:
+            mask = grids.screen_index[p0:p1]
+        coords_ = grids.coords[p0:p1]
         gridcube = grids.gen_cube(mol, dm1_dft, coords_, mask)
-        _, wv, ao_value_cube = gridcube.gen_cube_rho_uks(
+        _, wv, ao_value = gridcube.gen_cube_rho_rks(
             ni, dm1_dft, ao_deriv=2, require_vxc=True
         )
-        wv[:, :, 0, :] *= 0.5
-        wv = wv.reshape(gridcube.input_level, 2, 4, len(gridcube.coords))
-        p1 += len(gridcube.coords)
+        wv[:, 0, :] *= 0.5
+        wv = wv.reshape(gridcube.input_level, 4, len(gridcube.coords))
 
-        ao_array = np.array(
-            [
-                ao_value_cube[0],
-                ao_value_cube[1],
-                ao_value_cube[2],
-                ao_value_cube[3],
-            ]
-        )
+        ao_array = np.array([ao_value[0], ao_value[1], ao_value[2], ao_value[3]])
         ao_mat = np.array(
             [
-                [
-                    ao_value_cube[1],
-                    ao_value_cube[2],
-                    ao_value_cube[3],
-                ],
-                [
-                    ao_value_cube[4],
-                    ao_value_cube[5],
-                    ao_value_cube[6],
-                ],
-                [
-                    ao_value_cube[5],
-                    ao_value_cube[7],
-                    ao_value_cube[8],
-                ],
-                [
-                    ao_value_cube[6],
-                    ao_value_cube[8],
-                    ao_value_cube[9],
-                ],
+                [ao_value[1], ao_value[2], ao_value[3]],
+                [ao_value[4], ao_value[5], ao_value[6]],
+                [ao_value[5], ao_value[7], ao_value[8]],
+                [ao_value[6], ao_value[8], ao_value[9]],
             ]
         )
 
         for k, ia in enumerate(atmlst):
-            p0, p1 = mol.aoslice_by_atom()[ia, 2:]
-            grad2force[k, p0:p1, :] = -2 * (
-                np.einsum(
-                    "isnp,xpu,npv,suv->ipx",
-                    wv,
-                    ao_value_cube[1:4, :, p0:p1],
-                    ao_array,
-                    dm1_dft[:, p0:p1],
-                    optimize=True,
-                )
-                + np.einsum(
-                    "isnp,nxpu,pv,suv->ipx",
-                    wv,
-                    ao_mat[:, :, :, p0:p1],
-                    ao_value_cube[0],
-                    dm1_dft[:, p0:p1],
-                    optimize=True,
-                )
+            ao0, ao1 = mol.aoslice_by_atom()[ia, 2:]
+            grad2force_part = np.einsum(
+                "inp,xpu,npv,uv->ipx",
+                wv,
+                ao_value[1:4, :, ao0:ao1],
+                ao_array,
+                dm1_dft[ao0:ao1],
+                optimize=True,
+            ) + np.einsum(
+                "inp,nxpu,pv,uv->ipx",
+                wv,
+                ao_mat[:, :, :, ao0:ao1],
+                ao_value[0],
+                dm1_dft[ao0:ao1],
+                optimize=True,
             )
-        p0 += len(gridcube.coords)
+            grad2force_part = -2 * grad2force_part
+            grad2force[k, :, p0:p1] = np.reshape(
+                grad2force_part,
+                (grids.input_level, p1 - p0, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3),
+            )
         print(
-            f"current p0: {p0}, p1: {p1}, current size: {lib.current_memory()[0] / 1024:.2f} GB"
+            f"current p0: {p0}, p1: {p1}, current size: {lib.current_memory()[0] / 1024:.2f} GB, max size: {max_memory} GB",
+        )
+        print(
+            f"size of ao_array: {ao_array.shape} elements, size of ao_mat: {ao_mat.shape} elements, size of ao_value: {ao_value.shape} elements, size of grad2force: {grad2force.shape} elements",
         )
 
-    data_dict["grad2force"] = np.reshape(
-        grad2force,
-        (
-            len(atmlst),
-            grids.input_level,
-            len(grids.coords),
-            CUBE_SIZE,
-            CUBE_SIZE,
-            CUBE_SIZE,
-            3,
-        ),
-    )
+    data_dict["grad2force"] = grad2force
 
     # Test force
     grad_mat = np.zeros(
-        (
-            grids.input_level,
-            len(grids.coords),
-            CUBE_SIZE,
-            CUBE_SIZE,
-            CUBE_SIZE,
-        )
+        (grids.input_level, len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
     )
     grad_mat[0, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
     grad_mat[1, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
@@ -547,10 +511,6 @@ def get_dft_grad(mol, grids, mdft, dm1_dft, data_dict, max_memory=16 * 1024**3):
         grad_mat,
         data_dict["grad2force"],
         optimize=True,
-    )
-
-    print(
-        f"Memory check, current grad2force size: {grad2force.nbytes / 1024**3:.2f} GB, grad_mat: {grad_mat.nbytes / 1024**3:.2f} GB current size: {lib.current_memory()[0] / 1024:.2f} GB"
     )
 
     print(
@@ -677,8 +637,28 @@ def cc(mol, grids, name, args, evaluate=False):
         dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
+    data_dict = {}
+    # Generate input data
+    gridcube = grids.gen_cube(mol, dm1_dft, grids.coords, grids.screen_index)
+    rho_cube_dft = gridcube.gen_cube_rho_rks(mdft._numint, dm1_dft)
+    get_dft_grad(mol, grids, dm1_dft, data_dict)
+
+    if "grad2force" in data_dict and grad_cc is not None:
+        # HF gradient
+        ghf_hf = pyscf.grad.rhf.Gradients(mf)
+        grad_hf = ghf_hf.kernel()
+
+        # DFT gradient
+        gdft = mdft.Gradients()
+        grad_dft = gdft.kernel()
+
+        data_dict["grad_cc_train"] = grad_cc - grad_dft
+        data_dict["grad_hf"] = grad_hf
+        data_dict["grad_dft"] = grad_dft
+        data_dict["grad_cc"] = grad_cc
+
     # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
-    rho_dft, data_dict = get_dft_energy(
+    data_append_dict = get_dft_energy(
         mol,
         grids,
         mdft,
@@ -690,6 +670,7 @@ def cc(mol, grids, name, args, evaluate=False):
         dm2_cc,
         evaluate=evaluate,
     )
+    data_dict.update(data_append_dict)
 
     if "tol_delta_grids" in data_dict:
         error = np.sum(data_dict["tol_delta_grids"] * grids.weights) - energy_train
@@ -735,93 +716,6 @@ def cc(mol, grids, name, args, evaluate=False):
             - energy_train
         )
         print(f"Error exc_lerf part: {AU2KCALMOL * error_exc_lerf}")
-
-    # Generate input data
-    gridcube = grids.gen_cube(mol, dm1_dft, grids.coords, grids.screen_index)
-    rho_cube_dft, wv, ao_value_cube = gridcube.gen_cube_rho_rks(
-        mdft._numint, dm1_dft, ao_deriv=2, require_vxc=True
-    )
-
-    wv[:, 0, :] *= 0.5
-    wv = wv.reshape(gridcube.input_level, 4, len(gridcube.coords))
-
-    atmlst = range(mol.natm)
-    grad2force = np.zeros((len(atmlst), gridcube.input_level, len(gridcube.coords), 3))
-    ao_array = np.array(
-        [ao_value_cube[0], ao_value_cube[1], ao_value_cube[2], ao_value_cube[3]]
-    )
-    ao_mat = np.array(
-        [
-            [ao_value_cube[1], ao_value_cube[2], ao_value_cube[3]],
-            [ao_value_cube[4], ao_value_cube[5], ao_value_cube[6]],
-            [ao_value_cube[5], ao_value_cube[7], ao_value_cube[8]],
-            [ao_value_cube[6], ao_value_cube[8], ao_value_cube[9]],
-        ]
-    )
-    for k, ia in enumerate(atmlst):
-        p0, p1 = mol.aoslice_by_atom()[ia, 2:]
-        grad2force[k] = np.einsum(
-            "inp,xpu,npv,uv->ipx",
-            wv,
-            ao_value_cube[1:4, :, p0:p1],
-            ao_array,
-            dm1_dft[p0:p1],
-            optimize=True,
-        ) + np.einsum(
-            "inp,nxpu,pv,uv->ipx",
-            wv,
-            ao_mat[:, :, :, p0:p1],
-            ao_value_cube[0],
-            dm1_dft[p0:p1],
-            optimize=True,
-        )
-    grad2force = -grad2force * 2
-    data_dict["grad2force"] = np.reshape(
-        grad2force,
-        (
-            len(atmlst),
-            gridcube.input_level,
-            len(grids.coords),
-            CUBE_SIZE,
-            CUBE_SIZE,
-            CUBE_SIZE,
-            3,
-        ),
-    )
-
-    if "grad2force" in data_dict and grad_cc is not None:
-        # HF gradient
-        ghf_hf = pyscf.grad.rhf.Gradients(mf)
-        grad_hf = ghf_hf.kernel()
-
-        # DFT gradient
-        gdft = mdft.Gradients()
-        grad_dft = gdft.kernel()
-
-        data_dict["grad_cc_train"] = grad_cc - grad_dft
-        data_dict["grad_hf"] = grad_hf
-        data_dict["grad_dft"] = grad_dft
-        data_dict["grad_cc"] = grad_cc
-
-        # Test force
-        grad_mat = np.zeros(
-            (gridcube.input_level, len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
-        )
-        grad_mat[0, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
-        grad_mat[1, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
-        grad_mat[2, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.72
-        grad_mat[3, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.81
-        force = np.einsum(
-            "p,ipabc,tipabcx->tx",
-            grids.weights,
-            grad_mat,
-            data_dict["grad2force"],
-            optimize=True,
-        )
-
-        get_veff_grad_modified_zeros(gdft)
-        grad_dft_zeros = gdft.kernel()
-        print("Error force DFT: ", np.linalg.norm(force - (grad_dft - grad_dft_zeros)))
 
     data_dict.update(
         {
