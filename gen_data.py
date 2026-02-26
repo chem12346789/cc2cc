@@ -250,7 +250,7 @@ if __name__ == "__main__":
                     else:
                         get_uks_grad(mol, grids, dm1_dft, data_dict)
                     np.savez_compressed(DATA_PATH / f"data_{name}.npz", **data_dict)
-                    print(f"SKIP: {name} already exists.")
+                    # print(f"SKIP: {name} already exists.")
                     continue
 
             grids = Grid(mol, args.grid_level, 7)
