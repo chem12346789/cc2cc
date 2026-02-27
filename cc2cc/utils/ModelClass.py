@@ -481,7 +481,7 @@ class ModelClass:
             exc_cube = self.model(input_mat * weights_mat)
         else:
             exc_cube = self.model(input_mat) * weights_mat
-        # exc_cube += torch.einsum("i,ij->ij", self.get_b3lyp_ene(input_mat), weights_mat)
+        exc_cube += torch.einsum("i,ij->ij", self.get_b3lyp_ene(input_mat), weights_mat)
         middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
         exc_cube = exc_cube.detach().cpu().numpy().squeeze(-1)
         middle_cube = middle_cube.detach().cpu().numpy()

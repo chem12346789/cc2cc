@@ -413,9 +413,10 @@ def get_dft_energy(
         }
 
 
-def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=2000):
+def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
     """
     Calculate the gradient of (exchange-correlation energy - DFT energy) on the grids.
+    Note the max_memory is hard to predict (a large memory usage is due to grad2force and grad_mat), so just set it to a relative small value to avoid OOM.
     """
     mdft = pyscf.scf.RKS(mol)
     mdft.xc = "b3lyp"
@@ -440,7 +441,7 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=2000):
     )
 
     ni = mdft._numint
-    step = int(max_memory * 1024**2 / (dm1_dft.shape[0] * CUBE_SIZE**3 * 32 * 8))
+    step = int(max_memory * 1024**2 / (dm1_dft.shape[-1] * CUBE_SIZE**3 * 32 * 8))
     # 32 is the number of elements in the ao_array and ao_mat, 8 is the size of float64 in bytes
     print(f"Step size: {step}")
     for p0, p1 in lib.prange(0, len(grids.coords), step):
@@ -468,6 +469,10 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=2000):
 
         for k, ia in enumerate(atmlst):
             ao0, ao1 = mol.aoslice_by_atom()[ia, 2:]
+            print(
+                f"size of ao_array: {ao_array.shape} elements, size of ao_mat: {ao_mat.shape} elements, size of ao_value: {ao_value.shape} elements, size of grad2force: {grad2force.shape} elements, size of wv: {wv.shape} elements",
+                flush=True,
+            )
             grad2force_part = np.einsum(
                 "inp,xpu,npv,uv->ipx",
                 wv,
@@ -489,10 +494,12 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=2000):
                 (grids.input_level, p1 - p0, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3),
             )
         print(
-            f"current p0: {p0}, p1: {p1}, current size: {lib.current_memory()[0] / 1024:.2f} GB, max size: {max_memory} GB",
+            f"current p0: {p0}, p1: {p1}, current size: {lib.current_memory()[0] / 1024:.2f} GB, max size: {max_memory / 1024:.2f} GB",
+            flush=True,
         )
         print(
             f"size of ao_array: {ao_array.shape} elements, size of ao_mat: {ao_mat.shape} elements, size of ao_value: {ao_value.shape} elements, size of grad2force: {grad2force.shape} elements",
+            flush=True,
         )
 
     data_dict["grad2force"] = grad2force

@@ -245,9 +245,9 @@ if __name__ == "__main__":
                     dm1_dft = data_dict["dm1_dft"]
                     grids = Grid(mol, args.grid_level, 7)
                     if mol.spin == 0:
-                        get_rks_grad(mol, grids, dm1_dft, data_dict)
+                        get_rks_grad(mol, grids, dm1_dft, data_dict, max_memory=16000)
                     else:
-                        get_uks_grad(mol, grids, dm1_dft, data_dict)
+                        get_uks_grad(mol, grids, dm1_dft, data_dict, max_memory=16000)
                     np.savez_compressed(DATA_PATH / f"data_{name}.npz", **data_dict)
                     # print(f"SKIP: {name} already exists.")
                     continue
