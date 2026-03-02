@@ -25,7 +25,7 @@ from pyscf.dft.numint import (
 from pyscf.dft.gen_grid import NBINS
 from pyscf.grad.rks import _d1_dot_, _gga_grad_sum_, _make_dR_dao_w
 
-from cc2cc.utils.env_var import CUBE_MIDDLE, CUBE_SIZE
+from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
 from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.Grids import Grid
 
@@ -73,7 +73,7 @@ def get_veff_modified(
                 grids,
                 nao,
                 ao_deriv,
-                max_memory=max_memory // (2 * CUBE_SIZE**3),
+                max_memory=max_memory // (2 * EDGE_SIZE**3),
                 non0tab=None,
             ):
                 t0 = (logger.process_clock(), logger.perf_counter())
@@ -93,13 +93,13 @@ def get_veff_modified(
 
                     excsum[i] += np.sum(energy_den)
                     wv = np.einsum(
-                        "ilpabc,piabc->lpabc",
+                        "ilpC,piC->lpC",
                         vxc_mat,
                         middle_cube,
                         optimize=True,
                     )
+                    wv = wv.reshape(4, len(gridcube.coords))  # lpC -> lP
 
-                    wv = wv.reshape(4, len(gridcube.coords))  # lpabc -> lP
                     t0 = logger.timer(mol, "    post model eval", *t0)
                     yield i, ao_value, gridcube.non0tab, wv
 
@@ -277,7 +277,7 @@ def get_veff_grad_modified(ks_grad, modeldict):
                 grids,
                 nao,
                 ao_deriv,
-                max_memory=max_memory // (2 * CUBE_SIZE**3),
+                max_memory=max_memory // (2 * EDGE_SIZE**3),
                 non0tab=None,
             ):
                 for idm in range(nset):
@@ -288,13 +288,13 @@ def get_veff_grad_modified(ks_grad, modeldict):
                     _, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
 
                     wv = np.einsum(
-                        "ilpabc,piabc->lpabc",
+                        "ilpC,piC->lpC",
                         vxc_mat,
                         middle_cube,
                         optimize=True,
                     )
                     wv[0] *= 0.5
-                    wv = wv.reshape(4, len(gridcube.coords))  # lpabc -> lP
+                    wv = wv.reshape(4, len(gridcube.coords))  # lpC -> lP
                     _gga_grad_sum_(vmat[idm], mol, ao_value, wv, None, ao_loc)
 
                     # # aow = _scale_ao(ao[:4], wv[:4])

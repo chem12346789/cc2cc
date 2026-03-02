@@ -14,10 +14,9 @@ import torch._functorch.config
 from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
 
-from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, CUBE_SIZE, CUBE_MIDDLE
+from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, EDGE_SIZE, CUBE_MIDDLE
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBase import DataBase
-from cc2cc.utils.Grids import Grid
 
 
 class ModelClass:
@@ -77,9 +76,12 @@ class ModelClass:
 
         self.device = next(self.model.parameters()).device
         self.dtype = next(self.model.parameters()).dtype
-        self.model_type = self.model.model_type
+        self.cube_type = self.model.cube_type
+        self.cube_size = self.model.cube_size
         self.input_level = self.model.input_level
-        self.print(f"Model type: {self.model_type}")
+        self.print(f"cube type: {self.cube_type}")
+        self.print(f"cube size: {self.cube_size}")
+        self.print(f"input level: {self.input_level}")
 
         if self.args.save_dir is not None and self.args.save_dir != "":
             self.dir_checkpoint = (
@@ -202,11 +204,13 @@ class ModelClass:
         """
 
         def process_input(x):
-            if self.model_type == "center_4":
+            if self.cube_type == "center_4":
                 return x[:, : self.input_level, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            if self.model_type == "cube":
-                return x[:, : self.input_level, :, :, :]
-            if self.model_type == "cube9":
+            if self.cube_type == "cube":
+                return x[:, : self.input_level, :, :, :].reshape(
+                    x.shape[0], self.input_level, self.cube_size
+                )
+            if self.cube_type == "cube9":
                 return np.stack(
                     [
                         x[:, : self.input_level, 0, 0, 0],
@@ -221,7 +225,7 @@ class ModelClass:
                     ],
                     axis=-1,
                 )
-            if self.model_type == "cube5":
+            if self.cube_type == "cube5":
                 return np.stack(
                     [
                         x[:, : self.input_level, 0, 0, 0],
@@ -232,7 +236,7 @@ class ModelClass:
                     ],
                     axis=-1,
                 )
-            raise ValueError(f"Unknown model type: {self.model_type}")
+            raise ValueError(f"Unknown cube type: {self.cube_type}")
 
         self.database_train = DataBase(
             train_str_dict,
@@ -419,51 +423,51 @@ class ModelClass:
         return data_record_l
 
     def get_b3lyp_ene(self, rho_cube):
-        if self.model_type == "center_4":
+        if self.cube_type == "center_4":
             return (
                 rho_cube[:, 0] * 0.08
                 + rho_cube[:, 1] * 0.19
                 + rho_cube[:, 2] * 0.72
                 + rho_cube[:, 3] * 0.81
             )
-        elif self.model_type == "cube":
+        elif self.cube_type == "cube":
             return (
-                rho_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.08
-                + rho_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.19
-                + rho_cube[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.72
-                + rho_cube[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] * 0.81
+                rho_cube[:, 0, self.model.cube_middle] * 0.08
+                + rho_cube[:, 1, self.model.cube_middle] * 0.19
+                + rho_cube[:, 2, self.model.cube_middle] * 0.72
+                + rho_cube[:, 3, self.model.cube_middle] * 0.81
             )
-        elif self.model_type == "cube5":
+        elif self.cube_type == "cube5":
             return (
-                rho_cube[:, 0, self.model.cube_middle]
-                + rho_cube[:, 1, self.model.cube_middle]
-                + rho_cube[:, 2, self.model.cube_middle]
-                + rho_cube[:, 3, self.model.cube_middle]
+                rho_cube[:, 0, self.model.cube_middle] * 0.08
+                + rho_cube[:, 1, self.model.cube_middle] * 0.19
+                + rho_cube[:, 2, self.model.cube_middle] * 0.72
+                + rho_cube[:, 3, self.model.cube_middle] * 0.81
             )
         else:
-            raise ValueError(f"Unknown model type: {self.model_type}")
+            raise ValueError(f"Unknown cube type: {self.cube_type}")
 
     def modified_b3lyp_potential(self, middle_cube):
-        if self.model_type == "center_4":
+        if self.cube_type == "center_4":
             middle_cube[:, 0] += 0.08
             middle_cube[:, 1] += 0.19
             middle_cube[:, 2] += 0.72
             middle_cube[:, 3] += 0.81
-        elif self.model_type == "cube":
-            middle_cube[:, 0, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
-            middle_cube[:, 1, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
-            middle_cube[:, 2, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.72
-            middle_cube[:, 3, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.81
-        elif self.model_type == "cube5":
+        elif self.cube_type == "cube":
+            middle_cube[:, 0, self.model.cube_middle] += 0.08
+            middle_cube[:, 1, self.model.cube_middle] += 0.19
+            middle_cube[:, 2, self.model.cube_middle] += 0.72
+            middle_cube[:, 3, self.model.cube_middle] += 0.81
+        elif self.cube_type == "cube5":
             middle_cube[:, 0, self.model.cube_middle] += 0.08
             middle_cube[:, 1, self.model.cube_middle] += 0.19
             middle_cube[:, 2, self.model.cube_middle] += 0.72
             middle_cube[:, 3, self.model.cube_middle] += 0.81
         else:
-            raise ValueError(f"Unknown model type: {self.model_type}")
+            raise ValueError(f"Unknown cube type: {self.cube_type}")
         return middle_cube
 
-    def eval_xc_eff_cube(self, rho_cube, weights_):
+    def eval_xc_eff(self, rho_cube, weights_):
         """
         Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
         Args:
@@ -486,44 +490,3 @@ class ModelClass:
         exc_cube = exc_cube.detach().cpu().numpy().squeeze(-1)
         middle_cube = middle_cube.detach().cpu().numpy()
         return exc_cube, middle_cube
-
-    def eval_xc_eff_4(self, rho, weights_):
-        """
-        Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
-        Args:
-            mol: PySCF molecule object.
-            dms: Density matrices.
-            ni: NumInt object.
-            coords_: Coordinates of the grid points.
-            weights_: Weights of the grid points.
-        Returns:
-            exc: Exchange-correlation energy.
-            vxc: Exchange-correlation potential.
-        """
-        input_mat = torch.tensor(rho, dtype=self.dtype, device=self.device)
-        input_mat.requires_grad = True
-        exc_cube = self.model(input_mat)
-        vxc_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
-        exc_cube = exc_cube.detach().cpu().numpy().squeeze(-1)
-        vxc_cube = vxc_cube.detach().cpu().numpy()
-        return exc_cube, vxc_cube
-
-    def eval_xc_eff(self, rho, weights_):
-        """
-        Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
-        Args:
-            mol: PySCF molecule object.
-            dms: Density matrices.
-            ni: NumInt object.
-            coords_: Coordinates of the grid points.
-            weights_: Weights of the grid points.
-        Returns:
-            exc: Exchange-correlation energy.
-            vxc: Exchange-correlation potential.
-        """
-        if self.model_type == "center_4":
-            return self.eval_xc_eff_4(rho, weights_)
-        elif self.model_type == "cube":
-            return self.eval_xc_eff_cube(rho, weights_)
-        else:
-            raise ValueError(f"Unknown model {self.model_name} for eval_xc_eff")

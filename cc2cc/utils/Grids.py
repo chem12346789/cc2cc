@@ -27,7 +27,7 @@ from pyscf.dft.numint import (
 from pyscf.dft.gen_grid import BLKSIZE, NBINS, CUTOFF, ALIGNMENT_UNIT
 from pyscf import __config__
 
-from cc2cc.utils.env_var import CUBE_SIZE, CUBE_LEN, CUBE_MIDDLE
+from cc2cc.utils.env_var import EDGE_SIZE, CUBE_LEN, CUBE_MIDDLE
 
 libdft = lib.load_library("libdft")
 OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
@@ -58,9 +58,9 @@ def gen_cube_njit(
                 eig_vec[:, i] *= -1
 
         p_coords = coords[p]
-        for i in range(CUBE_SIZE):
-            for j in range(CUBE_SIZE):
-                for k in range(CUBE_SIZE):
+        for i in range(EDGE_SIZE):
+            for j in range(EDGE_SIZE):
+                for k in range(EDGE_SIZE):
                     coor_cube[p, i, j, k, :] = (
                         p_coords
                         + (i - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 0]
@@ -69,8 +69,8 @@ def gen_cube_njit(
                     )
 
 
-@njit(fastmath=True, parallel=True)
-def gen_center_njit(
+@njit(fastmath=True)
+def gen_cube5_njit(
     rho_in_2,
     rho_in_1,
     coords,
@@ -79,7 +79,26 @@ def gen_center_njit(
     """
     Generate the center coordinates for the given molecule.
     """
-    coor_cube = coords.copy()
+    for p in range(len(coords)):
+        norm_2d = rho_in_2[:, :, p]
+        eig_val, eig_vec = np.linalg.eigh(norm_2d)
+        eig_val_sort = np.argsort(eig_val)
+        eig_vec = eig_vec[:, eig_val_sort]
+        norm_1d = rho_in_1[:, p]
+        for i in range(3):
+            if np.sum(eig_vec[:, i] * norm_1d) < 0:
+                eig_vec[:, i] *= -1
+
+        p_coords = coords[p]
+        for iter_, (i, j, k) in enumerate(
+            [(0, 0, 0), (0, 2, 2), (1, 1, 1), (2, 2, 0), (2, 0, 2)]
+        ):
+            coor_cube[p, iter_, :] = (
+                p_coords
+                + (i - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 0]
+                + (j - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 1]
+                + (k - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 2]
+            )
 
 
 class Grid(dft.gen_grid.Grids):
@@ -101,12 +120,21 @@ class Grid(dft.gen_grid.Grids):
     gen_rho_uks: Generate the center density for the given molecule in UKS.
     """
 
-    def __init__(self, mol, level, input_level=4, cube_type="cube", test=False):
+    def __init__(
+        self,
+        mol,
+        level,
+        input_level=4,
+        cube_type="cube",
+        cube_size=EDGE_SIZE**3,
+        test=False,
+    ):
         super().__init__(mol)
 
         self.level = level
         self.input_level = input_level
         self.cube_type = cube_type
+        self.cube_size = cube_size
 
         # Set default parameters, please refer to pyscf.dft.gen_grid.Grids for details.
         self.radi_method = dft.radi.gauss_chebyshev
@@ -175,97 +203,17 @@ class Grid(dft.gen_grid.Grids):
         rho_in_2[2, 1, :] = rho_in_2[1, 2, :]
 
         if self.cube_type == "center":
-            coor_cube = np.zeros((len(coords), 1, 1, 1, 3))
-            gen_center_njit(rho_in_2, rho_in_1, coords, coor_cube)
+            coor_cube = coords.copy().reshape((len(coords), 1, 3))
         elif self.cube_type == "cube":
-            coor_cube = np.zeros((len(coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3))
+            coor_cube = np.zeros((len(coords), EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3))
             gen_cube_njit(rho_in_2, rho_in_1, coords, coor_cube)
+        elif self.cube_type == "cube5":
+            coor_cube = np.zeros((len(coords), 5, 3))
+            gen_cube5_njit(rho_in_2, rho_in_1, coords, coor_cube)
         else:
             raise ValueError("Unknown cube type.")
 
         return GridCube(coor_cube, self)
-
-    def gen_rho_rks(
-        self,
-        rho_in,
-        ni,
-        hermi=1,
-        require_vxc=False,
-    ):
-        """
-        Generate the cube density for the given molecule.
-        """
-        rho_lda = rho_in[0]
-        rho0 = rho_in[0]
-
-        exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
-        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
-        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho_in, xctype="GGA")[:2]
-        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho_in, xctype="GGA")[:2]
-
-        input_ = np.array(
-            [exc_lda * rho0, exc_vwn * rho0, exc_b88 * rho0, exc_lyp * rho0]
-        )
-        input_ = input_.transpose(1, 0)
-
-        if require_vxc:
-            exc_b3lyp = (
-                0.08 * input_[:, 0]
-                + 0.19 * input_[:, 1]
-                + 0.72 * input_[:, 2]
-                + 0.81 * input_[:, 3]
-            )
-
-            vxc_b3lyp = np.zeros((4, 4, len(rho_lda)))
-            vxc_b3lyp[0, 0:1, :] = vxc_lda
-            vxc_b3lyp[1, 0:1, :] = vxc_vwn
-            vxc_b3lyp[2, :, :] = vxc_b88
-            vxc_b3lyp[3, :, :] = vxc_lyp
-
-            return input_, exc_b3lyp, vxc_b3lyp
-
-        return input_
-
-    def gen_rho_uks(
-        self,
-        rho_in,
-        ni,
-        hermi=1,
-        require_vxc=False,
-    ):
-        """
-        Generate the cube density for the given molecule.
-        """
-        rho_lda = (rho_in[0][0], rho_in[1][0])
-        rho0 = rho_in[0][0] + rho_in[1][0]
-
-        exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
-        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
-        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho_in, xctype="GGA")[:2]
-        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho_in, xctype="GGA")[:2]
-
-        input_ = np.array(
-            [exc_lda * rho0, exc_vwn * rho0, exc_b88 * rho0, exc_lyp * rho0]
-        )
-        input_ = input_.transpose(1, 0)
-
-        if require_vxc:
-            exc_b3lyp = (
-                0.08 * input_[:, 0]
-                + 0.19 * input_[:, 1]
-                + 0.72 * input_[:, 2]
-                + 0.81 * input_[:, 3]
-            )
-
-            vxc_b3lyp = np.zeros((4, 2, 4, len(rho_lda)))
-            vxc_b3lyp[0, :, 0:1, :] = vxc_lda
-            vxc_b3lyp[1, :, 0:1, :] = vxc_vwn
-            vxc_b3lyp[2, :, :, :] = vxc_b88
-            vxc_b3lyp[3, :, :, :] = vxc_lyp
-
-            return input_, exc_b3lyp, vxc_b3lyp
-
-        return input_
 
 
 class GridCube:
@@ -277,8 +225,10 @@ class GridCube:
 
     def __init__(self, coords, grid: Grid):
         self.number_of_cube = len(coords)
-        # size of coords: (number * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE, 3)
+        # size of coords: (number * EDGE_SIZE * EDGE_SIZE * EDGE_SIZE, 3) or (number * 5, 3)
         self.input_level = grid.input_level
+        self.cube_type = grid.cube_type
+        self.cube_size = grid.cube_size
         self.coords = coords.reshape((-1, 3))
         self.mol = grid.mol
         self.cutoff = grid.cutoff
@@ -336,12 +286,11 @@ class GridCube:
             vxc_mat[6, :, :] = vxc_tfk
 
         input_mat = input_mat.reshape(
-            (self.input_level, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+            (self.input_level, self.number_of_cube, self.cube_size)
         )
-        input_mat = input_mat.transpose(1, 0, 2, 3, 4)
-
+        input_mat = input_mat.transpose(1, 0, 2)
         vxc_mat = vxc_mat.reshape(
-            (self.input_level, 4, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+            (self.input_level, 4, self.number_of_cube, self.cube_size)
         )
 
         t0 = logger.timer(self.mol, "      gen exc and vxc", *t0)
@@ -410,20 +359,11 @@ class GridCube:
             vxc_mat[6, :, :, :] = vxc_tfk
 
         input_mat = input_mat.reshape(
-            (self.input_level, self.number_of_cube, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+            (self.input_level, self.number_of_cube, self.cube_size)
         )
-        input_mat = input_mat.transpose(1, 0, 2, 3, 4)
-
+        input_mat = input_mat.transpose(1, 0, 2)
         vxc_mat = vxc_mat.reshape(
-            (
-                self.input_level,
-                2,
-                4,
-                self.number_of_cube,
-                CUBE_SIZE,
-                CUBE_SIZE,
-                CUBE_SIZE,
-            )
+            (self.input_level, 4, self.number_of_cube, self.cube_size)
         )
 
         t0 = logger.timer(self.mol, "      gen exc and vxc", *t0)

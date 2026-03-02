@@ -6,7 +6,7 @@ import torch
 from torch import nn
 
 
-from cc2cc.utils.env_var import CUBE_SIZE, CUBE_MIDDLE
+from cc2cc.utils.env_var import EDGE_SIZE, CUBE_MIDDLE
 from cc2cc.utils.model.model_utils import Transformer, DenseNet
 
 ESP = 1e-8
@@ -20,12 +20,12 @@ class Model(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.model_type = "cube"
+        self.cube_type = "cube"
         self.input_level = 4
         self.before_weight = True
 
         self.predictor = Transformer(
-            d_model=CUBE_SIZE**3,
+            d_model=EDGE_SIZE**3,
             seq_len=4,
             num_layer=5,
             qkv_bias=False,
@@ -35,7 +35,7 @@ class Model(nn.Module):
         )
 
         self.densenet = DenseNet(
-            d_model=4 * CUBE_SIZE**3,
+            d_model=4 * EDGE_SIZE**3,
             mlp=108,
             depth=5,
             dense_bias=False,
@@ -53,7 +53,7 @@ class Model(nn.Module):
             dense_actv="gelu",
         )
 
-        self.mixing_weight = nn.Linear(4 * CUBE_SIZE**3, 6)
+        self.mixing_weight = nn.Linear(4 * EDGE_SIZE**3, 6)
         self.weight_softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
@@ -71,12 +71,12 @@ class Model(nn.Module):
         )
 
         # do mixing x and x_center using Mixture of experts mechanism
-        weight_out = self.mixing_weight(x.reshape(-1, 4 * CUBE_SIZE**3))
+        weight_out = self.mixing_weight(x.reshape(-1, 4 * EDGE_SIZE**3))
         weight_out = self.weight_softmax(weight_out)
 
-        x_cube = x.reshape(-1, 4, CUBE_SIZE**3)
+        x_cube = x.reshape(-1, 4, EDGE_SIZE**3)
         x_cube = self.predictor(x_cube)
-        x_cube = x_cube.reshape(-1, 4 * CUBE_SIZE**3)
+        x_cube = x_cube.reshape(-1, 4 * EDGE_SIZE**3)
         x_cube = self.densenet(x_cube)
 
         # # Extract the central values for each channel

@@ -15,15 +15,15 @@ class Model(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.model_type = "cube5"
-        self.input_level = 4
+        self.cube_type = "cube5"
         self.cube_size = 5
         self.cube_middle = 2
+        self.input_level = 4
         self.before_weight = False
 
         self.predictor = Transformer(
-            d_model=5,
-            seq_len=4,
+            d_model=self.cube_size,
+            seq_len=self.input_level,
             num_layer=5,
             qkv_bias=False,
             ffn_bias=False,
@@ -32,7 +32,7 @@ class Model(nn.Module):
         )
 
         self.densenet = DenseNet(
-            d_model=4 * 5,
+            d_model=4 * self.cube_size,
             mlp=108,
             depth=5,
             dense_bias=False,
@@ -41,7 +41,7 @@ class Model(nn.Module):
         )
 
         self.densenet_center = DenseNet(
-            d_model=4,
+            d_model=self.input_level,
             mlp=108,
             depth=5,
             dense_bias=False,
@@ -50,7 +50,7 @@ class Model(nn.Module):
             dense_actv="gelu",
         )
 
-        self.mixing_weight = nn.Linear(4 * 5, 6)
+        self.mixing_weight = nn.Linear(self.input_level * self.cube_size, 6)
         self.weight_softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
@@ -59,17 +59,18 @@ class Model(nn.Module):
         """
 
         # do mixing x and x_center using Mixture of experts mechanism
-        weight_out = self.mixing_weight(x.reshape(-1, 4 * 5))
+        weight_out = self.mixing_weight(
+            x.reshape(-1, self.input_level * self.cube_size)
+        )
         weight_out = self.weight_softmax(weight_out)
 
-        x_cube = x.reshape(-1, 4, 5)
-        x_cube = self.predictor(x_cube)
-        x_cube = x_cube.reshape(-1, 4 * 5)
+        x_cube = self.predictor(x)
+        x_cube = x_cube.reshape(-1, self.input_level * self.cube_size)
         x_cube = self.densenet(x_cube)
 
         # # Extract the central values for each channel
         x_center = x[:, :, self.cube_middle]
-        x_center = x_center.reshape(-1, 4 * 1)
+        x_center = x_center.reshape(-1, self.input_level)
         x_center = self.densenet_center(x_center)
 
         mixed_output = (

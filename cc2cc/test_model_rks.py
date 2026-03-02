@@ -24,18 +24,21 @@ def test_model_rks(
     time_ai_start = timer()
     mdft = pyscf.dft.RKS(mol).density_fit()
     mdft.xc = "b3lyp"
-    mdft.grids = Grid(mol, args.grid_level, modeldict.input_level, test=True)
+    mdft.grids = Grid(
+        mol,
+        args.grid_level,
+        input_level=modeldict.input_level,
+        cube_type=modeldict.cube_type,
+        cube_size=modeldict.cube_size,
+        test=True,
+    )
+    get_veff_modified_rks(mdft, modeldict)
 
     mdft.verbose = 4
     mdft.mol.verbose = 4
     mdft.diis_space = 6
     mdft.conv_tol = 1e-7
     mdft.conv_tol_grad = 1e-3
-
-    if modeldict.model_type == "center_4":
-        get_veff_modified_rks(mdft, modeldict)
-    elif modeldict.model_type == "cube":
-        get_veff_modified_rks(mdft, modeldict)
 
     if args.max_cycle == -1:
         mdft.max_cycle = -1
@@ -63,10 +66,7 @@ def test_model_rks(
         g = mdft.Gradients()
         g.xc = "b3lyp"
         g.grids = mdft.grids
-        if modeldict.model_type == "center_4":
-            get_veff_grad_modified_rks(g, modeldict)
-        elif modeldict.model_type == "cube":
-            get_veff_grad_modified_rks(g, modeldict)
+        get_veff_grad_modified_rks(g, modeldict)
         grad_mdft = g.kernel()
     else:
         grad_mdft = None

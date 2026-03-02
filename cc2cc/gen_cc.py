@@ -23,7 +23,7 @@ from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.modelscf_rks import get_veff_grad_modified_zeros
 from cc2cc.utils.pyscf_ccsd_t_rdm import _gamma1_intermediates
-from cc2cc.utils.env_var import CUBE_MIDDLE, CUBE_SIZE
+from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
 
 
 def block_loop_rdm2(nao):
@@ -433,15 +433,15 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
             len(atmlst),
             grids.input_level,
             len(grids.coords),
-            CUBE_SIZE,
-            CUBE_SIZE,
-            CUBE_SIZE,
+            EDGE_SIZE,
+            EDGE_SIZE,
+            EDGE_SIZE,
             3,
         )
     )
 
     ni = mdft._numint
-    step = int(max_memory * 1024**2 / (dm1_dft.shape[-1] * CUBE_SIZE**3 * 32 * 8))
+    step = int(max_memory * 1024**2 / (dm1_dft.shape[-1] * EDGE_SIZE**3 * 32 * 8))
     # 32 is the number of elements in the ao_array and ao_mat, 8 is the size of float64 in bytes
     print(f"Step size: {step}")
     for p0, p1 in lib.prange(0, len(grids.coords), step):
@@ -491,7 +491,7 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
             grad2force_part = -2 * grad2force_part
             grad2force[k, :, p0:p1] = np.reshape(
                 grad2force_part,
-                (grids.input_level, p1 - p0, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 3),
+                (grids.input_level, p1 - p0, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3),
             )
         print(
             f"current p0: {p0}, p1: {p1}, current size: {lib.current_memory()[0] / 1024:.2f} GB, max size: {max_memory / 1024:.2f} GB",
@@ -506,7 +506,7 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
 
     # Test force
     grad_mat = np.zeros(
-        (grids.input_level, len(grids.coords), CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+        (grids.input_level, len(grids.coords), EDGE_SIZE, EDGE_SIZE, EDGE_SIZE)
     )
     grad_mat[0, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.08
     grad_mat[1, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19

@@ -10,12 +10,12 @@ from pyscf import lib
 import torch
 
 # set the environment variable
-CUBE_SIZE = os.environ.get("DFT2CC_CUBE_SIZE")
-if CUBE_SIZE is None:
-    CUBE_SIZE = 3
+EDGE_SIZE = os.environ.get("DFT2CC_EDGE_SIZE")
+if EDGE_SIZE is None:
+    EDGE_SIZE = 3
 else:
-    CUBE_SIZE = int(CUBE_SIZE)
-CUBE_MIDDLE = CUBE_SIZE // 2
+    EDGE_SIZE = int(EDGE_SIZE)
+CUBE_MIDDLE = EDGE_SIZE // 2
 
 CUBE_LEN = os.environ.get("DFT2CC_CUBE_LEN")
 if CUBE_LEN is None:
@@ -46,6 +46,7 @@ else:
     DATA_TEST_PATH = MAIN_PATH / "data" / DATA_TEST_DIR
 
 CHECKPOINTS_PATH = MAIN_PATH / "checkpoints"
+
 
 def print_computer_info(device):
     """
@@ -79,7 +80,7 @@ def print_computer_info(device):
         print(f"CUDA Version: {torch.version.cuda}")
         print(f"PyTorch Version: {torch.__version__}")
 
-    print(f"CUBE_SIZE: {CUBE_SIZE}")
+    print(f"EDGE_SIZE: {EDGE_SIZE}")
     print(f"CUBE_MIDDLE: {CUBE_MIDDLE}")
     print(f"CUBE_LEN: {CUBE_LEN}")
     print(f"TEST: {TEST}")
