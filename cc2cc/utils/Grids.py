@@ -363,7 +363,7 @@ class GridCube:
         )
         input_mat = input_mat.transpose(1, 0, 2)
         vxc_mat = vxc_mat.reshape(
-            (self.input_level, 4, self.number_of_cube, self.cube_size)
+            (self.input_level, 2, 4, self.number_of_cube, self.cube_size)
         )
 
         t0 = logger.timer(self.mol, "      gen exc and vxc", *t0)

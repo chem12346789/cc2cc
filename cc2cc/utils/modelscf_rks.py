@@ -98,14 +98,14 @@ def get_veff_modified(
                         middle_cube,
                         optimize=True,
                     )
-                    wv = wv.reshape(4, len(gridcube.coords))  # lpC -> lP
 
                     t0 = logger.timer(mol, "    post model eval", *t0)
-                    yield i, ao_value, gridcube.non0tab, wv
 
-                    # wv = wv[:, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-                    # t0 = logger.timer(mol, "    post model eval", *t0)
-                    # yield i, ao, mask, wv
+                    # wv = wv.reshape(4, len(gridcube.coords))  # lpC -> lP
+                    # yield i, ao_value, gridcube.non0tab, wv
+
+                    wv = wv[:, :, modeldict.model.cube_middle]
+                    yield i, ao, mask, wv
 
         aow = None
         pair_mask = mol.get_overlap_cond() < -np.log(ni.cutoff)
