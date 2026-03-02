@@ -702,6 +702,9 @@ def ucc(mol, grids, name, args, evaluate=False):
     # Generate input data
     gridcube = grids.gen_cube(mol, dm1_dft, grids.coords, grids.screen_index)
     rho_cube_dft = gridcube.gen_cube_rho_uks(mdft._numint, dm1_dft)
+    rho_cube_dft = rho_cube_dft.reshape(
+        len(grids.coords), grids.input_level, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
+    )
     get_dft_grad(mol, grids, dm1_dft, data_dict)
 
     if "grad2force" in data_dict and grad_cc is not None:

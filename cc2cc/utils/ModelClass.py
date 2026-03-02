@@ -290,13 +290,6 @@ class ModelClass:
                 output = self.model(torch.einsum("p...,pi->p...", input_, weight))
             else:
                 output = self.model(input_) * weight
-
-            # if self.args.if_grad:
-            #     grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
-            #     grad2force = batch["grad2force"]
-            #     middle_ = torch.autograd.grad(
-            #         torch.sum(output), input_, create_graph=True
-            #     )[0]
         else:
             with torch.no_grad():
                 if self.model.before_weight:
@@ -328,11 +321,17 @@ class ModelClass:
             else:
                 loss_abs_record = 0.0
 
-            # if self.args.if_grad:
-            #     tot_loss += loss_multiplier_grad * self.loss_grad(grad_cc_train, force)
-            #     loss_grad_record = torch.sum(torch.abs(grad_cc_train - force)).item()
-            # else:
-            loss_grad_record = 0.0
+            if self.args.if_grad:
+                middle_ = torch.autograd.grad(
+                    torch.sum(output), input_, create_graph=True
+                )[0]
+                grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
+                grad2force = batch["grad2force"]
+                force = torch.einsum("ipC,tipCx->tx", middle_, grad2force)
+                tot_loss += loss_multiplier_grad * self.loss_grad(grad_cc_train, force)
+                loss_grad_record = torch.sum(torch.abs(grad_cc_train - force)).item()
+            else:
+                loss_grad_record = 0.0
         else:
             loss_abs_record = 0.0
             loss_grad_record = 0.0
