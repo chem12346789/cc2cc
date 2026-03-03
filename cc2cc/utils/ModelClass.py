@@ -238,10 +238,54 @@ class ModelClass:
                 )
             raise ValueError(f"Unknown cube type: {self.cube_type}")
 
+        def process_grad2force(x):
+            # tipabcx -> tipCx
+            if self.cube_type == "center_4":
+                return x[
+                    :, : self.input_level, :, [CUBE_MIDDLE], CUBE_MIDDLE, CUBE_MIDDLE, :
+                ]
+            if self.cube_type == "cube":
+                x = x[:, : self.input_level, :, :, :, :, :].reshape(
+                    x.shape[0],
+                    self.input_level,
+                    x.shape[2],
+                    self.cube_size,
+                    x.shape[-1],
+                )
+                return x
+            if self.cube_type == "cube9":
+                return np.stack(
+                    [
+                        x[:, : self.input_level, :, 0, 0, 0, :],
+                        x[:, : self.input_level, :, 0, 0, 2, :],
+                        x[:, : self.input_level, :, 0, 2, 0, :],
+                        x[:, : self.input_level, :, 0, 2, 2, :],
+                        x[:, : self.input_level, :, 1, 1, 1, :],
+                        x[:, : self.input_level, :, 2, 0, 0, :],
+                        x[:, : self.input_level, :, 2, 0, 2, :],
+                        x[:, : self.input_level, :, 2, 2, 0, :],
+                        x[:, : self.input_level, :, 2, 2, 2, :],
+                    ],
+                    axis=-2,
+                )
+            if self.cube_type == "cube5":
+                return np.stack(
+                    [
+                        x[:, : self.input_level, :, 0, 0, 0, :],
+                        x[:, : self.input_level, :, 0, 2, 2, :],
+                        x[:, : self.input_level, :, 1, 1, 1, :],
+                        x[:, : self.input_level, :, 2, 2, 0, :],
+                        x[:, : self.input_level, :, 2, 0, 2, :],
+                    ],
+                    axis=-2,
+                )
+            raise ValueError(f"Unknown cube type: {self.cube_type}")
+
         self.database_train = DataBase(
             train_str_dict,
             self.args,
             process_input=process_input,
+            process_grad2force=process_grad2force,
             verbose=self.verbose,
         )
         self.database_eval = DataBase(
@@ -252,6 +296,7 @@ class ModelClass:
             atomic_name_dict=self.database_train.atomic_name_dict,
             atomic_energy_dict=self.database_train.atomic_energy_dict,
             process_input=process_input,
+            process_grad2force=process_grad2force,
             verbose=self.verbose,
         )
 
@@ -327,7 +372,7 @@ class ModelClass:
                 )[0]
                 grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
                 grad2force = batch["grad2force"]
-                force = torch.einsum("ipC,tipCx->tx", middle_, grad2force)
+                force = torch.einsum("piC,tipCx->tx", middle_, grad2force)
                 tot_loss += loss_multiplier_grad * self.loss_grad(grad_cc_train, force)
                 loss_grad_record = torch.sum(torch.abs(grad_cc_train - force)).item()
             else:

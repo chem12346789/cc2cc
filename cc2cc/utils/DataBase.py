@@ -67,6 +67,7 @@ class DataBase:
         atomic_name_dict=None,
         atomic_energy_dict=None,
         process_input=lambda x: x,
+        process_grad2force=lambda x: x,
         verbose=False,
     ):
         """
@@ -83,6 +84,7 @@ class DataBase:
             self.dtype = torch.float32
         self.if_eval = if_eval
         self.process_input = process_input
+        self.process_grad2force = process_grad2force
         self.verbose = verbose
         self.array_key = ["input", "weight", "output", "grad2force"]
 
@@ -323,7 +325,7 @@ class DataBase:
                 data_dict["loss_multiplier_abs"] = loss_multiplier_abs
 
             data_dict["output"] = output_mat.reshape((-1, 1))
-            data_dict["grad2force"] = grad2force
+            data_dict["grad2force"] = self.process_grad2force(grad2force)
             data_dict["grad_cc_train"] = grad_cc_train
 
         atomic_systems = []
