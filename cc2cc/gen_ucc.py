@@ -460,6 +460,9 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
         )
     )
 
+    rho_cube_dft = np.zeros((len(grids.coords), grids.input_level, EDGE_SIZE**3))
+    gridcube_coords = np.zeros((len(grids.coords), EDGE_SIZE**3, 3))
+
     ni = mdft._numint
     step = int(max_memory * 1024**2 / (dm1_dft.shape[-1] * EDGE_SIZE**3 * 32 * 8))
     # 32 is the number of elements in the ao_array and ao_mat, 8 is the size of float64 in bytes
@@ -471,9 +474,12 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
             mask = grids.screen_index[p0:p1]
         coords_ = grids.coords[p0:p1]
         gridcube = grids.gen_cube(mol, dm1_dft, coords_, mask)
-        _, wv, ao_value = gridcube.gen_cube_rho_uks(
+        rho_cube_dft_part, wv, ao_value = gridcube.gen_cube_rho_uks(
             ni, dm1_dft, ao_deriv=2, require_vxc=True
         )
+        rho_cube_dft[p0:p1] = rho_cube_dft_part
+        gridcube_coords[p0:p1] = gridcube.coords.reshape(len(coords_), EDGE_SIZE**3, 3)
+
         wv[:, :, 0, :] *= 0.5
         wv = wv.reshape(gridcube.input_level, 2, 4, len(gridcube.coords))
 
@@ -520,7 +526,13 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
             flush=True,
         )
 
+    data_dict["rho_cube_dft"] = rho_cube_dft.reshape(
+        len(grids.coords), grids.input_level, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
+    )
     data_dict["grad2force"] = grad2force
+    data_dict["cube_coor"] = gridcube_coords.transpose(0, 2, 1).reshape(
+        len(grids.coords), 3, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
+    )
 
     # Test force
     grad_mat = np.zeros(
@@ -700,11 +712,6 @@ def ucc(mol, grids, name, args, evaluate=False):
 
     data_dict = {}
     # Generate input data
-    gridcube = grids.gen_cube(mol, dm1_dft, grids.coords, grids.screen_index)
-    rho_cube_dft = gridcube.gen_cube_rho_uks(mdft._numint, dm1_dft)
-    rho_cube_dft = rho_cube_dft.reshape(
-        len(grids.coords), grids.input_level, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
-    )
     get_dft_grad(mol, grids, dm1_dft, data_dict)
 
     if "grad2force" in data_dict and grad_cc is not None:
@@ -794,7 +801,6 @@ def ucc(mol, grids, name, args, evaluate=False):
             "dm1_cc": dm1_cc,
             "e_dft_d3bj": e_dft_d3bj,
             "energy_train": energy_train,
-            "rho_cube_dft": rho_cube_dft,
             "weights": grids.weights,
         }
     )

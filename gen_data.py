@@ -14,6 +14,7 @@ from cc2cc.utils import Grid, DATA_PATH
 from cc2cc.utils.parser import gen_name_args
 from cc2cc.gen_cc import cc, get_dft_grad as get_rks_grad
 from cc2cc.gen_ucc import ucc, get_dft_grad as get_uks_grad
+from cc2cc.utils.env_var import EDGE_SIZE
 
 
 train_str_list = [
