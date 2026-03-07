@@ -29,12 +29,7 @@ from cc2cc.utils.Grids import Grid
 lib.logger.TIMER_LEVEL = 4
 
 
-def get_veff_modified(
-    ks,
-    modeldict: ModelClass,
-    lambda_rho=None,
-    dm_tar=None,
-):
+def get_veff_modified(ks, modeldict: ModelClass):
     """
     Get the method of "Get the effective potential for the UKS method".
     Note the max_memory=2000 use around 8GB gpu memory.
@@ -62,10 +57,6 @@ def get_veff_modified(
         nao = dma.shape[-1]
         make_rhoa, nset = ni._gen_rho_evaluator(mol, dma, hermi, False, grids)[:2]
         make_rhob = ni._gen_rho_evaluator(mol, dmb, hermi, False, grids)[0]
-
-        nelec = np.zeros((2, nset))
-        excsum = np.zeros(nset)
-        vmat = np.zeros((2, nset, nao, nao))
 
         def block_loop(ao_deriv):
             for ao, mask, weights_, coords_ in ni.block_loop(
@@ -111,6 +102,9 @@ def get_veff_modified(
                     # yield i, ao, mask, wv
 
         aow = None
+        nelec = np.zeros((2, nset))
+        excsum = np.zeros(nset)
+        vmat = np.zeros((2, nset, nao, nao))
         pair_mask = mol.get_overlap_cond() < -np.log(ni.cutoff)
 
         t0 = (logger.process_clock(), logger.perf_counter())

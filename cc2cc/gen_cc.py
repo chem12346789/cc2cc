@@ -4,6 +4,7 @@ from itertools import product
 from math import erf
 
 import numpy as np
+import scipy
 import opt_einsum as oe
 import torch
 
@@ -24,6 +25,10 @@ from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.modelscf_rks import get_veff_grad_modified_zeros
 from cc2cc.utils.pyscf_ccsd_t_rdm import _gamma1_intermediates
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
+
+
+def is_hermitian(matrix, tol=1e-8):
+    return np.allclose(matrix, matrix.conj().T, atol=tol)
 
 
 def block_loop_rdm2(nao):
@@ -442,6 +447,10 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
 
     rho_cube_dft = np.zeros((len(grids.coords), grids.input_level, EDGE_SIZE**3))
     gridcube_coords = np.zeros((len(grids.coords), EDGE_SIZE**3, 3))
+    ao0_coords = np.zeros((len(grids.coords), EDGE_SIZE**3, dm1_dft.shape[-1]))
+    ao4_coords = np.zeros(
+        (grids.input_level, len(grids.coords), EDGE_SIZE**3, dm1_dft.shape[-1])
+    )
 
     ni = mdft._numint
     step = int(max_memory * 1024**2 / (dm1_dft.shape[-1] * EDGE_SIZE**3 * 32 * 8))
@@ -459,9 +468,15 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
         )
         rho_cube_dft[p0:p1] = rho_cube_dft_part
         gridcube_coords[p0:p1] = gridcube.coords.reshape(len(coords_), EDGE_SIZE**3, 3)
+        ao0_coords[p0:p1] = ao_value[0].reshape(
+            len(coords_), EDGE_SIZE**3, dm1_dft.shape[-1]
+        )
 
-        wv[:, 0, :] *= 0.5
         wv = wv.reshape(gridcube.input_level, 4, len(gridcube.coords))
+        wv[:, 0, :] *= 0.5
+        ao4_coords[:, p0:p1] = np.einsum("xpu,ixp->ipu", ao_value[:4], wv).reshape(
+            gridcube.input_level, len(coords_), EDGE_SIZE**3, dm1_dft.shape[-1]
+        )
 
         ao_array = np.array([ao_value[0], ao_value[1], ao_value[2], ao_value[3]])
         ao_mat = np.array(
@@ -515,6 +530,17 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
     data_dict["cube_coor"] = gridcube_coords.transpose(0, 2, 1).reshape(
         len(grids.coords), 3, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
     )
+    data_dict["ao0_coords"] = ao0_coords.reshape(
+        len(grids.coords), EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, dm1_dft.shape[-1]
+    )
+    data_dict["ao4_coords"] = ao4_coords.reshape(
+        grids.input_level,
+        len(grids.coords),
+        EDGE_SIZE,
+        EDGE_SIZE,
+        EDGE_SIZE,
+        dm1_dft.shape[-1],
+    )
 
     # Test force
     grad_mat = np.zeros(
@@ -531,14 +557,60 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
         data_dict["grad2force"],
         optimize=True,
     )
-
     print(
         "Error force DFT: ",
         np.linalg.norm(force - (grad_dft - grad_dft_zeros)),
     )
 
+    vxc_test = np.einsum(
+        "g,igabcu,igabc,gabcv->uv",
+        grids.weights,
+        data_dict["ao4_coords"],
+        grad_mat,
+        data_dict["ao0_coords"],
+        optimize=True,
+    )
+    vxc_test = lib.hermi_sum(vxc_test, axes=(0, 2, 1))
+    vj, vk = mdft.get_jk(mol, dm1_dft)
+    omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mdft.xc, spin=mol.spin)
+    vk *= hyb
+    vxc_test += vj - vk * 0.5
+    print(
+        hyb, "Error vxc DFT: ", np.linalg.norm(vxc_test - mdft.get_veff(mol, dm1_dft))
+    )
 
-def cc(mol, grids, name, args, evaluate=False):
+    h1e = mdft.get_hcore()
+    s1e = mdft.get_ovlp()
+    mo_energy, mo_coeff = mdft.eig(vxc_test + h1e, s1e)
+    mo_occ = mdft.get_occ(mo_energy, mo_coeff)
+    dm_test = mdft.make_rdm1(mo_coeff, mo_occ)
+
+    print("Test MO coefficient difference: ", np.linalg.norm(mo_coeff - mdft.mo_coeff))
+    print("Test MO energy difference: ", np.linalg.norm(mo_energy - mdft.mo_energy))
+    print(
+        "Test dipole difference: ",
+        np.linalg.norm(mdft.dip_moment(mol, dm_test) - mdft.dip_moment(mol, dm1_dft)),
+    )
+
+    print("Test dm difference: ", np.linalg.norm(dm_test - dm1_dft))
+    if is_hermitian(dm_test) and is_hermitian(dm1_dft):
+        eigval1, eigvector1 = np.linalg.eigh(dm_test)
+        eigval2, eigvector2 = np.linalg.eigh(dm1_dft)
+    else:
+        eigval1, eigvector1 = np.linalg.eig(dm_test)
+        eigval2, eigvector2 = np.linalg.eig(dm1_dft)
+    print("Test eigval difference: ", np.linalg.norm(eigval1 - eigval2))
+    print(f"convert matrix: {np.linalg.norm(np.linalg.inv(eigvector1) - eigvector1.T)}")
+    print(f"convert matrix: {np.linalg.norm(np.linalg.inv(eigvector2) - eigvector2.T)}")
+
+
+def cc(
+    mol: pyscf.gto.Mole,
+    grids,
+    name,
+    args,
+    evaluate=False,
+):
     """
     Generate data for the CCSD method. (Restrict scenario to spin = 0).
     """
@@ -560,7 +632,6 @@ def cc(mol, grids, name, args, evaluate=False):
     mdft.verbose = 4
     mdft.max_cycle = 200
     mdft.xc = "b3lyp"
-    # get_veff_modified_rks(mdft, modeldict, lambda_rho=1, dm_tar=dm1_cc)
     mdft.kernel(mf.make_rdm1())
     if args.check_convergence and not mdft.converged:
         raise ValueError("RKS not converged.")

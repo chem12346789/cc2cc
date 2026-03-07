@@ -69,8 +69,8 @@ class Model(nn.Module):
         x_cube = x_cube.reshape(-1, self.input_level * self.cube_size)
         x_cube = self.densenet(x_cube)
 
-        # # Extract the central values for each channel
         x_center = x[:, :, self.cube_middle]
+        # # Extract the central values for each channel
         x_center = x_center.reshape(-1, self.input_level)
         x_center = self.densenet_center(x_center)
 

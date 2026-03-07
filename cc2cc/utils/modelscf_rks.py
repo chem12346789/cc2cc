@@ -32,12 +32,7 @@ from cc2cc.utils.Grids import Grid
 lib.logger.TIMER_LEVEL = 4
 
 
-def get_veff_modified(
-    ks,
-    modeldict,
-    lambda_rho=None,
-    dm_tar=None,
-):
+def get_veff_modified(ks, modeldict):
     """
     Get the method of "Get the effective potential for the RKS method".
     """
@@ -62,10 +57,6 @@ def get_veff_modified(
         ao_loc = mol.ao_loc_nr()
         cutoff = grids.cutoff * 1e2
         nbins = NBINS * 2 - int(NBINS * np.log(cutoff) / np.log(grids.cutoff))
-
-        nelec = np.zeros(nset)
-        excsum = np.zeros(nset)
-        vmat = np.zeros((nset, nao, nao))
 
         def block_loop(ao_deriv):
             for ao, mask, weights_, coords_ in ni.block_loop(
@@ -93,7 +84,7 @@ def get_veff_modified(
 
                     excsum[i] += np.sum(energy_den)
                     wv = np.einsum(
-                        "ilpC,piC->lpC",
+                        "ixgC,giC->xgC",
                         vxc_mat,
                         middle_cube,
                         optimize=True,
@@ -101,13 +92,16 @@ def get_veff_modified(
 
                     t0 = logger.timer(mol, "    post model eval", *t0)
 
-                    wv = wv.reshape(4, len(gridcube.coords))  # lpC -> lP
+                    wv = wv.reshape(4, len(gridcube.coords))  # xgC -> xG
                     yield i, ao_value, gridcube.non0tab, wv
 
                     # wv = wv[:, :, modeldict.model.cube_middle]
                     # yield i, ao, mask, wv
 
         aow = None
+        nelec = np.zeros(nset)
+        excsum = np.zeros(nset)
+        vmat = np.zeros((nset, nao, nao))
         pair_mask = mol.get_overlap_cond() < -np.log(ni.cutoff)
 
         t0 = (logger.process_clock(), logger.perf_counter())

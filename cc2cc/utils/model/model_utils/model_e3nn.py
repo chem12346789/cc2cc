@@ -3,7 +3,10 @@ from e3nn import o3
 from e3nn.nn import FullyConnectedNet
 from e3nn.o3 import Irreps
 from skala.pyscf import SkalaKS
+from e3nn import o3, nn
 
+
+o3.spherical_harmonics
 # E3NN-based octahedral equivariant network for 3D scalar field prediction.
 
 # This module implements an E3NN network that processes 27 points in a cube,

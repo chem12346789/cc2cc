@@ -9,7 +9,6 @@ import numpy as np
 
 import torch
 import torch.optim as optim
-import torch._functorch.config
 
 from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
@@ -526,7 +525,7 @@ class ModelClass:
         )
         input_mat.requires_grad = True
         if self.model.before_weight:
-            exc_cube = self.model(input_mat * weights_mat)
+            exc_cube = self.model(torch.einsum("p...,pi->p...", input_mat, weights_mat))
         else:
             exc_cube = self.model(input_mat) * weights_mat
         exc_cube += torch.einsum("i,ij->ij", self.get_b3lyp_ene(input_mat), weights_mat)
