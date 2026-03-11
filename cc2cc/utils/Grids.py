@@ -27,7 +27,7 @@ from pyscf.dft.numint import (
 from pyscf.dft.gen_grid import BLKSIZE, NBINS, CUTOFF, ALIGNMENT_UNIT
 from pyscf import __config__
 
-from cc2cc.utils.env_var import EDGE_SIZE, CUBE_LEN, CUBE_MIDDLE
+from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 
 libdft = lib.load_library("libdft")
 OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
@@ -64,9 +64,9 @@ def gen_cube_njit(
                 for k in range(EDGE_SIZE):
                     coor_cube[p, i, j, k, :] = (
                         p_coords
-                        + (i - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 0]
-                        + (j - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 1]
-                        + (k - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 2]
+                        + (i - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 0]
+                        + (j - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 1]
+                        + (k - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 2]
                     )
 
 
@@ -96,9 +96,9 @@ def gen_cube5_njit(
         ):
             coor_cube[p, iter_, :] = (
                 p_coords
-                + (i - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 0]
-                + (j - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 1]
-                + (k - CUBE_MIDDLE) * CUBE_LEN * eig_vec[:, 2]
+                + (i - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 0]
+                + (j - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 1]
+                + (k - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 2]
             )
 
 

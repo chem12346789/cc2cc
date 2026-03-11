@@ -17,11 +17,11 @@ else:
     EDGE_SIZE = int(EDGE_SIZE)
 CUBE_MIDDLE = EDGE_SIZE // 2
 
-CUBE_LEN = os.environ.get("DFT2CC_CUBE_LEN")
-if CUBE_LEN is None:
-    CUBE_LEN = 1e-2
+EDGE_LEN = os.environ.get("DFT2CC_EDGE_LEN")
+if EDGE_LEN is None:
+    EDGE_LEN = 1e-2
 else:
-    CUBE_LEN = float(CUBE_LEN)
+    EDGE_LEN = float(EDGE_LEN)
 
 TEST = os.environ.get("DFT2CC_TEST")
 if TEST is None:
@@ -82,7 +82,7 @@ def print_computer_info(device):
 
     print(f"EDGE_SIZE: {EDGE_SIZE}")
     print(f"CUBE_MIDDLE: {CUBE_MIDDLE}")
-    print(f"CUBE_LEN: {CUBE_LEN}")
+    print(f"EDGE_LEN: {EDGE_LEN}")
     print(f"TEST: {TEST}")
     print(f"MAIN_PATH: {MAIN_PATH.resolve()}")
     print(f"DATA_PATH: {DATA_PATH.resolve()}")

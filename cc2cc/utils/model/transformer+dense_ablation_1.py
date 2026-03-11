@@ -3,9 +3,10 @@ Generate list of model.
 """
 
 from torch import nn
+import torch
 
 from cc2cc.utils.env_var import EDGE_SIZE
-from cc2cc.utils.model.model_utils import Transformer, DenseNet, E3nn
+from cc2cc.utils.model.model_utils import Transformer, DenseNet
 
 
 class Model(nn.Module):
@@ -17,19 +18,13 @@ class Model(nn.Module):
         super().__init__()
 
         self.cube_type = "cube"
-        self.cube_size = EDGE_SIZE**3
+        self.cube_size = 27
         self.cube_middle = (self.cube_size - 1) // 2
         self.input_level = 4
         self.before_weight = False
 
-        self.E3nn = E3nn(
-            cube_type=self.cube_type,
-            cube_size=self.cube_size,
-            input_level=self.input_level,
-        )
-
         self.predictor = Transformer(
-            d_model=self.cube_size,
+            d_model=4,
             seq_len=self.input_level,
             num_layer=5,
             qkv_bias=False,
@@ -39,7 +34,7 @@ class Model(nn.Module):
         )
 
         self.densenet = DenseNet(
-            d_model=self.input_level * self.cube_size,
+            d_model=self.input_level * 4,
             mlp=108,
             depth=5,
             dense_bias=False,
@@ -57,37 +52,44 @@ class Model(nn.Module):
             dense_actv="gelu",
         )
 
-        self.mixing_weight = nn.Linear(self.input_level * self.cube_size, 6)
+        self.mixing_weight = nn.Linear(self.input_level * 4, 5)
         self.weight_softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
         """
         Standard forward function, required for all nn.Module classes
         """
-        x_center = x[:, :, self.cube_middle]
-
-        x_cube = self.E3nn(x)
+        num_of_batch = x.shape[0]
+        x_in = torch.stack(
+            [
+                x[:, :, self.cube_middle],
+                x[:, :, [0, 2, 6, 8, 18, 20, 24, 26]].sum(dim=-1),
+                x[:, :, [9, 3, 1, 17, 23, 25, 15, 5, 19, 11, 21, 7]].sum(dim=-1),
+                x[:, :, [12, 14, 10, 16, 4, 22]].sum(dim=-1),
+            ],
+            dim=-1,
+        )
 
         # do mixing x and x_center using Mixture of experts mechanism
         weight_out = self.mixing_weight(
-            x_cube.reshape(-1, self.input_level * self.cube_size)
+            x_in.reshape(num_of_batch, self.input_level * 4)
         )
         weight_out = self.weight_softmax(weight_out)
 
-        x_cube = self.predictor(x_cube)
-        x_cube = x_cube.reshape(-1, self.input_level * self.cube_size)
+        x_cube = self.predictor(x_in)
+        x_cube = x_cube.reshape(num_of_batch, self.input_level * 4)
         x_cube = self.densenet(x_cube)
 
         # # Extract the central values for each channel
-        x_center = x_center.reshape(-1, self.input_level)
+        x_center = x_in[:, :, 0]
+        x_center = x_center.reshape(num_of_batch, self.input_level)
         x_center = self.densenet_center(x_center)
 
         mixed_output = (
-            weight_out[:, [0]] * x_cube
-            + weight_out[:, [1]] * x_center
-            + weight_out[:, [2]] * x[:, [0], self.cube_middle]
-            + weight_out[:, [3]] * x[:, [1], self.cube_middle]
-            + weight_out[:, [4]] * x[:, [2], self.cube_middle]
-            + weight_out[:, [5]] * x[:, [3], self.cube_middle]
+            +weight_out[:, [0]] * x_center
+            + weight_out[:, [1]] * x[:, [0], 0]
+            + weight_out[:, [2]] * x[:, [1], 0]
+            + weight_out[:, [3]] * x[:, [2], 0]
+            + weight_out[:, [4]] * x[:, [3], 0]
         )
         return mixed_output

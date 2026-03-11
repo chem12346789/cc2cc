@@ -58,6 +58,7 @@ class Model(nn.Module):
         """
         Standard forward function, required for all nn.Module classes
         """
+        # input x shape: (batch_size, input_level, cube_size)
 
         # do mixing x and x_center using Mixture of experts mechanism
         weight_out = self.mixing_weight(
