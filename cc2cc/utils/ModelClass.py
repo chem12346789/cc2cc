@@ -90,10 +90,10 @@ class ModelClass:
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=True)
 
-        if (not if_validate) and (not self.args.if_grad):
-            # model.compile does not support Double backward which is used in grad.
-            self.model.compile(dynamic=True, mode="max-autotune-no-cudagraphs")
-            self.print("Model compiled with torch.compile!")
+        # if (not if_validate) and (not self.args.if_grad):
+        #     # model.compile does not support Double backward which is used in grad.
+        #     self.model.compile(dynamic=True, mode="max-autotune-no-cudagraphs")
+        #     self.print("Model compiled with torch.compile!")
 
         if self.args.distributed:
             self.print(f"Using DistributedDataParallel on rank {self.local_rank}")
