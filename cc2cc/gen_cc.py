@@ -648,7 +648,7 @@ def cc(
 
     # CCSD calculation
     mycc = pyscf.cc.CCSD(mf)
-    mycc.verbose = 9
+    mycc.verbose = 9  # to trace the usage of memory.
     mycc.direct = True
     _, t1, t2 = mycc.kernel()
     eris = mycc.ao2mo()

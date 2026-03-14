@@ -55,7 +55,7 @@ def gen_cube_njit(
         norm_1d = rho_in_1[:, p]
         # norm_1d = np.array([np.pi, np.e, 1])
         for i in range(3):
-            if np.sum(eig_vec[:, i] * norm_1d) < 0:
+            if eig_vec[:, i] @ norm_1d < 0:
                 eig_vec[:, i] *= -1
 
         p_coords = coords[p]
@@ -87,7 +87,7 @@ def gen_cube5_njit(
         eig_vec = eig_vec[:, eig_val_sort]
         norm_1d = rho_in_1[:, p]
         for i in range(3):
-            if np.sum(eig_vec[:, i] * norm_1d) < 0:
+            if eig_vec[:, i] @ norm_1d < 0:
                 eig_vec[:, i] *= -1
 
         p_coords = coords[p]

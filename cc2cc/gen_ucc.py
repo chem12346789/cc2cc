@@ -491,7 +491,7 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
 
         wv = wv.reshape(gridcube.input_level, 2, 4, len(gridcube.coords))
         wv[:, :, 0, :] *= 0.5
-        ao4_coords[:, p0:p1] = np.einsum("xpu,isxp->ispu", ao_value[:4], wv).reshape(
+        ao4_coords[:, :, p0:p1] = np.einsum("xpu,isxp->ispu", ao_value[:4], wv).reshape(
             gridcube.input_level, 2, len(coords_), EDGE_SIZE**3, nao
         )
 

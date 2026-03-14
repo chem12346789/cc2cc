@@ -18,13 +18,21 @@ from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 # Output coordinates: 1 point at (0, 0, 0)
 
 
-class Conv(torch.nn.Module):
-    def __init__(self, cube_type="cube", cube_size=27, input_level=4, lmax=2):
+class E3nn(torch.nn.Module):
+    def __init__(
+        self,
+        cube_type="cube",
+        cube_size=27,
+        input_level=4,
+        lmax=2,
+        out_l=1,
+    ):
         super().__init__()
 
         self.input_level = input_level
         self.cube_type = cube_type
         self.cube_size = cube_size
+        self.out_l = out_l
         self.lmax = lmax
         num_basis = 10
         self.lmax = 2
@@ -52,7 +60,7 @@ class Conv(torch.nn.Module):
         hidden_irreps = o3.Irreps(
             "+".join([f"{self.input_level}x{i}e" for i in range(self.lmax + 1)])
         )
-        irreps_output = o3.Irreps(f"{self.cube_size}x0e")
+        irreps_output = o3.Irreps(f"{self.cube_size}x{self.out_l}e")
 
         irreps_sh = o3.Irreps.spherical_harmonics(lmax=self.lmax)
         self.sh = o3.spherical_harmonics(
@@ -62,7 +70,6 @@ class Conv(torch.nn.Module):
             irreps_input,
             irreps_sh,
             hidden_irreps,
-            # shared_weights=False,
             shared_weights=True,
             internal_weights=True,
         )
@@ -70,18 +77,6 @@ class Conv(torch.nn.Module):
         # xavier_uniform_ initialization for the tensor product weights
         with torch.no_grad():
             self.tp.weight.uniform_(-1, 1)
-
-        # self.emb = soft_one_hot_linspace(
-        #     self.edge_vec.norm(dim=1),
-        #     -1,
-        #     1,
-        #     num_basis,
-        #     basis="smooth_finite",
-        #     cutoff=True,
-        # ).mul(num_basis**0.5)
-        # self.fc = nn.FullyConnectedNet(
-        #     [num_basis, 16, self.tp.weight_numel], torch.relu
-        # )
 
         self.sh_center = o3.spherical_harmonics(
             irreps_sh,
@@ -106,28 +101,3 @@ class Conv(torch.nn.Module):
         f_out = self.tp_center(f_hidden, self.sh_center)
         # f_out shape: [27]
         return f_out
-
-
-class E3nn(torch.nn.Module):
-
-    def __init__(self, cube_type="cube", cube_size=27, input_level=4, lmax=2):
-        super().__init__()
-
-        self.cube_type = cube_type
-        self.cube_size = cube_size
-        self.input_level = input_level
-        self.lmax = lmax
-
-        self.conv1 = Conv(self.cube_type, self.cube_size, self.input_level, self.lmax)
-        self.conv2 = Conv(self.cube_type, self.cube_size, self.input_level, self.lmax)
-        self.conv3 = Conv(self.cube_type, self.cube_size, self.input_level, self.lmax)
-        self.conv4 = Conv(self.cube_type, self.cube_size, self.input_level, self.lmax)
-
-    def forward(self, x):
-        x = x.permute(0, 2, 1).contiguous()
-        out1 = torch.vmap(self.conv1)(x)
-        out2 = torch.vmap(self.conv2)(x)
-        out3 = torch.vmap(self.conv3)(x)
-        out4 = torch.vmap(self.conv4)(x)
-        x_cube = torch.cat([out1, out2, out3, out4], dim=-2)
-        return x_cube
