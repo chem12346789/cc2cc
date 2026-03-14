@@ -86,6 +86,11 @@ class Collect_info:
         data_test = pd.read_csv("validate_hkqai_done/ccdft_def2-QZVP__gmtkn-def2.csv")
         data_test_name = np.array(data_test["name"])
 
+        if "name" not in self.data.columns:
+            time.sleep(30 * 60)  # Sleep for 30 minutes before trying again
+            data_test = pd.read_csv("validate_hkqai_done/ccdft_def2-QZVP__gmtkn-def2.csv")
+            data_test_name = np.array(data_test["name"])
+
         for i, name in enumerate(self.data["name"]):
             if "_0_1_0.0000" not in name:
                 name = name.replace(self.basis, "def2-QZVP_0_1_0.0000")
