@@ -74,19 +74,16 @@ class E3nn(torch.nn.Module):
             internal_weights=True,
         )
 
-        # xavier_uniform_ initialization for the tensor product weights
-        with torch.no_grad():
-            self.tp.weight.uniform_(-1, 1)
-
+        irreps_sh_center = o3.Irreps.spherical_harmonics(lmax=self.lmax)
         self.sh_center = o3.spherical_harmonics(
-            irreps_sh,
+            irreps_sh_center,
             self.center_vec,
             normalize=True,
             normalization="component",
         )
         self.tp_center = o3.FullyConnectedTensorProduct(
             hidden_irreps,
-            irreps_sh,
+            irreps_sh_center,
             irreps_output,
             shared_weights=True,
             internal_weights=True,
