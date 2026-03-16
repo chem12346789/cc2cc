@@ -35,7 +35,6 @@ def test_model_uks(
     get_veff_modified_uks(mdft, modeldict)
 
     mdft.verbose = 4
-    mdft.mol.verbose = 4
     mdft.diis_space = 6
     mdft.conv_tol = 1e-7
 
@@ -51,7 +50,7 @@ def test_model_uks(
 
     if mdft.converged is False and if_retry:
         print("UKS not converged. Add dynamic level shift.")
-        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=0.5)
+        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=1.0)
         mdft.kernel()
         if mdft.converged is False:
             print("Error: UKS not converged!!! Restart without SCF procedure.")
