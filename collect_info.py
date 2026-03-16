@@ -26,6 +26,7 @@ class Collect_info:
             "model_load": self.model_load,
             "basis": self.basis,
             "verbose": self.verbose,
+            "pid": os.getpid(),
         }
         self.run = wandb.init(
             project="DFT2CC_validation",
@@ -86,10 +87,8 @@ class Collect_info:
         data_test = pd.read_csv("validate_hkqai_done/ccdft_def2-QZVP__gmtkn-def2.csv")
         data_test_name = np.array(data_test["name"])
 
-        if "name" not in self.data.columns:
-            time.sleep(30 * 60)  # Sleep for 30 minutes before trying again
-            data_test = pd.read_csv("validate_hkqai_done/ccdft_def2-QZVP__gmtkn-def2.csv")
-            data_test_name = np.array(data_test["name"])
+        while "name" not in self.data.columns:
+            return
 
         for i, name in enumerate(self.data["name"]):
             if "_0_1_0.0000" not in name:
