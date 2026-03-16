@@ -253,7 +253,9 @@ class DataBase:
         if self.args.rho_input == "dft":
             input_mat = data["rho_cube_dft"]
             energy_target = data["e_cc"] - data["e_dft"]
-            # energy_target = data["e_cc"] - data["e_dft_d3bj"]
+        elif self.args.rho_input == "dft_d3bj":
+            input_mat = data["rho_cube_dft"]
+            energy_target = data["e_cc"] - data["e_dft_d3bj"]
         else:
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 

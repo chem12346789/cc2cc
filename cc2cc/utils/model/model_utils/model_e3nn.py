@@ -25,7 +25,7 @@ class E3nn(torch.nn.Module):
         cube_size=27,
         input_level=4,
         lmax=2,
-        out_l=1,
+        out_l=0,
     ):
         super().__init__()
 
@@ -78,19 +78,24 @@ class E3nn(torch.nn.Module):
         with torch.no_grad():
             self.tp.weight.uniform_(-1, 1)
 
+        irreps_sh_center = o3.Irreps.spherical_harmonics(lmax=self.lmax)
         self.sh_center = o3.spherical_harmonics(
-            irreps_sh,
+            irreps_sh_center,
             self.center_vec,
             normalize=True,
             normalization="component",
         )
         self.tp_center = o3.FullyConnectedTensorProduct(
             hidden_irreps,
-            irreps_sh,
+            irreps_sh_center,
             irreps_output,
             shared_weights=True,
             internal_weights=True,
         )
+
+        # xavier_uniform_ initialization for the tensor product weights
+        with torch.no_grad():
+            self.tp_center.weight.uniform_(-1, 1)
 
     def forward(self, f_in):
         # f_in shape: [CUBE_SIZE**3, 4]

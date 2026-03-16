@@ -165,7 +165,7 @@ def add_args(parser: argparse.ArgumentParser):
         "--rho_input",
         type=str,
         default="dft",
-        choices=["dft"],
+        choices=["dft", "dft_d3bj"],
         help="Type of input density. ",
     )
 
