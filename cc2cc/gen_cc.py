@@ -11,13 +11,12 @@ import torch
 import pyscf
 from pyscf import lib
 
+import pyscf.cc
 from pyscf.cc import ccsd_t_lambda
 from pyscf.cc import ccsd_t
 from pyscf.cc import ccsd_rdm
-
 # from pyscf.cc.ccsd_t_rdm import _gamma1_intermediates
 from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
-from pyscf.grad import ccsd_t as ccsd_t_grad
 from pyscf.grad import ccsd as ccsd_grad
 
 from cc2cc.utils import diff_rho
@@ -649,7 +648,6 @@ def cc(
     # CCSD calculation
     mycc = pyscf.cc.CCSD(mf)
     mycc.verbose = 9  # to trace the usage of memory.
-    mycc.direct = True
     _, t1, t2 = mycc.kernel()
     eris = mycc.ao2mo()
     e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
