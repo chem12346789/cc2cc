@@ -3,13 +3,12 @@ Generate list of model.
 """
 
 import torch
-from torch import nn
 
 from cc2cc.utils.env_var import EDGE_SIZE
 from cc2cc.utils.model.model_utils import Transformer, DenseNet, E3nn
 
 
-class Model(nn.Module):
+class Model(torch.nn.Module):
     """
     Transformer module.
     """
@@ -67,8 +66,8 @@ class Model(nn.Module):
             dense_actv="gelu",
         )
 
-        self.mixing_weight = nn.Linear(self.input_level * self.cube_size, 6)
-        self.weight_softmax = nn.Softmax(dim=-1)
+        self.mixing_weight = torch.nn.Linear(self.input_level * self.cube_size, 6)
+        self.weight_softmax = torch.nn.Softmax(dim=-1)
 
     def forward(self, x):
         """
@@ -76,11 +75,11 @@ class Model(nn.Module):
         """
         x_center = x[:, :, self.cube_middle]
 
-        x = x.permute(0, 2, 1).contiguous()
-        out1 = torch.vmap(self.conv1)(x)
-        out2 = torch.vmap(self.conv2)(x)
-        out3 = torch.vmap(self.conv3)(x)
-        out4 = torch.vmap(self.conv4)(x)
+        x_in = x.permute(0, 2, 1).contiguous()
+        out1 = torch.vmap(self.conv1)(x_in)
+        out2 = torch.vmap(self.conv2)(x_in)
+        out3 = torch.vmap(self.conv3)(x_in)
+        out4 = torch.vmap(self.conv4)(x_in)
         x_cube = torch.cat([out1, out2, out3, out4], dim=-2)
 
         # do mixing x and x_center using Mixture of experts mechanism
