@@ -1,8 +1,5 @@
 import json
-from itertools import product
 import argparse
-from copy import deepcopy
-from pathlib import Path
 import random
 import os
 
@@ -10,12 +7,11 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-import tqdm
+import torch_levenberg_marquardt as tlm
 
 from ase import units
 from ase.atoms import Atoms
 from torch_dftd.torch_dftd3_calculator import TorchDFTD3Calculator
-from ase.calculators.dftd3 import DFTD3
 
 from pyscf.data.elements import _std_symbol
 
@@ -58,14 +54,13 @@ class Model(nn.Module):
                 "alp": kwargs.get("alp", 14.0),
             }
         elif damping == "bj":
-            data_random = np.random.random(4) * 2
             self.param_vector = torch.nn.Parameter(
                 torch.tensor(
                     [
-                        kwargs.get("s6", 1 * data_random[0]),
-                        kwargs.get("rs6", 0.3981 * data_random[1]),
-                        kwargs.get("s18", 1.9 * data_random[2]),
-                        kwargs.get("rs18", 4.4211 * data_random[3]),
+                        kwargs.get("s6", 0),
+                        kwargs.get("rs6", 0.736420),
+                        kwargs.get("s18", 0),
+                        kwargs.get("rs18", 0.392564),
                     ],
                     dtype=torch.float64,
                     device=device,
@@ -89,7 +84,29 @@ class Model(nn.Module):
             **batch_dicts, damping=self.damping
         )
 
-        return E_disp * units.mol / units.kcal
+        energy_dftd3 = E_disp * units.mol / units.kcal
+        reaction_energy_dftd3 = torch.einsum(
+            "ji,i->j",
+            molecules_to_reactions,
+            energy_dftd3 + data_dft_ene,
+        )
+        mean_reaction_energy_dftd3 = torch.einsum(
+            "i,ij,j->j",
+            torch.abs(reference_energy - reaction_energy_dftd3),
+            reactions_to_subset,
+            1 / number_of_reactions,
+        )
+        loss = torch.abs(
+            mean_absolute_deviation
+            * torch.einsum(
+                "i,i,i->",
+                number_of_reactions,
+                1 / average_relative_absolute_energies,
+                mean_reaction_energy_dftd3,
+            )
+        )
+
+        return loss
 
     def obtain_batch_dicts(self, atoms_list):
         # Calculator.calculate(self, atoms, properties, system_changes)
@@ -289,44 +306,16 @@ print(
 )
 
 
-# optimizer = torch.optim.LBFGS(
-#     model.parameters(), history_size=10, max_iter=4, line_search_fn="strong_wolfe"
-# )
-
-
-def closure():
-    energy_dftd3 = model(input_batch)
-
-    reaction_energy_dftd3 = torch.einsum(
-        "ji,i->j",
-        molecules_to_reactions,
-        energy_dftd3 + data_dft_ene,
-    )
-    mean_reaction_energy_dftd3 = torch.einsum(
-        "i,ij,j->j",
-        torch.abs(reference_energy - reaction_energy_dftd3),
-        reactions_to_subset,
-        1 / number_of_reactions,
-    )
-    loss = torch.abs(
-        mean_absolute_deviation
-        * torch.einsum(
-            "i,i,i->",
-            number_of_reactions,
-            1 / average_relative_absolute_energies,
-            mean_reaction_energy_dftd3,
-        )
-    )
-
-    loss.backward()
-    return loss
-
-
-optimizer = torch.optim.Adagrad(
+optimizer = torch.optim.LBFGS(
     model.parameters(),
     lr=args.lr,
-    weight_decay=1e-12,
+    line_search_fn="strong_wolfe",
 )
+# optimizer = torch.optim.Adagrad(
+#     model.parameters(),
+#     lr=args.lr,
+#     weight_decay=1e-12,
+# )
 scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
     optimizer,
     T_0=100,
@@ -336,18 +325,39 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
 loss_function = torch.nn.L1Loss(reduction="sum")
 torch.set_printoptions(precision=5, sci_mode=False)
 
-for epoch in tqdm.tqdm(range(args.epochs + 1)):
+
+# tlm.utils.fit(
+#     tlm.training.LevenbergMarquardtModule(
+#         model=model,
+#         loss_fn=tlm.loss.MSELoss(),
+#         learning_rate=1.0,
+#         attempts_per_step=10,
+#         solve_method="qr",
+#     ),
+#     train_loader,
+#     epochs=50,
+# )
+
+
+def closure():
     optimizer.zero_grad(set_to_none=True)
+    loss = model(input_batch)
+    loss.backward()
+    return loss
+
+
+for epoch in range(args.epochs + 1):
     loss = closure()
-    optimizer.step()
+    optimizer.step(closure)
     scheduler.step()
 
-    if epoch % 100 == 0:
+    if epoch % 10 == 0:
         loss_value = loss.item()
         params = model.param_vector.data.detach().cpu().numpy()
 
         print(
             f"Epoch {epoch}: Loss = {loss_value:.6f}, "
-            f"Para = {np.array2string(params, precision=6, floatmode='fixed')}",
+            f"Para = {np.array2string(params, precision=6, floatmode='fixed')}, "
+            f"Lr = {optimizer.param_groups[0]['lr']:.2e}",
             flush=True,
         )
