@@ -15,7 +15,6 @@ import tqdm
 from ase import units
 from ase.atoms import Atoms
 from torch_dftd.torch_dftd3_calculator import TorchDFTD3Calculator
-from ase.calculators.dftd3 import DFTD3
 
 from pyscf.data.elements import _std_symbol
 
