@@ -620,6 +620,10 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
     print(f"convert matrix: {np.linalg.norm(np.linalg.inv(eigvector2) - eigvector2.T)}")
 
 
+def uzmp(dm1_dft, dm1_cc):
+    return
+
+
 def ucc(mol, grids, name, args, evaluate=False):
     """
     Generate data for the UCCSD method.

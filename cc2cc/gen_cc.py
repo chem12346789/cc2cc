@@ -15,6 +15,7 @@ import pyscf.cc
 from pyscf.cc import ccsd_t_lambda
 from pyscf.cc import ccsd_t
 from pyscf.cc import ccsd_rdm
+
 # from pyscf.cc.ccsd_t_rdm import _gamma1_intermediates
 from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
 from pyscf.grad import ccsd as ccsd_grad
@@ -601,6 +602,10 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
     print("Test eigval difference: ", np.linalg.norm(eigval1 - eigval2))
     print(f"convert matrix: {np.linalg.norm(np.linalg.inv(eigvector1) - eigvector1.T)}")
     print(f"convert matrix: {np.linalg.norm(np.linalg.inv(eigvector2) - eigvector2.T)}")
+
+
+def zmp(dm1_dft, dm1_cc):
+    return
 
 
 def cc(
