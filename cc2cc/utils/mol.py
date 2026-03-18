@@ -184,7 +184,7 @@ def gen_ecp(basis: str, atom_list: list) -> dict:
         return dict_
 
 
-def extend(
+def rotate(
     name_mol: str,
     dataset_name: str = "Mol",
     verbose=4,
@@ -193,7 +193,7 @@ def extend(
     solve_symmetry=False,
 ) -> tuple:
     """
-    Function to extend the molecule
+    Function to rotate the molecule
     """
     molecule = np.array(copy.deepcopy(dataset[dataset_name][name_mol]), dtype=object)
 
@@ -233,7 +233,7 @@ def gen_mole(
         print(
             f"if_rotate:{if_rotate} if_rotate_random:{if_rotate_random} solve_symmetry:{solve_symmetry}"
         )
-    molecule = extend(
+    molecule = rotate(
         name_mol,
         dataset_name,
         verbose=verbose,
