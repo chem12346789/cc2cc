@@ -53,10 +53,7 @@ def test_model_uks(
         pyscf.scf.addons.dynamic_level_shift_(mdft, factor=1.0)
         mdft.kernel()
         if mdft.converged is False:
-            print("Error: UKS not converged!!! Restart without SCF procedure.")
-            test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
-            mdft.max_cycle = -1
-            mdft.kernel(dm0=test_data.dm1_dft)
+            print("Error: UKS not converged!!! Just use the current result.")
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
 
