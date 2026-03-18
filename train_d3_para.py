@@ -17,7 +17,8 @@ from ase.atoms import Atoms
 from torch_dftd.torch_dftd3_calculator import TorchDFTD3Calculator
 from ase.calculators.dftd3 import DFTD3
 
-from cc2cc.utils import gen_mole
+from pyscf.data.elements import _std_symbol
+
 from cc2cc.utils import AU2KCALMOL
 
 
@@ -57,27 +58,24 @@ class Model(nn.Module):
                 "alp": kwargs.get("alp", 14.0),
             }
         elif damping == "bj":
+            data_random = np.random.random(4) * 2
             self.param_vector = torch.nn.Parameter(
                 torch.tensor(
-                    # [
-                    #     kwargs.get("s6", 1),
-                    #     kwargs.get("rs6", 0.3981),
-                    #     kwargs.get("s18", 1.9889),
-                    #     kwargs.get("rs18", 4.4211),
-                    # ],
                     [
-                        kwargs.get("rs6", 0.3981),
-                        kwargs.get("rs18", 4.4211),
+                        kwargs.get("s6", 1 * data_random[0]),
+                        kwargs.get("rs6", 0.3981 * data_random[1]),
+                        kwargs.get("s18", 1.9 * data_random[2]),
+                        kwargs.get("rs18", 4.4211 * data_random[3]),
                     ],
                     dtype=torch.float64,
                     device=device,
                 )
             )
             self.params = {
-                "s6": 0.01,
-                "rs6": self.param_vector[0],
-                "s18": 0.01,
-                "rs18": self.param_vector[1],
+                "s6": self.param_vector[0],
+                "rs6": self.param_vector[1],
+                "s18": self.param_vector[2],
+                "rs18": self.param_vector[3],
                 "alp": kwargs.get("alp", 14.0),
             }
         self.calc.dftd_module.params = self.params
@@ -178,248 +176,178 @@ random.seed(args.seed)
 os.environ["PYTHONHASHSEED"] = str(args.seed)
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
-
 DEVICE = "cuda"
-
-data = pd.read_csv(DATA_PATH)
+DTYPE = torch.float64
 
 with open("jupyter-notebook/subset.json", "r", encoding="utf-8") as f:
     full_subset_dict = json.load(f)["full_subset_dict"]
-name_mol_list = []
+batch_subset = []
 for subset in full_subset_dict.values():
-    for name_mol in subset:
-        name_mol_list.append(f"{name_mol}")
-batch_subset = list(set(name_mol_list))
+    for set_ in subset:
+        batch_subset.append(set_)
 print(batch_subset, flush=True)
 
-if Path(SAVE_PARA_PATH).exists():
-    with open(SAVE_PARA_PATH, "r", encoding="utf-8") as f:
-        load_para = json.load(f)
+model = Model(device=DEVICE, damping=args.damping)
+
+data = pd.read_csv(DATA_PATH)
+data_name_list = (data["name"].str.split("_def2").str[0]).to_numpy()
+if args.load == "":
+    dft_type = "b3lyp"
 else:
-    load_para = None
+    dft_type = "scf"
+data_dft_ene = data[f"{dft_type}_ene"].to_numpy() * AU2KCALMOL
+
 
 with open(
     "/home/chenzihao/workspace/cc2cc_test5/cc2cc/utils/gmtkn-def2.json",
     encoding="utf-8",
 ) as f:
-    json_data = json.load(f)
+    GMNTK55_json = json.load(f)
+input_batch = []
 
-if args.load == "":
-    dft_type_list = ["b3lyp"]
-else:
-    dft_type_list = ["scf"]
-for damping, dft_type in product([args.damping], dft_type_list):
-    data_name_list = (data["name"].str.split("_def2").str[0]).to_numpy()
-    data_dft_ene = data[f"{dft_type}_ene"].to_numpy() * AU2KCALMOL
+for name_mol in data_name_list:
+    molecule = GMNTK55_json[name_mol]
+    symbols_list = [_std_symbol(symbol_coord[0]) for symbol_coord in molecule]
+    coords_list = np.array([symbol_coord[1:] for symbol_coord in molecule])
+    atoms = Atoms(symbols=symbols_list, positions=coords_list)
+    input_batch.append(atoms)
 
-    input_batch = {}
-    name_batch_list = {}
-    weight_batch_list = {}
-    mean_absolute_deviation = []
+input_batch = model.obtain_batch_dicts(input_batch)
 
-    model = Model(device=DEVICE, damping=damping)
-    model.compile(mode="max-autotune-no-cudagraphs")
-    for name_mol in data_name_list:
-        for i_subset in batch_subset:
-            i_subset_name = "BH76" if i_subset == "BH76RC" else i_subset
-            if name_mol.startswith(i_subset_name):
-                mol = gen_mole(
-                    name_mol,
-                    "def2-qzvp",
-                    dataset_name=args.dataset,
-                )
-                atoms = Atoms(
-                    symbols=mol.elements, positions=mol.atom_coords() * units.Bohr
-                )
-                if i_subset not in input_batch:
-                    input_batch[i_subset] = []
-                input_batch[i_subset].append(atoms)
-                if i_subset not in name_batch_list:
-                    name_batch_list[i_subset] = []
-                name_batch_list[i_subset].append(name_mol)
 
-    for i_subset in batch_subset:
-        i_subset_name = "BH76" if i_subset == "BH76RC" else i_subset
-        reaction_dict = json_data[f"reaction-{i_subset}"]
-        name_batch_list[i_subset] = np.array(name_batch_list[i_subset])
-        input_batch[i_subset] = model.obtain_batch_dicts(input_batch[i_subset])
-        reaction_dict_copy = reaction_dict.copy()
-        for i_reaction_name, (i_reaction_keys, i_reaction) in enumerate(
-            reaction_dict_copy.items()
-        ):
-            systems_list = i_reaction["systems"]
-            stoichiometry_list = i_reaction["stoichiometry"]
+reference_energy = []
+molecules_to_reactions = []
+reactions_to_subset = []
 
-            for i in range(len(systems_list)):
-                mole_name = f"{i_subset_name}-{systems_list[i]}"
-                stoichiometry = int(stoichiometry_list[i])
+for i_subset, subset_name in enumerate(batch_subset):
+    i_subset_name = "BH76" if subset_name == "BH76RC" else subset_name
+    reaction_dict = GMNTK55_json[f"reaction-{subset_name}"]
+    for i_reaction_keys, i_reaction in reaction_dict.items():
+        systems_list = i_reaction["systems"]
+        stoichiometry_list = i_reaction["stoichiometry"]
+        molecule_stoichiometry = torch.zeros(len(data_name_list))
+        finished = True
 
-                if mole_name in json_data:
-                    if isinstance(json_data[mole_name], str):
-                        mole_name = json_data[mole_name]
+        for i in range(len(systems_list)):
+            mole_name = f"{i_subset_name}-{systems_list[i]}"
+            stoichiometry = int(stoichiometry_list[i])
 
-                col = np.where(data_name_list == mole_name)[0]
-                if col.size != 1:
-                    print(f"Warning: {mole_name} not found in name_list", flush=True)
-                    reaction_dict.pop(i_reaction_keys)
-                    break
-        json_data[f"reaction-{i_subset}"] = reaction_dict
+            if mole_name in GMNTK55_json:
+                if isinstance(GMNTK55_json[mole_name], str):
+                    mole_name = GMNTK55_json[mole_name]
 
-    energy_batch_target = {}
-    for i_subset in batch_subset:
-        i_subset_name = "BH76" if i_subset == "BH76RC" else i_subset
-        reaction_dict = json_data[f"reaction-{i_subset}"]
+            col = np.where(data_name_list == mole_name)[0]
+            if col.size == 1:
+                molecule_stoichiometry[col[0]] = stoichiometry
+            else:
+                finished = False
 
-        energy_batch_target[i_subset] = torch.zeros(
-            len(reaction_dict), dtype=torch.float64, device=DEVICE
+        if finished:
+            reference_energy.append(i_reaction["reference"])
+            molecules_to_reactions.append(molecule_stoichiometry)
+            subset_index = torch.zeros(len(batch_subset))
+            subset_index[i_subset] = 1
+            reactions_to_subset.append(subset_index)
+
+reference_energy = torch.tensor(np.array(reference_energy), device=DEVICE, dtype=DTYPE)
+molecules_to_reactions = torch.tensor(
+    np.array(molecules_to_reactions), device=DEVICE, dtype=DTYPE
+)
+reactions_to_subset = torch.tensor(
+    np.array(reactions_to_subset), device=DEVICE, dtype=DTYPE
+)
+data_dft_ene = torch.tensor(data_dft_ene, device=DEVICE, dtype=DTYPE)
+number_of_reactions = torch.sum(reactions_to_subset, axis=0)
+
+average_relative_absolute_energies = torch.einsum(
+    "i,ij,j->j",
+    torch.abs(reference_energy),
+    reactions_to_subset,
+    1 / number_of_reactions,
+)
+
+reaction_energy_dft = torch.einsum(
+    "ji,i->j",
+    molecules_to_reactions,
+    data_dft_ene,
+)
+mean_absolute_deviation = 56.84 / 1505
+mean_reaction_energy = torch.einsum(
+    "i,ij,j->j",
+    torch.abs(reference_energy - reaction_energy_dft),
+    reactions_to_subset,
+    1 / number_of_reactions,
+)
+print(
+    mean_absolute_deviation
+    * torch.einsum(
+        "i,i,i->",
+        number_of_reactions,
+        1 / average_relative_absolute_energies,
+        mean_reaction_energy,
+    )
+)
+
+
+# optimizer = torch.optim.LBFGS(
+#     model.parameters(), history_size=10, max_iter=4, line_search_fn="strong_wolfe"
+# )
+
+
+def closure():
+    energy_dftd3 = model(input_batch)
+
+    reaction_energy_dftd3 = torch.einsum(
+        "ji,i->j",
+        molecules_to_reactions,
+        energy_dftd3 + data_dft_ene,
+    )
+    mean_reaction_energy_dftd3 = torch.einsum(
+        "i,ij,j->j",
+        torch.abs(reference_energy - reaction_energy_dftd3),
+        reactions_to_subset,
+        1 / number_of_reactions,
+    )
+    loss = torch.abs(
+        mean_absolute_deviation
+        * torch.einsum(
+            "i,i,i->",
+            number_of_reactions,
+            1 / average_relative_absolute_energies,
+            mean_reaction_energy_dftd3,
         )
-        weight_batch = np.zeros(len(reaction_dict), dtype=np.float64)
-        for i_reaction_name, (i_reaction_keys, i_reaction) in enumerate(
-            reaction_dict.items()
-        ):
-            systems_list = i_reaction["systems"]
-            stoichiometry_list = i_reaction["stoichiometry"]
-            weight_batch[i_reaction_name] = i_reaction["reference"]
-            energy_batch_target[i_subset][i_reaction_name] = i_reaction["reference"]
-            for i in range(len(systems_list)):
-                mole_name = f"{i_subset_name}-{systems_list[i]}"
-                stoichiometry = int(stoichiometry_list[i])
-
-                if mole_name in json_data:
-                    if isinstance(json_data[mole_name], str):
-                        mole_name = json_data[mole_name]
-
-                col = np.where(data_name_list == mole_name)[0]
-                energy_batch_target[i_subset][i_reaction_name] += (
-                    -data_dft_ene[col[0]]
-                ) * stoichiometry
-        mean_absolute_deviation.extend(np.abs(weight_batch))
-        weight_batch_list[i_subset] = 1 / np.mean(np.abs(weight_batch))
-
-    print(
-        f"mean_absolute_deviation: {56.84 / len(mean_absolute_deviation)}",
-        flush=True,
     )
 
-    optimizer = torch.optim.AdamW(
-        model.parameters(),
-        lr=args.lr,
-        weight_decay=1e-12,
-    )
-    scheduler = torch.optim.lr_scheduler.ConstantLR(
-        optimizer,
-        factor=0.5,
-        total_iters=500,
-    )
-    loss_function = torch.nn.L1Loss(reduction="sum")
-    torch.set_printoptions(precision=5, sci_mode=False)
-    energy_batch_output = {}
-    print("start training...", flush=True)
+    loss.backward()
+    return loss
 
-    parameter_list = []
-    wtmad_2_list = []
 
-    for epoch in tqdm.tqdm(range(args.epochs + 1)):
-        loss_batch = []
-        wtmad_2 = 0
-        loss = 0.0
-        optimizer.zero_grad()
-        for i_subset in batch_subset:
-            i_subset_name = "BH76" if i_subset == "BH76RC" else i_subset
-            energy = model(input_batch[i_subset])
+optimizer = torch.optim.Adagrad(
+    model.parameters(),
+    lr=args.lr,
+    weight_decay=1e-12,
+)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+    optimizer,
+    T_0=100,
+    T_mult=2,
+    eta_min=1e-8,
+)
+loss_function = torch.nn.L1Loss(reduction="sum")
+torch.set_printoptions(precision=5, sci_mode=False)
 
-            reaction_dict = json_data[f"reaction-{i_subset}"]
-            energy_batch_output[i_subset] = torch.zeros(
-                len(reaction_dict), dtype=torch.float64, device=DEVICE
-            )
-            for i_reaction_name, (i_reaction_keys, i_reaction) in enumerate(
-                reaction_dict.items()
-            ):
-                systems_list = i_reaction["systems"]
-                stoichiometry_list = i_reaction["stoichiometry"]
+for epoch in tqdm.tqdm(range(args.epochs + 1)):
+    optimizer.zero_grad(set_to_none=True)
+    loss = closure()
+    optimizer.step()
+    scheduler.step()
 
-                for i in range(len(systems_list)):
-                    mole_name = f"{i_subset_name}-{systems_list[i]}"
-                    stoichiometry = int(stoichiometry_list[i])
+    if epoch % 100 == 0:
+        loss_value = loss.item()
+        params = model.param_vector.data.detach().cpu().numpy()
 
-                    if mole_name in json_data:
-                        if isinstance(json_data[mole_name], str):
-                            mole_name = json_data[mole_name]
-
-                    col_disp = np.where(name_batch_list[i_subset] == mole_name)[0]
-                    if col_disp.size == 1:
-                        energy_batch_output[i_subset][i_reaction_name] += (
-                            energy[col_disp[0]] * stoichiometry
-                        )
-                    else:
-                        print(
-                            f"Warning: {mole_name} not found in name_list", flush=True
-                        )
-                        break
-            loss += (
-                loss_function(
-                    energy_batch_output[i_subset], energy_batch_target[i_subset]
-                )
-                * weight_batch_list[i_subset]
-            )
-            loss_batch.append(
-                torch.mean(
-                    torch.abs(
-                        energy_batch_output[i_subset] - energy_batch_target[i_subset]
-                    )
-                ).item()
-            )
-            wtmad_2 += (
-                torch.sum(
-                    torch.abs(
-                        energy_batch_output[i_subset] - energy_batch_target[i_subset]
-                    )
-                )
-                * weight_batch_list[i_subset]
-            ).item()
-
-        # clip the loss to avoid exploding gradients
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        loss.backward()
-        optimizer.step()
-        scheduler.step()
-
-        if epoch % 100 == 0:
-            parameter_dict = {}
-            for key, item in model.calc.dftd_module.params.items():
-                if isinstance(item, torch.Tensor):
-                    parameter_dict[key] = item.detach().cpu().numpy().item()
-                else:
-                    parameter_dict[key] = item
-            parameter_list.append(deepcopy(parameter_dict))
-            wtmad_2_list.append(wtmad_2 * 56.84 / len(mean_absolute_deviation))
-            print(
-                f"Epoch: {epoch}, wtmad_2: {wtmad_2 * 56.84 / len(mean_absolute_deviation)}, {parameter_dict}, loss: {loss_batch}",
-                flush=True,
-            )
-
-    best_epoch = np.argmin(wtmad_2_list)
-    print(f"Best epoch: {best_epoch}, wtmad_2: {wtmad_2_list[best_epoch]}", flush=True)
-    model_new = Model(device=DEVICE, damping=damping, **parameter_list[best_epoch])
-    save_para[f"{"ai" if dft_type == "scf" else dft_type}_d3{damping}"] = (
-        parameter_list[best_epoch]
-    )
-    data_dft_disp = []
-    for name_mol in data_name_list:
-        mol = gen_mole(
-            name_mol,
-            "def2-qzvp",
-            dataset_name=args.dataset,
+        print(
+            f"Epoch {epoch}: Loss = {loss_value:.6f}, "
+            f"Para = {np.array2string(params, precision=6, floatmode='fixed')}",
+            flush=True,
         )
-        atoms = Atoms(symbols=mol.elements, positions=mol.atom_coords() * units.Bohr)
-        energy = model_new(model_new.obtain_batch_dicts([atoms]))
-        data_dft_disp.append(energy.item() / AU2KCALMOL)
-
-    data[f"modified_{"ai" if dft_type == "scf" else dft_type}_d3{damping}"] = (
-        np.array(data_dft_disp) + data[f"{dft_type}_ene"].to_numpy()
-    )
-
-data.to_csv(DATA_PATH, index=False)
-
-with open(SAVE_PARA_PATH, "w", encoding="utf-8") as f:
-    json.dump(save_para, f)
