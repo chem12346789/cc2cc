@@ -34,8 +34,6 @@ class E3nn(torch.nn.Module):
         self.cube_size = cube_size
         self.out_l = out_l
         self.lmax = lmax
-        num_basis = 10
-        self.lmax = 2
 
         if self.cube_type == "cube":
             edge_vec = torch.zeros(
@@ -92,10 +90,6 @@ class E3nn(torch.nn.Module):
             shared_weights=True,
             internal_weights=True,
         )
-
-        # xavier_uniform_ initialization for the tensor product weights
-        with torch.no_grad():
-            self.tp_center.weight.uniform_(-1, 1)
 
     def forward(self, f_in):
         # f_in shape: [CUBE_SIZE**3, 4]
