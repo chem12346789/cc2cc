@@ -59,9 +59,14 @@ class Model(nn.Module):
         elif damping == "bj":
             self.param_vector = torch.nn.Parameter(
                 torch.tensor(
+                    # [
+                    #     kwargs.get("s6", 1),
+                    #     kwargs.get("rs6", 0.3981),
+                    #     kwargs.get("s18", 1.9889),
+                    #     kwargs.get("rs18", 4.4211),
+                    # ],
                     [
                         kwargs.get("rs6", 0.3981),
-                        kwargs.get("s18", 1.9889),
                         kwargs.get("rs18", 4.4211),
                     ],
                     dtype=torch.float64,
@@ -69,10 +74,10 @@ class Model(nn.Module):
                 )
             )
             self.params = {
-                "s6": kwargs.get("s6", 1.0),
+                "s6": 0.01,
                 "rs6": self.param_vector[0],
-                "s18": self.param_vector[1],
-                "rs18": self.param_vector[2],
+                "s18": 0.01,
+                "rs18": self.param_vector[1],
                 "alp": kwargs.get("alp", 14.0),
             }
         self.calc.dftd_module.params = self.params
@@ -179,9 +184,7 @@ DEVICE = "cuda"
 data = pd.read_csv(DATA_PATH)
 
 with open("jupyter-notebook/subset.json", "r", encoding="utf-8") as f:
-    # full_subset_dict = json.load(f)["full_subset_dict"]
-    # full_subset_dict = json.load(f)["full_subset_dict_test"]
-    full_subset_dict = json.load(f)["full_subset_small_dict"]
+    full_subset_dict = json.load(f)["full_subset_dict"]
 name_mol_list = []
 for subset in full_subset_dict.values():
     for name_mol in subset:
@@ -214,14 +217,7 @@ for damping, dft_type in product([args.damping], dft_type_list):
     weight_batch_list = {}
     mean_absolute_deviation = []
 
-    load_para_disp = {}
-    if load_para is not None:
-        if f'{"ai" if dft_type == "scf" else dft_type}_d3{damping}' in load_para:
-            load_para_disp = load_para[
-                f"{"ai" if dft_type == "scf" else dft_type}_d3{damping}"
-            ]
-
-    model = Model(device=DEVICE, damping=damping, **load_para_disp)
+    model = Model(device=DEVICE, damping=damping)
     model.compile(mode="max-autotune-no-cudagraphs")
     for name_mol in data_name_list:
         for i_subset in batch_subset:
@@ -398,7 +394,7 @@ for damping, dft_type in product([args.damping], dft_type_list):
             parameter_list.append(deepcopy(parameter_dict))
             wtmad_2_list.append(wtmad_2 * 56.84 / len(mean_absolute_deviation))
             print(
-                f"Epoch: {epoch}, wtmad_2: {wtmad_2 * 56.84 / len(mean_absolute_deviation)}, loss: {loss_batch}",
+                f"Epoch: {epoch}, wtmad_2: {wtmad_2 * 56.84 / len(mean_absolute_deviation)}, {parameter_dict}, loss: {loss_batch}",
                 flush=True,
             )
 
