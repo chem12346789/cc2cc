@@ -24,3 +24,7 @@ where = ["."]
 include = ["cc2cc"]
 exclude = []
 namespaces = false
+
+[tool.pyright]
+reportArgumentType = false
+reportAttributeAccessIssue = false
