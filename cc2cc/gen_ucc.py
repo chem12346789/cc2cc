@@ -16,7 +16,7 @@ from pyscf.cc import uccsd_t
 from pyscf.cc import uccsd_rdm
 from pyscf.grad import uccsd as uccsd_grad
 
-from cc2cc.gen_cc import block_loop_rdm2
+from cc2cc.gen_cc import block_loop_rdm2, is_hermitian
 
 from cc2cc.utils.pyscf_uccsd_t_rdm import u_gamma1_intermediates
 from cc2cc.utils.pyscf_uccsd_t_rdm import u_gamma2_intermediates
@@ -48,15 +48,6 @@ def get_dft_energy(
     backends = "torch" if torch.cuda.is_available() else "numpy"
     print(f"Using backend: {backends} for get_dft_energy\n")
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
-    ao_array = np.array([ao_value[0], ao_value[1], ao_value[2], ao_value[3]])
-    ao_mat = np.array(
-        [
-            [ao_value[1], ao_value[2], ao_value[3]],
-            [ao_value[4], ao_value[5], ao_value[6]],
-            [ao_value[5], ao_value[7], ao_value[8]],
-            [ao_value[6], ao_value[8], ao_value[9]],
-        ]
-    )
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
     ao_value = ao_value[:4]
     ao_1 = ao_value[1:4]
@@ -795,10 +786,14 @@ def ucc(mol, grids, name, args, evaluate=False):
         gdft = mdft.Gradients()
         grad_dft = gdft.kernel()
 
+        gdft_d3bj = mdft_d3bj.Gradients()
+        grad_dft_d3bj = gdft_d3bj.kernel()
+
         data_dict["grad_cc_train"] = grad_cc - grad_dft
         data_dict["grad_hf"] = grad_hf
-        data_dict["grad_dft"] = grad_dft
         data_dict["grad_cc"] = grad_cc
+        data_dict["grad_dft"] = grad_dft
+        data_dict["grad_dft_d3bj"] = grad_dft_d3bj
 
     # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
     data_append_dict = get_dft_energy(

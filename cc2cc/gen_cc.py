@@ -27,10 +27,6 @@ from cc2cc.utils.pyscf_ccsd_t_rdm import _gamma1_intermediates
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
 
 
-def is_hermitian(matrix, tol=1e-8):
-    return np.allclose(matrix, matrix.conj().T, atol=tol)
-
-
 def block_loop_rdm2(nao):
     """
     Generate slices for block processing of the 4-index 2-RDM.
@@ -743,10 +739,14 @@ def cc(
         gdft = mdft.Gradients()
         grad_dft = gdft.kernel()
 
+        gdft_d3bj = mdft_d3bj.Gradients()
+        grad_dft_d3bj = gdft_d3bj.kernel()
+
         data_dict["grad_cc_train"] = grad_cc - grad_dft
         data_dict["grad_hf"] = grad_hf
-        data_dict["grad_dft"] = grad_dft
         data_dict["grad_cc"] = grad_cc
+        data_dict["grad_dft"] = grad_dft
+        data_dict["grad_dft_d3bj"] = grad_dft_d3bj
 
     # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
     data_append_dict = get_dft_energy(
