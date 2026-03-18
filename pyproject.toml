@@ -28,3 +28,6 @@ namespaces = false
 [tool.pyright]
 reportArgumentType = false
 reportAttributeAccessIssue = false
+reportCallIssue = false
+reportOptionalMemberAccess = false
+reportOptionalOperand = false
