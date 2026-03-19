@@ -27,6 +27,10 @@ from cc2cc.utils.pyscf_ccsd_t_rdm import _gamma1_intermediates
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
 
 
+def is_hermitian(matrix, tol=1e-8):
+    return np.allclose(matrix, matrix.conj().T, atol=tol)
+
+
 def block_loop_rdm2(nao):
     """
     Generate slices for block processing of the 4-index 2-RDM.
@@ -618,6 +622,8 @@ def cc(
     print(f"Generate data for {name}")
     # RHF calculation
     mf = pyscf.scf.RHF(mol)
+    mf.conv_tol = 1e-12
+    mf.conv_tol_grad = 1e-8
     mf.max_cycle = 2500
     mf.verbose = 4
     mf.kernel()
@@ -649,6 +655,9 @@ def cc(
     # CCSD calculation
     mycc = pyscf.cc.CCSD(mf)
     mycc.verbose = 9  # to trace the usage of memory.
+    mycc.conv_tol = 1e-12
+    mycc.conv_tol_normt = 1e-8
+    mycc.max_cycle = 200
     _, t1, t2 = mycc.kernel()
     eris = mycc.ao2mo()
     e3ref = ccsd_t.kernel(mycc, eris, t1, t2)

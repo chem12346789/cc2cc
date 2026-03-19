@@ -26,10 +26,6 @@ from cc2cc.utils.modelscf_uks import get_veff_grad_modified_zeros
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
 
 
-def is_hermitian(matrix, tol=1e-8):
-    return np.allclose(matrix, matrix.conj().T, atol=tol)
-
-
 def get_dft_energy(
     mol,
     grids,
@@ -623,6 +619,8 @@ def ucc(mol, grids, name, args, evaluate=False):
 
     # UHF calculation
     mf = pyscf.scf.UHF(mol)
+    mf.conv_tol = 1e-12
+    mf.conv_tol_grad = 1e-8
     mf.max_cycle = 2500
     mf.verbose = 4
     mf.kernel()
@@ -654,6 +652,9 @@ def ucc(mol, grids, name, args, evaluate=False):
     # UCCSD calculation
     mycc = pyscf.cc.UCCSD(mf)
     mycc.verbose = 9
+    mycc.conv_tol = 1e-12
+    mycc.conv_tol_normt = 1e-8
+    mycc.max_cycle = 200
     _, t1, t2 = mycc.kernel()
     eris = mycc.ao2mo()
     e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
