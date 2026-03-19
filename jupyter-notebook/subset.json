@@ -166,6 +166,8 @@
             "BSR36",
             "CDIE20",
             "ISO34",
+            "ISOL24",
+            "C60ISO",
             "PArel"
         ],
         "sub3": [
@@ -178,15 +180,11 @@
             "WCPT18"
         ],
         "sub4": [
-            "RG18",
             "ADIM6",
             "S22",
-            "S66",
-            "HEAVY28",
             "WATER27",
             "CARBHB12",
             "PNICO23",
-            "HAL59",
             "AHB21",
             "CHB6",
             "IL16"
@@ -196,9 +194,8 @@
             "ICONF",
             "ACONF",
             "Amino20x4",
-            "PCONF21",
-            "MCONF",
             "SCONF",
+            "UPU23",
             "BUT14DIOL"
         ]
     }

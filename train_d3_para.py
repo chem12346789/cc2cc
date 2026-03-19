@@ -197,7 +197,7 @@ DEVICE = "cuda"
 DTYPE = torch.float64
 
 with open("jupyter-notebook/subset.json", "r", encoding="utf-8") as f:
-    full_subset_dict = json.load(f)["full_subset_dict"]
+    full_subset_dict = json.load(f)["full_subset_small_dict"]
 batch_subset = []
 for subset in full_subset_dict.values():
     for set_ in subset:
