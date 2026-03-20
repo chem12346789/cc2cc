@@ -10,16 +10,15 @@ import pyscf
 from pyscf import lib
 
 import pyscf.cc
-from pyscf.cc import uccsd_t_lambda
-from pyscf.cc import uccsd_t_rdm
 from pyscf.cc import uccsd_t
 from pyscf.cc import uccsd_rdm
 from pyscf.grad import uccsd as uccsd_grad
 
 from cc2cc.gen_cc import block_loop_rdm2, is_hermitian
 
-from cc2cc.utils.pyscf_uccsd_t_rdm import u_gamma1_intermediates
-from cc2cc.utils.pyscf_uccsd_t_rdm import u_gamma2_intermediates
+from cc2cc.utils.pyscf_uccsd_t_lambda import kernel as uccsd_t_lambda_kernel
+from cc2cc.utils.pyscf_uccsd_t_u_gamma1_intermediates import u_gamma1_intermediates
+from cc2cc.utils.pyscf_uccsd_t_u_gamma2_intermediates import u_gamma2_intermediates
 from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.modelscf_uks import get_veff_grad_modified_zeros
@@ -670,7 +669,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         del t1, t2, eris, mycc
         gc.collect()
     else:
-        l1, l2 = uccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
+        l1, l2 = uccsd_t_lambda_kernel(mycc, eris, t1, t2)[1:]
         print("uccsd_t_lambda DONE", flush=True)
         d1, (goo, gOO, gvv, gVV) = u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
         print("u_gamma1_intermediates DONE", flush=True)
