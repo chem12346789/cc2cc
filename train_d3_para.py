@@ -56,12 +56,14 @@ class Model(nn.Module):
         elif damping == "bj":
             self.param_vector = torch.nn.Parameter(
                 torch.tensor(
-                    [
-                        kwargs.get("s6", 0),
-                        kwargs.get("rs6", 0.736420),
-                        kwargs.get("s18", 0),
-                        kwargs.get("rs18", 0.392564),
-                    ],
+                    # [
+                    #     # kwargs.get("s6", 1),
+                    #     # kwargs.get("rs6", 0.3981),
+                    #     # kwargs.get("s18", 1.9889),
+                    #     # kwargs.get("rs18", 4.4211),
+                    #     # kwargs.get("alp", 14.0),
+                    # ],
+                    [0, 0.713586, 0, 0.539029, 6.770524],
                     dtype=torch.float64,
                     device=device,
                 )
@@ -71,7 +73,7 @@ class Model(nn.Module):
                 "rs6": self.param_vector[1],
                 "s18": self.param_vector[2],
                 "rs18": self.param_vector[3],
-                "alp": kwargs.get("alp", 14.0),
+                "alp": self.param_vector[4],
             }
         self.calc.dftd_module.params = self.params
         self.damping = damping
@@ -197,7 +199,7 @@ DEVICE = "cuda"
 DTYPE = torch.float64
 
 with open("jupyter-notebook/subset.json", "r", encoding="utf-8") as f:
-    full_subset_dict = json.load(f)["full_subset_small_dict"]
+    full_subset_dict = json.load(f)["full_subset_dict"]
 batch_subset = []
 for subset in full_subset_dict.values():
     for set_ in subset:
@@ -306,16 +308,16 @@ print(
 )
 
 
-optimizer = torch.optim.LBFGS(
-    model.parameters(),
-    lr=args.lr,
-    line_search_fn="strong_wolfe",
-)
-# optimizer = torch.optim.Adagrad(
+# optimizer = torch.optim.LBFGS(
 #     model.parameters(),
 #     lr=args.lr,
-#     weight_decay=1e-12,
+#     line_search_fn="strong_wolfe",
 # )
+optimizer = torch.optim.Adagrad(
+    model.parameters(),
+    lr=args.lr,
+    weight_decay=1e-12,
+)
 scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
     optimizer,
     T_0=100,
@@ -348,10 +350,10 @@ def closure():
 
 for epoch in range(args.epochs + 1):
     loss = closure()
-    optimizer.step(closure)
+    optimizer.step()
     scheduler.step()
 
-    if epoch % 10 == 0:
+    if epoch % 100 == 0:
         loss_value = loss.item()
         params = model.param_vector.data.detach().cpu().numpy()
 
