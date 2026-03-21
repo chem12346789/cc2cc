@@ -314,10 +314,6 @@ class DataBase:
 
             grad2force = data["grad2force"]
             grad_cc_train = data["grad_cc_train"]
-            error_energy = AU2KCALMOL * abs(
-                energy_target - np.sum(output_mat * weight_mat)
-            )
-            self.print(f"Error energy: {error_energy:>9.6f} kcal/mol")
 
             if self.args.if_relative_weight_abs:
                 loss_multiplier_abs /= self.loss_ene(np.abs(output_mat * weight_mat))
@@ -325,6 +321,16 @@ class DataBase:
                     f"Adjusted loss_multiplier_abs: {loss_multiplier_abs:>6.3f}",
                 )
                 data_dict["loss_multiplier_abs"] = loss_multiplier_abs
+
+            error_energy = AU2KCALMOL * abs(
+                energy_target - np.sum(output_mat * weight_mat)
+            )
+            if np.abs(error_energy) > 0.01:
+                print(
+                    f"Warning: Large error energy {error_energy:>9.6f} kcal/mol "
+                    f"for {name:>40} set to 0 in absolute loss calculation.",
+                )
+                data_dict["loss_multiplier_abs"] = 0
 
             data_dict["output"] = output_mat.reshape((-1, 1))
             data_dict["grad2force"] = self.process_grad2force(grad2force)
