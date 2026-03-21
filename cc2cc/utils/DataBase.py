@@ -320,7 +320,6 @@ class DataBase:
                 self.print(
                     f"Adjusted loss_multiplier_abs: {loss_multiplier_abs:>6.3f}",
                 )
-                data_dict["loss_multiplier_abs"] = loss_multiplier_abs
 
             error_energy = AU2KCALMOL * abs(
                 energy_target - np.sum(output_mat * weight_mat)
@@ -330,7 +329,7 @@ class DataBase:
                     f"Warning: Large error energy {error_energy:>9.6f} kcal/mol "
                     f"for {name:>40} set to 0 in absolute loss calculation.",
                 )
-                data_dict["loss_multiplier_abs"] = 0
+                loss_multiplier_abs = 0
 
             data_dict["output"] = output_mat.reshape((-1, 1))
             data_dict["grad2force"] = self.process_grad2force(grad2force)
@@ -394,7 +393,7 @@ class DataBase:
         data_dict["loss_multiplier_atomic"] = loss_multiplier_atomic
 
         self.print(
-            f"Adjusted loss_multiplier: {loss_multiplier:>6.3f}, loss_multiplier_grad {loss_multiplier_grad:>6.3f}, loss_multiplier_atomic {loss_multiplier_atomic:>6.3f}",
+            f"Adjusted loss_multiplier: {loss_multiplier:>6.3f}, loss_multiplier_grad {loss_multiplier_grad:>6.3f}, loss_multiplier_atomic {loss_multiplier_atomic:>6.3f}, loss_multiplier_abs {loss_multiplier_abs:>6.3f}",
         )
 
         for key in self.array_key:
