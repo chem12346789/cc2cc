@@ -6,6 +6,10 @@ from pyscf.cc import ccsd_lambda
 from pyscf.cc import uccsd_lambda
 
 
+def parallel_einsum(subscripts, *tensors):
+    return numpy.einsum(subscripts, *tensors, optimize="optimal")
+
+
 def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     log = logger.Logger(mycc.stdout, mycc.verbose)
     d1 = uccsd_rdm._gamma1_intermediates(mycc, t1, t2, l1, l2)
@@ -61,98 +65,98 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     time2 = logger.process_clock(), logger.perf_counter()
     for b0, b1 in lib.prange(0, nvira, blksize):
         for c0, c1 in lib.prange(0, nvira, blksize):
-            w_blk = numpy.einsum(
+            w_blk = parallel_einsum(
                 "ijae,kceb->ijkabc",
                 t2aa[:, :, :, :],
                 eris_ovvv[:, c0:c1, :, b0:b1],
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "kice,jbea->ijkabc",
                 t2aa[:, :, c0:c1, :],
                 eris_ovvv[:, b0:b1, :, :],
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "jkbe,iaec->ijkabc",
                 t2aa[:, :, b0:b1, :],
                 eris_ovvv[:, :, :, c0:c1],
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "ikae,jbec->ijkabc",
                 t2aa[:, :, :, :],
                 eris_ovvv[:, b0:b1, :, c0:c1],
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "kjce,iaeb->ijkabc",
                 t2aa[:, :, c0:c1, :],
                 eris_ovvv[:, :, :, b0:b1],
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "jibe,kcea->ijkabc",
                 t2aa[:, :, b0:b1, :],
                 eris_ovvv[:, c0:c1, :, :],
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "mkbc,iajm->ijkabc",
                 t2aa[:, :, b0:b1, c0:c1],
                 eris_ovoo[:, :, :, :],
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "mjab,kcim->ijkabc",
                 t2aa[:, :, :, b0:b1],
                 eris_ovoo[:, c0:c1, :, :],
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "mica,jbkm->ijkabc",
                 t2aa[:, :, c0:c1, :],
                 eris_ovoo[:, b0:b1, :, :],
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "mjcb,iakm->ijkabc",
                 t2aa[:, :, c0:c1, b0:b1],
                 eris_ovoo[:, :, :, :],
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "miba,kcjm->ijkabc",
                 t2aa[:, :, b0:b1, :],
                 eris_ovoo[:, c0:c1, :, :],
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "mkac,jbim->ijkabc",
                 t2aa[:, :, :, c0:c1],
                 eris_ovoo[:, b0:b1, :, :],
             )
-            v_blk = numpy.einsum(
+            v_blk = parallel_einsum(
                 "jbkc,ia->ijkabc",
                 eris_ovov[:, b0:b1, :, c0:c1],
                 t1a[:, :],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "iajb,kc->ijkabc",
                 eris_ovov[:, :, :, b0:b1],
                 t1a[:, c0:c1],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "kcia,jb->ijkabc",
                 eris_ovov[:, c0:c1, :, :],
                 t1a[:, b0:b1],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "kcjb,ia->ijkabc",
                 eris_ovov[:, c0:c1, :, b0:b1],
                 t1a[:, :],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "jbia,kc->ijkabc",
                 eris_ovov[:, b0:b1, :, :],
                 t1a[:, c0:c1],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "iakc,jb->ijkabc",
                 eris_ovov[:, :, :, c0:c1],
                 t1a[:, b0:b1],
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "jkbc,ai->ijkabc",
                     t2aa[:, :, b0:b1, c0:c1],
                     fvo[:, :],
@@ -160,7 +164,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 0.5
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "ijab,ck->ijkabc",
                     t2aa[:, :, :, b0:b1],
                     fvo[c0:c1, :],
@@ -168,7 +172,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 0.5
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "kica,bj->ijkabc",
                     t2aa[:, :, c0:c1, :],
                     fvo[b0:b1, :],
@@ -176,7 +180,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 0.5
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "kjcb,ai->ijkabc",
                     t2aa[:, :, c0:c1, b0:b1],
                     fvo[:, :],
@@ -184,7 +188,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 0.5
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "jiba,ck->ijkabc",
                     t2aa[:, :, b0:b1, :],
                     fvo[c0:c1, :],
@@ -192,7 +196,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 0.5
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "ikac,bj->ijkabc",
                     t2aa[:, :, :, c0:c1],
                     fvo[b0:b1, :],
@@ -206,9 +210,9 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
             rw = r6(w_blk) / d3
             wvd = (w_blk + v_blk) / d3
 
-            goo += numpy.einsum("iklabc,jklabc->ij", wvd, rw) * 0.125
-            gvv += numpy.einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.125
-            gvo += numpy.einsum("jkbc,ijkabc->ai", t2aa[:, :, b0:b1, c0:c1], rw) * 0.125
+            goo += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.125
+            gvv += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.125
+            gvo += parallel_einsum("jkbc,ijkabc->ai", t2aa[:, :, b0:b1, c0:c1], rw) * 0.125
         time2 = log.timer_debug1(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (b0, b1), *time2
         )
@@ -230,98 +234,98 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     time2 = logger.process_clock(), logger.perf_counter()
     for b0, b1 in lib.prange(0, nvirb, blksize):
         for c0, c1 in lib.prange(0, nvirb, blksize):
-            w_blk = numpy.einsum(
+            w_blk = parallel_einsum(
                 "ijae,kceb->ijkabc",
                 t2bb[:, :, :, :],
                 eris_OVVV[:, c0:c1, :, b0:b1],
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "kice,jbea->ijkabc",
                 t2bb[:, :, c0:c1, :],
                 eris_OVVV[:, b0:b1, :, :],
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "jkbe,iaec->ijkabc",
                 t2bb[:, :, b0:b1, :],
                 eris_OVVV[:, :, :, c0:c1],
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "ikae,jbec->ijkabc",
                 t2bb[:, :, :, :],
                 eris_OVVV[:, b0:b1, :, c0:c1],
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "kjce,iaeb->ijkabc",
                 t2bb[:, :, c0:c1, :],
                 eris_OVVV[:, :, :, b0:b1],
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "jibe,kcea->ijkabc",
                 t2bb[:, :, b0:b1, :],
                 eris_OVVV[:, c0:c1, :, :],
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "imab,kcjm->ijkabc",
                 t2bb[:, :, :, b0:b1],
                 eris_OVOO[:, c0:c1, :, :],
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "jmbc,iakm->ijkabc",
                 t2bb[:, :, b0:b1, c0:c1],
                 eris_OVOO[:, :, :, :],
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "kmca,jbim->ijkabc",
                 t2bb[:, :, c0:c1, :],
                 eris_OVOO[:, b0:b1, :, :],
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "imac,jbkm->ijkabc",
                 t2bb[:, :, :, c0:c1],
                 eris_OVOO[:, b0:b1, :, :],
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "kmcb,iajm->ijkabc",
                 t2bb[:, :, c0:c1, b0:b1],
                 eris_OVOO[:, :, :, :],
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "jmba,kcim->ijkabc",
                 t2bb[:, :, b0:b1, :],
                 eris_OVOO[:, c0:c1, :, :],
             )
-            v_blk = numpy.einsum(
+            v_blk = parallel_einsum(
                 "jbkc,ia->ijkabc",
                 eris_OVOV[:, b0:b1, :, c0:c1],
                 t1b[:, :],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "iajb,kc->ijkabc",
                 eris_OVOV[:, :, :, b0:b1],
                 t1b[:, c0:c1],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "kcia,jb->ijkabc",
                 eris_OVOV[:, c0:c1, :, :],
                 t1b[:, b0:b1],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "kcjb,ia->ijkabc",
                 eris_OVOV[:, c0:c1, :, b0:b1],
                 t1b[:, :],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "jbia,kc->ijkabc",
                 eris_OVOV[:, b0:b1, :, :],
                 t1b[:, c0:c1],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "iakc,jb->ijkabc",
                 eris_OVOV[:, :, :, c0:c1],
                 t1b[:, b0:b1],
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "jkbc,ai->ijkabc",
                     t2bb[:, :, b0:b1, c0:c1],
                     fVO[:, :],
@@ -329,7 +333,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 0.5
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "ijab,ck->ijkabc",
                     t2bb[:, :, :, b0:b1],
                     fVO[c0:c1, :],
@@ -337,7 +341,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 0.5
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "kica,bj->ijkabc",
                     t2bb[:, :, c0:c1, :],
                     fVO[b0:b1, :],
@@ -345,7 +349,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 0.5
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "kjcb,ai->ijkabc",
                     t2bb[:, :, c0:c1, b0:b1],
                     fVO[:, :],
@@ -353,7 +357,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 0.5
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "jiba,ck->ijkabc",
                     t2bb[:, :, b0:b1, :],
                     fVO[c0:c1, :],
@@ -361,7 +365,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 0.5
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "ikac,bj->ijkabc",
                     t2bb[:, :, :, c0:c1],
                     fVO[b0:b1, :],
@@ -375,9 +379,9 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
             rw = r6(w_blk) / d3
             wvd = (w_blk + v_blk) / d3
 
-            gOO += numpy.einsum("iklabc,jklabc->ij", wvd, rw) * 0.125
-            gVV += numpy.einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.125
-            gVO += numpy.einsum("jkbc,ijkabc->ai", t2bb[:, :, b0:b1, c0:c1], rw) * 0.125
+            gOO += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.125
+            gVV += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.125
+            gVO += parallel_einsum("jkbc,ijkabc->ai", t2bb[:, :, b0:b1, c0:c1], rw) * 0.125
         time2 = log.timer_debug1(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (b0, b1), *time2
         )
@@ -402,7 +406,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         for b0, b1 in lib.prange(0, nvira, blksize):
             for c0, c1 in lib.prange(0, nvira, blksize):
                 w_blk = (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jIeA,kceb->IjkAbc",
                         t2ab[:, :, :, a0:a1],
                         eris_ovvv[:, c0:c1, :, b0:b1],
@@ -410,20 +414,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jIbE,kcEA->IjkAbc",
                         t2ab[:, :, b0:b1, :],
                         eris_ovVV[:, c0:c1, :, a0:a1],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "jkbe,IAec->IjkAbc",
                     t2aa[:, :, b0:b1, :],
                     eris_OVvv[:, a0:a1, :, c0:c1],
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mIbA,kcjm->IjkAbc",
                         t2ab[:, :, b0:b1, a0:a1],
                         eris_ovoo[:, c0:c1, :, :],
@@ -431,35 +435,35 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jMbA,kcIM->IjkAbc",
                         t2ab[:, :, b0:b1, a0:a1],
                         eris_ovOO[:, c0:c1, :, :],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "jmbc,IAkm->IjkAbc",
                     t2aa[:, :, b0:b1, c0:c1],
                     eris_OVoo[:, a0:a1, :, :],
                 )
-                v_blk = numpy.einsum(
+                v_blk = parallel_einsum(
                     "jbkc,IA->IjkAbc", eris_ovov[:, b0:b1, :, c0:c1], t1b[:, a0:a1]
                 )
-                v_blk += numpy.einsum(
+                v_blk += parallel_einsum(
                     "kcIA,jb->IjkAbc", eris_ovOV[:, c0:c1, :, a0:a1], t1a[:, b0:b1]
                 )
-                v_blk += numpy.einsum(
+                v_blk += parallel_einsum(
                     "kcIA,jb->IjkAbc", eris_ovOV[:, c0:c1, :, a0:a1], t1a[:, b0:b1]
                 )
                 v_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jkbc,AI->IjkAbc", t2aa[:, :, b0:b1, c0:c1], fVO[a0:a1, :]
                     )
                     * 0.5
                 )
                 v_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kIcA,bj->IjkAbc", t2ab[:, :, c0:c1, a0:a1], fvo[b0:b1, :]
                     )
                     * 2
@@ -471,7 +475,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 wvd = (w_blk + v_blk) / d3
 
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kIeA,jceb->IjkAbc",
                         t2ab[:, :, :, a0:a1],
                         eris_ovvv[:, c0:c1, :, b0:b1],
@@ -479,20 +483,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kIbE,jcEA->IjkAbc",
                         t2ab[:, :, b0:b1, :],
                         eris_ovVV[:, c0:c1, :, a0:a1],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "kjbe,IAec->IjkAbc",
                     t2aa[:, :, b0:b1, :],
                     eris_OVvv[:, a0:a1, :, c0:c1],
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mIbA,jckm->IjkAbc",
                         t2ab[:, :, b0:b1, a0:a1],
                         eris_ovoo[:, c0:c1, :, :],
@@ -500,21 +504,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kMbA,jcIM->IjkAbc",
                         t2ab[:, :, b0:b1, a0:a1],
                         eris_ovOO[:, c0:c1, :, :],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "kmbc,IAjm->IjkAbc",
                     t2aa[:, :, b0:b1, c0:c1],
                     eris_OVoo[:, a0:a1, :, :],
                 )
 
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kIeA,jbec->IjkAbc",
                         t2ab[:, :, :, a0:a1],
                         eris_ovvv[:, b0:b1, :, c0:c1],
@@ -522,20 +526,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kIcE,jbEA->IjkAbc",
                         t2ab[:, :, c0:c1, :],
                         eris_ovVV[:, b0:b1, :, a0:a1],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "kjce,IAeb->IjkAbc",
                     t2aa[:, :, c0:c1, :],
                     eris_OVvv[:, a0:a1, :, b0:b1],
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mIcA,jbkm->IjkAbc",
                         t2ab[:, :, c0:c1, a0:a1],
                         eris_ovoo[:, b0:b1, :, :],
@@ -543,21 +547,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kMcA,jbIM->IjkAbc",
                         t2ab[:, :, c0:c1, a0:a1],
                         eris_ovOO[:, b0:b1, :, :],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "kmcb,IAjm->IjkAbc",
                     t2aa[:, :, c0:c1, b0:b1],
                     eris_OVoo[:, a0:a1, :, :],
                 )
 
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jIeA,kbec->IjkAbc",
                         t2ab[:, :, :, a0:a1],
                         eris_ovvv[:, b0:b1, :, c0:c1],
@@ -565,20 +569,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jIcE,kbEA->IjkAbc",
                         t2ab[:, :, c0:c1, :],
                         eris_ovVV[:, b0:b1, :, a0:a1],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "jkce,IAeb->IjkAbc",
                     t2aa[:, :, c0:c1, :],
                     eris_OVvv[:, a0:a1, :, b0:b1],
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mIcA,kbjm->IjkAbc",
                         t2ab[:, :, c0:c1, a0:a1],
                         eris_ovoo[:, b0:b1, :, :],
@@ -586,23 +590,23 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jMcA,kbIM->IjkAbc",
                         t2ab[:, :, c0:c1, a0:a1],
                         eris_ovOO[:, b0:b1, :, :],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "jmcb,IAkm->IjkAbc",
                     t2aa[:, :, c0:c1, b0:b1],
                     eris_OVoo[:, a0:a1, :, :],
                 )
 
                 rw = w_blk / d3
-                goo += numpy.einsum("kilabc,kjlabc->ij", wvd, rw) * 0.25
-                goo += numpy.einsum("kliabc,kljabc->ij", wvd, rw) * 0.25
-                gOO += numpy.einsum("iklabc,jklabc->ij", wvd, rw) * 0.25
+                goo += parallel_einsum("kilabc,kjlabc->ij", wvd, rw) * 0.25
+                goo += parallel_einsum("kliabc,kljabc->ij", wvd, rw) * 0.25
+                gOO += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.25
         time2 = log.timer_debug1(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (a0, a1), *time2
         )
@@ -629,7 +633,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         for j0, j1 in lib.prange(0, nocca, blksize):
             for k0, k1 in lib.prange(0, nocca, blksize):
                 w_blk = (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jIeA,kceb->IjkAbc",
                         t2ab[j0:j1, i0:i1, :, :],
                         eris_ovvv[k0:k1, :, :, :],
@@ -637,20 +641,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jIbE,kcEA->IjkAbc",
                         t2ab[j0:j1, i0:i1, :, :],
                         eris_ovVV[k0:k1, :, :, :],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "jkbe,IAec->IjkAbc",
                     t2aa[j0:j1, k0:k1, :, :],
                     eris_OVvv[i0:i1, :, :, :],
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mIbA,kcjm->IjkAbc",
                         t2ab[:, i0:i1, :, :],
                         eris_ovoo[k0:k1, :, j0:j1, :],
@@ -658,35 +662,35 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jMbA,kcIM->IjkAbc",
                         t2ab[j0:j1, :, :, :],
                         eris_ovOO[k0:k1, :, i0:i1, :],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "jmbc,IAkm->IjkAbc",
                     t2aa[j0:j1, :, :, :],
                     eris_OVoo[i0:i1, :, k0:k1:, :],
                 )
-                v_blk = numpy.einsum(
+                v_blk = parallel_einsum(
                     "jbkc,IA->IjkAbc",
                     eris_ovov[j0:j1, :, k0:k1, :],
                     t1b[i0:i1, :],
                 )
-                v_blk += numpy.einsum(
+                v_blk += parallel_einsum(
                     "kcIA,jb->IjkAbc",
                     eris_ovOV[k0:k1, :, i0:i1, :],
                     t1a[j0:j1, :],
                 )
-                v_blk += numpy.einsum(
+                v_blk += parallel_einsum(
                     "kcIA,jb->IjkAbc",
                     eris_ovOV[k0:k1, :, i0:i1, :],
                     t1a[j0:j1, :],
                 )
                 v_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jkbc,AI->IjkAbc",
                         t2aa[j0:j1, k0:k1, :, :],
                         fVO[:, i0:i1],
@@ -694,7 +698,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 0.5
                 )
                 v_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kIcA,bj->IjkAbc",
                         t2ab[k0:k1, i0:i1, :, :],
                         fvo[:, j0:j1],
@@ -707,7 +711,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 wvd = (w_blk + v_blk) / d3
 
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kIeA,jceb->IjkAbc",
                         t2ab[k0:k1, i0:i1, :, :],
                         eris_ovvv[j0:j1, :, :, :],
@@ -715,20 +719,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kIbE,jcEA->IjkAbc",
                         t2ab[k0:k1, i0:i1, :, :],
                         eris_ovVV[j0:j1, :, :, :],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "kjbe,IAec->IjkAbc",
                     t2aa[k0:k1, j0:j1, :, :],
                     eris_OVvv[i0:i1, :, :, :],
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mIbA,jckm->IjkAbc",
                         t2ab[:, i0:i1, :, :],
                         eris_ovoo[j0:j1, :, k0:k1, :],
@@ -736,21 +740,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kMbA,jcIM->IjkAbc",
                         t2ab[k0:k1, :, :, :],
                         eris_ovOO[j0:j1, :, i0:i1, :],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "kmbc,IAjm->IjkAbc",
                     t2aa[k0:k1, :, :, :],
                     eris_OVoo[i0:i1, :, j0:j1:, :],
                 )
 
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kIeA,jbec->IjkAbc",
                         t2ab[k0:k1, i0:i1, :, :],
                         eris_ovvv[j0:j1, :, :, :],
@@ -758,20 +762,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kIcE,jbEA->IjkAbc",
                         t2ab[k0:k1, i0:i1, :, :],
                         eris_ovVV[j0:j1, :, :, :],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "kjce,IAeb->IjkAbc",
                     t2aa[k0:k1, j0:j1, :, :],
                     eris_OVvv[i0:i1, :, :, :],
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mIcA,jbkm->IjkAbc",
                         t2ab[:, i0:i1, :, :],
                         eris_ovoo[j0:j1, :, k0:k1, :],
@@ -779,21 +783,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "kMcA,jbIM->IjkAbc",
                         t2ab[k0:k1, :, :, :],
                         eris_ovOO[j0:j1, :, i0:i1, :],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "kmcb,IAjm->IjkAbc",
                     t2aa[k0:k1, :, :, :],
                     eris_OVoo[i0:i1, :, j0:j1:, :],
                 )
 
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jIeA,kbec->IjkAbc",
                         t2ab[j0:j1, i0:i1, :, :],
                         eris_ovvv[k0:k1, :, :, :],
@@ -801,20 +805,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jIcE,kbEA->IjkAbc",
                         t2ab[j0:j1, i0:i1, :, :],
                         eris_ovVV[k0:k1, :, :, :],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "jkce,IAeb->IjkAbc",
                     t2aa[j0:j1, k0:k1, :, :],
                     eris_OVvv[i0:i1, :, :, :],
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mIcA,kbjm->IjkAbc",
                         t2ab[:, i0:i1, :, :],
                         eris_ovoo[k0:k1, :, j0:j1, :],
@@ -822,22 +826,22 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "jMcA,kbIM->IjkAbc",
                         t2ab[j0:j1, :, :, :],
                         eris_ovOO[k0:k1, :, i0:i1, :],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "jmcb,IAkm->IjkAbc",
                     t2aa[j0:j1, :, :, :],
                     eris_OVoo[i0:i1, :, k0:k1:, :],
                 )
                 rw = w_blk / d3
-                gvv += numpy.einsum("ijkcad,ijkcbd->ab", wvd, rw) * 0.25
-                gvv += numpy.einsum("ijkcda,ijkcdb->ab", wvd, rw) * 0.25
-                gVV += numpy.einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.25
+                gvv += parallel_einsum("ijkcad,ijkcbd->ab", wvd, rw) * 0.25
+                gvv += parallel_einsum("ijkcda,ijkcdb->ab", wvd, rw) * 0.25
+                gVV += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.25
         time2 = log.timer_debug1(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (i0, i1), *time2
         )
@@ -867,7 +871,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     for c0, c1 in lib.prange(0, nvira, blksize):
         for k0, k1 in lib.prange(0, nocca, blksize):
             w_blk = (
-                numpy.einsum(
+                parallel_einsum(
                     "jIeA,kceb->IjkAbc",
                     t2ab[:, :, :, :],
                     eris_ovvv[k0:k1, c0:c1, :, :],
@@ -875,20 +879,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "jIbE,kcEA->IjkAbc",
                     t2ab[:, :, :, :],
                     eris_ovVV[k0:k1, c0:c1, :, :],
                 )
                 * 2
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "jkbe,IAec->IjkAbc",
                 t2aa[:, k0:k1, :, :],
                 eris_OVvv[:, :, :, c0:c1],
             )
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "mIbA,kcjm->IjkAbc",
                     t2ab[:, :, :, :],
                     eris_ovoo[k0:k1, c0:c1, :, :],
@@ -896,35 +900,35 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "jMbA,kcIM->IjkAbc",
                     t2ab[:, :, :, :],
                     eris_ovOO[k0:k1, c0:c1, :, :],
                 )
                 * 2
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "jmbc,IAkm->IjkAbc",
                 t2aa[:, :, :, c0:c1],
                 eris_OVoo[:, :, k0:k1, :],
             )
-            v_blk = numpy.einsum(
+            v_blk = parallel_einsum(
                 "jbkc,IA->IjkAbc",
                 eris_ovov[:, :, k0:k1, c0:c1],
                 t1b[:, :],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "kcIA,jb->IjkAbc",
                 eris_ovOV[k0:k1, c0:c1, :, :],
                 t1a[:, :],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "kcIA,jb->IjkAbc",
                 eris_ovOV[k0:k1, c0:c1, :, :],
                 t1a[:, :],
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "jkbc,AI->IjkAbc",
                     t2aa[:, k0:k1, :, c0:c1],
                     fVO[:, :],
@@ -932,7 +936,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 0.5
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "kIcA,bj->IjkAbc",
                     t2ab[k0:k1, :, c0:c1, :],
                     fvo[:, :],
@@ -945,7 +949,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
             wvd = (w_blk + v_blk) / d3
 
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "kIeA,jceb->IjkAbc",
                     t2ab[k0:k1, :, :, :],
                     eris_ovvv[:, c0:c1, :, :],
@@ -953,20 +957,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "kIbE,jcEA->IjkAbc",
                     t2ab[k0:k1, :, :, :],
                     eris_ovVV[:, c0:c1, :, :],
                 )
                 * 2
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "kjbe,IAec->IjkAbc",
                 t2aa[k0:k1, :, :, :],
                 eris_OVvv[:, :, :, c0:c1],
             )
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "mIbA,jckm->IjkAbc",
                     t2ab[:, :, :, :],
                     eris_ovoo[:, c0:c1, k0:k1, :],
@@ -974,21 +978,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "kMbA,jcIM->IjkAbc",
                     t2ab[k0:k1, :, :, :],
                     eris_ovOO[:, c0:c1, :, :],
                 )
                 * 2
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "kmbc,IAjm->IjkAbc",
                 t2aa[k0:k1, :, :, c0:c1],
                 eris_OVoo[:, :, :, :],
             )
 
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "kIeA,jbec->IjkAbc",
                     t2ab[k0:k1, :, :, :],
                     eris_ovvv[:, :, :, c0:c1],
@@ -996,20 +1000,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "kIcE,jbEA->IjkAbc",
                     t2ab[k0:k1, :, c0:c1, :],
                     eris_ovVV[:, :, :, :],
                 )
                 * 2
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "kjce,IAeb->IjkAbc",
                 t2aa[k0:k1, :, c0:c1, :],
                 eris_OVvv[:, :, :, :],
             )
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "mIcA,jbkm->IjkAbc",
                     t2ab[:, :, c0:c1, :],
                     eris_ovoo[:, :, k0:k1, :],
@@ -1017,21 +1021,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "kMcA,jbIM->IjkAbc",
                     t2ab[k0:k1, :, c0:c1, :],
                     eris_ovOO[:, :, :, :],
                 )
                 * 2
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "kmcb,IAjm->IjkAbc",
                 t2aa[k0:k1, :, c0:c1, :],
                 eris_OVoo[:, :, :, :],
             )
 
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "jIeA,kbec->IjkAbc",
                     t2ab[:, :, :, :],
                     eris_ovvv[k0:k1, :, :, c0:c1],
@@ -1039,20 +1043,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "jIcE,kbEA->IjkAbc",
                     t2ab[:, :, c0:c1, :],
                     eris_ovVV[k0:k1, :, :, :],
                 )
                 * 2
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "jkce,IAeb->IjkAbc",
                 t2aa[:, k0:k1, c0:c1, :],
                 eris_OVvv[:, :, :, :],
             )
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "mIcA,kbjm->IjkAbc",
                     t2ab[:, :, c0:c1, :],
                     eris_ovoo[k0:k1, :, :, :],
@@ -1060,21 +1064,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "jMcA,kbIM->IjkAbc",
                     t2ab[:, :, c0:c1, :],
                     eris_ovOO[k0:k1, :, :, :],
                 )
                 * 2
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "jmcb,IAkm->IjkAbc",
                 t2aa[:, :, c0:c1, :],
                 eris_OVoo[:, :, k0:k1, :],
             )
             rw = w_blk / d3
-            gvo += numpy.einsum("kica,ijkabc->bj", t2ab[k0:k1, :, c0:c1, :], rw) * 0.5
-            gVO += numpy.einsum("jkbc,ijkabc->ai", t2aa[:, k0:k1, :, c0:c1], rw) * 0.125
+            gvo += parallel_einsum("kica,ijkabc->bj", t2ab[k0:k1, :, c0:c1, :], rw) * 0.5
+            gVO += parallel_einsum("jkbc,ijkabc->ai", t2aa[:, k0:k1, :, c0:c1], rw) * 0.125
         time2 = log.timer_debug1(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (c0, c1), *time2
         )
@@ -1100,7 +1104,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         for b0, b1 in lib.prange(0, nvirb, blksize):
             for c0, c1 in lib.prange(0, nvirb, blksize):
                 w_blk = (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ijae,kceb->ijkabc",
                         t2ab[:, :, a0:a1, :],
                         eris_OVVV[:, c0:c1, :, b0:b1],
@@ -1108,20 +1112,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ijeb,kcea->ijkabc",
                         t2ab[:, :, :, b0:b1],
                         eris_OVvv[:, c0:c1, :, a0:a1],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "jkbe,iaec->ijkabc",
                     t2bb[:, :, b0:b1, :],
                     eris_ovVV[:, a0:a1, :, c0:c1],
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "imab,kcjm->ijkabc",
                         t2ab[:, :, a0:a1, b0:b1],
                         eris_OVOO[:, c0:c1, :, :],
@@ -1129,35 +1133,35 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mjab,kcim->ijkabc",
                         t2ab[:, :, a0:a1, b0:b1],
                         eris_OVoo[:, c0:c1, :, :],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "jmbc,iakm->ijkabc",
                     t2bb[:, :, b0:b1, c0:c1],
                     eris_ovOO[:, a0:a1, :, :],
                 )
-                v_blk = numpy.einsum(
+                v_blk = parallel_einsum(
                     "jbkc,ia->ijkabc",
                     eris_OVOV[:, b0:b1, :, c0:c1],
                     t1a[:, a0:a1],
                 )
-                v_blk += numpy.einsum(
+                v_blk += parallel_einsum(
                     "iakc,jb->ijkabc",
                     eris_ovOV[:, a0:a1, :, c0:c1],
                     t1b[:, b0:b1],
                 )
-                v_blk += numpy.einsum(
+                v_blk += parallel_einsum(
                     "iakc,jb->ijkabc",
                     eris_ovOV[:, a0:a1, :, c0:c1],
                     t1b[:, b0:b1],
                 )
                 v_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "JKBC,ai->iJKaBC",
                         t2bb[:, :, b0:b1, c0:c1],
                         fvo[a0:a1, :],
@@ -1165,7 +1169,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 0.5
                 )
                 v_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "iKaC,BJ->iJKaBC",
                         t2ab[:, :, a0:a1, c0:c1],
                         fVO[b0:b1, :],
@@ -1178,7 +1182,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 wvd = (w_blk + v_blk) / d3
 
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ikae,jceb->ijkabc",
                         t2ab[:, :, a0:a1, :],
                         eris_OVVV[:, c0:c1, :, b0:b1],
@@ -1186,20 +1190,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ikeb,jcea->ijkabc",
                         t2ab[:, :, :, b0:b1],
                         eris_OVvv[:, c0:c1, :, a0:a1],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "kjbe,iaec->ijkabc",
                     t2bb[:, :, b0:b1, :],
                     eris_ovVV[:, a0:a1, :, c0:c1],
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "imab,jckm->ijkabc",
                         t2ab[:, :, a0:a1, b0:b1],
                         eris_OVOO[:, c0:c1, :, :],
@@ -1207,21 +1211,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mkab,jcim->ijkabc",
                         t2ab[:, :, a0:a1, b0:b1],
                         eris_OVoo[:, c0:c1, :, :],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "kmbc,iajm->ijkabc",
                     t2bb[:, :, b0:b1, c0:c1],
                     eris_ovOO[:, a0:a1, :, :],
                 )
 
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ikae,jbec->ijkabc",
                         t2ab[:, :, a0:a1, :],
                         eris_OVVV[:, b0:b1, :, c0:c1],
@@ -1229,20 +1233,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ikec,jbea->ijkabc",
                         t2ab[:, :, :, c0:c1],
                         eris_OVvv[:, b0:b1, :, a0:a1],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "kjce,iaeb->ijkabc",
                     t2bb[:, :, c0:c1, :],
                     eris_ovVV[:, a0:a1, :, b0:b1],
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "imac,jbkm->ijkabc",
                         t2ab[:, :, a0:a1, c0:c1],
                         eris_OVOO[:, b0:b1, :, :],
@@ -1250,21 +1254,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mkac,jbim->ijkabc",
                         t2ab[:, :, a0:a1, c0:c1],
                         eris_OVoo[:, b0:b1, :, :],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "kmcb,iajm->ijkabc",
                     t2bb[:, :, c0:c1, b0:b1],
                     eris_ovOO[:, a0:a1, :, :],
                 )
 
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ijae,kbec->ijkabc",
                         t2ab[:, :, a0:a1, :],
                         eris_OVVV[:, b0:b1, :, c0:c1],
@@ -1272,20 +1276,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ijec,kbea->ijkabc",
                         t2ab[:, :, :, c0:c1],
                         eris_OVvv[:, b0:b1, :, a0:a1],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "jkce,iaeb->ijkabc",
                     t2bb[:, :, c0:c1, :],
                     eris_ovVV[:, a0:a1, :, b0:b1],
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "imac,kbjm->ijkabc",
                         t2ab[:, :, a0:a1, c0:c1],
                         eris_OVOO[:, b0:b1, :, :],
@@ -1293,22 +1297,22 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mjac,kbim->ijkabc",
                         t2ab[:, :, a0:a1, c0:c1],
                         eris_OVoo[:, b0:b1, :, :],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "jmcb,iakm->ijkabc",
                     t2bb[:, :, c0:c1, b0:b1],
                     eris_ovOO[:, a0:a1, :, :],
                 )
                 rw = w_blk / d3
-                goo += numpy.einsum("iklabc,jklabc->ij", wvd, rw) * 0.25
-                gOO += numpy.einsum("kilabc,kjlabc->ij", wvd, rw) * 0.25
-                gOO += numpy.einsum("kliabc,kljabc->ij", wvd, rw) * 0.25
+                goo += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.25
+                gOO += parallel_einsum("kilabc,kjlabc->ij", wvd, rw) * 0.25
+                gOO += parallel_einsum("kliabc,kljabc->ij", wvd, rw) * 0.25
         time2 = log.timer_debug1(
             "uccsd_t spin 2 rdm _gamma1_intermediates pass2 [%d:%d]" % (a0, a1), *time2
         )
@@ -1335,7 +1339,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         for j0, j1 in lib.prange(0, noccb, blksize):
             for k0, k1 in lib.prange(0, noccb, blksize):
                 w_blk = (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ijae,kceb->ijkabc",
                         t2ab[i0:i1, j0:j1, :, :],
                         eris_OVVV[k0:k1, :, :, :],
@@ -1343,20 +1347,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ijeb,kcea->ijkabc",
                         t2ab[i0:i1, j0:j1, :, :],
                         eris_OVvv[k0:k1, :, :, :],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "jkbe,iaec->ijkabc",
                     t2bb[j0:j1, k0:k1, :, :],
                     eris_ovVV[i0:i1, :, :, :],
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "imab,kcjm->ijkabc",
                         t2ab[i0:i1, :, :, :],
                         eris_OVOO[k0:k1, :, j0:j1, :],
@@ -1364,35 +1368,35 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mjab,kcim->ijkabc",
                         t2ab[:, j0:j1, :, :],
                         eris_OVoo[k0:k1, :, i0:i1, :],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "jmbc,iakm->ijkabc",
                     t2bb[j0:j1, :, :, :],
                     eris_ovOO[i0:i1, :, k0:k1, :],
                 )
-                v_blk = numpy.einsum(
+                v_blk = parallel_einsum(
                     "jbkc,ia->ijkabc",
                     eris_OVOV[j0:j1, :, k0:k1, :],
                     t1a[i0:i1, :],
                 )
-                v_blk += numpy.einsum(
+                v_blk += parallel_einsum(
                     "iakc,jb->ijkabc",
                     eris_ovOV[i0:i1, :, k0:k1, :],
                     t1b[j0:j1, :],
                 )
-                v_blk += numpy.einsum(
+                v_blk += parallel_einsum(
                     "iakc,jb->ijkabc",
                     eris_ovOV[i0:i1, :, k0:k1, :],
                     t1b[j0:j1, :],
                 )
                 v_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "JKBC,ai->iJKaBC",
                         t2bb[j0:j1, k0:k1, :, :],
                         fvo[:, i0:i1],
@@ -1400,7 +1404,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 0.5
                 )
                 v_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "iKaC,BJ->iJKaBC",
                         t2ab[i0:i1, k0:k1, :, :],
                         fVO[:, j0:j1],
@@ -1413,7 +1417,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 wvd = (w_blk + v_blk) / d3
 
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ikae,jceb->ijkabc",
                         t2ab[i0:i1, k0:k1, :, :],
                         eris_OVVV[j0:j1, :, :, :],
@@ -1421,20 +1425,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ikeb,jcea->ijkabc",
                         t2ab[i0:i1, k0:k1, :, :],
                         eris_OVvv[j0:j1, :, :, :],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "kjbe,iaec->ijkabc",
                     t2bb[k0:k1, j0:j1, :, :],
                     eris_ovVV[i0:i1, :, :, :],
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "imab,jckm->ijkabc",
                         t2ab[i0:i1, :, :, :],
                         eris_OVOO[j0:j1, :, k0:k1, :],
@@ -1442,21 +1446,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mkab,jcim->ijkabc",
                         t2ab[:, k0:k1, :, :],
                         eris_OVoo[j0:j1, :, i0:i1, :],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "kmbc,iajm->ijkabc",
                     t2bb[k0:k1, :, :, :],
                     eris_ovOO[i0:i1, :, j0:j1, :],
                 )
 
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ikae,jbec->ijkabc",
                         t2ab[i0:i1, k0:k1, :, :],
                         eris_OVVV[j0:j1, :, :, :],
@@ -1464,20 +1468,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ikec,jbea->ijkabc",
                         t2ab[i0:i1, k0:k1, :, :],
                         eris_OVvv[j0:j1, :, :, :],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "kjce,iaeb->ijkabc",
                     t2bb[k0:k1, j0:j1, :, :],
                     eris_ovVV[i0:i1, :, :, :],
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "imac,jbkm->ijkabc",
                         t2ab[i0:i1, :, :, :],
                         eris_OVOO[j0:j1, :, k0:k1, :],
@@ -1485,21 +1489,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mkac,jbim->ijkabc",
                         t2ab[:, k0:k1, :, :],
                         eris_OVoo[j0:j1, :, i0:i1, :],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "kmcb,iajm->ijkabc",
                     t2bb[k0:k1, :, :, :],
                     eris_ovOO[i0:i1, :, j0:j1, :],
                 )
 
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ijae,kbec->ijkabc",
                         t2ab[i0:i1, j0:j1, :, :],
                         eris_OVVV[k0:k1, :, :, :],
@@ -1507,20 +1511,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk -= (
-                    numpy.einsum(
+                    parallel_einsum(
                         "ijec,kbea->ijkabc",
                         t2ab[i0:i1, j0:j1, :, :],
                         eris_OVvv[k0:k1, :, :, :],
                     )
                     * 2
                 )
-                w_blk -= numpy.einsum(
+                w_blk -= parallel_einsum(
                     "jkce,iaeb->ijkabc",
                     t2bb[j0:j1, k0:k1, :, :],
                     eris_ovVV[i0:i1, :, :, :],
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "imac,kbjm->ijkabc",
                         t2ab[i0:i1, :, :, :],
                         eris_OVOO[k0:k1, :, j0:j1, :],
@@ -1528,22 +1532,22 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
                 w_blk += (
-                    numpy.einsum(
+                    parallel_einsum(
                         "mjac,kbim->ijkabc",
                         t2ab[:, j0:j1, :, :],
                         eris_OVoo[k0:k1, :, i0:i1, :],
                     )
                     * 2
                 )
-                w_blk += numpy.einsum(
+                w_blk += parallel_einsum(
                     "jmcb,iakm->ijkabc",
                     t2bb[j0:j1, :, :, :],
                     eris_ovOO[i0:i1, :, k0:k1, :],
                 )
                 rw = w_blk / d3
-                gvv += numpy.einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.25
-                gVV += numpy.einsum("ijkcad,ijkcbd->ab", wvd, rw) * 0.25
-                gVV += numpy.einsum("ijkcda,ijkcdb->ab", wvd, rw) * 0.25
+                gvv += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.25
+                gVV += parallel_einsum("ijkcad,ijkcbd->ab", wvd, rw) * 0.25
+                gVV += parallel_einsum("ijkcda,ijkcdb->ab", wvd, rw) * 0.25
 
     blksize = min(
         noccb,
@@ -1570,7 +1574,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     for c0, c1 in lib.prange(0, nvirb, blksize):
         for k0, k1 in lib.prange(0, noccb, blksize):
             w_blk = (
-                numpy.einsum(
+                parallel_einsum(
                     "ijae,kceb->ijkabc",
                     t2ab,
                     eris_OVVV[k0:k1, c0:c1, :, :],
@@ -1578,20 +1582,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "ijeb,kcea->ijkabc",
                     t2ab,
                     eris_OVvv[k0:k1, c0:c1, :, :],
                 )
                 * 2
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "jkbe,iaec->ijkabc",
                 t2bb[:, k0:k1, :, :],
                 eris_ovVV[:, :, :, c0:c1],
             )
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "imab,kcjm->ijkabc",
                     t2ab,
                     eris_OVOO[k0:k1, c0:c1, :, :],
@@ -1599,35 +1603,35 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "mjab,kcim->ijkabc",
                     t2ab,
                     eris_OVoo[k0:k1, c0:c1, :, :],
                 )
                 * 2
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "jmbc,iakm->ijkabc",
                 t2bb[:, :, :, c0:c1],
                 eris_ovOO[:, :, k0:k1, :],
             )
-            v_blk = numpy.einsum(
+            v_blk = parallel_einsum(
                 "jbkc,ia->ijkabc",
                 eris_OVOV[:, :, k0:k1, c0:c1],
                 t1a[:, :],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "iakc,jb->ijkabc",
                 eris_ovOV[:, :, k0:k1, c0:c1],
                 t1b[:, :],
             )
-            v_blk += numpy.einsum(
+            v_blk += parallel_einsum(
                 "iakc,jb->ijkabc",
                 eris_ovOV[:, :, k0:k1, c0:c1],
                 t1b[:, :],
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "JKBC,ai->iJKaBC",
                     t2bb[:, k0:k1, :, c0:c1],
                     fvo[:, :],
@@ -1635,7 +1639,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 0.5
             )
             v_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "iKaC,BJ->iJKaBC",
                     t2ab[:, k0:k1, :, c0:c1],
                     fVO[:, :],
@@ -1648,7 +1652,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
             wvd = (w_blk + v_blk) / d3
 
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "ikae,jceb->ijkabc",
                     t2ab[:, k0:k1, :, :],
                     eris_OVVV[:, c0:c1, :, :],
@@ -1656,20 +1660,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "ikeb,jcea->ijkabc",
                     t2ab[:, k0:k1, :, :],
                     eris_OVvv[:, c0:c1, :, :],
                 )
                 * 2
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "kjbe,iaec->ijkabc",
                 t2bb[k0:k1, :, :, :],
                 eris_ovVV[:, :, :, c0:c1],
             )
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "imab,jckm->ijkabc",
                     t2ab[:, :, :, :],
                     eris_OVOO[:, c0:c1, k0:k1, :],
@@ -1677,21 +1681,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "mkab,jcim->ijkabc",
                     t2ab[:, k0:k1, :, :],
                     eris_OVoo[:, c0:c1, :, :],
                 )
                 * 2
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "kmbc,iajm->ijkabc",
                 t2bb[k0:k1, :, :, c0:c1],
                 eris_ovOO[:, :, :, :],
             )
 
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "ikae,jbec->ijkabc",
                     t2ab[:, k0:k1, :, :],
                     eris_OVVV[:, :, :, c0:c1],
@@ -1699,20 +1703,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "ikec,jbea->ijkabc",
                     t2ab[:, k0:k1, :, c0:c1],
                     eris_OVvv[:, :, :, :],
                 )
                 * 2
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "kjce,iaeb->ijkabc",
                 t2bb[k0:k1, :, c0:c1, :],
                 eris_ovVV[:, :, :, :],
             )
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "imac,jbkm->ijkabc",
                     t2ab[:, :, :, c0:c1],
                     eris_OVOO[:, :, k0:k1, :],
@@ -1720,21 +1724,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "mkac,jbim->ijkabc",
                     t2ab[:, k0:k1, :, c0:c1],
                     eris_OVoo[:, :, :, :],
                 )
                 * 2
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "kmcb,iajm->ijkabc",
                 t2bb[k0:k1, :, c0:c1, :],
                 eris_ovOO[:, :, :, :],
             )
 
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "ijae,kbec->ijkabc",
                     t2ab[:, :, :, :],
                     eris_OVVV[k0:k1, :, :, c0:c1],
@@ -1742,20 +1746,20 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk -= (
-                numpy.einsum(
+                parallel_einsum(
                     "ijec,kbea->ijkabc",
                     t2ab[:, :, :, c0:c1],
                     eris_OVvv[k0:k1, :, :, :],
                 )
                 * 2
             )
-            w_blk -= numpy.einsum(
+            w_blk -= parallel_einsum(
                 "jkce,iaeb->ijkabc",
                 t2bb[:, k0:k1, c0:c1, :],
                 eris_ovVV[:, :, :, :],
             )
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "imac,kbjm->ijkabc",
                     t2ab[:, :, :, c0:c1],
                     eris_OVOO[k0:k1, :, :, :],
@@ -1763,21 +1767,21 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 * 2
             )
             w_blk += (
-                numpy.einsum(
+                parallel_einsum(
                     "mjac,kbim->ijkabc",
                     t2ab[:, :, :, c0:c1],
                     eris_OVoo[k0:k1, :, :, :],
                 )
                 * 2
             )
-            w_blk += numpy.einsum(
+            w_blk += parallel_einsum(
                 "jmcb,iakm->ijkabc",
                 t2bb[:, :, c0:c1, :],
                 eris_ovOO[:, :, k0:k1, :],
             )
             rw = w_blk / d3
-            gVO += numpy.einsum("ikac,ijkabc->bj", t2ab[:, k0:k1, :, c0:c1], rw) * 0.5
-            gvo += numpy.einsum("jkbc,ijkabc->ai", t2bb[:, k0:k1, :, c0:c1], rw) * 0.125
+            gVO += parallel_einsum("ikac,ijkabc->bj", t2ab[:, k0:k1, :, c0:c1], rw) * 0.5
+            gvo += parallel_einsum("jkbc,ijkabc->ai", t2bb[:, k0:k1, :, c0:c1], rw) * 0.125
 
     doo, dOO = d1[0]
     dov, dOV = d1[1]
