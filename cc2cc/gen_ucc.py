@@ -455,8 +455,8 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
     nao = dm1_dft.shape[-1]
     rho_cube_dft = np.zeros((len(grids.coords), grids.input_level, EDGE_SIZE**3))
     gridcube_coords = np.zeros((len(grids.coords), EDGE_SIZE**3, 3))
-    ao0_coords = np.zeros((len(grids.coords), EDGE_SIZE**3, nao))
-    ao4_coords = np.zeros((grids.input_level, 2, len(grids.coords), EDGE_SIZE**3, nao))
+    # ao0_coords = np.zeros((len(grids.coords), EDGE_SIZE**3, nao))
+    # ao4_coords = np.zeros((grids.input_level, 2, len(grids.coords), EDGE_SIZE**3, nao))
 
     ni = mdft._numint
     step = int(max_memory * 1024**2 / (nao * EDGE_SIZE**3 * 32 * 8))
@@ -474,13 +474,13 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
         )
         rho_cube_dft[p0:p1] = rho_cube_dft_part
         gridcube_coords[p0:p1] = gridcube.coords.reshape(len(coords_), EDGE_SIZE**3, 3)
-        ao0_coords[p0:p1] = ao_value[0].reshape(len(coords_), EDGE_SIZE**3, nao)
+        # ao0_coords[p0:p1] = ao_value[0].reshape(len(coords_), EDGE_SIZE**3, nao)
 
         wv = wv.reshape(gridcube.input_level, 2, 4, len(gridcube.coords))
         wv[:, :, 0, :] *= 0.5
-        ao4_coords[:, :, p0:p1] = np.einsum("xpu,isxp->ispu", ao_value[:4], wv).reshape(
-            gridcube.input_level, 2, len(coords_), EDGE_SIZE**3, nao
-        )
+        # ao4_coords[:, :, p0:p1] = np.einsum("xpu,isxp->ispu", ao_value[:4], wv).reshape(
+        #     gridcube.input_level, 2, len(coords_), EDGE_SIZE**3, nao
+        # )
 
         ao_array = np.array([ao_value[0], ao_value[1], ao_value[2], ao_value[3]])
         ao_mat = np.array(
@@ -529,21 +529,21 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
         len(grids.coords), grids.input_level, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
     )
     data_dict["grad2force"] = grad2force
-    data_dict["cube_coor"] = gridcube_coords.transpose(0, 2, 1).reshape(
-        len(grids.coords), 3, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
-    )
-    data_dict["ao0_coords"] = ao0_coords.reshape(
-        len(grids.coords), EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, nao
-    )
-    data_dict["ao4_coords"] = ao4_coords.reshape(
-        grids.input_level,
-        2,
-        len(grids.coords),
-        EDGE_SIZE,
-        EDGE_SIZE,
-        EDGE_SIZE,
-        nao,
-    )
+    # data_dict["cube_coor"] = gridcube_coords.transpose(0, 2, 1).reshape(
+    #     len(grids.coords), 3, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
+    # )
+    # data_dict["ao0_coords"] = ao0_coords.reshape(
+    #     len(grids.coords), EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, nao
+    # )
+    # data_dict["ao4_coords"] = ao4_coords.reshape(
+    #     grids.input_level,
+    #     2,
+    #     len(grids.coords),
+    #     EDGE_SIZE,
+    #     EDGE_SIZE,
+    #     EDGE_SIZE,
+    #     nao,
+    # )
 
     # Test force
     grad_mat = np.zeros(
@@ -562,48 +562,48 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
     )
     print("Error force DFT: ", np.linalg.norm(force - (grad_dft - grad_dft_zeros)))
 
-    vxc_test = np.einsum(
-        "p,ispabcu,ipabc,pabcv->suv",
-        grids.weights,
-        data_dict["ao4_coords"],
-        grad_mat,
-        data_dict["ao0_coords"],
-        optimize=True,
-    )
-    vxc_test = lib.hermi_sum(vxc_test.reshape((-1, nao, nao)), axes=(0, 2, 1)).reshape(
-        2, nao, nao
-    )
-    vj, vk = mdft.get_jk(mol, dm1_dft)
-    omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mdft.xc, spin=mol.spin)
-    vk *= hyb
-    vj = vj[0] + vj[1]
-    vxc_test += vj - vk
+    # vxc_test = np.einsum(
+    #     "p,ispabcu,ipabc,pabcv->suv",
+    #     grids.weights,
+    #     data_dict["ao4_coords"],
+    #     grad_mat,
+    #     data_dict["ao0_coords"],
+    #     optimize=True,
+    # )
+    # vxc_test = lib.hermi_sum(vxc_test.reshape((-1, nao, nao)), axes=(0, 2, 1)).reshape(
+    #     2, nao, nao
+    # )
+    # vj, vk = mdft.get_jk(mol, dm1_dft)
+    # omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mdft.xc, spin=mol.spin)
+    # vk *= hyb
+    # vj = vj[0] + vj[1]
+    # vxc_test += vj - vk
 
-    h1e = mdft.get_hcore()
-    s1e = mdft.get_ovlp()
-    mo_energy, mo_coeff = mdft.eig(vxc_test + h1e, s1e)
-    mo_occ = mdft.get_occ(mo_energy, mo_coeff)
-    dm_test = mdft.make_rdm1(mo_coeff, mo_occ)
+    # h1e = mdft.get_hcore()
+    # s1e = mdft.get_ovlp()
+    # mo_energy, mo_coeff = mdft.eig(vxc_test + h1e, s1e)
+    # mo_occ = mdft.get_occ(mo_energy, mo_coeff)
+    # dm_test = mdft.make_rdm1(mo_coeff, mo_occ)
 
-    print("Test MO coefficient difference: ", np.linalg.norm(mo_coeff - mdft.mo_coeff))
-    print("Test MO energy difference: ", np.linalg.norm(mo_energy - mdft.mo_energy))
-    print(
-        "Test dipole difference: ",
-        np.linalg.norm(mdft.dip_moment(mol, dm_test) - mdft.dip_moment(mol, dm1_dft)),
-    )
+    # print("Test MO coefficient difference: ", np.linalg.norm(mo_coeff - mdft.mo_coeff))
+    # print("Test MO energy difference: ", np.linalg.norm(mo_energy - mdft.mo_energy))
+    # print(
+    #     "Test dipole difference: ",
+    #     np.linalg.norm(mdft.dip_moment(mol, dm_test) - mdft.dip_moment(mol, dm1_dft)),
+    # )
 
-    print("Test dm difference: ", np.linalg.norm(dm_test - dm1_dft))
-    dm_test = dm_test[0] + dm_test[1]
-    dm1_dft = dm1_dft[0] + dm1_dft[1]
-    if is_hermitian(dm_test) and is_hermitian(dm1_dft):
-        eigval1, eigvector1 = np.linalg.eigh(dm_test)
-        eigval2, eigvector2 = np.linalg.eigh(dm1_dft)
-    else:
-        eigval1, eigvector1 = np.linalg.eig(dm_test)
-        eigval2, eigvector2 = np.linalg.eig(dm1_dft)
-    print("Test eigval difference: ", np.linalg.norm(eigval1 - eigval2))
-    print(f"convert matrix: {np.linalg.norm(np.linalg.inv(eigvector1) - eigvector1.T)}")
-    print(f"convert matrix: {np.linalg.norm(np.linalg.inv(eigvector2) - eigvector2.T)}")
+    # print("Test dm difference: ", np.linalg.norm(dm_test - dm1_dft))
+    # dm_test = dm_test[0] + dm_test[1]
+    # dm1_dft = dm1_dft[0] + dm1_dft[1]
+    # if is_hermitian(dm_test) and is_hermitian(dm1_dft):
+    #     eigval1, eigvector1 = np.linalg.eigh(dm_test)
+    #     eigval2, eigvector2 = np.linalg.eigh(dm1_dft)
+    # else:
+    #     eigval1, eigvector1 = np.linalg.eig(dm_test)
+    #     eigval2, eigvector2 = np.linalg.eig(dm1_dft)
+    # print("Test eigval difference: ", np.linalg.norm(eigval1 - eigval2))
+    # print(f"convert matrix: {np.linalg.norm(np.linalg.inv(eigvector1) - eigvector1.T)}")
+    # print(f"convert matrix: {np.linalg.norm(np.linalg.inv(eigvector2) - eigvector2.T)}")
 
 
 def uzmp(dm1_dft, dm1_cc):
