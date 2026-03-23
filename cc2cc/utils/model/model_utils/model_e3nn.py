@@ -87,22 +87,26 @@ class E3nn(torch.nn.Module):
             internal_weights=True,
         )
 
+        # # xavier_uniform_ initialization for the tensor product weights
+        # with torch.no_grad():
+        #     for weight in self.tp.weight_views():
+        #         mul_1, mul_2, mul_out = weight.shape
+        #         # formula from torch.nn.init.xavier_uniform_
+        #         a = (6 / (mul_1 * mul_2 + mul_out)) ** 0.5
+        #         new_weight = torch.empty_like(weight)
+        #         new_weight.uniform_(-a, a)
+        #         weight[:] = new_weight
+        #     for weight in self.tp_center.weight_views():
+        #         mul_1, mul_2, mul_out = weight.shape
+        #         # formula from torch.nn.init.xavier_uniform_
+        #         a = (6 / (mul_1 * mul_2 + mul_out)) ** 0.5
+        #         new_weight = torch.empty_like(weight)
+        #         new_weight.uniform_(-a, a)
+        #         weight[:] = new_weight
+
         # xavier_uniform_ initialization for the tensor product weights
         with torch.no_grad():
-            for weight in self.tp.weight_views():
-                mul_1, mul_2, mul_out = weight.shape
-                # formula from torch.nn.init.xavier_uniform_
-                a = (6 / (mul_1 * mul_2 + mul_out)) ** 0.5
-                new_weight = torch.empty_like(weight)
-                new_weight.uniform_(-a, a)
-                weight[:] = new_weight
-            for weight in self.tp_center.weight_views():
-                mul_1, mul_2, mul_out = weight.shape
-                # formula from torch.nn.init.xavier_uniform_
-                a = (6 / (mul_1 * mul_2 + mul_out)) ** 0.5
-                new_weight = torch.empty_like(weight)
-                new_weight.uniform_(-a, a)
-                weight[:] = new_weight
+            self.tp.weight.uniform_(-1, 1)
 
     def forward(self, f_in):
         # f_in shape: [CUBE_SIZE**3, 4]
