@@ -108,6 +108,16 @@ class E3nn(torch.nn.Module):
         with torch.no_grad():
             self.tp.weight.uniform_(-1, 1)
 
+        # # kaiming_uniform_ initialization for the tensor product weights
+        # with torch.no_grad():
+        #     for weight in self.tp.weight_views():
+        #         mul_1, mul_2, mul_out = weight.shape
+        #         # formula from torch.nn.init.kaiming_uniform_
+        #         a = (6 / mul_1) ** 0.5
+        #         new_weight = torch.empty_like(weight)
+        #         new_weight.uniform_(-a, a)
+        #         weight[:] = new_weight
+
     def forward(self, f_in):
         # f_in shape: [CUBE_SIZE**3, 4]
         f_hidden = self.tp(f_in, self.sh)
