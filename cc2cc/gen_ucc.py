@@ -589,6 +589,7 @@ def ucc(mol, grids, name, args, evaluate=False):
     mycc.conv_tol = 1e-12
     mycc.conv_tol_normt = 1e-8
     mycc.max_cycle = 200
+    mycc.BLKMIN = 1
     _, t1, t2 = mycc.kernel()
     eris = mycc.ao2mo()
     e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
@@ -694,9 +695,11 @@ def ucc(mol, grids, name, args, evaluate=False):
                 np.einsum("pi,ij,qj->pq", mo_b, dm1_cc_mo[1], mo_b),
             ]
         )
+        print("DM1 done.", flush=True)
         dm2_cc = uccsd_rdm._make_rdm2(
             mycc, d1, d2, with_dm1=True, with_frozen=True, ao_repr=True
         )
+        print("DM2 done.", flush=True)
         dm1_cc_mo = np.array(dm1_cc_mo)
         dm2_cc = np.array(dm2_cc)
         del d1, d2, eris, mycc

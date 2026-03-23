@@ -591,6 +591,7 @@ def cc(
     mycc.conv_tol = 1e-12
     mycc.conv_tol_normt = 1e-8
     mycc.max_cycle = 200
+    mycc.BLKMIN = 1
     _, t1, t2 = mycc.kernel()
     eris = mycc.ao2mo()
     e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
