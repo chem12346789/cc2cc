@@ -683,6 +683,7 @@ def ucc(mol, grids, name, args, evaluate=False):
                 cc_grad.de = cc_grad.symmetrize(cc_grad.de, cc_grad.atmlst)
             cc_grad._finalize()
             grad_cc = cc_grad.de
+        print("Grad done.", flush=True)
 
         del t1, t2, l1, l2
         gc.collect()

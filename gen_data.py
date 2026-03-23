@@ -66,7 +66,12 @@ train_str_list = [
     # # ########  2  ########
     # # #####################
     # "molecule2-W4_11",
+    "W4_11-ch2ch",
+    "W4_11-ch2nh2",
     "W4_11-ch3nh",
+    "W4_11-hcnh",
+    "W4_11-s2",
+    "W4_11-ssh",
 ]
 
 eval_str_list = [
