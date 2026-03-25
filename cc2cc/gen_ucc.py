@@ -8,8 +8,8 @@ import torch
 
 import pyscf
 from pyscf import lib
-
 import pyscf.cc
+import pyscf.grad
 from pyscf.cc import uccsd_t
 from pyscf.cc import uccsd_rdm
 from pyscf.grad import uccsd as uccsd_grad
@@ -192,11 +192,12 @@ def ucc(mol, grids, name, args, evaluate=False):
         dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
-    data_dict = {}
     # Generate input data
-    get_dft_grad(mol, grids, dm1_dft, data_dict)
+    data_dict = {}
 
-    if "grad2force" in data_dict and grad_cc is not None:
+    if not evaluate:
+        get_dft_grad(mol, grids, dm1_dft, data_dict)
+
         # HF gradient
         ghf = pyscf.grad.uhf.Gradients(mf)
         grad_hf = ghf.kernel()

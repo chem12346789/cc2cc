@@ -7,6 +7,7 @@ import pyscf
 from pyscf import lib
 
 import pyscf.cc
+import pyscf.grad
 from pyscf.cc import ccsd_t_lambda
 from pyscf.cc import ccsd_t
 from pyscf.cc import ccsd_rdm
@@ -154,8 +155,8 @@ def cc(
         dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
-    data_dict = {}
     # Generate input data
+    data_dict = {}
     if not evaluate:
         get_dft_grad(mol, grids, dm1_dft, data_dict)
 

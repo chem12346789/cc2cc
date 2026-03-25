@@ -26,9 +26,9 @@ exclude = []
 namespaces = false
 
 [tool.pyright]
-reportArgumentType = warning
-reportAttributeAccessIssue = warning
-reportUndefinedVariable = error
+reportArgumentType = "warning"
+reportAttributeAccessIssue = "warning"
+reportUndefinedVariable = "error"
 reportCallIssue = false
 reportOptionalMemberAccess = false
 reportOptionalOperand = false

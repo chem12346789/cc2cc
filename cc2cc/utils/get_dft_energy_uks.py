@@ -7,8 +7,10 @@ import opt_einsum as oe
 import torch
 
 import pyscf
+import pyscf.dft
 
 from cc2cc.utils.get_dft_energy_rks import block_loop_rdm2
+
 
 def get_dft_energy(
     mol,

@@ -7,6 +7,7 @@ import opt_einsum as oe
 import torch
 
 import pyscf
+import pyscf.dft
 
 
 def block_loop_rdm2(nao):
