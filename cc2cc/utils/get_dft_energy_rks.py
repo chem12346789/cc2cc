@@ -68,7 +68,7 @@ def get_dft_energy(
     rho_hf = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_hf, xctype="GGA")
 
     if evaluate:
-        return rho_dft, {}
+        return {}
     else:
         dft_mo_coeff = mdft.mo_coeff
         mf_mo_coeff = mf.mo_coeff

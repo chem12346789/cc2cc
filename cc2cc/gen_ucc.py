@@ -14,11 +14,10 @@ from pyscf.cc import uccsd_t
 from pyscf.cc import uccsd_rdm
 from pyscf.grad import uccsd as uccsd_grad
 
-from cc2cc.gen_cc import is_hermitian
-
 from cc2cc.utils.pyscf_uccsd_t_lambda import kernel as uccsd_t_lambda_kernel
 from cc2cc.utils.pyscf_uccsd_t_u_gamma1_intermediates import u_gamma1_intermediates
 from cc2cc.utils.pyscf_uccsd_t_u_gamma2_intermediates import u_gamma2_intermediates
+
 from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.get_dft_energy_uks import get_dft_energy

@@ -10,10 +10,9 @@ import pyscf.cc
 from pyscf.cc import ccsd_t_lambda
 from pyscf.cc import ccsd_t
 from pyscf.cc import ccsd_rdm
-
+from pyscf.grad import ccsd as ccsd_grad
 # from pyscf.cc.ccsd_t_rdm import _gamma1_intermediates
 from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
-from pyscf.grad import ccsd as ccsd_grad
 
 from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
@@ -157,9 +156,9 @@ def cc(
 
     data_dict = {}
     # Generate input data
-    get_dft_grad(mol, grids, dm1_dft, data_dict)
+    if not evaluate:
+        get_dft_grad(mol, grids, dm1_dft, data_dict)
 
-    if "grad2force" in data_dict and grad_cc is not None:
         # HF gradient
         ghf_hf = pyscf.grad.rhf.Gradients(mf)
         grad_hf = ghf_hf.kernel()

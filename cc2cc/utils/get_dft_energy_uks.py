@@ -42,7 +42,7 @@ def get_dft_energy(
     ]
 
     if evaluate:
-        return rho_dft, {}
+        return {}
     else:
         dft_mo_coeff = mdft.mo_coeff
         mf_mo_coeff = mf.mo_coeff
