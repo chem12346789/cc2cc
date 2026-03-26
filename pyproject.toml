@@ -32,3 +32,6 @@ reportUndefinedVariable = "error"
 reportCallIssue = false
 reportOptionalMemberAccess = false
 reportOptionalOperand = false
+
+[tool.pylance]
+reportGeneralTypeIssues = "warning"
