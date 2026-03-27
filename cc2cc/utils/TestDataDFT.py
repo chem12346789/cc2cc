@@ -4,6 +4,7 @@ import warnings
 import numpy as np
 
 import pyscf
+import pyscf.dft
 
 from cc2cc.utils.env_var import DATA_TEST_PATH
 
@@ -22,6 +23,28 @@ def diff_rho(mol, dm1_compare1, dm1_compare2, grids):
     drho = pyscf.dft.numint.eval_rho(mol, ao, ddm, xctype="LDA")
 
     return np.sum(np.abs(drho) * grids.weights)
+
+
+def diff_I_value(mol, dm1_compare1, dm1_compare2, grids):
+    """
+    Calculate the difference between two density.
+    I = \frac{\int |rho1 - rho2|^2 \d r}{\int |rho1|^2 \d r + \int |rho2|^2 \d r}
+    """
+    ao = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=0)
+    if len(np.shape(dm1_compare1)) != len(np.shape(dm1_compare2)):
+        raise ValueError("dm1_compare1 and dm1_compare2 must have the same dimension.")
+    if len(np.shape(dm1_compare1)) == 3:
+        dm1_compare1 = dm1_compare1[0] + dm1_compare1[1]
+        dm1_compare2 = dm1_compare2[0] + dm1_compare2[1]
+    rho1 = pyscf.dft.numint.eval_rho(mol, ao, dm1_compare1, xctype="LDA")
+    rho2 = pyscf.dft.numint.eval_rho(mol, ao, dm1_compare2, xctype="LDA")
+    drho = rho1 - rho2
+    I_value = np.sum(np.abs(drho) ** 2 * grids.weights) / (
+        np.sum(np.abs(rho1) ** 2 * grids.weights)
+        + np.sum(np.abs(rho2) ** 2 * grids.weights)
+    )
+
+    return I_value
 
 
 class TestDataDFT:
