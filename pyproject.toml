@@ -26,12 +26,19 @@ exclude = []
 namespaces = false
 
 [tool.pyright]
+reportGeneralTypeIssues = "warning"
 reportArgumentType = "warning"
-reportAttributeAccessIssue = "warning"
 reportUndefinedVariable = "error"
+reportOperatorIssue = false
 reportCallIssue = false
 reportOptionalMemberAccess = false
 reportOptionalOperand = false
 
 [tool.pylance]
 reportGeneralTypeIssues = "warning"
+reportArgumentType = "warning"
+reportUndefinedVariable = "error"
+reportOperatorIssue = false
+reportCallIssue = false
+reportOptionalMemberAccess = false
+reportOptionalOperand = false

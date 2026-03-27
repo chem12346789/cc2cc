@@ -20,7 +20,7 @@ from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.pyscf_ccsd_t_rdm import _gamma1_intermediates
 from cc2cc.utils.get_dft_energy_rks import get_dft_energy
 from cc2cc.utils.get_dft_grad_rks import get_dft_grad
-from cc2cc.utils.zmp import zmp
+# from cc2cc.utils.zmp import zmp
 
 def is_hermitian(matrix, tol=1e-8):
     return np.allclose(matrix, matrix.conj().T, atol=tol)

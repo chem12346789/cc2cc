@@ -22,7 +22,7 @@ from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.get_dft_energy_uks import get_dft_energy
 from cc2cc.utils.get_dft_grad_uks import get_dft_grad
-from cc2cc.utils.zmp import uzmp
+# from cc2cc.utils.zmp import uzmp
 
 
 def ucc(mol, grids, name, args, evaluate=False):
