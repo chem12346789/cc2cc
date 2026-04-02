@@ -20,59 +20,59 @@ from cc2cc.utils.get_zmp import get_zmp_rks, get_zmp_uks
 
 from cc2cc.utils.env_var import EDGE_SIZE
 from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
+from cc2cc.utils.get_dft_energy_rks import get_dft_energy as get_dft_energy_rks
+from cc2cc.utils.get_dft_energy_uks import get_dft_energy as get_dft_energy_uks
 
 
 train_str_list = [
-    "W4_11-n2",
-    "W4_11-o2",
-    # # # #####################
-    # # # ########  0  ########
-    # # # #####################
-    # "molecule0-W4_11",
-    # "molecule0-ADDON",
-    # "AHB21-1A",
-    # "AHB21-4A",
-    # "ALK8-li+",
-    # "ALK8-na+",
-    # "ALKBDE10-ca",
-    # "ALKBDE10-k",
-    # "ALKBDE10-li",
-    # "ALKBDE10-mg",
-    # "ALKBDE10-na",
-    # "CHB6-24A",
-    # "DIPCS10-be_2+",
-    # "DIPCS10-mg_2+",
-    # "G21EA-EA_c-",
-    # "G21EA-EA_o-",
-    # "G21EA-EA_p-",
-    # "G21EA-EA_s-",
-    # "G21EA-EA_si-",
-    # "G21IP-al+",
-    # "G21IP-b+",
-    # "G21IP-be+",
-    # "G21IP-c+",
-    # "G21IP-cl+",
-    # "G21IP-f+",
-    # "G21IP-mg+",
-    # "G21IP-n+",
-    # "G21IP-o+",
-    # "G21IP-p+",
-    # "G21IP-s+",
-    # "G21IP-si+",
-    # "HEAVYSB11-br",
-    # "SIE4x4-he",
-    # "SIE4x4-he+",
-    # "RG18-ne",
-    # "RG18-ar",
-    # "RG18-kr",
-    # # # #####################
-    # # # ########  1  ########
-    # # # #####################
-    # "molecule1-W4_11",
-    # # # #####################
-    # # # ########  2  ########
-    # # # #####################
-    # "molecule2-W4_11",
+    # # #####################
+    # # ########  0  ########
+    # # #####################
+    "molecule0-W4_11",
+    "molecule0-ADDON",
+    "AHB21-1A",
+    "AHB21-4A",
+    "ALK8-li+",
+    "ALK8-na+",
+    "ALKBDE10-ca",
+    "ALKBDE10-k",
+    "ALKBDE10-li",
+    "ALKBDE10-mg",
+    "ALKBDE10-na",
+    "CHB6-24A",
+    "DIPCS10-be_2+",
+    "DIPCS10-mg_2+",
+    "G21EA-EA_c-",
+    "G21EA-EA_o-",
+    "G21EA-EA_p-",
+    "G21EA-EA_s-",
+    "G21EA-EA_si-",
+    "G21IP-al+",
+    "G21IP-b+",
+    "G21IP-be+",
+    "G21IP-c+",
+    "G21IP-cl+",
+    "G21IP-f+",
+    "G21IP-mg+",
+    "G21IP-n+",
+    "G21IP-o+",
+    "G21IP-p+",
+    "G21IP-s+",
+    "G21IP-si+",
+    "HEAVYSB11-br",
+    "SIE4x4-he",
+    "SIE4x4-he+",
+    "RG18-ne",
+    "RG18-ar",
+    "RG18-kr",
+    # # #####################
+    # # ########  1  ########
+    # # #####################
+    "molecule1-W4_11",
+    # # #####################
+    # # ########  2  ########
+    # # #####################
+    "molecule2-W4_11",
 ]
 
 eval_str_list = [
@@ -251,14 +251,57 @@ if __name__ == "__main__":
                 data = dict(np.load(DATA_PATH / f"data_{name}.npz"))
                 dm_tar = data["dm1_cc"]
                 dm_dft = data["dm1_dft"]
+                e_cc = data["e_cc"]
 
                 print(f"mol.spin: {mol.spin}")
                 max_l = 20
 
                 if mol.spin == 0:
-                    get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l)
+                    mzmp, dm1_zmp = get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l)
+                    data_append_dict = get_dft_energy_rks(
+                        mol,
+                        grids,
+                        mzmp,
+                        dm1_zmp,
+                        evaluate=evaluate,
+                    )
+                    for key in data_append_dict:
+                        key_zmp = key.replace("dft", "zmp")
+                        data[key_zmp] = data_append_dict[key]
+                    data["tol_delta_zmp_grids"] = (
+                        data["tol_cc_grids"] - data["tol_zmp_grids"]
+                    )
+                    e_zmp = mzmp.energy_tot(dm1_zmp)
+                    energy_train = e_cc - e_zmp
+                    error_zmp = (
+                        np.sum(data["tol_delta_zmp_grids"] * grids.weights)
+                        - energy_train
+                    )
+                    print(f"Error ZMP: {AU2KCALMOL * error_zmp}")
                 else:
-                    get_zmp_uks(mol, dm_tar, dm_dft, grids, max_l)
+                    mzmp, dm1_zmp = get_zmp_uks(mol, dm_tar, dm_dft, grids, max_l)
+                    data_append_dict = get_dft_energy_uks(
+                        mol,
+                        grids,
+                        mzmp,
+                        dm1_zmp,
+                        evaluate=evaluate,
+                    )
+                    for key in data_append_dict:
+                        key_zmp = key.replace("dft", "zmp")
+                        data[key_zmp] = data_append_dict[key]
+                    data["tol_delta_zmp_grids"] = (
+                        data["tol_cc_grids"] - data["tol_zmp_grids"]
+                    )
+                    if "tol_delta_zmp_grids" in data:
+                        e_zmp = mzmp.energy_tot(dm1_zmp)
+                        energy_train = e_cc - e_zmp
+                        error_zmp = (
+                            np.sum(data["tol_delta_zmp_grids"] * grids.weights)
+                            - energy_train
+                        )
+                        print(f"Error ZMP: {AU2KCALMOL * error_zmp}")
+                np.savez_compressed(DATA_PATH / f"data_{name}", **data)
             else:
                 if mol.spin == 0:
                     cc(mol, grids, name, args, evaluate=evaluate)

@@ -8,10 +8,10 @@ from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
 
 
-def get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l=4):
+def get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l=4, verbose=0):
     mzmp = RZMP(mol, dm_tar, grids, dftxc=1, xc="b3lyp")
     mzmp.diis_space = 64
-    mzmp.verbose = 4
+    mzmp.verbose = verbose
     mzmp.max_cycle = 5000
 
     ao = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=0)
@@ -67,13 +67,13 @@ def get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l=4):
         )
 
     dm_zmp = mzmp.make_rdm1()
-    return dm_zmp
+    return mzmp, dm_zmp
 
 
-def get_zmp_uks(mol, dm_tar, dm_dft, grids, max_l=4):
+def get_zmp_uks(mol, dm_tar, dm_dft, grids, max_l=4, verbose=0):
     mzmp = UZMP(mol, dm_tar, grids, dftxc=1, xc="b3lyp")
     mzmp.diis_space = 64
-    mzmp.verbose = 4
+    mzmp.verbose = verbose
     mzmp.max_cycle = 5000
 
     ao = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=0)
@@ -150,4 +150,4 @@ def get_zmp_uks(mol, dm_tar, dm_dft, grids, max_l=4):
         )
 
     dm_zmp = mzmp.make_rdm1()
-    return dm_zmp
+    return mzmp, dm_zmp

@@ -22,8 +22,7 @@ from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.get_dft_energy_uks import get_cc_energy, get_dft_energy, get_hf_energy
 from cc2cc.utils.get_dft_grad_uks import get_dft_grad
-
-# from cc2cc.utils.zmp import uzmp
+from cc2cc.utils.get_zmp import get_zmp_uks
 
 
 def ucc(mol, grids, name, args, evaluate=False):
@@ -247,6 +246,21 @@ def ucc(mol, grids, name, args, evaluate=False):
         data_dict["tol_cc_grids"] - data_dict["tol_dft_grids"]
     )
 
+    mzmp, dm1_zmp = get_zmp_uks(mol, dm1_cc, dm1_dft, grids, 20)
+    data_append_dict = get_dft_energy(
+        mol,
+        grids,
+        mzmp,
+        dm1_zmp,
+        evaluate=evaluate,
+    )
+    for key in data_append_dict:
+        key_zmp = key.replace("dft", "zmp")
+        data_dict[key_zmp] = data_append_dict[key]
+    data_dict["tol_delta_zmp_grids"] = (
+        data_dict["tol_cc_grids"] - data_dict["tol_zmp_grids"]
+    )
+
     if "tol_delta_grids" in data_dict:
         error = np.sum(data_dict["tol_delta_grids"] * grids.weights) - energy_train
         print(f"Error: {AU2KCALMOL * error}")
@@ -291,6 +305,14 @@ def ucc(mol, grids, name, args, evaluate=False):
             - energy_train
         )
         print(f"Error exc_lerf part: {AU2KCALMOL * error_exc_lerf}")
+
+    if "tol_delta_zmp_grids" in data_dict:
+        e_zmp = mzmp.energy_tot(dm1_zmp)
+        energy_train = e_cc - e_zmp
+        error_zmp = (
+            np.sum(data_dict["tol_delta_zmp_grids"] * grids.weights) - energy_train
+        )
+        print(f"Error ZMP: {AU2KCALMOL * error_zmp}")
 
     data_dict.update(
         {
