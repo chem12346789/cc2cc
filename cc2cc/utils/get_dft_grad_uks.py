@@ -1,4 +1,3 @@
-
 import numpy as np
 
 import pyscf
@@ -6,6 +5,39 @@ from pyscf import lib
 
 from cc2cc.utils.modelscf_rks import get_veff_grad_modified_zeros
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
+
+
+def get_dft_input(mol, grids, dm1_dft, data_dict, max_memory=8000):
+    """
+    Calculate the input of (exchange-correlation energy - DFT energy) on the grids.
+    """
+    mdft = pyscf.scf.UKS(mol)
+    mdft.grids = grids
+    mdft.xc = "b3lyp"
+    mdft.verbose = 4
+    mdft.kernel(dm1_dft)
+
+    rho_cube_dft = np.zeros((len(grids.coords), grids.input_level, EDGE_SIZE**3))
+
+    ni = mdft._numint
+    step = int(max_memory * 1024**2 / (dm1_dft.shape[-1] * EDGE_SIZE**3 * 32 * 8))
+    # 32 is the number of elements in the ao_array and ao_mat, 8 is the size of float64 in bytes
+    print(f"Step size: {step}")
+    for p0, p1 in lib.prange(0, len(grids.coords), step):
+        if grids.screen_index is None:
+            mask = None
+        else:
+            mask = grids.screen_index[p0:p1]
+        coords_ = grids.coords[p0:p1]
+        gridcube = grids.gen_cube(mol, dm1_dft, coords_, mask)
+        rho_cube_dft_part, wv, ao_value = gridcube.gen_cube_rho_uks(
+            ni, dm1_dft, ao_deriv=2, require_vxc=True
+        )
+        rho_cube_dft[p0:p1] = rho_cube_dft_part
+
+    data_dict["rho_cube_dft"] = rho_cube_dft.reshape(
+        len(grids.coords), grids.input_level, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
+    )
 
 
 def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
@@ -36,11 +68,10 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
         )
     )
 
-    nao = dm1_dft.shape[-1]
     rho_cube_dft = np.zeros((len(grids.coords), grids.input_level, EDGE_SIZE**3))
 
     ni = mdft._numint
-    step = int(max_memory * 1024**2 / (nao * EDGE_SIZE**3 * 32 * 8))
+    step = int(max_memory * 1024**2 / (dm1_dft.shape[-1] * EDGE_SIZE**3 * 32 * 8))
     # 32 is the number of elements in the ao_array and ao_mat, 8 is the size of float64 in bytes
     print(f"Step size: {step}")
     for p0, p1 in lib.prange(0, len(grids.coords), step):
