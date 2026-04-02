@@ -7,7 +7,7 @@ import pyscf
 import pyscf.dft
 
 from cc2cc.utils import get_veff_modified_rks, get_veff_grad_modified_rks, diff_rho
-from cc2cc.utils import Grid, TestDataDFT, DATA_PATH
+from cc2cc.utils import Grid, TestDataDFT, DATA_PATH, AU2KCALMOL
 
 
 def test_model_rks(
@@ -98,8 +98,8 @@ def test_model_rks(
         print(
             f"electronic density (dft vs cc) {diff_rho(mol, data["dm1_cc"], data["dm1_dft"], mdft.grids)}"
         )
-        print(f"energy (ai vs dft) {(e_scf - data['e_dft']) * 627.509} Kcal/mol")
-        print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * 627.509} Kcal/mol")
+        print(f"energy (ai vs dft) {(e_scf - data['e_dft']) * AU2KCALMOL} Kcal/mol")
+        print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * AU2KCALMOL} Kcal/mol")
         if args.if_grad:
             print(
                 f"gradient (ai vs dft) {np.linalg.norm(grad_mdft - data['grad_dft'])}"

@@ -43,13 +43,10 @@ def block_loop_rdm2(nao):
         yield i_slice, j_slice, k_slice, l_slice, nao_slice_i, nao_slice_j, nao_slice_k, nao_slice_l
 
 
-def get_dft_energy(
+def get_cc_energy(
     mol,
     grids,
-    mdft,
     mf,
-    dm1_hf,
-    dm1_dft,
     dm1_cc,
     dm1_cc_mo,
     dm2_cc,
@@ -65,21 +62,16 @@ def get_dft_energy(
     ao_value = ao_value[:4]
     ao_1 = ao_value[1:4]
 
-    rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
-    rho_hf = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_hf, xctype="GGA")
-
     if evaluate:
         return {}
     else:
-        dft_mo_coeff = mdft.mo_coeff
         mf_mo_coeff = mf.mo_coeff
 
         rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
-        exc_dft_grids = pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0]
 
         # exchange part from dm2_cc
         print("Start exchange part...")
-        exc_cc_grids = np.zeros_like(exc_dft_grids)
+        exc_cc_grids = np.zeros_like(grids.weights)
         for (
             i_slice,
             j_slice,
@@ -123,13 +115,109 @@ def get_dft_energy(
             torch.cuda.empty_cache()
         print("Exchange part done.\n")
 
+        # hatree part from dm1_cc
+        print("Start hatree part...")
+        hatree_cc_grids = np.zeros_like(grids.weights)
+        int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
+        vele = np.einsum(
+            "pij,ij->p",
+            int1e_grids,
+            dm1_cc,
+        )
+        hatree_cc_grids += 0.5 * vele * rho_cc[0]
+
+        # kinetic part
+        kin_cc_grids = np.zeros_like(grids.weights)
+        kinl_cc_grids = np.zeros_like(grids.weights)
+        eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo)
+        eigs_v_dm1 = mf_mo_coeff @ eigs_v_dm1
+        for i in range(np.shape(eigs_v_dm1)[1]):
+            part = oe.contract(
+                "pm,m,n,pn->p",
+                ao_value[0],
+                eigs_v_dm1[:, i],
+                eigs_v_dm1[:, i],
+                ao_2_diag,
+            )
+            kin_cc_grids -= part * eigs_e_dm1[i] / 2
+
+            partl = oe.contract(
+                "xpm,m,n,xpn->p",
+                ao_1,
+                eigs_v_dm1[:, i],
+                eigs_v_dm1[:, i],
+                ao_1,
+            )
+            kinl_cc_grids += partl * eigs_e_dm1[i] / 2
+
+        # nuclear part
+        nuc_cc_grids = np.zeros_like(grids.weights)
+        nuc_erf_cc_grids = np.zeros_like(grids.weights)
+        for i, coord in enumerate(grids.coords):
+            for i_atom in range(mol.natm):
+                distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
+                if distance > 1e-8:
+                    nuc_cc_grids[i] -= (
+                        rho_cc[0][i] * mol.atom_charges()[i_atom] / distance
+                    )
+                    nuc_erf_cc_grids[i] -= (
+                        rho_cc[0][i]
+                        * erf(1e2 * distance)
+                        * mol.atom_charges()[i_atom]
+                        / distance
+                    )
+        real_nuc_cc = np.einsum("pq,pq->", mol.intor("int1e_nuc"), dm1_cc)
+        nuc_erf_cc_scale = real_nuc_cc / np.sum(nuc_erf_cc_grids * grids.weights)
+        nuc_erf_cc_grids *= nuc_erf_cc_scale
+        print("Nuclear scale factors (cc/dft/hf):", nuc_erf_cc_scale)
+        print("Nuclear part done.\n")
+
+        tol_cc_grids = exc_cc_grids + hatree_cc_grids + kin_cc_grids + nuc_cc_grids
+
+        return {
+            "exc_cc_grids": exc_cc_grids,
+            "hatree_cc_grids": hatree_cc_grids,
+            "kin_cc_grids": kin_cc_grids,
+            "kinl_cc_grids": kinl_cc_grids,
+            "nuc_cc_grids": nuc_cc_grids,
+            "nuc_erf_cc_grids": nuc_erf_cc_grids,
+            "tol_cc_grids": tol_cc_grids,
+        }
+
+
+def get_dft_energy(
+    mol,
+    grids,
+    mdft,
+    dm1_dft,
+    evaluate=False,
+):
+    """
+    Calculate the (exchange-correlation energy - DFT energy) on the grids.
+    """
+    backends = "torch" if torch.cuda.is_available() else "numpy"
+    print(f"Using backend: {backends} for get_dft_energy\n")
+    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+    ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
+    ao_value = ao_value[:4]
+    ao_1 = ao_value[1:4]
+
+    rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
+
+    if evaluate:
+        return {}
+    else:
+        dft_mo_coeff = mdft.mo_coeff
+
+        exc_dft_grids = pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0]
+
         # K part from dm1_dft
         # exchange part
         # - 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_dft[0], dm1_dft[0])
         # - 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_dft[1], dm1_dft[1])
         # alpha is 0.2 in b3lyp
         print("Start K part...")
-        exc_k_dft_grids = np.zeros_like(exc_dft_grids)
+        exc_k_dft_grids = np.zeros_like(grids.weights)
         for (
             i_slice,
             j_slice,
@@ -168,13 +256,116 @@ def get_dft_energy(
             torch.cuda.empty_cache()
         print("Exchange part done.\n")
 
+        # hatree part from dm1_dft
+        print("Start hatree part...")
+        int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
+        hatree_dft_grids = np.zeros_like(grids.weights)
+        vele = np.einsum(
+            "pij,ij->p",
+            int1e_grids,
+            dm1_dft,
+        )
+        hatree_dft_grids += 0.5 * vele * rho_dft[0]
+        print("Hatree part done.\n")
+
+        # kinetic part
+        print("Start kinetic part...")
+        kin_dft_grids = np.zeros_like(grids.weights)
+        kinl_dft_grids = np.zeros_like(grids.weights)
+        for i in range(mol.nelec[0]):
+            part = oe.contract(
+                "pm,m,n,pn->p",
+                ao_value[0],
+                dft_mo_coeff[:, i],
+                dft_mo_coeff[:, i],
+                ao_2_diag,
+            )
+            kin_dft_grids -= part
+
+            partl = oe.contract(
+                "xpm,m,n,xpn->p",
+                ao_1,
+                dft_mo_coeff[:, i],
+                dft_mo_coeff[:, i],
+                ao_1,
+            )
+            kinl_dft_grids += partl
+        print("Kinetic part done.\n")
+
+        # nuclear part
+        print("Start nuclear part...")
+        nuc_dft_grids = np.zeros_like(grids.weights)
+        nuc_erf_dft_grids = np.zeros_like(grids.weights)
+        for i, coord in enumerate(grids.coords):
+            for i_atom in range(mol.natm):
+                distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
+                if distance > 1e-8:
+                    nuc_dft_grids[i] -= (
+                        rho_dft[0][i] * mol.atom_charges()[i_atom] / distance
+                    )
+                    nuc_erf_dft_grids[i] -= (
+                        rho_dft[0][i]
+                        * erf(1e2 * distance)
+                        * mol.atom_charges()[i_atom]
+                        / distance
+                    )
+        real_nuc_dft = np.einsum("pq,pq->", mol.intor("int1e_nuc"), dm1_dft)
+        nuc_erf_dft_scale = real_nuc_dft / np.sum(nuc_erf_dft_grids * grids.weights)
+        nuc_erf_dft_grids *= nuc_erf_dft_scale
+        print("Nuclear scale factors (cc/dft/hf):", nuc_erf_dft_scale)
+        print("Nuclear part done.\n")
+
+        tol_dft_grids = (
+            exc_dft_grids
+            + exc_k_dft_grids
+            + hatree_dft_grids
+            + kin_dft_grids
+            + nuc_dft_grids
+        )
+
+        return {
+            "exc_dft_grids": exc_dft_grids,
+            "exc_k_dft_grids": exc_k_dft_grids,
+            "hatree_dft_grids": hatree_dft_grids,
+            "kin_dft_grids": kin_dft_grids,
+            "kinl_dft_grids": kinl_dft_grids,
+            "nuc_dft_grids": nuc_dft_grids,
+            "nuc_erf_dft_grids": nuc_erf_dft_grids,
+            "tol_dft_grids": tol_dft_grids,
+        }
+
+
+def get_hf_energy(
+    mol,
+    grids,
+    mf,
+    dm1_hf,
+    evaluate=False,
+):
+    """
+    Calculate the (exchange-correlation energy - DFT energy) on the grids.
+    """
+    backends = "torch" if torch.cuda.is_available() else "numpy"
+    print(f"Using backend: {backends} for get_dft_energy\n")
+    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+    ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
+    ao_value = ao_value[:4]
+    ao_1 = ao_value[1:4]
+
+    rho_hf = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_hf, xctype="GGA")
+
+    if evaluate:
+        return {}
+    else:
+        mf_mo_coeff = mf.mo_coeff
+
         # K part from dm1_hf
         # exchange part
         # - 0.5 * oe.contract("pr,qs->pqrs", dm1_hf[0], dm1_hf[0])
         # - 0.5 * oe.contract("pr,qs->pqrs", dm1_hf[1], dm1_hf[1])
         # coefficient = - 2 * 0.5 * 0.5 * 0.5 = -0.25
         print("Start K part from HF...")
-        exc_k_hf_grids = np.zeros_like(exc_dft_grids)
+        exc_k_hf_grids = np.zeros_like(grids.weights)
         for (
             i_slice,
             j_slice,
@@ -214,81 +405,20 @@ def get_dft_energy(
 
         # hatree part from dm1_cc
         print("Start hatree part...")
-        hatree_cc_grids = np.zeros_like(exc_dft_grids)
         int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
-        vele = np.einsum(
-            "pij,ij->p",
-            int1e_grids,
-            dm1_cc,
-        )
-        hatree_cc_grids += 0.5 * vele * rho_cc[0]
-
-        # hatree part from dm1_dft
-        hatree_dft_grids = np.zeros_like(exc_dft_grids)
-        vele = np.einsum(
-            "pij,ij->p",
-            int1e_grids,
-            dm1_dft,
-        )
-        hatree_dft_grids += 0.5 * vele * rho_dft[0]
-        print("Hatree part done.\n")
-
-        # hatree part from dm1_hf
-        hatree_hf_grids = np.zeros_like(exc_dft_grids)
+        hatree_hf_grids = np.zeros_like(grids.weights)
         vele = np.einsum(
             "pij,ij->p",
             int1e_grids,
             dm1_hf,
         )
         hatree_hf_grids += 0.5 * vele * rho_hf[0]
+        print("Hatree part done.\n")
 
         # kinetic part
-        kin_cc_grids = np.zeros_like(exc_dft_grids)
-        kin_dft_grids = np.zeros_like(exc_dft_grids)
-        kin_hf_grids = np.zeros_like(exc_dft_grids)
-        kinl_cc_grids = np.zeros_like(exc_dft_grids)
-        kinl_dft_grids = np.zeros_like(exc_dft_grids)
-        kinl_hf_grids = np.zeros_like(exc_dft_grids)
-        eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo)
-        eigs_v_dm1 = mf_mo_coeff @ eigs_v_dm1
-        for i in range(np.shape(eigs_v_dm1)[1]):
-            part = oe.contract(
-                "pm,m,n,pn->p",
-                ao_value[0],
-                eigs_v_dm1[:, i],
-                eigs_v_dm1[:, i],
-                ao_2_diag,
-            )
-            kin_cc_grids -= part * eigs_e_dm1[i] / 2
-
-            partl = oe.contract(
-                "xpm,m,n,xpn->p",
-                ao_1,
-                eigs_v_dm1[:, i],
-                eigs_v_dm1[:, i],
-                ao_1,
-            )
-            kinl_cc_grids += partl * eigs_e_dm1[i] / 2
-
-        for i in range(mol.nelec[0]):
-            part = oe.contract(
-                "pm,m,n,pn->p",
-                ao_value[0],
-                dft_mo_coeff[:, i],
-                dft_mo_coeff[:, i],
-                ao_2_diag,
-            )
-            kin_dft_grids -= part
-
-            partl = oe.contract(
-                "xpm,m,n,xpn->p",
-                ao_1,
-                dft_mo_coeff[:, i],
-                dft_mo_coeff[:, i],
-                ao_1,
-            )
-            kinl_dft_grids += partl
-
+        print("Start kinetic part...")
+        kin_hf_grids = np.zeros_like(grids.weights)
+        kinl_hf_grids = np.zeros_like(grids.weights)
         for i in range(mol.nelec[0]):
             part = oe.contract(
                 "pm,m,n,pn->p",
@@ -307,38 +437,18 @@ def get_dft_energy(
                 ao_1,
             )
             kinl_hf_grids += partl
+        print("Kinetic part done.\n")
 
         # nuclear part
-        nuc_cc_grids = np.zeros_like(exc_dft_grids)
-        nuc_dft_grids = np.zeros_like(exc_dft_grids)
-        nuc_hf_grids = np.zeros_like(exc_dft_grids)
-        nuc_erf_cc_grids = np.zeros_like(exc_dft_grids)
-        nuc_erf_dft_grids = np.zeros_like(exc_dft_grids)
-        nuc_erf_hf_grids = np.zeros_like(exc_dft_grids)
+        print("Start nuclear part...")
+        nuc_hf_grids = np.zeros_like(grids.weights)
+        nuc_erf_hf_grids = np.zeros_like(grids.weights)
         for i, coord in enumerate(grids.coords):
             for i_atom in range(mol.natm):
                 distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
                 if distance > 1e-8:
-                    nuc_cc_grids[i] -= (
-                        rho_cc[0][i] * mol.atom_charges()[i_atom] / distance
-                    )
-                    nuc_dft_grids[i] -= (
-                        rho_dft[0][i] * mol.atom_charges()[i_atom] / distance
-                    )
                     nuc_hf_grids[i] -= (
                         rho_hf[0][i] * mol.atom_charges()[i_atom] / distance
-                    )
-                    nuc_erf_cc_grids[i] -= (
-                        rho_cc[0][i]
-                        * erf(1e2 * distance)
-                        * mol.atom_charges()[i_atom]
-                        / distance
-                    )
-                    nuc_erf_dft_grids[i] -= (
-                        rho_dft[0][i]
-                        * erf(1e2 * distance)
-                        * mol.atom_charges()[i_atom]
-                        / distance
                     )
                     nuc_erf_hf_grids[i] -= (
                         rho_hf[0][i]
@@ -346,52 +456,17 @@ def get_dft_energy(
                         * mol.atom_charges()[i_atom]
                         / distance
                     )
-        real_nuc_cc = np.einsum("pq,pq->", mol.intor("int1e_nuc"), dm1_cc)
-        real_nuc_dft = np.einsum("pq,pq->", mol.intor("int1e_nuc"), dm1_dft)
         real_nuc_hf = np.einsum("pq,pq->", mol.intor("int1e_nuc"), dm1_hf)
-        nuc_erf_cc_scale = real_nuc_cc / np.sum(nuc_erf_cc_grids * grids.weights)
-        nuc_erf_cc_grids *= nuc_erf_cc_scale
-        nuc_erf_dft_scale = real_nuc_dft / np.sum(nuc_erf_dft_grids * grids.weights)
-        nuc_erf_dft_grids *= nuc_erf_dft_scale
         nuc_erf_hf_scale = real_nuc_hf / np.sum(nuc_erf_hf_grids * grids.weights)
         nuc_erf_hf_grids *= nuc_erf_hf_scale
-        print(
-            "Nuclear scale factors (cc/dft/hf):",
-            nuc_erf_cc_scale,
-            nuc_erf_dft_scale,
-            nuc_erf_hf_scale,
-        )
+        print("Nuclear scale factors (cc/dft/hf):", nuc_erf_hf_scale)
         print("Nuclear part done.\n")
 
-        tol_cc_grids = exc_cc_grids + hatree_cc_grids + kin_cc_grids + nuc_cc_grids
-        tol_dft_grids = (
-            exc_dft_grids
-            + exc_k_dft_grids
-            + hatree_dft_grids
-            + kin_dft_grids
-            + nuc_dft_grids
-        )
-        tol_delta_grids = tol_cc_grids - tol_dft_grids
-
         return {
-            "exc_cc_grids": exc_cc_grids,
-            "hatree_cc_grids": hatree_cc_grids,
-            "kin_cc_grids": kin_cc_grids,
-            "kinl_cc_grids": kinl_cc_grids,
-            "nuc_cc_grids": nuc_cc_grids,
-            "nuc_erf_cc_grids": nuc_erf_cc_grids,
-            "exc_dft_grids": exc_dft_grids,
-            "exc_k_dft_grids": exc_k_dft_grids,
-            "hatree_dft_grids": hatree_dft_grids,
-            "kin_dft_grids": kin_dft_grids,
-            "kinl_dft_grids": kinl_dft_grids,
-            "nuc_dft_grids": nuc_dft_grids,
-            "nuc_erf_dft_grids": nuc_erf_dft_grids,
             "exc_k_hf_grids": exc_k_hf_grids,
             "hatree_hf_grids": hatree_hf_grids,
             "kin_hf_grids": kin_hf_grids,
             "kinl_hf_grids": kinl_hf_grids,
             "nuc_hf_grids": nuc_hf_grids,
             "nuc_erf_hf_grids": nuc_erf_hf_grids,
-            "tol_delta_grids": tol_delta_grids,
         }

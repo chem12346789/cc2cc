@@ -7,28 +7,29 @@ import numpy as np
 
 import pyscf
 import pyscf.md
+import pyscf.dft
 
 from cc2cc.utils import gen_mole, print_computer_info, add_args
 from cc2cc.utils.rotate import rotate
-from cc2cc.utils import Grid, DATA_PATH
+from cc2cc.utils import Grid, DATA_PATH, AU2KCALMOL
 from cc2cc.utils.parser import gen_name_args
 from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc
 
-# from cc2cc.utils.zmp import RZMP
-
-from cc2cc.utils.zmp_debug import RZMP
+from cc2cc.utils.get_zmp import get_zmp_rks, get_zmp_uks
 
 from cc2cc.utils.env_var import EDGE_SIZE
 from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
 
 
 train_str_list = [
-    "W4_11-ch4",
-    # # #####################
-    # # ########  0  ########
-    # # #####################
+    "W4_11-n2",
+    "W4_11-o2",
+    # # # #####################
+    # # # ########  0  ########
+    # # # #####################
     # "molecule0-W4_11",
+    # "molecule0-ADDON",
     # "AHB21-1A",
     # "AHB21-4A",
     # "ALK8-li+",
@@ -59,18 +60,18 @@ train_str_list = [
     # "G21IP-s+",
     # "G21IP-si+",
     # "HEAVYSB11-br",
-    # "RG18-ar",
-    # "RG18-kr",
-    # "RG18-ne",
     # "SIE4x4-he",
     # "SIE4x4-he+",
-    # # #####################
-    # # ########  1  ########
-    # # #####################
+    # "RG18-ne",
+    # "RG18-ar",
+    # "RG18-kr",
+    # # # #####################
+    # # # ########  1  ########
+    # # # #####################
     # "molecule1-W4_11",
-    # # #####################
-    # # ########  2  ########
-    # # #####################
+    # # # #####################
+    # # # ########  2  ########
+    # # # #####################
     # "molecule2-W4_11",
 ]
 
@@ -96,13 +97,13 @@ eval_str_list = [
     # "G2RC-62",
     # "G2RC-67",
     # "HAL59-29_CF3Br-benB",
-    "HAL59-30_CF3I-benB",
+    # "HAL59-30_CF3I-benB",
     # "IL16-152B",
     # "IL16-214B",
     # "IL16-229B",
     # # ######## 1 H ########
     # "HAL59-BrBr_FCCH",
-    "HAL59-FI_FCCH",
+    # "HAL59-FI_FCCH",
     # "PNICO23-22b",
     # # ######## 2 H ########
     # "DC13-o3_c2h2_add",
@@ -130,7 +131,7 @@ eval_str_list = [
     # # ######## 2 H ########
     # "RSE43-P28",
     # # ######## 3 H ########
-    "HAL59-NH3_F3CI",
+    # "HAL59-NH3_F3CI",
     # "PArel-c2h2f41",
     # "PArel-c2h2f42",
     # "RSE43-E28",
@@ -166,8 +167,7 @@ if __name__ == "__main__":
     for name_mol in name_mol_list:
         name = f"{name_mol}_{args.basis}"
 
-        # try:
-        if 1:
+        try:
             mol = gen_mole(
                 name_mol,
                 args.basis,
@@ -243,66 +243,34 @@ if __name__ == "__main__":
                     name = f"{name}_{args.md_number}"
                 else:
                     continue  # for single atom, no need to do md
-            print(f"Processing: {name}")
+            print(f"Processing: {name}", flush=True)
 
             grids = Grid(mol, args.grid_level, 7)
 
-            if args.if_continue:
-                if (DATA_PATH / f"data_{name}.npz").exists():
-                    data = dict(np.load(DATA_PATH / f"data_{name}.npz"))
-                    dm_tar = data["dm1_cc"]
-                    dm_dft = data["dm1_dft"]
+            if args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
+                data = dict(np.load(DATA_PATH / f"data_{name}.npz"))
+                dm_tar = data["dm1_cc"]
+                dm_dft = data["dm1_dft"]
 
-                    mzmp = RZMP(mol, dm_tar)
-                    mzmp.diis_space = 40
+                print(f"mol.spin: {mol.spin}")
+                max_l = 20
 
-                    # mzmp = RZMP(mol, dm_tar)
-                    # mzmp.guide = None
-                    # # mzmp.guide = "faxc"
-
-                    mzmp.max_cycle = 200
-                    max_l = 20
-                    for l in np.linspace(0, max_l, max_l + 1):
-                        mzmp.level_shift = 0.1 * 2**l
-                        print(f"Running ZMP with lambda_ZMP = {2**l}")
-                        mzmp.zscf(2**l)
-                        dm_zmp = mzmp.make_rdm1()
-                        print(f"ZMP DM1:\n{dm_zmp}")
-                        zmp_dipole = pyscf.scf.hf.dip_moment(
-                            mol=mol, dm=dm_zmp, unit="A.U."
-                        )
-                        dft_dipole = pyscf.scf.hf.dip_moment(
-                            mol=mol, dm=dm_dft, unit="A.U."
-                        )
-                        tar_dipole = pyscf.scf.hf.dip_moment(
-                            mol=mol, dm=dm_tar, unit="A.U."
-                        )
-                        print(
-                            f"ZMP, rho diff = {diff_rho(mol, dm_zmp, dm_tar, grids):.3e} "
-                            f"I value = {diff_I_value(mol, dm_zmp, dm_tar, grids):.3e} "
-                            f"dipole diff = {np.linalg.norm(zmp_dipole - tar_dipole):.3e} ",
-                            flush=True,
-                        )
-                        print(
-                            f"DFT, rho diff = {diff_rho(mol, dm_dft, dm_tar, grids):.3e} "
-                            f"I value = {diff_I_value(mol, dm_dft, dm_tar, grids):.3e} "
-                            f"dipole diff = {np.linalg.norm(dft_dipole - tar_dipole):.3e} ",
-                            flush=True,
-                        )
-                    continue
-
+                if mol.spin == 0:
+                    get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l)
+                else:
+                    get_zmp_uks(mol, dm_tar, dm_dft, grids, max_l)
             else:
                 if mol.spin == 0:
                     cc(mol, grids, name, args, evaluate=evaluate)
                 else:
                     ucc(mol, grids, name, args, evaluate=evaluate)
-        # except (ValueError, RuntimeError) as e:
-        #     print(f"ERROR: {name_mol} {args.md_number}")
-        #     print(e)
-        #     error_molecule.append(name)
-        #     print(f"Error molecule: {error_molecule}")
-        # finally:
-        #     print(f"Processed: {name_mol} {args.md_number}")
-        # print()
+        except (ValueError, RuntimeError) as e:
+            print(f"ERROR: {name_mol} {args.md_number}")
+            print(e)
+            error_molecule.append(name)
+            print(f"Error molecule: {error_molecule}")
+        finally:
+            print(f"Processed: {name_mol} {args.md_number}")
+        print()
 
     print(f"Error molecule: {error_molecule}")

@@ -12,15 +12,18 @@ from pyscf.cc import ccsd_t_lambda
 from pyscf.cc import ccsd_t
 from pyscf.cc import ccsd_rdm
 from pyscf.grad import ccsd as ccsd_grad
+
 # from pyscf.cc.ccsd_t_rdm import _gamma1_intermediates
 from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
 
 from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.pyscf_ccsd_t_rdm import _gamma1_intermediates
-from cc2cc.utils.get_dft_energy_rks import get_dft_energy
+from cc2cc.utils.get_dft_energy_rks import get_cc_energy, get_dft_energy, get_hf_energy
 from cc2cc.utils.get_dft_grad_rks import get_dft_grad
+
 # from cc2cc.utils.zmp import zmp
+
 
 def is_hermitian(matrix, tol=1e-8):
     return np.allclose(matrix, matrix.conj().T, atol=tol)
@@ -178,19 +181,35 @@ def cc(
         data_dict["grad_dft_d3bj"] = grad_dft_d3bj
 
     # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
-    data_append_dict = get_dft_energy(
+    data_append_dict = get_cc_energy(
         mol,
         grids,
-        mdft,
         mf,
-        dm1_hf,
-        dm1_dft,
         dm1_cc,
         dm1_cc_mo,
         dm2_cc,
         evaluate=evaluate,
     )
     data_dict.update(data_append_dict)
+    data_append_dict = get_dft_energy(
+        mol,
+        grids,
+        mdft,
+        dm1_dft,
+        evaluate=evaluate,
+    )
+    data_dict.update(data_append_dict)
+    data_append_dict = get_hf_energy(
+        mol,
+        grids,
+        mf,
+        dm1_hf,
+        evaluate=evaluate,
+    )
+    data_dict.update(data_append_dict)
+    data_dict["tol_delta_grids"] = (
+        data_dict["tol_cc_grids"] - data_dict["tol_dft_grids"]
+    )
 
     if "tol_delta_grids" in data_dict:
         error = np.sum(data_dict["tol_delta_grids"] * grids.weights) - energy_train

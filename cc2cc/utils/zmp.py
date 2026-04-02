@@ -1,92 +1,16 @@
 """
-Zhao-Morrison-Parr
-==================
-
-**Summary** This script preforms a Zhao-Morrison-Parr [ZMP1994]_ Kohn Sham inversion.
-
-Written for Python 3.7.4
-
-  :References:
-
-    .. [ZMP1994] Qingsheng Zhao, Robert C Morrison, and Robert G Parr.
-        From electron densities to Kohn-Sham kinetic energies, orbital energies, exchange-correlation potentials, and exchange-correlation energies. (1994)
-        <https://doi.org/10.1103/PhysRevA.50.2138> Physical Review A, 50(3) 2138.
-
-    .. [THG1997] David J Tozer, Nicholas C Handy, and William H Green.
-        Exchange-correlation functionals from ab initio electron densities (1997)
-        <https://doi.org/10.1016/S0009-2614(97)00586 and-1> Chemical Physics Letters, 273(3-4) 183-194
-
-    .. [Pulay1980] P Pulay.
-        Convergence acceleration of iterative sequences. the case of SCF iteration (1980)
-        <https://doi.org/10.1016/0009-2614(80)80396-4> Chemical Physics Letters, 73 (2): 393–398
-
-.. moduleauthor::
-    Seungsoo Nam <skaclitz@yonsei.ac.kr> <http://tccl.yonsei.ac.kr/mediawiki/index.php/Main_Page> ORCID: `000-0001-9948-6140 <https://orcid.org/0000-0001-9948-6140>`_
-
-.. topic:: Funding
-
-    This research was made possible by funding from the National Research Foundation of Korea (NRF-2020R1A2C2007468 and NRF-2020R1A4A1017737).
-
-.. topic:: Internal Log
-
-    **2020-06-13** RJM added doc string templates
-
-    **2020-08-21** SN corrected typos, minor changes in attribute names, etc.
-
+ZMP is a method to invert the density matrix from CCSD(T). See the original paper for details: https://journals.aps.org/pra/abstract/10.1103/PhysRevA.50.2138 and https://arxiv.org/pdf/2603.22140v1.
+It is based on the idea of minimizing the difference between the DFT and CC density matrices in a least-squares sense.
 """
 
 from functools import reduce
+
 import numpy as np
-from pyscf import scf, dft
 
-
-def parse_guide(description):
-    """Summary: Guiding potential parser for ZMP and WY
-
-    Args:
-        description (str) : guiding potential description for inversion
-
-    Returns:
-        (tuple): tuple containing:
-
-            (float): **fac_faxc** factor for Fermi-Amaldi potential (faxc)
-
-            (string): **dft_xc** description of dft part of xc
-
-    """
-
-    def _parse_guide(description):
-        fac_faxc = 0
-        dftxc = ""
-        for token in description.replace("-", "+-").replace(";+", ";").split("+"):
-            if token[0] == "-":
-                sign = -1
-                token = token[1:]
-            else:
-                sign = 1
-
-            if "*" in token:
-                fac, key = token.split("*")
-                if fac[0].isalpha():
-                    fac, key = key, fac
-                fac = sign * float(fac)
-            else:
-                fac, key = sign, token
-            if key.lower() == "faxc":
-                fac_faxc += fac
-            else:
-                dftxc += "+" + str(fac) + "*" + key
-        return fac_faxc, dftxc[1:]
-
-    if "," in description:
-        x_code, c_code = description.split(",")
-        fx, dft_x = _parse_guide(x_code)
-        fc, dft_c = _parse_guide(c_code)
-        fac_faxc = fx + fc
-        dft_xc = dft_x + "," + dft_c
-    else:
-        fac_faxc, dft_xc = _parse_guide(description)
-    return fac_faxc, dft_xc
+import pyscf
+from pyscf.lib import logger
+import pyscf.dft
+from pyscf.dft.numint import _dot_ao_ao_dense
 
 
 class DIIS:
@@ -164,287 +88,171 @@ class DIIS:
         return newfock, diis_error
 
 
-def basic(mz, mol):
-    """Summary: Common basic initialization function for RZMP and UZMP objects
+class RZMP(pyscf.dft.rks.RKS):
 
-    Args:
-        mz : RZMP or UZMP object
-        mol (object) : an instance of :class:`Mole`
+    def __init__(self, mol, dm_tar, grids, faxc=0, dftxc=0, xc="b3lyp"):
+        super().__init__(mol)
+        self.initialize_grids(mol, dm_tar)
 
-    """
-    mz.mol = mol
-    mz.guide = "faxc"
-    mz.diis_space = 40
-    mz.level_shift = 0.2
-    mz.max_cycle = 400
-    mz.conv_tol_dm = 1e-7
-    mz.conv_tol_diis = 1e-5
-    mz.with_df = False
-    mz.verbose = mz.mol.verbose
-    mz.stdout = mz.mol.stdout
-
-    mz.S = mz.mol.intor_symmetric("int1e_ovlp")
-    mz.T = mz.mol.intor_symmetric("int1e_kin")
-    mz.V = mz.mol.intor_symmetric("int1e_nuc")
-
-
-class RZMP:
-    """Summary: Perform ZMP calculation in restricted scheme, see [ZMP1994]_ for detail.
-
-    .. _restricted-zmp:
-
-    Attributes:
-        mol (object) : an instance of :class:`Mole`
-        dm_tar (ndarray) : Density matrix of target density in atomic orbital basis representation
-        dm_aux (ndarray) : Auxilary density matrix to construct a fixed part of fock matrix. Default is dm_tar
-        guide (str) : Guiding potential. Can be set as
-
-            |  None : no guiding potential except external potential
-            |  'faxc' : Exchange-correlation part of Fermi-Amaldi potential
-            |  xc   : ks.xc attribute in pyscf DFT
-
-        diis_space (int) : DIIS space size. Default is 40
-        level_shift (float) : Level shift (in AU) for virtual space. Default is 0.2
-        max_cycle (int) : max number of zscf iterations. Defalut is 400
-        conv_tol_dm (float) :  converge threshold for density matrix. Default is 1e-7
-        conv_tol_diis (float) : converge threshold for DIIS error. Default is 1e-5
-
-    :ivar:
-        * **converged** (bool) – zscf converged or not
-        * **mo_energy** (ndarray) –  molecular orbital energies (Note that energies when level_shift = 0)
-        * **mo_occ** (ndarray) –  molecular orbital occupation numbers
-        * **mo_coeff** (ndarray) – molecular orbital coefficients
-        * **dm** (ndarray) – density matrix in atomic orbital basis representation
-        * **l** (float) – the last given lambda
-
-    """
-
-    def __init__(self, mol, dm_tar, dm_aux=None):
-        basic(self, mol)
-
+        self.faxc = faxc * (1.0 - 1.0 / self.mol.nelectron)
+        print(f"Using faxc = {self.faxc:.2f} in RZMP", flush=True)
+        self.dftxc = dftxc
+        self.xc = xc
         self.dm_tar = dm_tar
-        self.initialized = False
         self.dm = dm_tar
-        self.dm_aux = dm_aux
         self.dm_old = dm_tar
-        self.verbose = mol.verbose
+        self.ao = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=0)
+        self.weights = grids.weights
+        self.rho_tar = pyscf.dft.numint.eval_rho(
+            mol, self.ao, self.dm_tar, xctype="LDA"
+        )
+        self.J_tar = self.get_j(self.mol, self.dm_tar)
+        self.S = mol.intor_symmetric("int1e_ovlp")
 
-    get_occ = scf.hf.get_occ
-    make_rdm1 = scf.hf.SCF.make_rdm1
+        self.conv_tol_dm = 1e-8
+        self.conv_tol_diis = 1e-4
 
-    def initialize(self):
-        """Summary: Construct a fixed part of fock matrix F0
+        J_tar, K_tar = self.get_jk(self.mol, self.dm_tar)
+        ni = self._numint
+        vxc = ni.nr_rks(self.mol, self.grids, self.xc, self.dm_tar)[2]
+        self.extra_vxc = self.dftxc * vxc
+        self.F0 = self.get_hcore(mol) + self.extra_vxc
 
-        .. math::
-
-            F_{0} = T + V_{ext} + V_{h} + V_{g}
-
-        """
-        self.get_ovlp = lambda *args: self.S
-
-        if self.with_df:
-            self.mf = dft.RKS(self.mol).density_fit()
+        if not ni.libxc.is_hybrid_xc(self.xc):
+            self.F0 = self.F0 + J_tar
         else:
-            self.mf = dft.RKS(self.mol)
-        self.mf.grids.build()
-        self.coords = self.mf.grids.coords
-        self.weights = self.mf.grids.weights
-        self.ao = dft.numint.eval_ao(self.mol, self.coords)
+            omega, alpha, hyb = ni.rsh_and_hybrid_coeff(self.xc, spin=mol.spin)
 
-        if self.dm_aux is None:
-            self.dm_aux = self.dm_tar
-        self.J_tar = self.mf.get_jk(self.mol, self.dm_tar)[0]
+            if omega == 0:
+                K_tar *= hyb
+            elif alpha == 0:  # LR=0, only SR exchange
+                raise NotImplementedError("LR=0 is not implemented yet")
+            elif hyb == 0:  # SR=0, only LR exchange
+                raise NotImplementedError("SR=0 is not implemented yet")
+            self.F0 = self.F0 + J_tar - K_tar * 0.5
 
-        if self.guide is None:
-            self.V0 = np.zeros_like(self.dm_tar)
-        else:
-            fac_faxc, dft_xc = parse_guide(self.guide)
-
-            N = self.mol.nelectron
-            J_tar = scf.hf.get_jk(self.mol, self.dm_aux)[0]
-            VFA = -(1.0 / N) * (J_tar)
-
-            self.mf.xc = dft_xc
-            Vxcdft = self.mf.get_veff(self.mol, dm=self.dm_aux)
-
-            self.V0 = fac_faxc * VFA + Vxcdft
-
-        self.F0 = self.T + self.V + self.V0
-        self.initialized = True
-
-    def zscf(self, l):
-        """Summary:
-        Run self-consistent ZMP equation under given lambda (l). Prints lambda,
-        HOMO-LUMO, dN and C to terminal.
-
-        Args:
-            l (float): Lagrange multiplier lambda
-        """
-        if not self.initialized:
-            self.initialize()
-        self.l = l
-
-        self.converged = False
+    def zscf(self, l=0.0):
         self.zdiis = DIIS(self.S, self.diis_space)
 
+        t0 = (logger.process_clock(), logger.perf_counter())
+
         for cycle in range(1, self.max_cycle):
-            self.J = self.mf.get_jk(self.mol, self.dm)[0]
+            self.J = self.get_jk(self.mol, self.dm)[0]
 
-            self.F = self.F0 + l * (self.J - self.J_tar)
-            self.F = scf.hf.level_shift(self.S, self.dm * 0.5, self.F, self.level_shift)
-            self.F, diis_e = self.zdiis.extrapolate(cycle, self.F, self.dm)  # DIIS
+            self.F = self.F0
+            self.F = self.F + l * (self.J - self.J_tar) + self.faxc * self.J
 
-            self.mo_energy, self.mo_coeff = scf.hf.eig(self.F, self.S)
+            rho_zmp = pyscf.dft.numint.eval_rho(
+                self.mol, self.ao, self.dm, xctype="LDA"
+            )
+            wv = self.weights * (rho_zmp - self.rho_tar)
+            self.F = self.F + l * _dot_ao_ao_dense(self.ao, self.ao, wv)
+
+            self.F = pyscf.scf.hf.level_shift(
+                self.S, self.dm * 0.5, self.F, self.level_shift
+            )
+            self.F, diis_e = self.zdiis.extrapolate(cycle, self.F, self.dm)
+
+            self.mo_energy, self.mo_coeff = pyscf.scf.hf.eig(self.F, self.S)
             self.mo_occ = self.get_occ(self.mo_energy, self.mo_coeff)
             self.dm = self.make_rdm1(self.mo_coeff, self.mo_occ)
 
             ddm = self.dm_old - self.dm
             dm_e = np.max(np.abs(ddm))
             self.dm_old = self.dm
-            dm_converged = dm_e < self.conv_tol_dm
-            diis_converged = diis_e < self.conv_tol_diis
             self.mo_energy[self.mo_occ == 0] -= self.level_shift
 
             nocc = self.mol.nelectron // 2
             HOMO, LUMO = self.mo_energy[nocc - 1], self.mo_energy[nocc]
             gap = LUMO - HOMO
 
-            print(f"\rlambda= {l:7.2f}  iter: {cycle:4d} gap= {gap:10.7f}   ", end="\r")
+            t0 = logger.timer(self, f"{cycle:4d} gap {gap:.2e} dm_e {dm_e:.2e}", *t0)
 
+            dm_converged = dm_e < self.conv_tol_dm
+            diis_converged = diis_e < self.conv_tol_diis
             self.converged = dm_converged and diis_converged
             if self.converged and cycle > 1:
                 break
 
-        self.J = self.mf.get_jk(self.mol, self.dm)[0]
-        dn = dft.numint.eval_rho(self.mol, self.ao, self.dm - self.dm_tar)
-        dN = 1000 * np.einsum("r,r", abs(dn), self.weights)
-        C = np.einsum(
-            "ij,ji", self.dm - self.dm_tar, self.J - self.J_tar
-        )  # Objective of minimization
         print(
-            f"lambda= {l:7.2f} niter: {cycle:4d} gap= {LUMO-HOMO:10.7f} dN= {dN:7.2f} C= {C:.2e} "
+            f"In lambda = {l:7.2f}, Use cycles = {cycle + 1}, and final convergence = {self.converged}",
+            flush=True,
         )
 
 
-class UZMP:
-    """Summary: Perform ZMP calculation in unrestricted scheme, see [THG1997]_.
+class UZMP(pyscf.dft.uks.UKS):
 
-    .. _unrestricted-zmp:
+    def __init__(self, mol, dm_tar, grids, faxc=0, dftxc=0, xc="b3lyp"):
+        super().__init__(mol)
+        self.initialize_grids(mol, dm_tar)
 
-    Attributes:
-        mol (object) : an instance of :class:`Mole`
-        dm_tar (ndarray) : Density matrix of target density in atomic orbital basis representation
-        dm_aux (ndarray) : Auxilary density matrix to construct a fixed part of fock matrix. Default is dm_tar
-        guide (str) : Guiding potential. Can be set as
-
-            |  None : no guiding potential except external potential
-            | 'faxc' : Exchange-correlation part of Fermi-Amaldi potential
-            |  xc   : ks.xc attribute in pyscf DFT
-
-        diis_space (int) : DIIS space size. Default is 40
-        level_shift (float) : Level shift (in AU) for virtual space. Default is 0.2
-        max_cycle (int) : max number of zscf iterations. Defalut is 400
-        conv_tol_dm (float) :  converge threshold for density matrix. Default is 1e-7
-        conv_tol_diis (float) : converge threshold for DIIS error. Default is 1e-5
-
-    :ivar:
-        * **converged** (bool) – zscf converged or not
-        * **mo_energy** (ndarray) –  molecular orbital energies (Note that energies when level_shift = 0)
-        * **mo_occ** (ndarray) –  molecular orbital occupation numbers
-        * **mo_coeff** (ndarray) – molecular orbital coefficients
-        * **dm** (ndarray) – density matrix in atomic orbital basis representation
-        * **l** (float) – the last given lambda
-
-    """
-
-    def __init__(self, mol, dm_tar, dm_aux=None):
-        basic(self, mol)
-        self.nelec = [
-            int((mol.nelectron + mol.spin) // 2),
-            int((mol.nelectron - mol.spin) // 2),
-        ]
-
+        self.faxc = faxc * (1.0 - 1.0 / self.mol.nelectron)
+        print(f"Using faxc = {self.faxc:.2f} in UZMP", flush=True)
+        self.dftxc = dftxc
+        self.xc = xc
         self.dm_tar = dm_tar
-        self.initialized = False
         self.dm = dm_tar
-        self.dm_aux = dm_aux
         self.dm_old = dm_tar
-        self.verbose = mol.verbose
+        self.ao = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=0)
+        self.weights = grids.weights
+        self.rho_tar = [
+            pyscf.dft.numint.eval_rho(mol, self.ao, self.dm_tar[0], xctype="LDA"),
+            pyscf.dft.numint.eval_rho(mol, self.ao, self.dm_tar[1], xctype="LDA"),
+        ]
+        self.J_tar = self.get_j(self.mol, self.dm_tar)
+        self.S = mol.intor_symmetric("int1e_ovlp")
 
-    get_occ = scf.uhf.get_occ
-    make_rdm1 = scf.uhf.UHF.make_rdm1
-    spin_square = scf.uhf.UHF.spin_square
+        self.conv_tol_dm = 1e-8
+        self.conv_tol_diis = 1e-4
 
-    def initialize(self):
-        """Summary: Construct a fixed part of fock matrix F0
+        J_tar, K_tar = self.get_jk(self.mol, self.dm_tar)
+        ni = self._numint
+        vxc = ni.nr_uks(self.mol, self.grids, self.xc, self.dm_tar)[2]
+        self.extra_vxc = self.dftxc * vxc
+        self.F0 = self.get_hcore(mol) + self.extra_vxc
 
-        .. math::
-
-            F_{0} = T + V_{ext} + V_{h} + V_{g}
-
-        """
-        self.get_ovlp = lambda *args: self.S
-
-        if self.with_df:
-            self.mf = dft.UKS(self.mol).density_fit()
+        if not ni.libxc.is_hybrid_xc(self.xc):
+            self.F0 = self.F0 + J_tar[0] + J_tar[1]
         else:
-            self.mf = dft.UKS(self.mol)
-        self.mf.grids.build()
-        self.coords = self.mf.grids.coords
-        self.weights = self.mf.grids.weights
-        self.ao = dft.numint.eval_ao(self.mol, self.coords)
+            omega, alpha, hyb = ni.rsh_and_hybrid_coeff(self.xc, spin=mol.spin)
 
-        if self.dm_aux is None:
-            self.dm_aux = self.dm_tar
-        self.J_tar = self.mf.get_jk(self.mol, self.dm_tar)[0]
+            if omega == 0:
+                K_tar *= hyb
+            elif alpha == 0:  # LR=0, only SR exchange
+                raise NotImplementedError("LR=0 is not implemented yet")
+            elif hyb == 0:  # SR=0, only LR exchange
+                raise NotImplementedError("SR=0 is not implemented yet")
+            self.F0 = self.F0 + J_tar[0] + J_tar[1] - K_tar * 0.5
 
-        if self.guide is None:
-            self.V0 = np.zeros_like(self.dm_tar)
-
-        else:
-            fac_faxc, dft_xc = parse_guide(self.guide)
-
-            N = self.mol.nelectron
-            J_tar = scf.hf.get_jk(self.mol, self.dm_aux)[0]
-            VFA = -(1.0 / N) * (J_tar[0] + J_tar[1])
-
-            self.mf.xc = dft_xc
-            Vxcdft = self.mf.get_veff(self.mol, dm=self.dm_aux)
-
-            self.V0 = fac_faxc * np.array((VFA, VFA)) + Vxcdft
-
-        self.F0 = (self.T + self.V + self.V0[0], self.T + self.V + self.V0[1])
-        self.initialized = True
-
-    def zscf(self, l):
-        """Summary: Run self-consistent ZMP equation under given lambda (l)
-
-        Args:
-        l (float): Lagrange multiplier lambda
-
-        """
-        if not self.initialized:
-            self.initialize()
-        self.l = l
-
-        self.converged = False
+    def zscf(self, l=0.0):
         self.zdiis_a = DIIS(self.S, self.diis_space)
         self.zdiis_b = DIIS(self.S, self.diis_space)
 
+        t0 = (logger.process_clock(), logger.perf_counter())
+
         for cycle in range(1, self.max_cycle):
-            self.J = self.mf.get_jk(self.mol, self.dm)[0]
+            J = self.get_jk(self.mol, self.dm)[0]
 
-            self.Fa = self.F0[0] + 2 * l * (self.J[0] - self.J_tar[0])
-            self.Fb = self.F0[1] + 2 * l * (self.J[1] - self.J_tar[1])
+            Fa, Fb = self.F0
+            Fa = Fa + 2 * l * (J[0] - self.J_tar[0]) + self.faxc * (J[0] + J[1])
+            Fb = Fb + 2 * l * (J[1] - self.J_tar[1]) + self.faxc * (J[0] + J[1])
 
-            self.Fa = scf.hf.level_shift(self.S, self.dm[0], self.Fa, self.level_shift)
-            self.Fb = scf.hf.level_shift(self.S, self.dm[1], self.Fb, self.level_shift)
+            rho_zmp = [
+                pyscf.dft.numint.eval_rho(self.mol, self.ao, self.dm[0], xctype="LDA"),
+                pyscf.dft.numint.eval_rho(self.mol, self.ao, self.dm[1], xctype="LDA"),
+            ]
+            wva = self.weights * (rho_zmp[0] - self.rho_tar[0])
+            wvb = self.weights * (rho_zmp[1] - self.rho_tar[1])
+            Fa = Fa + l * _dot_ao_ao_dense(self.ao, self.ao, wva)
+            Fb = Fb + l * _dot_ao_ao_dense(self.ao, self.ao, wvb)
 
-            self.Fa, diis_e_a = self.zdiis_a.extrapolate(cycle, self.Fa, self.dm[0])
-            self.Fb, diis_e_b = self.zdiis_b.extrapolate(cycle, self.Fb, self.dm[1])
+            Fa = pyscf.scf.hf.level_shift(self.S, self.dm[0], Fa, self.level_shift)
+            Fb = pyscf.scf.hf.level_shift(self.S, self.dm[1], Fb, self.level_shift)
+            Fa, diis_e_a = self.zdiis_a.extrapolate(cycle, Fa, self.dm[0])
+            Fb, diis_e_b = self.zdiis_b.extrapolate(cycle, Fb, self.dm[1])
 
-            e_a, c_a = scf.hf.eig(self.Fa, self.S)
-            e_b, c_b = scf.hf.eig(self.Fb, self.S)
+            e_a, c_a = pyscf.scf.hf.eig(Fa, self.S)
+            e_b, c_b = pyscf.scf.hf.eig(Fb, self.S)
             self.mo_energy = np.array((e_a, e_b))
             self.mo_coeff = np.array((c_a, c_b))
 
@@ -454,8 +262,6 @@ class UZMP:
             ddm = self.dm_old - self.dm
             dm_e = np.max(np.abs(ddm))
             self.dm_old = self.dm
-            dm_converged = dm_e < self.conv_tol_dm
-            diis_converged = diis_e_a + diis_e_b < self.conv_tol_diis
             self.mo_energy[0][self.mo_occ[0] == 0] -= self.level_shift
             self.mo_energy[1][self.mo_occ[1] == 0] -= self.level_shift
 
@@ -468,27 +274,15 @@ class UZMP:
             )
             gap = LUMO - HOMO
 
-            print(f"\rlambda= {l:7.2f}  iter: {cycle:4d} gap= {gap:10.7f}   ", end="\r")
+            t0 = logger.timer(self, f"{cycle:4d} gap {gap:.2e} dm_e {dm_e:.2e}", *t0)
 
+            dm_converged = dm_e < self.conv_tol_dm
+            diis_converged = diis_e_a + diis_e_b < self.conv_tol_diis
             self.converged = dm_converged and diis_converged
             if self.converged and cycle > 1:
                 break
 
-        self.J = self.mf.get_jk(self.mol, self.dm)[0]
-        # Calculate alpha/beta density difference separately
-        # dn_a = dft.numint.eval_rho(self.mol, self.ao, (self.dm-self.dm_tar)[0])
-        # dn_b = dft.numint.eval_rho(self.mol, self.ao, (self.dm-self.dm_tar)[1])
-        # dN = 1000*np.einsum('r,r', abs(dn_a)+abs(dn_b), self.weights)
-        dn = dft.numint.eval_rho(
-            self.mol,
-            self.ao,
-            (self.dm[0] + self.dm[1] - self.dm_tar[0] - self.dm_tar[1]),
-        )
-        dN = 1000 * np.einsum("r,r", abs(dn), self.weights)
-
-        Ca = np.einsum("ij,ji", self.dm[0] - self.dm_tar[0], self.J[0] - self.J_tar[0])
-        Cb = np.einsum("ij,ji", self.dm[1] - self.dm_tar[1], self.J[1] - self.J_tar[1])
-        C = 2 * (Ca + Cb)
         print(
-            f"lambda= {l:7.2f} niter: {cycle:4d} gap= {gap:10.7f} dN= {dN:7.2f} C= {C:.2e}  "
+            f"In lambda = {l:7.2f}, Use cycles = {cycle + 1}, and final convergence = {self.converged}",
+            flush=True,
         )
