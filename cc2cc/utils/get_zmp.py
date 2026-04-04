@@ -9,6 +9,9 @@ from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
 
 
 def get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l=4, verbose=0):
+    if dm_tar is None:
+        return None, None
+
     mzmp = RZMP(mol, dm_tar, grids, dftxc=1, xc="b3lyp")
     mzmp.diis_space = 64
     mzmp.verbose = verbose

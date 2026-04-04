@@ -97,13 +97,13 @@ eval_str_list = [
     # "G2RC-62",
     # "G2RC-67",
     # "HAL59-29_CF3Br-benB",
-    # "HAL59-30_CF3I-benB",
+    "HAL59-30_CF3I-benB",
     # "IL16-152B",
     # "IL16-214B",
     # "IL16-229B",
     # # ######## 1 H ########
     # "HAL59-BrBr_FCCH",
-    # "HAL59-FI_FCCH",
+    "HAL59-FI_FCCH",
     # "PNICO23-22b",
     # # ######## 2 H ########
     # "DC13-o3_c2h2_add",
@@ -131,7 +131,7 @@ eval_str_list = [
     # # ######## 2 H ########
     # "RSE43-P28",
     # # ######## 3 H ########
-    # "HAL59-NH3_F3CI",
+    "HAL59-NH3_F3CI",
     # "PArel-c2h2f41",
     # "PArel-c2h2f42",
     # "RSE43-E28",
@@ -252,6 +252,21 @@ if __name__ == "__main__":
                 dm_tar = data["dm1_cc"]
                 dm_dft = data["dm1_dft"]
                 e_cc = data["e_cc"]
+
+                data["tol_cc_grids"] = (
+                    data["exc_cc_grids"]
+                    + data["hatree_cc_grids"]
+                    + data["kin_cc_grids"]
+                    + data["nuc_cc_grids"]
+                )
+
+                data["tol_dft_grids"] = (
+                    data["exc_dft_grids"]
+                    + data["exc_k_dft_grids"]
+                    + data["hatree_dft_grids"]
+                    + data["kin_dft_grids"]
+                    + data["nuc_dft_grids"]
+                )
 
                 print(f"mol.spin: {mol.spin}")
                 max_l = 20
