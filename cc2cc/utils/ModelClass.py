@@ -33,6 +33,7 @@ class ModelClass:
         self.model_name = self.args.model
         self.load = self.args.load
         self.max_norm = self.args.max_norm
+        self.start_step = 0
 
         self.dir_checkpoint = (
             CHECKPOINTS_PATH
@@ -73,6 +74,19 @@ class ModelClass:
         if self.args.precision == "float64":
             self.model.double()
 
+        if self.args.optimizer == "AdamW":
+            self.optimizer = optim.AdamW(
+                self.model.parameters(),
+                lr=self.args.lr,
+                weight_decay=self.args.weight_decay,
+            )
+        elif self.args.optimizer == "Adafactor":
+            self.optimizer = optim.Adafactor(
+                self.model.parameters(),
+                lr=self.args.lr,
+                weight_decay=self.args.weight_decay,
+            )
+
         self.device = next(self.model.parameters()).device
         self.dtype = next(self.model.parameters()).dtype
         self.cube_type = self.model.cube_type
@@ -82,10 +96,14 @@ class ModelClass:
         self.print(f"cube size: {self.cube_size}")
         self.print(f"input level: {self.input_level}")
 
-        if self.args.save_dir is not None and self.args.save_dir != "":
-            self.dir_checkpoint = (
-                CHECKPOINTS_PATH / f"checkpoint_{self.args.save_dir}"
-            ).resolve()
+        if self.args.if_resume:
+            self.print("Resuming training from checkpoint.")
+            self.start_step = self.args.load_epoch
+            self.args.save_dir = f"atom-{self.args.load}"
+
+        self.dir_checkpoint = (
+            CHECKPOINTS_PATH / f"checkpoint_{self.args.save_dir}"
+        ).resolve()
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=True)
@@ -128,40 +146,16 @@ class ModelClass:
                 }
             self.state_dict = state_dict
             self.args.model = checkpoint["model"]
+            if "optimizer" in checkpoint:
+                self.optimizer.load_state_dict(checkpoint["optimizer"])
             self.print(f"Model loaded from {load_path} with model {self.args.model}")
         else:
             self.print("Model not found, starting from scratch.")
-
-    def save_model(self, epoch):
-        """
-        Save the model to the checkpoint.
-        """
-        if not self.dir_checkpoint.exists():
-            self.print(f"Directory {self.dir_checkpoint} not found. Created!")
-            (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
-        state_dict = self.model.state_dict()
-        torch.save(
-            {"state_dict": state_dict, "model": self.args.model},
-            self.dir_checkpoint / f"{epoch}.pth",
-        )
 
     def init_train(self):
         """
         Initialize the optimizer, scheduler, loss function and checkpoint_dir.
         """
-        if self.args.optimizer == "AdamW":
-            self.optimizer = optim.AdamW(
-                self.model.parameters(),
-                lr=self.args.lr,
-                weight_decay=self.args.weight_decay,
-            )
-        elif self.args.optimizer == "Adafactor":
-            self.optimizer = optim.Adafactor(
-                self.model.parameters(),
-                lr=self.args.lr,
-                weight_decay=self.args.weight_decay,
-            )
-
         if self.args.scheduler == "cosine":
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
@@ -301,6 +295,23 @@ class ModelClass:
 
         self.print(f"Training on {len(self.database_train)} systems.")
         self.print(f"Evaluating on {len(self.database_eval)} systems.")
+
+    def save_model(self, epoch):
+        """
+        Save the model to the checkpoint.
+        """
+        if not self.dir_checkpoint.exists():
+            self.print(f"Directory {self.dir_checkpoint} not found. Created!")
+            (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
+        state_dict = self.model.state_dict()
+        torch.save(
+            {
+                "state_dict": state_dict,
+                "model": self.args.model,
+                "optimizer": self.optimizer.state_dict(),
+            },
+            self.dir_checkpoint / f"{epoch}.pth",
+        )
 
     def train(self):
         """
