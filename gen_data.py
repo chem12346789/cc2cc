@@ -251,6 +251,7 @@ if __name__ == "__main__":
                 data = dict(np.load(DATA_PATH / f"data_{name}.npz"))
                 dm_tar = data["dm1_cc"]
                 dm_dft = data["dm1_dft"]
+                dm_zmp = data["dm1_zmp"]
                 e_cc = data["e_cc"]
 
                 data["tol_cc_grids"] = (
@@ -272,7 +273,9 @@ if __name__ == "__main__":
                 max_l = 20
 
                 if mol.spin == 0:
-                    mzmp, dm1_zmp = get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l)
+                    mzmp, dm1_zmp = get_zmp_rks(
+                        mol, dm_tar, dm_zmp, grids, max_l, start_l=max_l
+                    )
                     data_append_dict = get_dft_energy_rks(
                         mol,
                         grids,

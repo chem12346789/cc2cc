@@ -341,7 +341,7 @@ def get_hf_energy(
     """
     if evaluate:
         return {}
-    
+
     backends = "torch" if torch.cuda.is_available() else "numpy"
     print(f"Using backend: {backends} for get_dft_energy\n")
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
