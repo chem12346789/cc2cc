@@ -157,30 +157,10 @@ def cc(
         dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
+    mzmp, dm1_zmp = get_zmp_rks(mol, dm1_cc, dm1_dft, grids, 20)
+
     # Generate input data
     data_dict = {}
-
-    if not evaluate:
-        get_dft_grad(mol, grids, dm1_dft, data_dict)
-
-        # HF gradient
-        ghf_hf = pyscf.grad.rhf.Gradients(mf)
-        grad_hf = ghf_hf.kernel()
-
-        # DFT gradient
-        gdft = mdft.Gradients()
-        grad_dft = gdft.kernel()
-
-        gdft_d3bj = mdft_d3bj.Gradients()
-        grad_dft_d3bj = gdft_d3bj.kernel()
-
-        data_dict["grad_cc_train"] = grad_cc - grad_dft
-        data_dict["grad_hf"] = grad_hf
-        data_dict["grad_cc"] = grad_cc
-        data_dict["grad_dft"] = grad_dft
-        data_dict["grad_dft_d3bj"] = grad_dft_d3bj
-    else:
-        get_dft_input(mol, grids, dm1_dft, data_dict)
 
     # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
     data_append_dict = get_cc_energy(
@@ -213,8 +193,6 @@ def cc(
         data_dict["tol_delta_grids"] = (
             data_dict["tol_cc_grids"] - data_dict["tol_dft_grids"]
         )
-
-    mzmp, dm1_zmp = get_zmp_rks(mol, dm1_cc, dm1_dft, grids, 20)
     data_append_dict = get_dft_energy(
         mol,
         grids,
@@ -229,6 +207,46 @@ def cc(
         data_dict["tol_delta_zmp_grids"] = (
             data_dict["tol_cc_grids"] - data_dict["tol_zmp_grids"]
         )
+
+    if not evaluate:
+        data_append_dict = get_dft_grad(mol, grids, dm1_dft, data_dict)
+        data_dict.update(data_append_dict)
+        data_append_dict = get_dft_grad(mol, grids, dm1_zmp, data_dict)
+        for key in data_append_dict:
+            if "dft" in key:
+                key_zmp = key.replace("dft", "zmp")
+                data_dict[key_zmp] = data_append_dict[key]
+            else:
+                key_zmp = key + "_zmp"
+                data_dict[key_zmp] = data_append_dict[key]
+
+        # HF gradient
+        ghf_hf = pyscf.grad.rhf.Gradients(mf)
+        grad_hf = ghf_hf.kernel()
+
+        # DFT gradient
+        gdft = mdft.Gradients()
+        grad_dft = gdft.kernel()
+
+        gdft_d3bj = mdft_d3bj.Gradients()
+        grad_dft_d3bj = gdft_d3bj.kernel()
+
+        grad_zmp = mzmp.Gradients()
+        grad_zmp = grad_zmp.kernel()
+
+        data_dict["grad_cc_train"] = grad_cc - grad_dft
+        data_dict["grad_hf"] = grad_hf
+        data_dict["grad_cc"] = grad_cc
+        data_dict["grad_dft"] = grad_dft
+        data_dict["grad_dft_d3bj"] = grad_dft_d3bj
+        data_dict["grad_zmp"] = grad_zmp
+    else:
+        data_append_dict = get_dft_input(mol, grids, dm1_dft, data_dict)
+        data_dict.update(data_append_dict)
+        data_append_dict = get_dft_input(mol, grids, dm1_zmp, data_dict)
+        for key in data_append_dict:
+            key_zmp = key.replace("dft", "zmp")
+            data_dict[key_zmp] = data_append_dict[key]
 
     if "tol_delta_grids" in data_dict:
         error = np.sum(data_dict["tol_delta_grids"] * grids.weights) - energy_train

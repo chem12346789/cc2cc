@@ -8,7 +8,7 @@ from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
 
 
-def get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l=4, verbose=0):
+def get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0):
     if dm_tar is None:
         return None, None
 
@@ -36,7 +36,7 @@ def get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l=4, verbose=0):
     nuc_tar_grids = rho_tar * nuc_grids
     nuc_dft_grids = rho_dft * nuc_grids
 
-    for l in np.linspace(0, max_l, max_l + 1):
+    for l in np.linspace(start_l, max_l, max_l - start_l + 1):
         mzmp.level_shift = 2**l
         print(f"Running ZMP with lambda_ZMP = {2**l}")
         mzmp.zscf(2**l)
@@ -73,7 +73,7 @@ def get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l=4, verbose=0):
     return mzmp, dm_zmp
 
 
-def get_zmp_uks(mol, dm_tar, dm_dft, grids, max_l=4, verbose=0):
+def get_zmp_uks(mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0):
     mzmp = UZMP(mol, dm_tar, grids, dftxc=1, xc="b3lyp")
     mzmp.diis_space = 64
     mzmp.verbose = verbose
@@ -112,7 +112,7 @@ def get_zmp_uks(mol, dm_tar, dm_dft, grids, max_l=4, verbose=0):
     nuc_tar_grids = (rho_tar[0] + rho_tar[1]) * nuc_grids
     nuc_dft_grids = (rho_dft[0] + rho_dft[1]) * nuc_grids
 
-    for l in np.linspace(0, max_l, max_l + 1):
+    for l in np.linspace(start_l, max_l, max_l - start_l + 1):
         mzmp.level_shift = 2**l
         print(f"Running ZMP with lambda_ZMP = {2**l}")
         mzmp.zscf(2**l)
