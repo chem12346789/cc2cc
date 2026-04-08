@@ -256,6 +256,9 @@ class DataBase:
         elif self.args.rho_input == "dft_d3bj":
             input_mat = data["rho_cube_dft"]
             energy_target = data["e_cc"] - data["e_dft_d3bj"]
+        elif self.args.rho_input == "zmp":
+            input_mat = data["rho_cube_zmp"]
+            energy_target = data["e_cc"] - data["e_zmp"]
         else:
             raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
 
@@ -273,54 +276,21 @@ class DataBase:
                 energy_target = np.sum(output_mat * weight_mat)
         else:
             if self.args.output_target == "tol_delta_grids":
-                output_mat = data["tol_delta_grids"]
-            elif self.args.output_target == "tol_delta_grids_l":
-                output_mat = (
-                    data["exc_cc_grids"]
-                    + data["hatree_cc_grids"]
-                    + data["kinl_cc_grids"]
-                    + data["nuc_cc_grids"]
-                ) - (
-                    data["exc_dft_grids"]
-                    + data["exc_k_dft_grids"]
-                    + data["hatree_dft_grids"]
-                    + data["kinl_dft_grids"]
-                    + data["nuc_dft_grids"]
-                )
-            elif self.args.output_target == "tol_delta_grids_l_erf":
-                output_mat = (
-                    data["exc_cc_grids"]
-                    + data["hatree_cc_grids"]
-                    + data["kinl_cc_grids"]
-                    + data["nuc_erf_cc_grids"]
-                ) - (
-                    data["exc_dft_grids"]
-                    + data["exc_k_dft_grids"]
-                    + data["hatree_dft_grids"]
-                    + data["kinl_dft_grids"]
-                    + data["nuc_erf_dft_grids"]
-                )
-            elif self.args.output_target == "exc_cc_grids":
-                output_mat = (data["exc_cc_grids"]) - (
-                    data["exc_dft_grids"] + data["exc_k_dft_grids"]
-                )
-            elif self.args.output_target == "b3lyp":
-                output_mat = data["exc_dft_grids"]
-                energy_target = np.sum(output_mat * weight_mat)
+                if self.args.rho_input == "dft":
+                    output_mat = data["tol_delta_grids"]
+                elif self.args.rho_input == "zmp":
+                    output_mat = data["tol_delta_zmp_grids"]
+                else:
+                    raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
             else:
-                raise ValueError(
-                    f"Unknown output target: {self.args.output_target}",
-                )
-
-            grad2force = data["grad2force"]
-            grad_cc_train = data["grad_cc_train"]
+                raise ValueError(f"Unknown output_target: {self.args.output_target}")
+            data_dict["output"] = output_mat.reshape((-1, 1))
 
             if self.args.if_relative_weight_abs:
                 loss_multiplier_abs /= self.loss_ene(np.abs(output_mat * weight_mat))
                 self.print(
                     f"Adjusted loss_multiplier_abs: {loss_multiplier_abs:>6.3f}",
                 )
-
             error_energy = AU2KCALMOL * abs(
                 energy_target - np.sum(output_mat * weight_mat)
             )
@@ -331,9 +301,15 @@ class DataBase:
                 )
                 loss_multiplier_abs = 0
 
-            data_dict["output"] = output_mat.reshape((-1, 1))
-            data_dict["grad2force"] = self.process_grad2force(grad2force)
-            data_dict["grad_cc_train"] = grad_cc_train
+            if self.args.if_grad:
+                grad2force = data["grad2force"]
+                grad_cc_train = data["grad_cc_train"]
+                data_dict["grad2force"] = self.process_grad2force(grad2force)
+                data_dict["grad_cc_train"] = grad_cc_train
+                loss_multiplier_grad = 1 / self.loss_ene(np.abs(grad_cc_train))
+            else:
+                data_dict["grad2force"] = 0
+                data_dict["grad_cc_train"] = 0
 
         atomic_systems = []
         atomic_stoichiometry = []
@@ -393,7 +369,7 @@ class DataBase:
         data_dict["loss_multiplier_atomic"] = loss_multiplier_atomic
 
         self.print(
-            f"Adjusted loss_multiplier: {loss_multiplier:>6.3f}, loss_multiplier_grad {loss_multiplier_grad:>6.3f}, loss_multiplier_atomic {loss_multiplier_atomic:>6.3f}, loss_multiplier_abs {loss_multiplier_abs:>6.3f}",
+            f"Adjusted loss_multiplier: {loss_multiplier:>6.3f}, grad {loss_multiplier_grad:>6.3f}, atomic {loss_multiplier_atomic:>6.3f}, abs {loss_multiplier_abs:>6.3f}",
         )
 
         for key in self.array_key:

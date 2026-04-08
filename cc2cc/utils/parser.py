@@ -165,7 +165,7 @@ def add_args(parser: argparse.ArgumentParser):
         "--rho_input",
         type=str,
         default="dft",
-        choices=["dft", "dft_d3bj"],
+        choices=["dft", "dft_d3bj", "zmp"],
         help="Type of input density. ",
     )
 
@@ -405,6 +405,13 @@ def add_args(parser: argparse.ArgumentParser):
         type=str,
         default="",
         help="Directory to save the model. Default is empty.",
+    )
+
+    parser.add_argument(
+        "--if_resume",
+        type=str2bool,
+        default=False,
+        help="Whether to resume the training. Default is False.",
     )
 
     # for testing

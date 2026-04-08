@@ -32,9 +32,11 @@ def get_dft_input(mol, grids, dm1_dft, data_dict, max_memory=8000):
         rho_cube_dft_part = gridcube.gen_cube_rho_rks(ni, dm1_dft)
         rho_cube_dft[p0:p1] = rho_cube_dft_part
 
-    data_dict["rho_cube_dft"] = rho_cube_dft.reshape(
-        len(grids.coords), grids.input_level, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
-    )
+    return {
+        "rho_cube_dft": rho_cube_dft.reshape(
+            len(grids.coords), grids.input_level, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
+        )
+    }
 
 
 def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
@@ -130,11 +132,6 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
             flush=True,
         )
 
-    data_dict["rho_cube_dft"] = rho_cube_dft.reshape(
-        len(grids.coords), grids.input_level, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
-    )
-    data_dict["grad2force"] = grad2force
-
     # Test force
     grad_mat = np.zeros(
         (grids.input_level, len(grids.coords), EDGE_SIZE, EDGE_SIZE, EDGE_SIZE)
@@ -154,3 +151,10 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
         "Error force DFT: ",
         np.linalg.norm(force - (grad_dft - grad_dft_zeros)),
     )
+
+    return {
+        "rho_cube_dft": rho_cube_dft.reshape(
+            len(grids.coords), grids.input_level, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
+        ),
+        "grad2force": grad2force,
+    }
