@@ -192,6 +192,8 @@ def ucc(mol, grids, name, args, evaluate=False):
         dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
+    mzmp, dm1_zmp = get_zmp_uks(mol, dm1_cc, dm1_dft, grids, 20)
+
     # Generate input data
     data_dict = {}
 
@@ -227,7 +229,6 @@ def ucc(mol, grids, name, args, evaluate=False):
             data_dict["tol_cc_grids"] - data_dict["tol_dft_grids"]
         )
 
-    mzmp, dm1_zmp = get_zmp_uks(mol, dm1_cc, dm1_dft, grids, 20)
     data_append_dict = get_dft_energy(
         mol,
         grids,
@@ -273,6 +274,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         data_dict["grad_cc"] = grad_cc
         data_dict["grad_dft"] = grad_dft
         data_dict["grad_dft_d3bj"] = grad_dft_d3bj
+        data_dict["grad_zmp"] = grad_zmp
     else:
         data_append_dict = get_dft_input(mol, grids, dm1_dft, data_dict)
         data_dict.update(data_append_dict)
@@ -345,6 +347,7 @@ def ucc(mol, grids, name, args, evaluate=False):
             "dm1_hf": dm1_hf,
             "dm1_dft": dm1_dft,
             "dm1_cc": dm1_cc,
+            "dm1_zmp": dm1_zmp,
             "e_dft_d3bj": e_dft_d3bj,
             "energy_train": energy_train,
             "weights": grids.weights,

@@ -8,14 +8,16 @@ from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
 
 
-def get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0):
+def get_zmp_rks(
+    mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0, max_cycle=5000
+):
     if dm_tar is None:
         return None, None
 
     mzmp = RZMP(mol, dm_tar, grids, dftxc=1, xc="b3lyp")
     mzmp.diis_space = 64
     mzmp.verbose = verbose
-    mzmp.max_cycle = 5000
+    mzmp.max_cycle = max_cycle
 
     ao = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=0)
     # hatree part from dm1_tar
@@ -73,11 +75,16 @@ def get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0):
     return mzmp, dm_zmp
 
 
-def get_zmp_uks(mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0):
+def get_zmp_uks(
+    mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0, max_cycle=5000
+):
+    if dm_tar is None:
+        return None, None
+
     mzmp = UZMP(mol, dm_tar, grids, dftxc=1, xc="b3lyp")
     mzmp.diis_space = 64
     mzmp.verbose = verbose
-    mzmp.max_cycle = 5000
+    mzmp.max_cycle = max_cycle
 
     ao = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=0)
     # hatree part from dm1_tar

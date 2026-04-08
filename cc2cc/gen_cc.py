@@ -312,6 +312,7 @@ def cc(
             "dm1_hf": dm1_hf,
             "dm1_dft": dm1_dft,
             "dm1_cc": dm1_cc,
+            "dm1_zmp": dm1_zmp,
             "e_dft_d3bj": e_dft_d3bj,
             "energy_train": energy_train,
             "weights": grids.weights,

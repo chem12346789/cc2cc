@@ -9,7 +9,13 @@ import pyscf
 import pyscf.md
 import pyscf.dft
 
-from cc2cc.utils import gen_mole, print_computer_info, add_args
+from cc2cc.utils import (
+    gen_mole,
+    get_dft_grad_rks,
+    get_dft_grad_uks,
+    print_computer_info,
+    add_args,
+)
 from cc2cc.utils.rotate import rotate
 from cc2cc.utils import Grid, DATA_PATH, AU2KCALMOL
 from cc2cc.utils.parser import gen_name_args
@@ -72,7 +78,7 @@ train_str_list = [
     # # #####################
     # # ########  2  ########
     # # #####################
-    "molecule2-W4_11",
+    # "molecule2-W4_11",
 ]
 
 eval_str_list = [
@@ -248,34 +254,32 @@ if __name__ == "__main__":
             grids = Grid(mol, args.grid_level, 7)
 
             if args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
-                data = dict(np.load(DATA_PATH / f"data_{name}.npz"))
-                dm_tar = data["dm1_cc"]
-                dm_dft = data["dm1_dft"]
-                dm_zmp = data["dm1_zmp"]
-                e_cc = data["e_cc"]
+                data_dict = dict(np.load(DATA_PATH / f"data_{name}.npz"))
+                dm_tar = data_dict["dm1_cc"]
+                dm_dft = data_dict["dm1_dft"]
+                e_cc = data_dict["e_cc"]
 
-                data["tol_cc_grids"] = (
-                    data["exc_cc_grids"]
-                    + data["hatree_cc_grids"]
-                    + data["kin_cc_grids"]
-                    + data["nuc_cc_grids"]
+                data_dict["tol_cc_grids"] = (
+                    data_dict["exc_cc_grids"]
+                    + data_dict["hatree_cc_grids"]
+                    + data_dict["kin_cc_grids"]
+                    + data_dict["nuc_cc_grids"]
                 )
 
-                data["tol_dft_grids"] = (
-                    data["exc_dft_grids"]
-                    + data["exc_k_dft_grids"]
-                    + data["hatree_dft_grids"]
-                    + data["kin_dft_grids"]
-                    + data["nuc_dft_grids"]
+                data_dict["tol_dft_grids"] = (
+                    data_dict["exc_dft_grids"]
+                    + data_dict["exc_k_dft_grids"]
+                    + data_dict["hatree_dft_grids"]
+                    + data_dict["kin_dft_grids"]
+                    + data_dict["nuc_dft_grids"]
                 )
 
                 print(f"mol.spin: {mol.spin}")
                 max_l = 20
 
                 if mol.spin == 0:
-                    mzmp, dm1_zmp = get_zmp_rks(
-                        mol, dm_tar, dm_zmp, grids, max_l, start_l=max_l
-                    )
+                    mzmp, dm1_zmp = get_zmp_rks(mol, dm_tar, dm_dft, grids, max_l)
+                    data_dict["dm1_zmp"] = dm1_zmp
                     data_append_dict = get_dft_energy_rks(
                         mol,
                         grids,
@@ -285,19 +289,34 @@ if __name__ == "__main__":
                     )
                     for key in data_append_dict:
                         key_zmp = key.replace("dft", "zmp")
-                        data[key_zmp] = data_append_dict[key]
-                    data["tol_delta_zmp_grids"] = (
-                        data["tol_cc_grids"] - data["tol_zmp_grids"]
+                        data_dict[key_zmp] = data_append_dict[key]
+                    data_dict["tol_delta_zmp_grids"] = (
+                        data_dict["tol_cc_grids"] - data_dict["tol_zmp_grids"]
                     )
+
+                    data_append_dict = get_dft_grad_rks(mol, grids, dm1_zmp, data_dict)
+                    for key in data_append_dict:
+                        if "dft" in key:
+                            key_zmp = key.replace("dft", "zmp")
+                            data_dict[key_zmp] = data_append_dict[key]
+                        else:
+                            key_zmp = key + "_zmp"
+                            data_dict[key_zmp] = data_append_dict[key]
+
+                    grad_zmp = mzmp.Gradients()
+                    grad_zmp = grad_zmp.kernel()
+                    data_dict["grad_zmp"] = grad_zmp
+
                     e_zmp = mzmp.energy_tot(dm1_zmp)
                     energy_train = e_cc - e_zmp
                     error_zmp = (
-                        np.sum(data["tol_delta_zmp_grids"] * grids.weights)
+                        np.sum(data_dict["tol_delta_zmp_grids"] * grids.weights)
                         - energy_train
                     )
                     print(f"Error ZMP: {AU2KCALMOL * error_zmp}")
                 else:
                     mzmp, dm1_zmp = get_zmp_uks(mol, dm_tar, dm_dft, grids, max_l)
+                    data_dict["dm1_zmp"] = dm1_zmp
                     data_append_dict = get_dft_energy_uks(
                         mol,
                         grids,
@@ -307,19 +326,32 @@ if __name__ == "__main__":
                     )
                     for key in data_append_dict:
                         key_zmp = key.replace("dft", "zmp")
-                        data[key_zmp] = data_append_dict[key]
-                    data["tol_delta_zmp_grids"] = (
-                        data["tol_cc_grids"] - data["tol_zmp_grids"]
+                        data_dict[key_zmp] = data_append_dict[key]
+                    data_dict["tol_delta_zmp_grids"] = (
+                        data_dict["tol_cc_grids"] - data_dict["tol_zmp_grids"]
                     )
-                    if "tol_delta_zmp_grids" in data:
-                        e_zmp = mzmp.energy_tot(dm1_zmp)
-                        energy_train = e_cc - e_zmp
-                        error_zmp = (
-                            np.sum(data["tol_delta_zmp_grids"] * grids.weights)
-                            - energy_train
-                        )
-                        print(f"Error ZMP: {AU2KCALMOL * error_zmp}")
-                np.savez_compressed(DATA_PATH / f"data_{name}", **data)
+
+                    data_append_dict = get_dft_grad_uks(mol, grids, dm1_zmp, data_dict)
+                    for key in data_append_dict:
+                        if "dft" in key:
+                            key_zmp = key.replace("dft", "zmp")
+                            data_dict[key_zmp] = data_append_dict[key]
+                        else:
+                            key_zmp = key + "_zmp"
+                            data_dict[key_zmp] = data_append_dict[key]
+
+                    grad_zmp = mzmp.Gradients()
+                    grad_zmp = grad_zmp.kernel()
+                    data_dict["grad_zmp"] = grad_zmp
+
+                    e_zmp = mzmp.energy_tot(dm1_zmp)
+                    energy_train = e_cc - e_zmp
+                    error_zmp = (
+                        np.sum(data_dict["tol_delta_zmp_grids"] * grids.weights)
+                        - energy_train
+                    )
+                    print(f"Error ZMP: {AU2KCALMOL * error_zmp}")
+                np.savez_compressed(DATA_PATH / f"data_{name}", **data_dict)
             else:
                 if mol.spin == 0:
                     cc(mol, grids, name, args, evaluate=evaluate)
