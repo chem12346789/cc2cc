@@ -44,7 +44,8 @@ def test_model_rks(
         test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
         mdft.kernel(dm0=test_data.dm1_dft)
     else:
-        mdft.max_cycle = args.max_cycle
+        # mdft.max_cycle = args.max_cycle
+        mdft.max_cycle = 200
         if_retry = True
         mdft.kernel()
 
@@ -52,8 +53,21 @@ def test_model_rks(
         print("RKS not converged. Add dynamic level shift.")
         pyscf.scf.addons.dynamic_level_shift_(mdft, factor=1.0)
         mdft.kernel()
-        if mdft.converged is False:
-            print("Error: RKS not converged!!! Just use the current result.")
+    if mdft.converged is False and if_retry:
+        print("RKS not converged. Add dynamic level shift.")
+        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=2.0)
+        mdft.kernel()
+    if mdft.converged is False and if_retry:
+        print("RKS not converged. Add dynamic level shift.")
+        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=4.0)
+        mdft.kernel()
+    if mdft.converged is False and if_retry:
+        print("RKS not converged. Add dynamic level shift.")
+        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=8.0)
+        mdft.kernel()
+    if mdft.converged is False:
+        print("Error: RKS not converged!!! Just use the current result.")
+
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
 
