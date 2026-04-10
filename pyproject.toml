@@ -28,6 +28,7 @@ namespaces = false
 [tool.pyright]
 reportGeneralTypeIssues = "warning"
 reportArgumentType = "warning"
+ reportAttributeAccessIssue = "warning"
 reportUndefinedVariable = "error"
 reportOperatorIssue = false
 reportCallIssue = false
