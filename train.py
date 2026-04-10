@@ -141,13 +141,13 @@ eval_str_list = [
     "G2RC-62",
     "G2RC-67",
     "HAL59-29_CF3Br-benB",
-    # "HAL59-30_CF3I-benB",
+    "HAL59-30_CF3I-benB",
     "IL16-152B",
     "IL16-214B",
     "IL16-229B",
     # ######## 1 H ########
     "HAL59-BrBr_FCCH",
-    # "HAL59-FI_FCCH",
+    "HAL59-FI_FCCH",
     "PNICO23-22b",
     # ######## 2 H ########
     "DC13-o3_c2h2_add",
@@ -158,7 +158,7 @@ eval_str_list = [
     "YBDE18-nf3-ch2",
     "YBDE18-pf3-ch2",
     # ######## 3 H ########
-    # "HAL59-NH3_F3CI",
+    "HAL59-NH3_F3CI",
     "IL16-230B",
     "RSE43-E5",
     "RSE43-E7",
