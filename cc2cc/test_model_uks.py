@@ -45,7 +45,7 @@ def test_model_uks(
         mdft.kernel(dm0=test_data.dm1_dft)
     else:
         # mdft.max_cycle = args.max_cycle
-        mdft.max_cycle = 100
+        mdft.max_cycle = 200
         if_retry = True
         mdft.kernel()
 
