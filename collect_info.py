@@ -78,6 +78,30 @@ class Collect_info:
             with open(source_data_path, "r") as f:
                 self.data = pd.concat([self.data, pd.read_csv(f)], ignore_index=True)
 
+    def add_d3bj_correction(self):
+        if "scf_d3bj_ene" in self.data.columns:
+            if self.verbose > 3:
+                print("D3BJ correction already added.")
+            return
+
+        data_test = pd.read_csv("validate_hkqai_done/ccdft_def2-QZVP__gmtkn-def2.csv")
+        data_test_name = np.array(data_test["name"])
+
+        while "name" not in self.data.columns:
+            return
+
+        for i, name in enumerate(self.data["name"]):
+            if "_0_1_0.0000" not in name:
+                name = name.replace(self.basis, "def2-QZVP_0_1_0.0000")
+            else:
+                name = name.replace(self.basis, "def2-QZVP")
+            col = np.where(data_test_name == name)[0]
+            b3lyp_ene = data_test.loc[col, "b3lyp_ene"].values[0]
+            b3lyp_d3bj_ene = data_test.loc[col, "b3lyp-d3bj_ene"].values[0]
+            self.data.loc[i, "scf_d3bj_ene"] = self.data.loc[i, "scf_ene"] + (
+                b3lyp_d3bj_ene - b3lyp_ene
+            )
+
     def get_wtmad_2(self):
         dft_type_list = ["scf_ene", "scf_d3bj_ene"]
         header = dft_type_list + ["Processed"]
@@ -476,6 +500,7 @@ if __name__ == "__main__":
     while not collector.if_done:
         collector.reset()
         collector.aggregate_data()
+        collector.add_d3bj_correction()
         collector.save_csv()
         # collector.load_csv()
         collector.get_wtmad_2()
