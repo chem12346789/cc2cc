@@ -39,7 +39,7 @@ def get_zmp_rks(
     nuc_dft_grids = rho_dft * nuc_grids
 
     for l in np.linspace(start_l, max_l, max_l - start_l + 1):
-        mzmp.level_shift = 2**l
+        mzmp.level_shift = 4**l
         print(f"Running ZMP with lambda_ZMP = {2**l}")
         mzmp.zscf(2**l)
         dm_zmp = mzmp.make_rdm1()
@@ -120,7 +120,7 @@ def get_zmp_uks(
     nuc_dft_grids = (rho_dft[0] + rho_dft[1]) * nuc_grids
 
     for l in np.linspace(start_l, max_l, max_l - start_l + 1):
-        mzmp.level_shift = 2**l
+        mzmp.level_shift = 4**l
         print(f"Running ZMP with lambda_ZMP = {2**l}")
         mzmp.zscf(2**l)
         dm_zmp = mzmp.make_rdm1()
