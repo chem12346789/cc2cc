@@ -306,7 +306,7 @@ class DataBase:
                 grad_cc_train = data["grad_cc_train"]
                 data_dict["grad2force"] = self.process_grad2force(grad2force)
                 data_dict["grad_cc_train"] = grad_cc_train
-                loss_multiplier_grad = 1 / (self.loss_ene(np.abs(grad_cc_train)) + 1e-3)
+                loss_multiplier_grad /= self.loss_ene(np.abs(grad_cc_train)) + 1e-4
             else:
                 data_dict["grad2force"] = 0
                 data_dict["grad_cc_train"] = 0
