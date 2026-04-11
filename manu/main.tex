@@ -305,27 +305,27 @@ The main difference between our method and other machine learning functionals \c
 		\begin{tabular}{lcccc}
 			     & Original Dataset & Size & Number of heavy atoms & Number of hydrogen atoms \\
 			\colrule
-			A    & GMTKN55~$^{1}$   & 47   & $1$                   & --                       \\
+			A    & GMTKN55~$^{1}$   & 47   & $1$                   & $0$                      \\
 			B    & W4-11            & 22   & $1$                   & $\neq0$                  \\
 			C    & W4-11            & 59   & $2$                   & --                       \\
-			A$'$ & GMTKN55          & 81   & $4$                   & $\leq4$                  \\
-			B$'$ & GMTKN55          & 23   & $5$                   & $\leq3$                  \\
-			C$'$ & GMTKN55          & 11   & $6$                   & $\leq3$                  \\
+			A$'$ & GMTKN55          & 23   & $5$                   & $\leq3$                  \\
+			B$'$ & GMTKN55          & 11   & $6$                   & $\leq3$                  \\
 			\colrule
-			\multicolumn{3}{l}{$^{1}$\footnotesize{Include anions and cations}}               \\
+			\multicolumn{5}{l}{$^{1}$\footnotesize{Include all atoms, anions and cations, and 8 extra heavy atoms molecules, Se, Ge, As, Te, I, Bi, Pb, Sb.
+			}}                                                                                \\
 		\end{tabular}
 	\end{ruledtabular}
 \end{table*}
 
 The dataset we use are listed in \Tab{tab:dataset}, all the Datasets are obtained from the GMTKN55 datasets \cite{goerigkLookDensityFunctional2017}.
 % 
-We use the molecules in datasets A, B, and C as the training set and the molecules in datasets A$'$, B$'$, and C$'$ as the validation set.
+We use the molecules in datasets A, B, and C as the training set and the molecules in datasets A$'$ and B$'$ as the validation set.
 % 
 Datasets A, B, and C are defined as follows: A comprises single-atom systems from GMTKN55 \cite{goerigkLookDensityFunctional2017}; B comprises molecules with one heavy (non-hydrogen) atom from W4-11; and C comprises molecules with two heavy atoms from W4-11.
 % 
-This lead to $136$ molecules in the training set and $115$ molecules in the validation set, while the number of molecules in GMTKN55 datasets is 2462 \cite{goerigkLookDensityFunctional2017}.
+This lead to $136$ molecules in the training set and $34$ molecules in the validation set, while the number of molecules in GMTKN55 datasets is 2462 \cite{goerigkLookDensityFunctional2017}.
 % % TODO: ablation study on the dataset size.
-% To improve training efficiency and balance the dataset across different atom species, we augment the training set by adding 9 additional copies of dataset A.
+To improve training efficiency and balance the dataset across different atom species, we add 9 additional copies of dataset A.
 
 In this article, we use the electron density and energy density from CCSD(T)/Def2-QZVPPD (except the anions) and CCSD(T)/Ma-Def2-QZVPPD (the anions) \cite{bartlettCoupledclusterTheoryQuantum2007-02-22,weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} as the input and target of the molecules.
 %
@@ -403,6 +403,9 @@ The eigenvectors $\mathbf{u}(\brm{r}_{i})$ of this matrix represent the main rot
 	 & \big\{ \mathbf{r}_{i} + d (m \mathbf{u}_{1}(\brm{r}_{i}) + n \mathbf{u}_{2}(\brm{r}_{i}) + p \mathbf{u}_{3}(\brm{r}_{i})) \nl
 	 & \text{ for } m,n,p \in \{-1,0,1\} \big\}.
 \end{align}
+% 
+Although this alignment process adds some computational cost, it provides a consistent local reference frame for the input features, which may help the model learn more effectively.
+
 
 \section{Ablation Study}
 \subsection{Ablation study on the dataset size}
