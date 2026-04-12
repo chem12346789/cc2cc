@@ -23,7 +23,7 @@ class Model(torch.nn.Module):
         self.before_weight = False
         self.lmax = 2
         self.out_l = 0
-        self.e3nn_level = 8
+        self.e3nn_level = 6
 
         self.conv1 = E3nn(
             self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
@@ -41,12 +41,6 @@ class Model(torch.nn.Module):
             self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
         )
         self.conv6 = E3nn(
-            self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
-        )
-        self.conv7 = E3nn(
-            self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
-        )
-        self.conv8 = E3nn(
             self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
         )
 
@@ -95,9 +89,7 @@ class Model(torch.nn.Module):
         out4 = torch.vmap(self.conv4)(x_in)
         out5 = torch.vmap(self.conv5)(x_in)
         out6 = torch.vmap(self.conv6)(x_in)
-        out7 = torch.vmap(self.conv7)(x_in)
-        out8 = torch.vmap(self.conv8)(x_in)
-        x_cube = torch.cat([out1, out2, out3, out4, out5, out6, out7, out8], dim=-2)
+        x_cube = torch.cat([out1, out2, out3, out4, out5, out6], dim=-2)
 
         # do mixing x and x_center using Mixture of experts mechanism
         weight_out = self.mixing_weight(
