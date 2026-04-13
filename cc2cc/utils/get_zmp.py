@@ -7,6 +7,7 @@ from cc2cc.utils.zmp import RZMP, UZMP
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
 
+LEVEL_SHIFT = 3
 
 def get_zmp_rks(
     mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0, max_cycle=5000
@@ -39,7 +40,7 @@ def get_zmp_rks(
     nuc_dft_grids = rho_dft * nuc_grids
 
     for l in np.linspace(start_l, max_l, max_l - start_l + 1):
-        mzmp.level_shift = 4**l
+        mzmp.level_shift = LEVEL_SHIFT**l
         print(f"Running ZMP with lambda_ZMP = {2**l}")
         mzmp.zscf(2**l)
         dm_zmp = mzmp.make_rdm1()
@@ -120,7 +121,7 @@ def get_zmp_uks(
     nuc_dft_grids = (rho_dft[0] + rho_dft[1]) * nuc_grids
 
     for l in np.linspace(start_l, max_l, max_l - start_l + 1):
-        mzmp.level_shift = 4**l
+        mzmp.level_shift = LEVEL_SHIFT**l
         print(f"Running ZMP with lambda_ZMP = {2**l}")
         mzmp.zscf(2**l)
         dm_zmp = mzmp.make_rdm1()

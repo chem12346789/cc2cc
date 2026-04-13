@@ -31,7 +31,6 @@ train_str_list = [
     # # ########  0  ########
     # # #####################
     "molecule0-W4_11",
-    "molecule0-ADDON",
     "AHB21-1A",
     "AHB21-4A",
     "ALK8-li+",
@@ -72,9 +71,9 @@ train_str_list = [
     # # #####################
     "molecule1-W4_11",
     # # #####################
-    # # ########  2  ########
+    # # ########  2 # #######
     # # #####################
-    # "molecule2-W4_11",
+    "molecule2-W4_11",
 ]
 
 eval_str_list = [
@@ -99,13 +98,13 @@ eval_str_list = [
     # "G2RC-62",
     # "G2RC-67",
     # "HAL59-29_CF3Br-benB",
-    "HAL59-30_CF3I-benB",
+    # "HAL59-30_CF3I-benB",
     # "IL16-152B",
     # "IL16-214B",
     # "IL16-229B",
     # # ######## 1 H ########
     # "HAL59-BrBr_FCCH",
-    "HAL59-FI_FCCH",
+    # "HAL59-FI_FCCH",
     # "PNICO23-22b",
     # # ######## 2 H ########
     # "DC13-o3_c2h2_add",

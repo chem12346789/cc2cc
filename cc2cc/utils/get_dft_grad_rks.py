@@ -11,6 +11,9 @@ def get_dft_input(mol, grids, dm1_dft, data_dict, max_memory=8000):
     """
     Calculate the input of (exchange-correlation energy - DFT energy) on the grids.
     """
+    if dm1_dft is None:
+        return {}
+
     mdft = pyscf.scf.RKS(mol)
     mdft.xc = "b3lyp"
     mdft.verbose = 4
@@ -44,6 +47,9 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
     Calculate the gradient of (exchange-correlation energy - DFT energy) on the grids.
     Note the max_memory is hard to predict (a large memory usage is due to grad2force and grad_mat), so just set it to a relative small value to avoid OOM.
     """
+    if dm1_dft is None:
+        return {}
+
     mdft = pyscf.scf.RKS(mol)
     mdft.xc = "b3lyp"
     mdft.verbose = 4
