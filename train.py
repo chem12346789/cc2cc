@@ -4,6 +4,19 @@ from cc2cc.utils import add_args
 from cc2cc.utils.parser import gen_name_args
 from cc2cc.train_model import train_model
 
+# train_str_list = [
+#     "W4_11-c",
+#     "W4_11-si",
+#     "W4_11-f",
+# ]
+
+# eval_str_list = [
+#     # # #####################
+#     # # ######  5(<9)  ######
+#     # # #####################
+#     "molecule5-W4_11",
+# ]
+
 train_str_list = [
     "molecule0-W4_11",
     "molecule_ADDON",
