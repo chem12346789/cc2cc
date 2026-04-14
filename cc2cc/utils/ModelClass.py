@@ -5,7 +5,9 @@ Generate list of model.
 from pathlib import Path
 import datetime
 import os
+
 import numpy as np
+import pandas as pd
 
 import torch
 import torch.optim as optim
@@ -16,6 +18,42 @@ import torch.distributed as dist
 from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, EDGE_SIZE, CUBE_MIDDLE
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBase import DataBase
+
+
+class DataRecordList:
+    """
+    DataRecordList is a list of DataRecord, which is used to record the training and evaluation results.
+    """
+
+    def __init__(self, len_batch):
+        self.data_dict = {
+            "loss_ene": np.zeros(len_batch),
+            "loss_ene_abs": np.zeros(len_batch),
+            "loss_ene_atomic": np.zeros(len_batch),
+            "loss_grad_record": np.zeros(len_batch),
+            "loss_tot": np.zeros(len_batch),
+            "name": ["" for _ in range(len_batch)],
+        }
+        self.iter = 0
+
+    def add_data_record(self, data_record):
+        for key in self.data_dict.keys():
+            if key in data_record:
+                if key == "name":
+                    self.data_dict[key][self.iter] = data_record[key]
+                else:
+                    self.data_dict[key][self.iter] = (
+                        AU2KCALMOL * data_record[key].item()
+                    )
+            else:
+                raise ValueError(f"Key {key} not found in data_record.")
+        self.iter += 1
+
+    def save(self, path):
+        """Save the data_dict to a csv file."""
+
+        df = pd.DataFrame(self.data_dict)
+        df.to_csv(path, index=False)
 
 
 class ModelClass:
@@ -232,12 +270,12 @@ class ModelClass:
             raise ValueError(f"Unknown cube type: {self.cube_type}")
 
         def process_grad2force(x):
-            # tipabcx -> tipCx
+            # tipabcx -> tipCx -> piCtx
             if self.cube_type == "center_4":
-                return x[
+                x = x[
                     :, : self.input_level, :, [CUBE_MIDDLE], CUBE_MIDDLE, CUBE_MIDDLE, :
                 ]
-            if self.cube_type == "cube":
+            elif self.cube_type == "cube":
                 x = x[:, : self.input_level, :, :, :, :, :].reshape(
                     x.shape[0],
                     self.input_level,
@@ -245,9 +283,8 @@ class ModelClass:
                     self.cube_size,
                     x.shape[-1],
                 )
-                return x
-            if self.cube_type == "cube9":
-                return np.stack(
+            elif self.cube_type == "cube9":
+                x = np.stack(
                     [
                         x[:, : self.input_level, :, 0, 0, 0, :],
                         x[:, : self.input_level, :, 0, 0, 2, :],
@@ -261,8 +298,8 @@ class ModelClass:
                     ],
                     axis=-2,
                 )
-            if self.cube_type == "cube5":
-                return np.stack(
+            elif self.cube_type == "cube5":
+                x = np.stack(
                     [
                         x[:, : self.input_level, :, 0, 0, 0, :],
                         x[:, : self.input_level, :, 0, 2, 2, :],
@@ -272,7 +309,9 @@ class ModelClass:
                     ],
                     axis=-2,
                 )
-            raise ValueError(f"Unknown cube type: {self.cube_type}")
+            else:
+                raise ValueError(f"Unknown cube type: {self.cube_type}")
+            return np.transpose(x, (2, 1, 3, 0, 4))
 
         self.database_train = DataBase(
             train_str_dict,
@@ -355,12 +394,12 @@ class ModelClass:
         tot_loss = loss_multiplier * self.loss_ene(
             data_weight * sum_target, data_weight * torch.sum(output)
         )
-        loss_record = np.abs((sum_target - torch.sum(output)).item())
+        loss_record = torch.abs((sum_target - torch.sum(output)))
 
         if if_train:
             if self.args.if_abs:
                 target = batch["output"] * weight
-                loss_abs_record = torch.sum(torch.abs(target - output)).item()
+                loss_abs_record = torch.sum(torch.abs(target - output))
                 if self.args.topk_abs > 0:
                     topk_indices = torch.topk(
                         torch.abs(target - output).sum(dim=1), self.args.topk_abs
@@ -374,7 +413,7 @@ class ModelClass:
                         data_weight * target, data_weight * output
                     )
             else:
-                loss_abs_record = 0.0
+                loss_abs_record = torch.zeros_like(loss_record)
 
             if self.args.if_grad:
                 middle_ = torch.autograd.grad(
@@ -382,14 +421,14 @@ class ModelClass:
                 )[0]
                 grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
                 grad2force = batch["grad2force"]
-                force = torch.einsum("piC,tipCx->tx", middle_, grad2force)
+                force = (middle_[:, :, :, None, None] * grad2force).sum((0, 1, 2))
                 tot_loss += loss_multiplier_grad * self.loss_grad(grad_cc_train, force)
-                loss_grad_record = torch.sum(torch.abs(grad_cc_train - force)).item()
+                loss_grad_record = torch.sum(torch.abs(grad_cc_train - force))
             else:
-                loss_grad_record = 0.0
+                loss_grad_record = torch.zeros_like(loss_record)
         else:
-            loss_abs_record = 0.0
-            loss_grad_record = 0.0
+            loss_abs_record = torch.zeros_like(loss_record)
+            loss_grad_record = torch.zeros_like(loss_record)
 
         if self.args.if_atomic:
             ae_target = batch["ae_target"].cuda(self.local_rank)
@@ -424,22 +463,24 @@ class ModelClass:
             tot_loss += loss_multiplier_atomic * self.loss_ene_atomic(
                 data_weight * ae_target, data_weight * ae_output
             )
-            loss_atomic_record = torch.abs(ae_target - ae_output).item()
+            loss_atomic_record = torch.abs(ae_target - ae_output)
         else:
-            loss_atomic_record = 0.0
+            loss_atomic_record = torch.zeros_like(loss_record)
 
+        event = torch.cuda.Event()
+        event.record()
         data_record = {
-            "loss_ene": AU2KCALMOL * loss_record,
-            "loss_ene_abs": AU2KCALMOL * loss_abs_record,
-            "loss_ene_atomic": AU2KCALMOL * loss_atomic_record,
-            "loss_grad_record": AU2KCALMOL * loss_grad_record,
-            "loss_tot": AU2KCALMOL * tot_loss.item(),
+            "loss_ene": loss_record.detach().to("cpu", non_blocking=True),
+            "loss_ene_abs": loss_abs_record.detach().to("cpu", non_blocking=True),
+            "loss_ene_atomic": loss_atomic_record.detach().to("cpu", non_blocking=True),
+            "loss_grad_record": loss_grad_record.detach().to("cpu", non_blocking=True),
+            "loss_tot": tot_loss.detach().to("cpu", non_blocking=True),
             "name": batch["name"],
         }
 
         if if_train:
-            return tot_loss, data_record
-        return data_record
+            return tot_loss, data_record, event
+        return data_record, event
 
     def train_model(self):
         """
@@ -447,18 +488,24 @@ class ModelClass:
         """
         self.train()
         self.optimizer.zero_grad(set_to_none=True)
-        data_record_l = []
+        data_record_l = DataRecordList(len(self.database_train))
+        data_record = None
 
         for batch in self.database_train.data_gpu:
             batch = self.database_train.process_batch(batch, device=self.local_rank)
-            tot_loss, data_record = self.loss(batch)
+            tot_loss, data_record, event = self.loss(batch)
 
             tot_loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_norm)
             self.optimizer.step()
             self.optimizer.zero_grad(set_to_none=True)
 
-            data_record_l.append(data_record)
+            while data_record is not None:
+                if event.query():
+                    data_record_l.add_data_record(data_record)
+                    data_record = None
+                else:
+                    break
         return data_record_l
 
     def eval_model(self):
@@ -467,13 +514,18 @@ class ModelClass:
         """
         self.eval()
         self.optimizer.zero_grad(set_to_none=True)
-        data_record_l = []
+        data_record_l = DataRecordList(len(self.database_eval))
 
         for batch in self.database_eval.data_gpu:
             batch = self.database_train.process_batch(batch, device=self.local_rank)
-            data_record = self.loss(batch, if_train=False)
+            data_record, event = self.loss(batch, if_train=False)
 
-            data_record_l.append(data_record)
+            while data_record is not None:
+                if event.query():
+                    data_record_l.add_data_record(data_record)
+                    data_record = None
+                else:
+                    break
         return data_record_l
 
     def get_b3lyp_ene(self, rho_cube):
