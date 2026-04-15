@@ -66,9 +66,11 @@ def print_computer_info(device):
     print(f"PID: {os.getpid()}")
 
     print(f"CPU Count: {os.cpu_count()}")
-    print(f"NUMBER_OF_THREADS: {os.environ.get('NUMBER_OF_THREADS', 'Not Set')}")
+    OMP_NUM_THREADS = int(os.environ.get("OMP_NUM_THREADS", 1))
+    print(f"OMP_NUM_THREADS: {OMP_NUM_THREADS}")
     print(f"NUMBER_OF_GPU: {os.environ.get('NUMBER_OF_GPU', 'Not Set')}")
-    lib.num_threads(int(os.environ.get("NUMBER_OF_THREADS", 1)))
+    lib.num_threads(OMP_NUM_THREADS)
+    torch.set_num_threads(OMP_NUM_THREADS)
 
     if device == "cuda":
         # print the gpu information

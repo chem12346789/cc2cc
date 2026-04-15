@@ -10,7 +10,7 @@ from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
 LEVEL_SHIFT = 3
 
 def get_zmp_rks(
-    mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0, max_cycle=5000
+    mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0, max_cycle=20000
 ):
     if dm_tar is None:
         return None, None
@@ -77,7 +77,7 @@ def get_zmp_rks(
 
 
 def get_zmp_uks(
-    mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0, max_cycle=5000
+    mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0, max_cycle=20000
 ):
     if dm_tar is None:
         return None, None
