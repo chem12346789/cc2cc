@@ -139,8 +139,7 @@ class RZMP(pyscf.dft.rks.RKS):
         for cycle in range(1, self.max_cycle):
             self.J = self.get_jk(self.mol, self.dm)[0]
 
-            self.F = self.F0
-            self.F = self.F + l * (self.J - self.J_tar) + self.faxc * self.J
+            self.F = self.F0 + l * (self.J - self.J_tar) + self.faxc * self.J
 
             rho_zmp = pyscf.dft.numint.eval_rho(
                 self.mol, self.ao, self.dm, xctype="LDA"
@@ -233,9 +232,8 @@ class UZMP(pyscf.dft.uks.UKS):
         for cycle in range(1, self.max_cycle):
             J = self.get_jk(self.mol, self.dm)[0]
 
-            Fa, Fb = self.F0
-            Fa = Fa + 2 * l * (J[0] - self.J_tar[0]) + self.faxc * (J[0] + J[1])
-            Fb = Fb + 2 * l * (J[1] - self.J_tar[1]) + self.faxc * (J[0] + J[1])
+            Fa = self.F0[0] + 2 * l * (J[0] - self.J_tar[0]) + self.faxc * (J[0] + J[1])
+            Fb = self.F0[1] + 2 * l * (J[1] - self.J_tar[1]) + self.faxc * (J[0] + J[1])
 
             rho_zmp = [
                 pyscf.dft.numint.eval_rho(self.mol, self.ao, self.dm[0], xctype="LDA"),

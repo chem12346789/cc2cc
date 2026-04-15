@@ -192,7 +192,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
-    mzmp, dm1_zmp = get_zmp_uks(mol, dm1_cc, dm1_dft, grids, 20)
+    mzmp, dm1_zmp = get_zmp_uks(mol, dm1_cc, dm1_dft, grids, max_l=20)
 
     # Generate input data
     data_dict = {}
