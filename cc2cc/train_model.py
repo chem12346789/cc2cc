@@ -8,40 +8,29 @@ from torch import distributed as dist
 
 import wandb
 
-from cc2cc.utils import DataRecord, ModelClass
+from cc2cc.utils import ModelClass
 from cc2cc.utils import print_computer_info
 from cc2cc.utils.timer import Timer
 
 
-def train_data_record_process(train_data_record_l):
-    train_data_name = []
-    train_data_record_new_l = {}
-    for data in train_data_record_l:
-        if data["name"] in train_data_name:
-            train_data_record_new_l[data["name"]].update(
-                {
-                    key: train_data_record_new_l[data["name"]][key] + [data[key]]
-                    for key in data.keys()
-                    if key.startswith("loss_")
-                }
-            )
-        else:
-            train_data_name.append(data["name"])
-            train_data_record_new_l[data["name"]] = {
-                key: [data[key]] for key in data.keys() if key.startswith("loss_")
-            }
-    train_data_record_l = []
-    for name in train_data_name:
-        train_data_record_l.append(
-            {
-                "name": name,
-                **{
-                    key: np.mean(train_data_record_new_l[name][key])
-                    for key in train_data_record_new_l[name].keys()
-                },
-            }
-        )
-    return train_data_record_l
+class BestLoss:
+    def __init__(self):
+        self.loss_dict = {
+            "tot_loss": np.inf,
+            "train_loss": np.inf,
+            "eval_loss": np.inf,
+        }
+
+    def update(self, now_loss):
+        if_improved = False
+        for key in self.loss_dict.keys():
+            if now_loss[key] < self.loss_dict[key]:
+                print(
+                    f"Best {key} improved: {self.loss_dict[key]:.2e} -> {now_loss[key]:.2e}"
+                )
+                self.loss_dict[key] = now_loss[key]
+                if_improved = True
+        return if_improved
 
 
 def train_model(train_str_dict, eval_str_dict, args):
@@ -100,7 +89,7 @@ def train_model(train_str_dict, eval_str_dict, args):
         wandb.define_metric("*", step_metric="global_step")
 
         timer = Timer()
-        best_tot_loss, best_train_loss, best_eval_loss = np.inf, np.inf, np.inf
+        best_loss = BestLoss()
 
     if modeldict.args.distributed:
         dist.barrier()
@@ -111,34 +100,14 @@ def train_model(train_str_dict, eval_str_dict, args):
             modeldict.database_eval.sampler.set_epoch(epoch)
 
         if epoch > modeldict.start_step:
-            train_data_record_l = modeldict.train_model()
+            train_record = modeldict.train_model()
             if modeldict.args.distributed:
                 dist.barrier()
-                train_data_record_l_gathered = [
-                    [] for _ in range(dist.get_world_size())
-                ]
-                dist.all_gather_object(
-                    train_data_record_l_gathered, train_data_record_l
-                )
-                if modeldict.local_rank == 0:
-                    train_data_record_l = []
-                    for data in train_data_record_l_gathered:
-                        train_data_record_l.extend(data)
 
             if epoch % args.eval_step == 0:
-                eval_data_record_l = modeldict.eval_model()
+                eval_record = modeldict.eval_model()
                 if modeldict.args.distributed:
                     dist.barrier()
-                    eval_data_record_l_gathered = [
-                        [] for _ in range(dist.get_world_size())
-                    ]
-                    dist.all_gather_object(
-                        eval_data_record_l_gathered, eval_data_record_l
-                    )
-                    if modeldict.local_rank == 0:
-                        eval_data_record_l = []
-                        for data in eval_data_record_l_gathered:
-                            eval_data_record_l.extend(data)
 
                 if modeldict.local_rank == 0:
                     experiment_dict = {
@@ -148,99 +117,52 @@ def train_model(train_str_dict, eval_str_dict, args):
                         "time_elapsed": timer.elapsed(),
                     }
 
-                    train_data_record_l = train_data_record_process(train_data_record_l)
-                    eval_data_record_l = train_data_record_process(eval_data_record_l)
-
-                    epoch_train_loss = np.mean(
-                        [data["loss_ene"] for data in train_data_record_l]
-                    )
-                    epoch_eval_loss = np.mean(
-                        [data["loss_ene"] for data in eval_data_record_l]
-                    )
-                    epoch_tot_loss = np.mean(
-                        [data["loss_ene"] for data in eval_data_record_l]
-                        + [data["loss_ene"] for data in train_data_record_l]
+                    if_improved = best_loss.update(
+                        {
+                            "train_loss": np.mean(train_record.data_dict["loss_ene"]),
+                            "eval_loss": np.mean(eval_record.data_dict["loss_ene"]),
+                            "tot_loss": np.mean(
+                                np.concatenate(
+                                    [
+                                        train_record.data_dict["loss_ene"],
+                                        eval_record.data_dict["loss_ene"],
+                                    ]
+                                )
+                            ),
+                        }
                     )
                     epoch_lr = experiment_dict["lr"]
 
                     experiment_dict.update(
                         {
-                            f"train_{key}": np.mean(
-                                [data[key] for data in train_data_record_l]
-                            )
-                            for key in train_data_record_l[0].keys()
+                            f"train_{key}": np.mean(train_record.data_dict[key])
+                            for key in train_record.data_dict.keys()
                             if key.startswith("loss_")
                         }
                     )
                     experiment_dict.update(
                         {
-                            f"eval_{key}": np.mean(
-                                [data[key] for data in eval_data_record_l]
-                            )
-                            for key in eval_data_record_l[0].keys()
+                            f"eval_{key}": np.mean(eval_record.data_dict[key])
+                            for key in eval_record.data_dict.keys()
                             if key.startswith("loss_")
                         }
                     )
                     run.log(experiment_dict)
 
-                    if (
-                        (epoch_train_loss < best_train_loss)
-                        or (epoch_eval_loss < best_eval_loss)
-                        or (epoch_tot_loss < best_tot_loss)
-                        or (epoch % (args.eval_step * 32) == 0)
-                    ):
-                        if epoch_tot_loss < best_tot_loss:
-                            print(
-                                f"Total loss improved: {best_tot_loss:.4f} -> {epoch_tot_loss:.4f}!"
-                            )
-                            best_tot_loss = epoch_tot_loss
-                        elif epoch_train_loss < best_train_loss:
-                            print(
-                                f"Train loss improved: {best_train_loss:.4f} -> {epoch_train_loss:.4f}!"
-                            )
-                            best_train_loss = epoch_train_loss
-                        elif epoch_eval_loss < best_eval_loss:
-                            print(
-                                f"Eval loss improved: {best_eval_loss:.4f} -> {epoch_eval_loss:.4f}!"
-                            )
-                            best_eval_loss = epoch_eval_loss
-                        else:
-                            print(
-                                f"Loss not improved: {best_tot_loss:.4f} -> {epoch_tot_loss:.4f}."
-                            )
-
+                    if if_improved or (epoch % (args.eval_step * 32) == 0):
                         modeldict.save_model(epoch)
 
-                        data_record_train = DataRecord(
-                            modeldict.dir_checkpoint / "loss" / f"train-loss-{epoch}"
+                        train_record.save(
+                            modeldict.dir_checkpoint / "loss" / f"train-{epoch}.csv"
                         )
-                        for data in train_data_record_l:
-                            data_record_train.add_data(data)
-                        data_record_train.save_csv()
-
-                        data_record_eval = DataRecord(
-                            modeldict.dir_checkpoint / "loss" / f"eval-loss-{epoch}"
-                        )
-                        for data in eval_data_record_l:
-                            data_record_eval.add_data(data)
-                        data_record_eval.save_csv()
-
-                        run.log(
-                            {
-                                "epoch_eval": epoch,
-                                "train_loss_ene_epoch_eval": np.mean(
-                                    [data["loss_ene"] for data in train_data_record_l]
-                                ),
-                                "eval_loss_ene_epoch_eval": np.mean(
-                                    [data["loss_ene"] for data in eval_data_record_l]
-                                ),
-                            }
+                        eval_record.save(
+                            modeldict.dir_checkpoint / "loss" / f"eval-{epoch}.csv"
                         )
 
                     print(
                         f"Epoch: {epoch:>9} "
-                        f"Loss: {epoch_train_loss:>9.2e} "
-                        f"Eval: {epoch_eval_loss:>9.2e} "
+                        f"Loss: {best_loss.loss_dict["train_loss"]:>9.2e} "
+                        f"Eval: {best_loss.loss_dict["eval_loss"]:>9.2e} "
                         f"lr: {epoch_lr:>9.2e} "
                         f"{timer.measure()}",
                         flush=True,

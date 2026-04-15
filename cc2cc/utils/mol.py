@@ -184,7 +184,7 @@ def gen_ecp(basis: str, atom_list: list) -> dict:
         return dict_
 
 
-def rotate(
+def rotate_mol(
     name_mol: str,
     dataset_name: str = "Mol",
     verbose=4,
@@ -233,7 +233,7 @@ def gen_mole(
         print(
             f"if_rotate:{if_rotate} if_rotate_random:{if_rotate_random} solve_symmetry:{solve_symmetry}"
         )
-    molecule = rotate(
+    molecule = rotate_mol(
         name_mol,
         dataset_name,
         verbose=verbose,

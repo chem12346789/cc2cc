@@ -27,9 +27,11 @@ class BasicDataset(Dataset):
         super(BasicDataset, self).__init__()
         self.data = {}
         self.name_list = []
+        total_number_of_atom = 0
 
         for name in name_list:
             num_data_used, data_dict = load_data(mol_info_dict[name], name)
+            total_number_of_atom += num_data_used
             if num_data_used != 0:
                 self.data[name] = data_dict
                 self.name_list.append(name)
@@ -38,6 +40,10 @@ class BasicDataset(Dataset):
             if num_data_used == 1:
                 append_number = 20 // int(data_dict["data_weight"]) - 1
                 self.name_list.extend([name] * append_number)
+                total_number_of_atom += num_data_used * append_number
+        print(
+            f"Total number of data: {len(self.name_list)}, total number of atoms: {total_number_of_atom}"
+        )
 
     def __len__(self):
         return len(self.name_list)
@@ -182,6 +188,8 @@ class DataBase:
             batch_size=args.batch_size,
             num_workers=int(os.environ.get("OMP_NUM_THREADS", 0)),
             pin_memory=True,
+            persistent_workers=True,
+            prefetch_factor=4,
             sampler=self.sampler,
         )
 
@@ -232,7 +240,7 @@ class DataBase:
         """
         batch_gpu = {}
         for key, val in batch.items():
-            if key in self.array_key:
+            if key in ["input", "weight"]:
                 batch_gpu[key] = val.to(device=device, non_blocking=True)
             else:
                 batch_gpu[key] = val
