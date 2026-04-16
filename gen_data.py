@@ -1,19 +1,6 @@
 """ """
 
 import os
-
-N_THREADS = "32"
-
-os.environ["OMP_NUM_THREADS"] = N_THREADS
-os.environ["MKL_NUM_THREADS"] = N_THREADS
-os.environ["OPENBLAS_NUM_THREADS"] = N_THREADS
-os.environ["NUMEXPR_NUM_THREADS"] = N_THREADS
-os.environ["VECLIB_MAXIMUM_THREADS"] = N_THREADS
-os.environ["BLIS_NUM_THREADS"] = N_THREADS
-
-os.environ["OMP_NESTED"] = "FALSE"
-os.environ["OMP_MAX_ACTIVE_LEVELS"] = "1"
-
 import argparse
 import copy
 
@@ -41,54 +28,55 @@ from cc2cc.utils.get_dft_grad_rks import get_dft_grad as get_dft_grad_rks
 from cc2cc.utils.get_dft_grad_uks import get_dft_grad as get_dft_grad_uks
 
 train_str_list = [
-    "molecule_ADDON",
-    # # # #####################
-    # # # ########  0  ########
-    # # # #####################
-    # "molecule0-W4_11",
-    # "AHB21-1A",
-    # "AHB21-4A",
-    # "ALK8-li+",
-    # "ALK8-na+",
-    # "ALKBDE10-ca",
-    # "ALKBDE10-k",
-    # "ALKBDE10-li",
-    # "ALKBDE10-mg",
-    # "ALKBDE10-na",
-    # "CHB6-24A",
-    # "DIPCS10-be_2+",
-    # "DIPCS10-mg_2+",
-    # "G21EA-EA_c-",
-    # "G21EA-EA_o-",
-    # "G21EA-EA_p-",
-    # "G21EA-EA_s-",
-    # "G21EA-EA_si-",
-    # "G21IP-al+",
-    # "G21IP-b+",
-    # "G21IP-be+",
-    # "G21IP-c+",
-    # "G21IP-cl+",
-    # "G21IP-f+",
-    # "G21IP-mg+",
-    # "G21IP-n+",
-    # "G21IP-o+",
-    # "G21IP-p+",
-    # "G21IP-s+",
-    # "G21IP-si+",
-    # "HEAVYSB11-br",
-    # "SIE4x4-he",
-    # "SIE4x4-he+",
-    # "RG18-ne",
-    # "RG18-ar",
-    # "RG18-kr",
-    # # # #####################
-    # # # ########  1  ########
-    # # # #####################
-    # "molecule1-W4_11",
-    # # # #####################
-    # # # ########  2 # #######
-    # # # #####################
-    # "molecule2-W4_11",
+    # "molecule_ADDON",
+    # "ADDON_Se",
+    # # #####################
+    # # ########  0  ########
+    # # #####################
+    "molecule0-W4_11",
+    "AHB21-1A",
+    "AHB21-4A",
+    "ALK8-li+",
+    "ALK8-na+",
+    "ALKBDE10-ca",
+    "ALKBDE10-k",
+    "ALKBDE10-li",
+    "ALKBDE10-mg",
+    "ALKBDE10-na",
+    "CHB6-24A",
+    "DIPCS10-be_2+",
+    "DIPCS10-mg_2+",
+    "G21EA-EA_c-",
+    "G21EA-EA_o-",
+    "G21EA-EA_p-",
+    "G21EA-EA_s-",
+    "G21EA-EA_si-",
+    "G21IP-al+",
+    "G21IP-b+",
+    "G21IP-be+",
+    "G21IP-c+",
+    "G21IP-cl+",
+    "G21IP-f+",
+    "G21IP-mg+",
+    "G21IP-n+",
+    "G21IP-o+",
+    "G21IP-p+",
+    "G21IP-s+",
+    "G21IP-si+",
+    "HEAVYSB11-br",
+    "SIE4x4-he",
+    "SIE4x4-he+",
+    "RG18-ne",
+    "RG18-ar",
+    "RG18-kr",
+    # # #####################
+    # # ########  1  ########
+    # # #####################
+    "molecule1-W4_11",
+    # # #####################
+    # # ########  2 # #######
+    # # #####################
+    "molecule2-W4_11",
 ]
 
 eval_str_list = [
