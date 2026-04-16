@@ -60,3 +60,4 @@ out_mkdir
 
 # wandb files
 wandb/*
+sets/
