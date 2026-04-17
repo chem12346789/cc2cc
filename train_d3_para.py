@@ -39,31 +39,10 @@ class Model(nn.Module):
             self.param_vector = torch.nn.Parameter(
                 torch.tensor(
                     [
+                        kwargs.get("s6", 0),
                         kwargs.get("rs6", 1.261),
-                        kwargs.get("s18", 1.703),
+                        kwargs.get("s18", 0),
                     ],
-                    dtype=torch.float64,
-                    device=device,
-                )
-            )
-            self.params = {
-                "s6": kwargs.get("s6", 1.0),
-                "rs6": self.param_vector[0],
-                "s18": self.param_vector[1],
-                "rs18": kwargs.get("rs18", 1.0),
-                "alp": kwargs.get("alp", 14.0),
-            }
-        elif damping == "bj":
-            self.param_vector = torch.nn.Parameter(
-                torch.tensor(
-                    # [
-                    #     # kwargs.get("s6", 1),
-                    #     # kwargs.get("rs6", 0.3981),
-                    #     # kwargs.get("s18", 1.9889),
-                    #     # kwargs.get("rs18", 4.4211),
-                    #     # kwargs.get("alp", 14.0),
-                    # ],
-                    [0, 0.713586, 0, 0.539029, 6.770524],
                     dtype=torch.float64,
                     device=device,
                 )
@@ -72,8 +51,27 @@ class Model(nn.Module):
                 "s6": self.param_vector[0],
                 "rs6": self.param_vector[1],
                 "s18": self.param_vector[2],
-                "rs18": self.param_vector[3],
-                "alp": self.param_vector[4],
+                "rs18": kwargs.get("rs18", 1.0),
+                "alp": kwargs.get("alp", 14.0),
+            }
+        elif damping == "bj":
+            self.param_vector = torch.nn.Parameter(
+                torch.tensor(
+                    [
+                        kwargs.get("rs6", 0.735999),
+                        kwargs.get("s18", -0.673070),
+                        kwargs.get("rs18", 0.392889),
+                    ],
+                    dtype=torch.float64,
+                    device=device,
+                )
+            )
+            self.params = {
+                "s6": kwargs.get("s6", 0.412427),
+                "rs6": self.param_vector[0],
+                "s18": self.param_vector[1],
+                "rs18": self.param_vector[2],
+                "alp": kwargs.get("alp", 14),
             }
         self.calc.dftd_module.params = self.params
         self.damping = damping
@@ -304,7 +302,8 @@ print(
         number_of_reactions,
         1 / average_relative_absolute_energies,
         mean_reaction_energy,
-    )
+    ),
+    flush=True,
 )
 
 

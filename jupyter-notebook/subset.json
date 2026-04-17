@@ -1,11 +1,8 @@
 {
     "full_subset_dict_test": {
         "test": [
-            "W4_11",
-            "MB16_43",
-            "BSR36",
-            "Amino20x4",
-            "S22"
+            "S22",
+            "S66"
         ]
     },
     "full_subset_dict_ccpvdz": {
