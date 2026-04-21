@@ -58,8 +58,7 @@ def train_model(train_str_dict, eval_str_dict, args):
     # 1. Init the criterion and the model
 
     modeldict = ModelClass(args)
-    modeldict.init_model()
-    modeldict.init_train()
+    modeldict.init_model(init_train=True)
     modeldict.init_database(train_str_dict, eval_str_dict)
 
     if modeldict.args.distributed:
