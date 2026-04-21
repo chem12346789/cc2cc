@@ -67,11 +67,11 @@ class Model(nn.Module):
                 )
             )
             self.params = {
-                "s6": kwargs.get("s6", 0.412427),
+                "s6": kwargs.get("s6", 0.2),
                 "rs6": self.param_vector[0],
                 "s18": self.param_vector[1],
                 "rs18": self.param_vector[2],
-                "alp": kwargs.get("alp", 14),
+                "alp": kwargs.get("alp", 4),
             }
         self.calc.dftd_module.params = self.params
         self.damping = damping
@@ -214,7 +214,6 @@ else:
     dft_type = "scf"
 data_dft_ene = data[f"{dft_type}_ene"].to_numpy() * AU2KCALMOL
 
-
 with open(
     "/home/chenzihao/workspace/cc2cc_test5/cc2cc/utils/gmtkn-def2.json",
     encoding="utf-8",
@@ -319,13 +318,12 @@ optimizer = torch.optim.Adagrad(
 )
 scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
     optimizer,
-    T_0=100,
+    T_0=3200,
     T_mult=2,
     eta_min=1e-8,
 )
 loss_function = torch.nn.L1Loss(reduction="sum")
 torch.set_printoptions(precision=5, sci_mode=False)
-
 
 # tlm.utils.fit(
 #     tlm.training.LevenbergMarquardtModule(

@@ -55,6 +55,12 @@ class DataRecordList:
         df = pd.DataFrame(self.data_dict)
         df.to_csv(path, index=False)
 
+    def merge(self):
+        """merge the the named data"""
+        df = pd.DataFrame(self.data_dict)
+        df_grouped = df.groupby("name").mean().reset_index()
+        return df_grouped
+
 
 class ModelClass:
     """
