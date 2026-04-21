@@ -160,8 +160,8 @@ def train_model(train_str_dict, eval_str_dict, args):
 
                     print(
                         f"Epoch: {epoch:>9} "
-                        f"Loss: {best_loss.loss_dict["train_loss"]:>9.2e} "
-                        f"Eval: {best_loss.loss_dict["eval_loss"]:>9.2e} "
+                        f"Loss: {np.mean(train_record.data_dict["loss_ene"]):>9.2e} "
+                        f"Eval: {np.mean(eval_record.data_dict["loss_ene"]):>9.2e} "
                         f"lr: {epoch_lr:>9.2e} "
                         f"{timer.measure()}",
                         flush=True,
