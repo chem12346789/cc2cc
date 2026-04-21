@@ -165,11 +165,11 @@ class Collect_info:
         print(f"Total number of reactions done: {np.sum(completed_reaction_counts)}")
         print(f"Total number of reactions: {np.sum(reaction_count_list)}")
 
-        summary_subset_df = pd.read_csv(
+        subset_mean_df = pd.read_csv(
             f"validate_hkqai_done/summary_subset.csv",
             index_col=0,
         )
-        summary_wtmad_2_subset_df = pd.read_csv(
+        wtmad_2_subset_df = pd.read_csv(
             f"validate_hkqai_done/summary_subset_wtmad_2.csv",
             index_col=0,
         )
@@ -184,8 +184,8 @@ class Collect_info:
         dft_type_list = ["scf_ene", "scf_d3bj_ene"]
         header = dft_type_list + ["Processed"]
         for df in [
-            summary_subset_df,
-            summary_wtmad_2_subset_df,
+            subset_mean_df,
+            wtmad_2_subset_df,
             wtmad_1_df,
             wtmad_2_df,
         ]:
@@ -206,7 +206,7 @@ class Collect_info:
             dtype=object,
         )
         print(f"Number of reactions process/done in each subset: {reaction_status_set}")
-        for df in (summary_subset_df, summary_wtmad_2_subset_df):
+        for df in (subset_mean_df, wtmad_2_subset_df):
             df.loc[self.name_subset_list, "Processed"] = reaction_status_set
 
         for dft_type in dft_type_list:
@@ -239,8 +239,9 @@ class Collect_info:
             wtmad_1_multiplier[completed_reaction_counts > 75] = 0.1
             wtmad_1_multiplier[completed_reaction_counts < 7.5] = 10
             wtmad_1_subset = wtmad_1_multiplier * mean_reaction_energy
-            summary_subset_df.loc[self.name_subset_list, dft_type] = (
-                mean_reaction_energy
+            subset_mean_df.loc[self.name_subset_list, dft_type] = mean_reaction_energy
+            wtmad_1_df.loc[self.name_subset_list, dft_type] = np.einsum(
+                "i,ij->j", wtmad_1_subset, subset2set
             )
 
             wtmad_2_subset = mean_absolute_deviation * np.einsum(
@@ -249,16 +250,16 @@ class Collect_info:
                 inverse_mae,
                 mean_reaction_energy,
             )
-            summary_wtmad_2_subset_df.loc[self.name_subset_list, dft_type] = (
-                wtmad_2_subset
-            )
-            print(
-                f"WTMAD-2 for {dft_type}: {np.einsum('i,ij->j', wtmad_2_subset, subset2set)} sum: {np.sum(wtmad_2_subset)}"
+            wtmad_2_subset_df.loc[self.name_subset_list, dft_type] = wtmad_2_subset
+            wtmad_2_df.loc[self.name_subset_list, dft_type] = np.einsum(
+                "i,ij->j", wtmad_2_subset, subset2set
             )
 
         with pd.option_context("display.max_rows", None, "display.max_columns", None):
-            print(summary_subset_df)
-            print(summary_wtmad_2_subset_df)
+            print(subset_mean_df)
+            print(wtmad_2_subset_df)
+            print(wtmad_1_df)
+            print(wtmad_2_df)
 
         raise NotImplementedError("WTMAD-2 calculation not implemented yet.")
 

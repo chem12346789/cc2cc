@@ -59,7 +59,8 @@ class DataRecordList:
         """merge the the named data"""
         df = pd.DataFrame(self.data_dict)
         df_grouped = df.groupby("name").mean().reset_index()
-        return df_grouped
+        self.data_dict = df_grouped.to_dict(orient="list")
+        self.iter = len(self.data_dict["name"])
 
 
 class ModelClass:
@@ -214,7 +215,7 @@ class ModelClass:
                     k.replace("module.", ""): v for k, v in state_dict.items()
                 }
             self.state_dict = state_dict
-            self.args.model = checkpoint["model"]        
+            self.args.model = checkpoint["model"]
             if "optimizer" in checkpoint:
                 self.optimizer_state_dict = checkpoint["optimizer"]
             self.print(f"Model loaded from {load_path} with model {self.args.model}")
@@ -519,6 +520,7 @@ class ModelClass:
                     data_record = None
                 else:
                     break
+        data_record_l.merge()
         return data_record_l
 
     def eval_model(self):
@@ -539,6 +541,7 @@ class ModelClass:
                     data_record = None
                 else:
                     break
+        data_record_l.merge()
         return data_record_l
 
     def get_b3lyp_ene(self, rho_cube):
