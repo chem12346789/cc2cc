@@ -1,11 +1,8 @@
 from pathlib import Path
 import json
-import shutil
 import time
-from datetime import datetime
 import argparse
 import os
-from urllib import parse
 
 import pandas as pd
 import numpy as np
@@ -54,6 +51,7 @@ class Collect_info:
             name=f"collect_{self.model_load}_{self.basis}",
             config=experiment_dict,
             allow_val_change=True,
+            mode="disabled",
         )
 
         print("Collect_info initialized with the following parameters:")
@@ -62,7 +60,7 @@ class Collect_info:
         print("")
 
         with open("jupyter-notebook/subset.json") as f:
-            self.full_subset_dict = json.load(f)["full_subset_dict"]
+            self.full_subset_dict = json.load(f)[self.data_set]
 
         for name_set, subset_list_ in self.full_subset_dict.items():
             self.full_subset_dict[name_set] = np.sort(subset_list_).tolist()
@@ -82,9 +80,12 @@ class Collect_info:
 
     def aggregate_data(self):
         for name_subset in self.name_subset_list:
+            print(
+                f"Find *{self.basis}_{self.model_load}_{self.data_set}_{name_subset}.csv in validate directory..."
+            )
             data_path_list = list(
                 Path("validate").glob(
-                    f"*{self.basis}*{self.model_load}*{name_subset}.csv"
+                    f"*{self.basis}_{self.model_load}_{self.data_set}_{name_subset}.csv"
                 )
             )
             if len(data_path_list) != 1:
@@ -99,8 +100,16 @@ class Collect_info:
             with open(source_data_path, "r") as f:
                 self.data = pd.concat([self.data, pd.read_csv(f)], ignore_index=True)
 
+        if self.data.empty:
+            print("No data found to aggregate.")
+
     def add_d3bj_correction(self):
-        if "scf_d3bj_ene" in self.data.columns:
+        print(f"Current data columns: {self.data.columns.tolist()}")
+        if (
+            self.data.empty
+            or "scf_d3bj_ene" in self.data.columns
+            or "b3lyp-d3bj_ene" in self.data.columns
+        ):
             if self.verbose > 3:
                 print("D3BJ correction already added.")
             return
@@ -126,6 +135,11 @@ class Collect_info:
             )
 
     def get_wtmad_2(self):
+        if self.data.empty:
+            if self.verbose > 3:
+                print("No data available to calculate WTMAD-2.")
+            return
+
         data_name_list = (
             self.data["name"].str.split(f"_{self.basis}", regex=False).str[0].to_numpy()
         )
@@ -394,7 +408,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_load",
         type=str,
-        required=True,
+        nargs="?",  # 0 or 1 argument
+        const="",  # Used when flag appears without a value
+        default="",  # Used when flag is absent
         help="Model load identifier.",
     )
     parser.add_argument(
@@ -422,6 +438,12 @@ if __name__ == "__main__":
         help="Maximum number of checks before exiting, -1 for infinite.",
     )
     parser.add_argument(
+        "--data_set",
+        type=str,
+        default="gmtkn-def2",
+        help="Dataset identifier for processing.",
+    )
+    parser.add_argument(
         "--sota",
         action="store_true",
         help="Whether to treat the current model as SOTA and adjust the output accordingly.",
@@ -433,6 +455,7 @@ if __name__ == "__main__":
         basis=args.basis,
         is_sota=args.sota,
         verbose=args.verbose,
+        data_set=args.data_set,
     )
     num_checks = 0
 

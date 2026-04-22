@@ -5,70 +5,20 @@
             "S66"
         ]
     },
-    "full_subset_dict_ccpvdz": {
+    "s66x8-def2": {
         "sub1": [
-            "W4_11",
-            "G21EA",
-            "G21IP",
-            "DIPCS10",
-            "PA26",
-            "SIE4x4",
-            "ALKBDE10",
-            "YBDE18",
-            "AL2X6",
-            "HEAVYSB11",
-            "NBPRC",
-            "ALK8",
-            "RC21",
-            "G2RC",
-            "BH76RC",
-            "FH51",
-            "TAUT15",
-            "DC13"
-        ],
-        "sub2": [
-            "MB16_43",
-            "DARC",
-            "RSE43",
-            "BSR36",
-            "CDIE20",
-            "ISO34",
-            "PArel"
-        ],
-        "sub3": [
-            "BH76",
-            "BHPERI",
-            "BHDIV10",
-            "INV24",
-            "BHROT27",
-            "PX13",
-            "WCPT18"
-        ],
-        "sub4": [
-            "RG18",
-            "ADIM6",
-            "S22",
-            "S66",
-            "WATER27",
-            "CARBHB12",
-            "PNICO23",
-            "HAL59",
-            "AHB21",
-            "CHB6",
-            "IL16"
-        ],
-        "sub5": [
-            "IDISP",
-            "ICONF",
-            "ACONF",
-            "Amino20x4",
-            "PCONF21",
-            "MCONF",
-            "SCONF",
-            "BUT14DIOL"
+            "molecule_ab",
+            "molecule_0.9",
+            "molecule_0.95",
+            "molecule_1.0",
+            "molecule_1.05",
+            "molecule_1.1",
+            "molecule_1.25",
+            "molecule_1.5",
+            "molecule_2.0"
         ]
     },
-    "full_subset_dict": {
+    "gmtkn-def2": {
         "sub1": [
             "W4_11",
             "G21EA",
@@ -135,7 +85,7 @@
             "BUT14DIOL"
         ]
     },
-    "full_subset_small_dict": {
+    "full_subset_dict": {
         "sub1": [
             "W4_11",
             "G21EA",
@@ -177,11 +127,15 @@
             "WCPT18"
         ],
         "sub4": [
+            "RG18",
             "ADIM6",
             "S22",
+            "S66",
+            "HEAVY28",
             "WATER27",
             "CARBHB12",
             "PNICO23",
+            "HAL59",
             "AHB21",
             "CHB6",
             "IL16"
@@ -191,6 +145,8 @@
             "ICONF",
             "ACONF",
             "Amino20x4",
+            "PCONF21",
+            "MCONF",
             "SCONF",
             "UPU23",
             "BUT14DIOL"
