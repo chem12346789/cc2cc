@@ -165,7 +165,11 @@ class Collect_info:
                 finished = True
 
                 for i in range(len(systems_list)):
-                    mole_name = f"{i_subset_name}-{systems_list[i]}"
+                    if self.data_set == "gmtkn-def2":
+                        mole_name = f"{i_subset_name}-{systems_list[i]}"
+                    # elif self.data_set == "s66x8-def2":
+                    else:
+                        mole_name = f"{systems_list[i]}"
                     stoichiometry = int(stoichiometry_list[i])
 
                     if mole_name in data_set_json:
@@ -176,6 +180,10 @@ class Collect_info:
                     if col.size == 1:
                         molecule_stoichiometry[col[0]] = stoichiometry
                     else:
+                        if self.verbose > 3:
+                            print(
+                                f"Warning: Could not find molecule {mole_name} in subset {subset_name}"
+                            )
                         finished = False
 
                 if finished:
@@ -197,23 +205,11 @@ class Collect_info:
         completed_counts_subset = np.sum(reactions_to_subset, axis=0)
         total_counts_subset = np.array(total_counts_subset)
 
-        subset_mean_df = pd.read_csv(
-            f"validate_hkqai_done/subset_mean_df.csv",
-            index_col=0,
-        )
-        wtmad_2_subset_df = pd.read_csv(
-            f"validate_hkqai_done/wtmad_2_subset_df.csv",
-            index_col=0,
-        )
-        wtmad_1_df = pd.read_csv(
-            f"validate_hkqai_done/wtmad_1_df.csv",
-            index_col=0,
-        )
-        wtmad_2_df = pd.read_csv(
-            f"validate_hkqai_done/wtmad_2_df.csv",
-            index_col=0,
-        )
-        dft_type_list = ["scf_ene", "scf_d3bj_ene", "modified_ai_d3bj"]
+        if self.model_load == "":
+            # this mean we use the dft data
+            dft_type_list = ["b3lyp_ene", "b3lyp-d3bj_ene"]
+        else:
+            dft_type_list = ["scf_ene", "scf_d3bj_ene", "modified_ai_d3bj"]
         header = dft_type_list + ["Processed"]
         rename_dict = {
             "cc_ene": "mae",
@@ -225,6 +221,38 @@ class Collect_info:
             "scf_d3bj_ene": "AI(BJ)",
             "modified_ai_d3bj": "AI(M BJ)",
         }
+
+        if self.data_set == "gmntkn-def2":
+            subset_mean_df = pd.read_csv(
+                f"validate_hkqai_done/subset_mean_df.csv",
+                index_col=0,
+            )
+            wtmad_2_subset_df = pd.read_csv(
+                f"validate_hkqai_done/wtmad_2_subset_df.csv",
+                index_col=0,
+            )
+            wtmad_1_df = pd.read_csv(
+                f"validate_hkqai_done/wtmad_1_df.csv",
+                index_col=0,
+            )
+            wtmad_2_df = pd.read_csv(
+                f"validate_hkqai_done/wtmad_2_df.csv",
+                index_col=0,
+            )
+        else:
+            subset_mean_df = pd.DataFrame(
+                index=self.name_subset_list, columns=dft_type_list
+            )
+            wtmad_2_subset_df = pd.DataFrame(
+                index=self.name_subset_list, columns=dft_type_list
+            )
+            wtmad_1_df = pd.DataFrame(
+                index=self.name_set_list + ["summary"], columns=dft_type_list
+            )
+            wtmad_2_df = pd.DataFrame(
+                index=self.name_set_list + ["summary"], columns=dft_type_list
+            )
+
         for df in [subset_mean_df, wtmad_2_subset_df, wtmad_1_df, wtmad_2_df]:
             for col in header:
                 if col not in df.columns:
@@ -232,6 +260,9 @@ class Collect_info:
             # move Processed column to the end
             df.pop("Processed")
 
+        print(
+            f"Number of reactions process/done in each subset: {completed_counts_subset}/{total_counts_subset}"
+        )
         status_subset = np.array(
             [
                 f"{int(x[0])}/{int(x[1])}" if int(x[0]) < int(x[1]) else "DONE"

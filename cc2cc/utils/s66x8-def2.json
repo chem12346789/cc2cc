@@ -88669,6 +88669,9 @@
             "reference": -0.494
         }
     },
+    "reaction-molecule_a": {},
+    "reaction-molecule_b": {},
+    "reaction-molecule_ab": {},
     "molecule_0.9": [
         "s66x8-1-0.9",
         "s66x8-2-0.9",

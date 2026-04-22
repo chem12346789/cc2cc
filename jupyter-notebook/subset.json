@@ -7,6 +7,8 @@
     },
     "s66x8-def2": {
         "sub1": [
+            "molecule_a",
+            "molecule_b",
             "molecule_ab",
             "molecule_0.9",
             "molecule_0.95",
