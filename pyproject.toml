@@ -28,12 +28,13 @@ namespaces = false
 [tool.pyright]
 reportGeneralTypeIssues = "warning"
 reportArgumentType = "warning"
- reportAttributeAccessIssue = "warning"
+reportAttributeAccessIssue = "warning"
 reportUndefinedVariable = "error"
 reportOperatorIssue = false
 reportCallIssue = false
 reportOptionalMemberAccess = false
 reportOptionalOperand = false
+ reportPrivateImportUsage = false
 
 [tool.pylance]
 reportGeneralTypeIssues = "warning"
@@ -43,3 +44,4 @@ reportOperatorIssue = false
 reportCallIssue = false
 reportOptionalMemberAccess = false
 reportOptionalOperand = false
+ reportPrivateImportUsage = false

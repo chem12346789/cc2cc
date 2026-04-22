@@ -39,31 +39,31 @@ class Model(nn.Module):
             self.param_vector = torch.nn.Parameter(
                 torch.tensor(
                     [
+                        kwargs.get("s6", 0),
                         kwargs.get("rs6", 1.261),
-                        kwargs.get("s18", 1.703),
+                        kwargs.get("s18", 0),
                     ],
                     dtype=torch.float64,
                     device=device,
                 )
             )
             self.params = {
-                "s6": kwargs.get("s6", 1.0),
-                "rs6": self.param_vector[0],
-                "s18": self.param_vector[1],
+                "s6": self.param_vector[0],
+                "rs6": self.param_vector[1],
+                "s18": self.param_vector[2],
                 "rs18": kwargs.get("rs18", 1.0),
                 "alp": kwargs.get("alp", 14.0),
             }
         elif damping == "bj":
             self.param_vector = torch.nn.Parameter(
                 torch.tensor(
-                    # [
-                    #     # kwargs.get("s6", 1),
-                    #     # kwargs.get("rs6", 0.3981),
-                    #     # kwargs.get("s18", 1.9889),
-                    #     # kwargs.get("rs18", 4.4211),
-                    #     # kwargs.get("alp", 14.0),
-                    # ],
-                    [0, 0.713586, 0, 0.539029, 6.770524],
+                    [
+                        kwargs.get("s6", 0.412427),
+                        kwargs.get("rs6", 0.735999),
+                        kwargs.get("s18", -0.673070),
+                        kwargs.get("rs18", 0.392889),
+                        kwargs.get("alp", 3.321617),
+                    ],
                     dtype=torch.float64,
                     device=device,
                 )
@@ -77,6 +77,18 @@ class Model(nn.Module):
             }
         self.calc.dftd_module.params = self.params
         self.damping = damping
+
+    def get_dftd3_energy(self, batch_dicts):
+        self.calc.reset()
+
+        # Calculate the energy using the DFTD3 calculator
+        E_disp = self.calc.dftd_module.calc_energy_batch(
+            **batch_dicts, damping=self.damping
+        )
+
+        # E_disp to hartree, then add to DFT energy to get the total energy
+        energy_dftd3 = E_disp / units.Hartree
+        return energy_dftd3.detach().cpu().numpy() + data["scf_ene"].to_numpy()
 
     def forward(self, batch_dicts):
         self.calc.reset()
@@ -210,12 +222,7 @@ model = Model(device=DEVICE, damping=args.damping)
 
 data = pd.read_csv(DATA_PATH)
 data_name_list = (data["name"].str.split("_def2").str[0]).to_numpy()
-if args.load == "":
-    dft_type = "b3lyp"
-else:
-    dft_type = "scf"
-data_dft_ene = data[f"{dft_type}_ene"].to_numpy() * AU2KCALMOL
-
+data_dft_ene = data["scf_ene"].to_numpy() * AU2KCALMOL
 
 with open(
     "/home/chenzihao/workspace/cc2cc_test5/cc2cc/utils/gmtkn-def2.json",
@@ -304,7 +311,8 @@ print(
         number_of_reactions,
         1 / average_relative_absolute_energies,
         mean_reaction_energy,
-    )
+    ),
+    flush=True,
 )
 
 
@@ -320,13 +328,12 @@ optimizer = torch.optim.Adagrad(
 )
 scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
     optimizer,
-    T_0=100,
+    T_0=3200,
     T_mult=2,
     eta_min=1e-8,
 )
 loss_function = torch.nn.L1Loss(reduction="sum")
 torch.set_printoptions(precision=5, sci_mode=False)
-
 
 # tlm.utils.fit(
 #     tlm.training.LevenbergMarquardtModule(
@@ -363,3 +370,21 @@ for epoch in range(args.epochs + 1):
             f"Lr = {optimizer.param_groups[0]['lr']:.2e}",
             flush=True,
         )
+
+        if "loss" in save_para:
+            if loss_value < save_para["loss"]:
+                save_para["epoch"] = epoch
+                save_para["loss"] = loss_value
+                save_para["parameters"] = params.tolist()
+        else:
+            save_para["epoch"] = epoch
+            save_para["loss"] = loss_value
+            save_para["parameters"] = params.tolist()
+
+with open(SAVE_PARA_PATH, "w", encoding="utf-8") as f:
+    json.dump(save_para, f, indent=4)
+
+
+data["modified_ai_d3bj"] = model.get_dftd3_energy(input_batch)
+# save to DATA_PATH
+data.to_csv(DATA_PATH, index=False)

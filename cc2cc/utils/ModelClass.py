@@ -55,6 +55,13 @@ class DataRecordList:
         df = pd.DataFrame(self.data_dict)
         df.to_csv(path, index=False)
 
+    def merge(self):
+        """merge the the named data"""
+        df = pd.DataFrame(self.data_dict)
+        df_grouped = df.groupby("name").mean().reset_index()
+        self.data_dict = df_grouped.to_dict(orient="list")
+        self.iter = len(self.data_dict["name"])
+
 
 class ModelClass:
     """
@@ -78,6 +85,7 @@ class ModelClass:
             / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
         ).resolve()
         self.state_dict = None
+        self.optimizer_state_dict = None
 
         # for distributed training
         if self.args.distributed:
@@ -94,7 +102,7 @@ class ModelClass:
             self.local_rank = 0
             self.verbose = True
 
-    def init_model(self, if_validate=False):
+    def init_model(self, if_validate=False, init_train=False):
         """
         Initialize the model.
         """
@@ -125,6 +133,24 @@ class ModelClass:
                 weight_decay=self.args.weight_decay,
             )
 
+        if self.args.scheduler == "cosine":
+            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
+                self.optimizer,
+                T_max=self.args.eval_step * 32 * self.args.cosine_T,
+                eta_min=self.args.cosine_eta_min,
+            )
+        elif self.args.scheduler == "constant":
+            self.scheduler = optim.lr_scheduler.ConstantLR(self.optimizer)
+        elif self.args.scheduler == "cosine_warn":
+            self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                self.optimizer,
+                T_0=self.args.eval_step * 32,
+                T_mult=2,
+                eta_min=self.args.cosine_eta_min,
+            )
+        else:
+            raise ValueError(f"Unknown scheduler {self.args.scheduler}")
+
         self.device = next(self.model.parameters()).device
         self.dtype = next(self.model.parameters()).dtype
         self.cube_type = self.model.cube_type
@@ -146,6 +172,9 @@ class ModelClass:
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=True)
 
+        if self.optimizer_state_dict is not None:
+            self.optimizer.load_state_dict(self.optimizer_state_dict)
+
         # if (not if_validate) and (not self.args.if_grad):
         #     # model.compile does not support Double backward which is used in grad.
         #     self.model.compile(dynamic=True, mode="max-autotune-no-cudagraphs")
@@ -156,6 +185,9 @@ class ModelClass:
             self.model = DistributedDataParallel(
                 self.model, device_ids=[self.local_rank]
             )
+
+        if init_train:
+            self.init_train()
 
     def print(self, msg):
         """
@@ -185,7 +217,7 @@ class ModelClass:
             self.state_dict = state_dict
             self.args.model = checkpoint["model"]
             if "optimizer" in checkpoint:
-                self.optimizer.load_state_dict(checkpoint["optimizer"])
+                self.optimizer_state_dict = checkpoint["optimizer"]
             self.print(f"Model loaded from {load_path} with model {self.args.model}")
         else:
             self.print("Model not found, starting from scratch.")
@@ -194,24 +226,6 @@ class ModelClass:
         """
         Initialize the optimizer, scheduler, loss function and checkpoint_dir.
         """
-        if self.args.scheduler == "cosine":
-            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer,
-                T_max=self.args.eval_step * 32 * self.args.cosine_T,
-                eta_min=self.args.cosine_eta_min,
-            )
-        elif self.args.scheduler == "constant":
-            self.scheduler = optim.lr_scheduler.ConstantLR(self.optimizer)
-        elif self.args.scheduler == "cosine_warn":
-            self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                self.optimizer,
-                T_0=self.args.eval_step * 32,
-                T_mult=2,
-                eta_min=self.args.cosine_eta_min,
-            )
-        else:
-            raise ValueError(f"Unknown scheduler {self.args.scheduler}")
-
         if self.args.loss_ene == "L1Loss":
             self.loss_ene = torch.nn.L1Loss(reduction="sum").cuda(self.local_rank)
             self.loss_ene_atomic = torch.nn.L1Loss(reduction="sum").cuda(
@@ -506,6 +520,7 @@ class ModelClass:
                     data_record = None
                 else:
                     break
+        data_record_l.merge()
         return data_record_l
 
     def eval_model(self):
@@ -526,6 +541,7 @@ class ModelClass:
                     data_record = None
                 else:
                     break
+        data_record_l.merge()
         return data_record_l
 
     def get_b3lyp_ene(self, rho_cube):
