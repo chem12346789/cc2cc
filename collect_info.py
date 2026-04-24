@@ -37,7 +37,10 @@ class Collect_info:
             / f"ccdft_{self.basis}_{self.model_load}_{self.data_set}.csv"
         )
         self.if_done = False
-        self.stamp = f"{self.model_load}_{self.data_set}"
+        if self.is_sota:
+            self.stamp = f"{self.model_load}_{self.data_set}_sota"
+        else:
+            self.stamp = f"{self.model_load}_{self.data_set}"
 
         experiment_dict = {
             "model_load": self.model_load,
@@ -48,7 +51,7 @@ class Collect_info:
         self.run = wandb.init(
             project="DFT2CC_validation",
             resume="allow",
-            name=f"collect_{self.model_load}_{self.basis}",
+            name=f"collect_{self.model_load}_{self.basis}_{'sota' if self.is_sota else 'standard'}",
             config=experiment_dict,
             allow_val_change=True,
             mode="disabled",
@@ -154,7 +157,13 @@ class Collect_info:
         total_counts_subset = []
 
         for i_subset, subset_name in enumerate(self.name_subset_list):
-            i_subset_name = "BH76" if subset_name == "BH76RC" else subset_name
+            if subset_name == "BH76RC":
+                i_subset_name = "BH76"
+            if "S66x8" in subset_name:
+                i_subset_name = "S66x8"
+            else:
+                i_subset_name = subset_name
+
             reaction_dict = data_set_json[f"reaction-{subset_name}"]
             total_counts_subset.append(len(reaction_dict))
 
@@ -165,11 +174,7 @@ class Collect_info:
                 finished = True
 
                 for i in range(len(systems_list)):
-                    if self.data_set == "gmtkn-def2":
-                        mole_name = f"{i_subset_name}-{systems_list[i]}"
-                    # elif self.data_set == "s66x8-def2":
-                    else:
-                        mole_name = f"{systems_list[i]}"
+                    mole_name = f"{i_subset_name}-{systems_list[i]}"
                     stoichiometry = int(stoichiometry_list[i])
 
                     if mole_name in data_set_json:
@@ -306,11 +311,16 @@ class Collect_info:
             divide(1, completed_counts_subset),
         )
         inverse_mae = divide(1, mean_relative_abs_energies)
-        mean_absolute_deviation = 56.84 / 1505
 
         wtmad_1_multiplier = np.ones_like(mean_relative_abs_energies)
         wtmad_1_multiplier[mean_relative_abs_energies > 75] = 0.1
         wtmad_1_multiplier[mean_relative_abs_energies < 7.5] = 10
+
+        if self.model_load == "":
+            subset_mean_df.loc[self.name_subset_list, "mae"] = (
+                mean_relative_abs_energies
+            )
+        mean_absolute_deviation = 56.84 / 1505
 
         for dft_type in dft_type_list:
             if dft_type not in self.data.columns:
@@ -340,12 +350,22 @@ class Collect_info:
                 wtmad_1_df.loc[self.name_set_list, dft_type]
             )
 
-            wtmad_2_subset = mean_absolute_deviation * np.einsum(
-                "i,i,i->i",
-                completed_counts_subset,
-                inverse_mae,
-                mean_reaction_energy,
-            )
+            if self.data_set == "gmtkn-def2":
+                wtmad_2_subset = mean_absolute_deviation * np.einsum(
+                    "i,i,i->i",
+                    completed_counts_subset,
+                    inverse_mae,
+                    mean_reaction_energy,
+                )
+            else:
+                wtmad_2_subset = 100 * np.einsum(
+                    "i,i,ij,j->j",
+                    np.abs(reference_energy - reaction_energy_dft),
+                    divide(1, np.abs(reference_energy)),
+                    reactions_to_subset,
+                    divide(1, completed_counts_subset),
+                )
+
             wtmad_2_subset_df.loc[self.name_subset_list, dft_type] = wtmad_2_subset
             wtmad_2_df.loc[self.name_set_list, dft_type] = np.einsum(
                 "i,ij->j", wtmad_2_subset, subset2set
@@ -356,18 +376,22 @@ class Collect_info:
 
         len_processed = np.sum(completed_counts_subset)
         log_dict = {
-            "WTMAD-2_min": wtmad_2_df.loc["summary", "scf_ene"],
-            "WTMAD-2_max": wtmad_2_df.loc["summary", "scf_ene"] / len_processed * 1505,
+            "WTMAD-2_min": wtmad_2_df.loc["summary", dft_type_list[0]],
+            "WTMAD-2_max": wtmad_2_df.loc["summary", dft_type_list[0]]
+            / len_processed
+            * 1505,
             "len_processed": len_processed,
         }
         for name_set in self.full_subset_dict:
-            log_dict[f"WTMAD-2_{name_set}"] = float(wtmad_2_df.loc[name_set, "scf_ene"])
+            log_dict[f"WTMAD-2_{name_set}"] = float(
+                wtmad_2_df.loc[name_set, dft_type_list[0]]
+            )
         self.run.log(log_dict)
 
         for df in [subset_mean_df, wtmad_2_subset_df, wtmad_1_df, wtmad_2_df]:
             # rename columns
             df.rename(columns=rename_dict, inplace=True)
-            if "AI(M BJ)" not in self.data.columns:
+            if "AI(M BJ)" in self.data.columns:
                 df.pop("AI(M BJ)")
 
         with pd.option_context(
@@ -383,10 +407,10 @@ class Collect_info:
 
         if self.is_sota:
             for df in [subset_mean_df, wtmad_2_subset_df, wtmad_1_df, wtmad_2_df]:
-                df["SOTA(BJ)"] = df["AI(M BJ)"]
-                df.pop("AI(M BJ)")
-                df.pop("AI")
-                df.pop("AI(BJ)")
+                # raname AI to SOTA and AI(BJ) to SOTA(BJ)
+                if "AI" in df.columns and "AI(BJ)" in df.columns:
+                    df["SOTA"] = df["AI"]
+                    df["SOTA(BJ)"] = df["AI(BJ)"]
 
         print(f"Saving excel backup files with timestamp: {self.stamp}")
         subset_mean_df.to_csv(

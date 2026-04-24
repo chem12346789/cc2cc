@@ -62,7 +62,7 @@ class Model(nn.Module):
                         kwargs.get("rs6", 0.735999),
                         kwargs.get("s18", -0.673070),
                         kwargs.get("rs18", 0.392889),
-                        kwargs.get("alp", 3.321617),
+                        kwargs.get("alp", 14.000000),
                     ],
                     dtype=torch.float64,
                     device=device,

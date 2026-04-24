@@ -5,19 +5,16 @@
             "S66"
         ]
     },
-    "s66x8-def2": {
+    "dft-fitset-def2": {
         "sub1": [
-            "molecule_a",
-            "molecule_b",
-            "molecule_ab",
-            "molecule_0.9",
-            "molecule_0.95",
-            "molecule_1.0",
-            "molecule_1.05",
-            "molecule_1.1",
-            "molecule_1.25",
-            "molecule_1.5",
-            "molecule_2.0"
+            "S66x8-090",
+            "S66x8-095",
+            "S66x8-100",
+            "S66x8-105",
+            "S66x8-110",
+            "S66x8-125",
+            "S66x8-150",
+            "S66x8-200"
         ]
     },
     "gmtkn-def2": {
