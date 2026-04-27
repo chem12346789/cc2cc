@@ -19715,6 +19715,8 @@
             "reference": -0.849
         }
     },
+    "reaction-S22x5-A": {},
+    "reaction-S22x5-B": {},
     "reaction-S22x5-0.9": {
         "01-0.9": {
             "systems": [
@@ -101639,6 +101641,8 @@
             "reference": -0.49
         }
     },
+    "reaction-S66x8-A": {},
+    "reaction-S66x8-B": {},
     "reaction-S66x8-090": {
         "01-090": {
             "systems": [
