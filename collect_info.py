@@ -54,7 +54,7 @@ class Collect_info:
             name=f"collect_{self.model_load}_{self.basis}_{'sota' if self.is_sota else 'standard'}",
             config=experiment_dict,
             allow_val_change=True,
-            # mode="disabled",
+            mode="disabled",
         )
 
         print("Collect_info initialized with the following parameters:")
@@ -214,7 +214,7 @@ class Collect_info:
 
         if self.model_load == "":
             # this mean we use the dft data
-            dft_type_list = ["b3lyp_ene", "b3lyp-d3bj_ene"]
+            dft_type_list = ["b3lyp_ene", "b3lyp-d3bj_ene", "b3lyp-d3zero_ene"]
         else:
             dft_type_list = ["scf_ene", "scf_d3bj_ene", "modified_ai_d3bj"]
         header = dft_type_list + ["Processed"]
@@ -222,6 +222,7 @@ class Collect_info:
             "cc_ene": "mae",
             "b3lyp_ene": "B3LYP",
             "b3lyp-d3bj_ene": "B3LYP(BJ)",
+            "b3lyp-d3zero_ene": "B3LYP(0)",
             "scf_ene_sota": "SOTA",
             "scf_d3bj_ene_sota": "SOTA(BJ)",
             "scf_ene": "AI",
@@ -350,7 +351,6 @@ class Collect_info:
                 reactions_to_subset,
                 divide(1, completed_counts_subset),
             )
-            subset_mean_df.loc[self.name_subset_list, dft_type] = mean_reaction_energy
 
             wtmad_1_subset = wtmad_1_multiplier * mean_reaction_energy
             wtmad_1_df.loc[self.name_set_list, dft_type] = np.einsum(
@@ -361,6 +361,9 @@ class Collect_info:
             )
 
             if self.data_set == "gmtkn-def2":
+                subset_mean_df.loc[self.name_subset_list, dft_type] = (
+                    mean_reaction_energy
+                )
                 wtmad_2_subset = mean_absolute_deviation * np.einsum(
                     "i,i,i->i",
                     completed_counts_subset,
@@ -368,6 +371,13 @@ class Collect_info:
                     mean_reaction_energy,
                 )
             else:
+                subset_mean_df.loc[self.name_subset_list, dft_type] = 100 * np.einsum(
+                    "i,i,ij,j->j",
+                    (reference_energy - reaction_energy_dft),
+                    divide(1, np.abs(reference_energy)),
+                    reactions_to_subset,
+                    divide(1, completed_counts_subset),
+                )
                 wtmad_2_subset = 100 * np.einsum(
                     "i,i,ij,j->j",
                     np.abs(reference_energy - reaction_energy_dft),
