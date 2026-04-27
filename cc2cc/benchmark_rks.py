@@ -11,6 +11,7 @@ def benchmark_rks(mol, name, data_record):
     for xc_code, disp in [
         ("b3lyp", None),
         ("b3lyp", "d3bj"),
+        ("b3lyp", "d3zero"),
         # ("blyp", None),
         # ("blyp", "d3bj"),
     ]:

@@ -88,7 +88,7 @@ class Collect_info:
             )
             data_path_list = list(
                 Path("validate").glob(
-                    f"*{self.basis}_{self.model_load}_{self.data_set}_{name_subset}.csv"
+                    f"*{self.basis}_{self.model_load}_{self.data_set}_molecule_{name_subset}.csv"
                 )
             )
             if len(data_path_list) != 1:
@@ -159,8 +159,10 @@ class Collect_info:
         for i_subset, subset_name in enumerate(self.name_subset_list):
             if subset_name == "BH76RC":
                 i_subset_name = "BH76"
-            if "S66x8" in subset_name:
+            elif "S66x8" in subset_name:
                 i_subset_name = "S66x8"
+            elif "S22x5" in subset_name:
+                i_subset_name = "S22x5"
             else:
                 i_subset_name = subset_name
 
@@ -212,7 +214,7 @@ class Collect_info:
 
         if self.model_load == "":
             # this mean we use the dft data
-            dft_type_list = ["b3lyp_ene", "b3lyp-d3bj_ene"]
+            dft_type_list = ["b3lyp_ene", "b3lyp-d3bj_ene", "b3lyp-d3zero_ene"]
         else:
             dft_type_list = ["scf_ene", "scf_d3bj_ene", "modified_ai_d3bj"]
         header = dft_type_list + ["Processed"]
@@ -220,6 +222,7 @@ class Collect_info:
             "cc_ene": "mae",
             "b3lyp_ene": "B3LYP",
             "b3lyp-d3bj_ene": "B3LYP(BJ)",
+            "b3lyp-d3zero_ene": "B3LYP(0)",
             "scf_ene_sota": "SOTA",
             "scf_d3bj_ene_sota": "SOTA(BJ)",
             "scf_ene": "AI",
@@ -227,33 +230,39 @@ class Collect_info:
             "modified_ai_d3bj": "AI(M BJ)",
         }
 
-        if self.data_set == "gmntkn-def2":
+        if Path(f"validate_hkqai_done/{self.data_set}_subset_mean_df.csv").exists():
             subset_mean_df = pd.read_csv(
-                f"validate_hkqai_done/subset_mean_df.csv",
-                index_col=0,
-            )
-            wtmad_2_subset_df = pd.read_csv(
-                f"validate_hkqai_done/wtmad_2_subset_df.csv",
-                index_col=0,
-            )
-            wtmad_1_df = pd.read_csv(
-                f"validate_hkqai_done/wtmad_1_df.csv",
-                index_col=0,
-            )
-            wtmad_2_df = pd.read_csv(
-                f"validate_hkqai_done/wtmad_2_df.csv",
+                f"validate_hkqai_done/{self.data_set}_subset_mean_df.csv",
                 index_col=0,
             )
         else:
             subset_mean_df = pd.DataFrame(
                 index=self.name_subset_list, columns=dft_type_list
             )
+        if Path(f"validate_hkqai_done/{self.data_set}_wtmad_2_subset_df.csv").exists():
+            wtmad_2_subset_df = pd.read_csv(
+                f"validate_hkqai_done/{self.data_set}_wtmad_2_subset_df.csv",
+                index_col=0,
+            )
+        else:
             wtmad_2_subset_df = pd.DataFrame(
                 index=self.name_subset_list, columns=dft_type_list
             )
+        if Path(f"validate_hkqai_done/{self.data_set}_wtmad_1_df.csv").exists():
+            wtmad_1_df = pd.read_csv(
+                f"validate_hkqai_done/{self.data_set}_wtmad_1_df.csv",
+                index_col=0,
+            )
+        else:
             wtmad_1_df = pd.DataFrame(
                 index=self.name_set_list + ["summary"], columns=dft_type_list
             )
+        if Path(f"validate_hkqai_done/{self.data_set}_wtmad_2_df.csv").exists():
+            wtmad_2_df = pd.read_csv(
+                f"validate_hkqai_done/{self.data_set}_wtmad_2_df.csv",
+                index_col=0,
+            )
+        else:
             wtmad_2_df = pd.DataFrame(
                 index=self.name_set_list + ["summary"], columns=dft_type_list
             )
@@ -326,6 +335,8 @@ class Collect_info:
             if dft_type not in self.data.columns:
                 if self.verbose > 3:
                     print(f"Warning: {dft_type} not found in data columns.")
+                for df in [subset_mean_df, wtmad_2_subset_df, wtmad_1_df, wtmad_2_df]:
+                    df.pop(dft_type)
                 continue
             data_dft_ene = self.data[dft_type].to_numpy() * AU2KCALMOL
 
@@ -340,7 +351,6 @@ class Collect_info:
                 reactions_to_subset,
                 divide(1, completed_counts_subset),
             )
-            subset_mean_df.loc[self.name_subset_list, dft_type] = mean_reaction_energy
 
             wtmad_1_subset = wtmad_1_multiplier * mean_reaction_energy
             wtmad_1_df.loc[self.name_set_list, dft_type] = np.einsum(
@@ -351,6 +361,9 @@ class Collect_info:
             )
 
             if self.data_set == "gmtkn-def2":
+                subset_mean_df.loc[self.name_subset_list, dft_type] = (
+                    mean_reaction_energy
+                )
                 wtmad_2_subset = mean_absolute_deviation * np.einsum(
                     "i,i,i->i",
                     completed_counts_subset,
@@ -358,6 +371,13 @@ class Collect_info:
                     mean_reaction_energy,
                 )
             else:
+                subset_mean_df.loc[self.name_subset_list, dft_type] = 100 * np.einsum(
+                    "i,i,ij,j->j",
+                    (reference_energy - reaction_energy_dft),
+                    divide(1, np.abs(reference_energy)),
+                    reactions_to_subset,
+                    divide(1, completed_counts_subset),
+                )
                 wtmad_2_subset = 100 * np.einsum(
                     "i,i,ij,j->j",
                     np.abs(reference_energy - reaction_energy_dft),
