@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-import torch_levenberg_marquardt as tlm
 
 from ase import units
 from ase.atoms import Atoms
@@ -316,11 +315,6 @@ print(
 )
 
 
-# optimizer = torch.optim.LBFGS(
-#     model.parameters(),
-#     lr=args.lr,
-#     line_search_fn="strong_wolfe",
-# )
 optimizer = torch.optim.Adagrad(
     model.parameters(),
     lr=args.lr,
@@ -334,18 +328,6 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
 )
 loss_function = torch.nn.L1Loss(reduction="sum")
 torch.set_printoptions(precision=5, sci_mode=False)
-
-# tlm.utils.fit(
-#     tlm.training.LevenbergMarquardtModule(
-#         model=model,
-#         loss_fn=tlm.loss.MSELoss(),
-#         learning_rate=1.0,
-#         attempts_per_step=10,
-#         solve_method="qr",
-#     ),
-#     train_loader,
-#     epochs=50,
-# )
 
 
 def closure():
