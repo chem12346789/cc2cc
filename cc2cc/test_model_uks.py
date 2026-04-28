@@ -35,7 +35,7 @@ def test_model_uks(
     get_veff_modified_uks(mdft, modeldict)
 
     mdft.verbose = 4
-    mdft.mol.verbose = 4
+    # mdft.mol.verbose = 4
     mdft.conv_tol = 1e-7
     mdft.conv_tol_grad = 1e-3
 

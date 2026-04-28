@@ -372,17 +372,17 @@ class Collect_info:
                 )
             else:
                 subset_mean_df.loc[self.name_subset_list, dft_type] = 100 * np.einsum(
-                    "i,i,ij,j->j",
+                    "i,ij,j,j->j",
                     (reference_energy - reaction_energy_dft),
-                    divide(1, np.abs(reference_energy)),
                     reactions_to_subset,
+                    inverse_mae,
                     divide(1, completed_counts_subset),
                 )
                 wtmad_2_subset = 100 * np.einsum(
-                    "i,i,ij,j->j",
+                    "i,ij,j,j->j",
                     np.abs(reference_energy - reaction_energy_dft),
-                    divide(1, np.abs(reference_energy)),
                     reactions_to_subset,
+                    inverse_mae,
                     divide(1, completed_counts_subset),
                 )
 
