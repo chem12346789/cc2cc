@@ -118,7 +118,6 @@ class Model(nn.Module):
                 mean_reaction_energy_dftd3,
             )
         )
-
         return loss
 
     def obtain_batch_dicts(self, atoms_list):
@@ -138,15 +137,20 @@ class Model(nn.Module):
             ]
         )
 
-        batch_dicts = dict(
-            Z=torch.cat([d["Z"] for d in input_dicts_list], dim=0),  # (n_nodes,)
-            pos=torch.cat([d["pos"] for d in input_dicts_list], dim=0),  # (n_nodes,)
-            cell=cell_batch,  # (bs, 3, 3)
-            pbc=torch.stack([d["pbc"] for d in input_dicts_list]),  # (bs, 3)
-            shift_pos=torch.cat(
-                [d["shift_pos"] for d in input_dicts_list], dim=0
-            ),  # (n_nodes,)
-        )
+        batch_dicts = dict()
+        batch_dicts["Z"] = torch.cat(
+            [d["Z"] for d in input_dicts_list], dim=0
+        )  # (n_nodes,)
+        batch_dicts["pos"] = torch.cat(
+            [d["pos"] for d in input_dicts_list], dim=0
+        )  # (n_nodes,)
+        batch_dicts["cell"] = cell_batch  # (bs, 3, 3)
+        batch_dicts["pbc"] = torch.stack(
+            [d["pbc"] for d in input_dicts_list]
+        )  # (bs, 3)
+        batch_dicts["shift_pos"] = torch.cat(
+            [d["shift_pos"] for d in input_dicts_list], dim=0
+        )  # (n_nodes,)
         batch_dicts["edge_index"] = torch.cat(
             [
                 d["edge_index"] + shift_index_array[i]
@@ -173,7 +177,6 @@ class Model(nn.Module):
             ],
             dim=0,
         )
-
         batch_dicts["pos"].requires_grad_(True)
         return batch_dicts
 
@@ -194,12 +197,10 @@ parser.add_argument("--basis", type=str, default="def2-QZVPP", help="Basis set")
 parser.add_argument(
     "--damping", type=str, choices=["bj", "zero"], default="bj", help="Damping type"
 )
-
 args = parser.parse_args()
 DATA_PATH = f"validate_hkqai_done/ccdft_{args.basis}_{args.load}_gmtkn-def2.csv"
 save_para = {}
 SAVE_PARA_PATH = f"validate_hkqai_done/ccdft_{args.basis}_{args.load}_gmtkn-def2.json"
-
 
 # Set the random seed for reproducibility
 random.seed(args.seed)
@@ -238,7 +239,6 @@ for name_mol in data_name_list:
     input_batch.append(atoms)
 
 input_batch = model.obtain_batch_dicts(input_batch)
-
 
 reference_energy = []
 molecules_to_reactions = []
@@ -314,7 +314,6 @@ print(
     flush=True,
 )
 
-
 optimizer = torch.optim.Adagrad(
     model.parameters(),
     lr=args.lr,
@@ -329,16 +328,10 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
 loss_function = torch.nn.L1Loss(reduction="sum")
 torch.set_printoptions(precision=5, sci_mode=False)
 
-
-def closure():
+for epoch in range(args.epochs + 1):
     optimizer.zero_grad(set_to_none=True)
     loss = model(input_batch)
     loss.backward()
-    return loss
-
-
-for epoch in range(args.epochs + 1):
-    loss = closure()
     optimizer.step()
     scheduler.step()
 
@@ -365,7 +358,6 @@ for epoch in range(args.epochs + 1):
 
 with open(SAVE_PARA_PATH, "w", encoding="utf-8") as f:
     json.dump(save_para, f, indent=4)
-
 
 data["modified_ai_d3bj"] = model.get_dftd3_energy(input_batch)
 # save to DATA_PATH
