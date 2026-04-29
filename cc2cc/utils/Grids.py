@@ -254,21 +254,22 @@ class GridCube:
             self.mol, ao_value[:4], dms, non0tab=self.non0tab, xctype="GGA"
         )
         rho0 = rho[0]
+        t0 = logger.timer(self.mol, "       gen input", *t0)
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho0, xctype="LDA")[:2]
-        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho0, xctype="LDA")[:2]
-        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
-        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
-        t0 = logger.timer(self.mol, "      gen input", *t0)
-
         input_mat[0] = exc_lda * rho0
-        input_mat[1] = exc_vwn * rho0
-        input_mat[2] = exc_b88 * rho0
-        input_mat[3] = exc_lyp * rho0
-
         vxc_mat[0, 0:1, :] = vxc_lda
+
+        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho0, xctype="LDA")[:2]
+        input_mat[1] = exc_vwn * rho0
         vxc_mat[1, 0:1, :] = vxc_vwn
+
+        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
+        input_mat[2] = exc_b88 * rho0
         vxc_mat[2, :, :] = vxc_b88
+
+        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
+        input_mat[3] = exc_lyp * rho0
         vxc_mat[3, :, :] = vxc_lyp
 
         if self.input_level > 4:
@@ -294,7 +295,7 @@ class GridCube:
             (self.input_level, 4, self.number_of_cube, self.cube_size)
         )
 
-        t0 = logger.timer(self.mol, "      gen exc and vxc", *t0)
+        t0 = logger.timer(self.mol, "       gen exc and vxc", *t0)
         if require_vxc:
             return input_mat, vxc_mat, ao_value
         else:
@@ -331,17 +332,19 @@ class GridCube:
         t0 = logger.timer(self.mol, "      gen input", *t0)
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
-        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
-        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
-        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
         input_mat[0] = exc_lda * rho0
-        input_mat[1] = exc_vwn * rho0
-        input_mat[2] = exc_b88 * rho0
-        input_mat[3] = exc_lyp * rho0
-
         vxc_mat[0, :, 0:1, :] = vxc_lda
+
+        exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
+        input_mat[1] = exc_vwn * rho0
         vxc_mat[1, :, 0:1, :] = vxc_vwn
+
+        exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
+        input_mat[2] = exc_b88 * rho0
         vxc_mat[2, :, :, :] = vxc_b88
+
+        exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
+        input_mat[3] = exc_lyp * rho0
         vxc_mat[3, :, :, :] = vxc_lyp
 
         if self.input_level > 4:
