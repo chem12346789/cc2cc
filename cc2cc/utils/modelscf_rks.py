@@ -95,9 +95,6 @@ def get_veff_modified(ks, modeldict):
                     wv = wv.reshape(4, len(gridcube.coords))  # xgC -> xG
                     yield i, ao_value, gridcube.non0tab, wv
 
-                    # wv = wv[:, :, modeldict.model.cube_middle]
-                    # yield i, ao, mask, wv
-
         aow = None
         nelec = np.zeros(nset)
         excsum = np.zeros(nset)
@@ -110,20 +107,22 @@ def get_veff_modified(ks, modeldict):
             for i, ao, mask, wv in block_loop(ao_deriv):
                 t0 = logger.timer(mol, "  vxc on grids", *t0)
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
-                aow = np.einsum("xgi,xg->gi", ao, wv, optimize=True)
-                vmat[i] += np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
-                # aow = _scale_ao_sparse(ao, wv, mask, ao_loc, out=aow)
-                # _dot_ao_ao_sparse(
-                #     ao[0],
-                #     aow,
-                #     None,
-                #     nbins,
-                #     mask,
-                #     pair_mask,
-                #     ao_loc,
-                #     hermi=0,
-                #     out=vmat[i],
-                # )
+
+                # aow = np.einsum("xgi,xg->gi", ao, wv, optimize=True)
+                # vmat[i] += np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
+
+                aow = _scale_ao_sparse(ao, wv, mask, ao_loc, out=aow)
+                _dot_ao_ao_sparse(
+                    ao[0],
+                    aow,
+                    None,
+                    nbins,
+                    mask,
+                    pair_mask,
+                    ao_loc,
+                    hermi=0,
+                    out=vmat[i],
+                )
                 t0 = logger.timer(mol, "  vxc mat", *t0)
             vmat = lib.hermi_sum(vmat, axes=(0, 2, 1))
         else:

@@ -98,9 +98,6 @@ def get_veff_modified(ks, modeldict: ModelClass):
                     wv = wv.reshape(2, 4, len(gridcube.coords))  # slpC -> slP
                     yield i, ao_value, gridcube.non0tab, wv
 
-                    # wv = wv[:, :, :, modeldict.model.cube_middle]
-                    # yield i, ao, mask, wv
-
         aow = None
         nelec = np.zeros((2, nset))
         excsum = np.zeros(nset)
@@ -114,34 +111,36 @@ def get_veff_modified(ks, modeldict: ModelClass):
                 t0 = logger.timer(mol, "  vxc on grids", *t0)
                 wv[:, 0] *= 0.5
                 wva, wvb = wv
-                aow = np.einsum("xgi,xg->gi", ao, wva, optimize=True)
-                vmat[0, i] += np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
-                aow = np.einsum("xgi,xg->gi", ao, wvb, optimize=True)
-                vmat[1, i] += np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
-                # aow = _scale_ao_sparse(ao, wva, mask, ao_loc, out=aow)
-                # _dot_ao_ao_sparse(
-                #     ao[0],
-                #     aow,
-                #     None,
-                #     nbins,
-                #     mask,
-                #     pair_mask,
-                #     ao_loc,
-                #     hermi=0,
-                #     out=vmat[0, i],
-                # )
-                # aow = _scale_ao_sparse(ao, wvb, mask, ao_loc, out=aow)
-                # _dot_ao_ao_sparse(
-                #     ao[0],
-                #     aow,
-                #     None,
-                #     nbins,
-                #     mask,
-                #     pair_mask,
-                #     ao_loc,
-                #     hermi=0,
-                #     out=vmat[1, i],
-                # )
+
+                # aow = np.einsum("xgi,xg->gi", ao, wva, optimize=True)
+                # vmat[0, i] += np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
+                # aow = np.einsum("xgi,xg->gi", ao, wvb, optimize=True)
+                # vmat[1, i] += np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
+
+                aow = _scale_ao_sparse(ao, wva, mask, ao_loc, out=aow)
+                _dot_ao_ao_sparse(
+                    ao[0],
+                    aow,
+                    None,
+                    nbins,
+                    mask,
+                    pair_mask,
+                    ao_loc,
+                    hermi=0,
+                    out=vmat[0, i],
+                )
+                aow = _scale_ao_sparse(ao, wvb, mask, ao_loc, out=aow)
+                _dot_ao_ao_sparse(
+                    ao[0],
+                    aow,
+                    None,
+                    nbins,
+                    mask,
+                    pair_mask,
+                    ao_loc,
+                    hermi=0,
+                    out=vmat[1, i],
+                )
                 t0 = logger.timer(mol, "  vxc mat", *t0)
             vmat = lib.hermi_sum(vmat.reshape((-1, nao, nao)), axes=(0, 2, 1)).reshape(
                 2, nset, nao, nao
