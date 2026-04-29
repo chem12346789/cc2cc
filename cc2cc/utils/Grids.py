@@ -244,16 +244,19 @@ class GridCube:
         Generate the cube density for the given molecule.
         """
         t0 = (logger.process_clock(), logger.perf_counter())
+        t1 = (logger.process_clock(), logger.perf_counter())
         input_mat = np.zeros((self.input_level, len(self.coords)))
         vxc_mat = np.zeros((self.input_level, 4, len(self.coords)))
 
         ao_value = ni.eval_ao(
             self.mol, self.coords, deriv=ao_deriv, non0tab=self.non0tab
         )
+        t1 = logger.timer(self.mol, "           ao_value", *t1)
         rho = ni.eval_rho(
             self.mol, ao_value[:4], dms, non0tab=self.non0tab, xctype="GGA"
         )
         rho0 = rho[0]
+        t1 = logger.timer(self.mol, "           eval_rho", *t1)
         t0 = logger.timer(self.mol, "       gen input", *t0)
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho0, xctype="LDA")[:2]
