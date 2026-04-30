@@ -51,7 +51,6 @@ class DataRecordList:
 
     def save(self, path):
         """Save the data_dict to a csv file."""
-
         df = pd.DataFrame(self.data_dict)
         df.to_csv(path, index=False)
 
