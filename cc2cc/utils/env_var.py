@@ -6,6 +6,7 @@ AIDFT_MAIN_PATH: the main path of the project.
 from pathlib import Path
 import os
 from pyscf import lib
+import numba
 
 import torch
 
@@ -71,6 +72,7 @@ def print_computer_info(device):
     print(f"NUMBER_OF_GPU: {os.environ.get('NUMBER_OF_GPU', 'Not Set')}")
     lib.num_threads(OMP_NUM_THREADS)
     torch.set_num_threads(OMP_NUM_THREADS)
+    numba.set_num_threads(OMP_NUM_THREADS)
 
     if device == "cuda":
         # print the gpu information
