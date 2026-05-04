@@ -72,6 +72,7 @@ def get_veff_modified(ks, modeldict):
                     rho = make_rho(i, ao, mask, xctype)
                     den = rho[0] * weights_
                     nelec[i] += den.sum()
+                    t0 = logger.timer(mol, "    init", *t0)
 
                     gridcube = grids.gen_cube(mol, dms, coords_, mask)
                     t0 = logger.timer(mol, "    gen cube", *t0)
