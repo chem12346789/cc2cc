@@ -84,7 +84,7 @@ class Collect_info:
     def aggregate_data(self):
         for name_subset in self.name_subset_list:
             print(
-                f"Find *{self.basis}_{self.model_load}_{self.data_set}_{name_subset}.csv in validate directory..."
+                f"Find *{self.basis}_{self.model_load}_{self.data_set}_molecule_{name_subset}.csv in validate directory..."
             )
             data_path_list = list(
                 Path("validate").glob(
@@ -366,7 +366,7 @@ class Collect_info:
                 )
                 wtmad_2_subset = mean_absolute_deviation * np.einsum(
                     "i,i,i->i",
-                    completed_counts_subset,
+                    total_counts_subset,
                     inverse_mae,
                     mean_reaction_energy,
                 )

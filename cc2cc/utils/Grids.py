@@ -246,7 +246,10 @@ class GridCube:
         self.non0tab = None
 
     def gen_cube_rho_rks(
-        self, ni: pyscf.dft.numint.NumInt, dms, ao_deriv=1, require_vxc=False
+        self,
+        ni: pyscf.dft.numint.NumInt,
+        dms,
+        ao_deriv=1,
     ):
         """
         Generate the cube density for the given molecule.
@@ -307,17 +310,13 @@ class GridCube:
         )
 
         t0 = logger.timer(self.mol, "       gen exc and vxc", *t0)
-        if require_vxc:
-            return input_mat, vxc_mat, ao_value
-        else:
-            return input_mat
+        return input_mat, vxc_mat, ao_value
 
     def gen_cube_rho_uks(
         self,
         ni: pyscf.dft.numint.NumInt,
         dms,
         ao_deriv=1,
-        require_vxc=False,
     ):
         """
         Generate the cube density for the given molecule.
@@ -382,7 +381,4 @@ class GridCube:
         )
 
         t0 = logger.timer(self.mol, "      gen exc and vxc", *t0)
-        if require_vxc:
-            return input_mat, vxc_mat, ao_value
-
-        return input_mat
+        return input_mat, vxc_mat, ao_value

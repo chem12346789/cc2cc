@@ -8,24 +8,18 @@ The ``uncommment commment'' is the original docstring.
 import types
 
 import numpy as np
-import torch
 
 import pyscf
 from pyscf import lib
 from pyscf.lib import logger
 from pyscf.dft.numint import (
     NumInt,
-    _scale_ao,
     _scale_ao_sparse,
-    _dot_ao_ao,
-    _dot_ao_ao_dense,
     _dot_ao_ao_sparse,
-    # _tau_dot_sparse,
 )
 from pyscf.dft.gen_grid import NBINS
-from pyscf.grad.rks import _d1_dot_, _gga_grad_sum_, _make_dR_dao_w
+from pyscf.grad.rks import _gga_grad_sum_
 
-from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
 from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.Grids import Grid
 
@@ -53,10 +47,12 @@ def get_veff_modified(ks, modeldict):
         Modified from pyscf.dft.numint.nr_rks (https://github.com/pyscf/pyscf/blob/v2.9.0/pyscf/dft/numint.py)
         """
         xctype = ni._xc_type(xc_code)
-        make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, grids)
         ao_loc = mol.ao_loc_nr()
         cutoff = grids.cutoff * 1e2
         nbins = NBINS * 2 - int(NBINS * np.log(cutoff) / np.log(grids.cutoff))
+
+        nset = 1
+        nao = mol.nao
 
         def block_loop(ao_deriv):
             for ao, mask, weights_, coords_ in ni.block_loop(
@@ -64,21 +60,14 @@ def get_veff_modified(ks, modeldict):
                 grids,
                 nao,
                 ao_deriv,
-                max_memory=max_memory // (2 * EDGE_SIZE**3),
+                max_memory=max_memory // (nset * modeldict.model.cube_size),
                 non0tab=None,
             ):
                 t0 = (logger.process_clock(), logger.perf_counter())
                 for i in range(nset):
-                    rho = make_rho(i, ao, mask, xctype)
-                    den = rho[0] * weights_
-                    nelec[i] += den.sum()
-                    t0 = logger.timer(mol, "    init", *t0)
-
                     gridcube = grids.gen_cube(mol, dms, coords_, mask)
                     t0 = logger.timer(mol, "    gen cube", *t0)
-                    rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(
-                        ni, dms, require_vxc=True
-                    )
+                    rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(ni, dms)
                     t0 = logger.timer(mol, "    cube rho vxc", *t0)
                     energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
                     t0 = logger.timer(mol, "    model eval", *t0)
@@ -108,9 +97,6 @@ def get_veff_modified(ks, modeldict):
             for i, ao, mask, wv in block_loop(ao_deriv):
                 t0 = logger.timer(mol, "  vxc on grids", *t0)
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
-
-                # aow = np.einsum("xgi,xg->gi", ao, wv, optimize=True)
-                # vmat[i] += np.einsum("gi,gj->ij", ao[0], aow, optimize=True)
 
                 aow = _scale_ao_sparse(ao, wv, mask, ao_loc, out=aow)
                 _dot_ao_ao_sparse(
@@ -157,7 +143,7 @@ def get_veff_modified(ks, modeldict):
         # Modified from pyscf.dft.rks.get_veff; See
         # https://github.com/pyscf/pyscf/blob/v2.9.0/pyscf/dft/rks.py
         """
-        # print("Using modified get_veff", flush=True)
+        logger.debug(ks_, "Using modified get_veff")
         if mol is None:
             mol = ks_.mol
 
@@ -259,8 +245,10 @@ def get_veff_grad_modified(ks_grad, modeldict):
         verbose=None,
     ):
         xctype = ni._xc_type(xc_code)
-        make_rho, nset, nao = ni._gen_rho_evaluator(mol, dms, hermi, False, grids)
         ao_loc = mol.ao_loc_nr()
+
+        nset = 1
+        nao = mol.nao
 
         vmat = np.zeros((nset, 3, nao, nao))
 
@@ -271,13 +259,13 @@ def get_veff_grad_modified(ks_grad, modeldict):
                 grids,
                 nao,
                 ao_deriv,
-                max_memory=max_memory // (2 * EDGE_SIZE**3),
+                max_memory=max_memory // (nset * modeldict.model.cube_size),
                 non0tab=None,
             ):
                 for idm in range(nset):
                     gridcube = grids.gen_cube(mol, dms, coords_, mask)
                     rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(
-                        ni, dms, ao_deriv=ao_deriv, require_vxc=True
+                        ni, dms, ao_deriv=ao_deriv
                     )
                     _, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
 
@@ -290,30 +278,6 @@ def get_veff_grad_modified(ks_grad, modeldict):
                     wv[0] *= 0.5
                     wv = wv.reshape(4, len(gridcube.coords))  # lpC -> lP
                     _gga_grad_sum_(vmat[idm], mol, ao_value, wv, None, ao_loc)
-
-                    # # aow = _scale_ao(ao[:4], wv[:4])
-                    # # _d1_dot_(vmat[idm], mol, ao[1:4], aow, mask, ao_loc, True)
-                    # # # ##### in np.einsum #####
-                    # vmat[idm] += np.einsum(
-                    #     "np,p,xpi,npj->xij",
-                    #     vxc,
-                    #     weight,
-                    #     ao[1:4],
-                    #     ao_array,
-                    #     optimize=True,
-                    # )
-
-                    # # aow = _make_dR_dao_w(ao, wv[:4])
-                    # # _d1_dot_(vmat[idm], mol, aow, ao[0], mask, ao_loc, True)
-                    # # # ##### in np.einsum #####
-                    # vmat[idm] += np.einsum(
-                    #     "np,p,nxpi,pj->xij",
-                    #     vxc,
-                    #     weight,
-                    #     ao_mat,
-                    #     ao[0],
-                    #     optimize=True,
-                    # )
 
         exc = None
         if nset == 1:

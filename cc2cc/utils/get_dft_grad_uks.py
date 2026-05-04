@@ -33,7 +33,7 @@ def get_dft_input(mol, grids, dm1_dft, data_dict, max_memory=8000):
             mask = grids.screen_index[p0:p1]
         coords_ = grids.coords[p0:p1]
         gridcube = grids.gen_cube(mol, dm1_dft, coords_, mask)
-        rho_cube_dft_part, wv, ao_value = gridcube.gen_cube_rho_uks(
+        rho_cube_dft_part, _, _ = gridcube.gen_cube_rho_uks(
             ni, dm1_dft, ao_deriv=2, require_vxc=True
         )
         rho_cube_dft[p0:p1] = rho_cube_dft_part
@@ -90,7 +90,7 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
         coords_ = grids.coords[p0:p1]
         gridcube = grids.gen_cube(mol, dm1_dft, coords_, mask)
         rho_cube_dft_part, wv, ao_value = gridcube.gen_cube_rho_uks(
-            ni, dm1_dft, ao_deriv=2, require_vxc=True
+            ni, dm1_dft, ao_deriv=2
         )
         rho_cube_dft[p0:p1] = rho_cube_dft_part
 

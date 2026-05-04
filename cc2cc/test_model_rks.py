@@ -5,6 +5,9 @@ from timeit import default_timer as timer
 
 import pyscf
 import pyscf.dft
+from pyscf.dft import numint
+from gpu4pyscf.dft import numint as numint_gpu
+import torch
 
 from cc2cc.utils import get_veff_modified_rks, get_veff_grad_modified_rks, diff_rho
 from cc2cc.utils import Grid, TestDataDFT, DATA_PATH, AU2KCALMOL
@@ -22,8 +25,11 @@ def test_model_rks(
     """
     # 2.0 Prepare
     time_ai_start = timer()
+    # if torch.cuda.is_available():
+    #     mdft = pyscf.dft.RKS(mol).density_fit().to_gpu()
+    # else:
     mdft = pyscf.dft.RKS(mol).density_fit()
-    mdft.xc = "b3lyp"
+    get_veff_modified_rks(mdft, modeldict)
     mdft.grids = Grid(
         mol,
         args.grid_level,
@@ -32,7 +38,7 @@ def test_model_rks(
         cube_size=modeldict.cube_size,
         test=True,
     )
-    get_veff_modified_rks(mdft, modeldict)
+    mdft.xc = "b3lyp"
 
     mdft.verbose = 4
     mdft.mol.verbose = 4
@@ -104,6 +110,8 @@ def test_model_rks(
         data = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
         print(data["mol"])
         print(mol.tostring(format="xyz"))
+        print(f"energy (ai vs dft) {(e_scf - data['e_dft']) * AU2KCALMOL} Kcal/mol")
+        print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * AU2KCALMOL} Kcal/mol")
         print(
             f"electronic density (ai vs dft) {diff_rho(mol, data["dm1_dft"], mdft.make_rdm1(), mdft.grids)}"
         )
@@ -113,8 +121,11 @@ def test_model_rks(
         print(
             f"electronic density (dft vs cc) {diff_rho(mol, data["dm1_cc"], data["dm1_dft"], mdft.grids)}"
         )
-        print(f"energy (ai vs dft) {(e_scf - data['e_dft']) * AU2KCALMOL} Kcal/mol")
-        print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * AU2KCALMOL} Kcal/mol")
+        print(f"dipole (ai vs dft) {np.linalg.norm(scf_dipole - data['dipole_dft'])}")
+        print(f"dipole (ai vs cc) {np.linalg.norm(scf_dipole - data['dipole_cc'])}")
+        print(
+            f"dipole (dft vs cc) {np.linalg.norm(data['dipole_dft'] - data['dipole_cc'])}"
+        )
         if args.if_grad:
             print(
                 f"gradient (ai vs dft) {np.linalg.norm(grad_mdft - data['grad_dft'])}"

@@ -5,6 +5,7 @@ from timeit import default_timer as timer
 
 import pyscf
 import pyscf.dft
+import torch
 
 from cc2cc.utils import get_veff_modified_uks, get_veff_grad_modified_uks, diff_rho
 from cc2cc.utils import Grid, TestDataDFT, DATA_PATH
@@ -22,6 +23,9 @@ def test_model_uks(
     """
     # 2.0 Prepare
     time_ai_start = timer()
+    # if torch.cuda.is_available():
+    #     mdft = pyscf.dft.UKS(mol).density_fit().to_gpu()
+    # else:
     mdft = pyscf.dft.UKS(mol).density_fit()
     mdft.xc = "b3lyp"
     mdft.grids = Grid(

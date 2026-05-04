@@ -23,12 +23,13 @@ from cc2cc.utils.timer import Timer
 from cc2cc.utils.env_var import DATA_PATH, MAIN_PATH
 from cc2cc.utils.mol import AU2KCALMOL, AU2DEBYE
 
-
 __all__ = [
     "add_args",
     "gen_mole",
     "get_veff_modified_rks",
     "get_veff_modified_uks",
+    "get_veff_grad_modified_rks",
+    "get_veff_grad_modified_uks",
     "print_computer_info",
     "diff_rho",
     "DataRecord",
