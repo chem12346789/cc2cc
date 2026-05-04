@@ -17,6 +17,7 @@ validate
 /tmp_mol
 /work_script/
 /wandb/
+/wandb
 hkqai*.ipynb
 dgx1*.ipynb
 local*.ipynb
