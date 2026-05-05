@@ -34,7 +34,6 @@ def test_model_uks(
         input_level=modeldict.input_level,
         cube_type=modeldict.cube_type,
         cube_size=modeldict.cube_size,
-        test=True,
     )
     get_veff_modified_uks(mdft, modeldict)
 

@@ -4,27 +4,22 @@ Documentation for this module.
 More details.
 """
 
-# pylint: disable=W0212
-
 import numpy as np
-import torch
 from numba import njit, prange
 
 import pyscf
-from pyscf import dft, gto, lib
+from pyscf import dft, lib
 from pyscf.lib import logger
-import pyscf.dft.numint
+from pyscf.dft.gen_grid import Grids as GridsCPU
+from pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 from pyscf.dft.numint import (
+    NumInt,
     _dot_ao_dm,
     _contract_rho,
-    _sparse_enough,
-    _empty_aligned,
     _format_uks_dm,
     eval_ao,
-    _dot_ao_dm_sparse,
-    _contract_rho_sparse,
+    _sparse_enough,
 )
-from pyscf.dft.gen_grid import BLKSIZE, NBINS, CUTOFF, ALIGNMENT_UNIT
 from pyscf import __config__
 
 from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
@@ -35,6 +30,63 @@ OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
 # If the number of AOs in the system is less than this value, all tensors are
 # treated as dense quantities and contracted by dgemm directly.
 SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
+
+
+def iterate_grid_segments(mol, grids, nao, deriv, max_memory, non0tab=None):
+    ngrids = grids.coords.shape[0]
+    comp = (deriv + 1) * (deriv + 2) * (deriv + 3) // 6
+    # NOTE to index grids.non0tab, the blksize needs to be an integer
+    # multiplier of BLKSIZE
+    blksize = int(max_memory * 1e6 / ((comp + 1) * nao * 8 * BLKSIZE))
+    blksize = max(4, min(blksize, ngrids // BLKSIZE + 1, 1200)) * BLKSIZE
+    assert blksize % BLKSIZE == 0
+
+    if mol is grids.mol:
+        non0tab = grids.non0tab
+    if non0tab is None:
+        non0tab = np.empty(
+            ((ngrids + BLKSIZE - 1) // BLKSIZE, mol.nbas), dtype=np.uint8
+        )
+        non0tab[:] = NBINS + 1  # Corresponding to AO value ~= 1
+    screen_index = non0tab
+
+    # the xxx_sparse() functions require ngrids 8-byte aligned
+    allow_sparse = ngrids % ALIGNMENT_UNIT == 0 and nao > SWITCH_SIZE
+
+    for ip0, ip1 in lib.prange(0, ngrids, blksize):
+        coords = grids.coords[ip0:ip1]
+        weight = grids.weights[ip0:ip1]
+        mask = screen_index[ip0 // BLKSIZE :]
+        if not allow_sparse and not _sparse_enough(mask):
+            # Unset mask for dense AO tensor. It determines which eval_rho
+            # to be called in make_rho
+            mask = None
+        yield mask, weight, coords
+
+
+def rho_evaluator(
+    ni: NumInt,
+    mol,
+    ao,
+    dms,
+    non0tab=None,
+    xctype="LDA",
+    hermi=0,
+    with_lapl=True,
+):
+    if getattr(dms, "mo_coeff", None) is not None:
+        # TODO: test whether dm.mo_coeff matching dm
+        mo_coeff = dms.mo_coeff
+        mo_occ = dms.mo_occ
+    else:
+        mo_coeff = mo_occ = None
+    has_mo = mo_coeff is not None
+
+    if has_mo:
+        return ni.eval_rho2(mol, ao, mo_coeff, mo_occ, non0tab, xctype, with_lapl)
+    else:
+        return ni.eval_rho(mol, ao, dms, non0tab, xctype, hermi, with_lapl)
+        # it has a sparse version, but has_mo is False only for a few cases, so we use the dense version here.
 
 
 @njit(fastmath=True)
@@ -110,7 +162,59 @@ def gen_cube5_njit(
             )
 
 
-class Grid(dft.gen_grid.Grids):
+def eval_rho_cube(mol, ao, dm, rho_in_1, rho_in_2, screen_index, shls_slice, ao_loc):
+    if getattr(dm, "mo_coeff", None) is not None:
+        # TODO: test whether dm.mo_coeff matching dm
+        mo_coeff = dm.mo_coeff
+        mo_occ = dm.mo_occ
+    else:
+        mo_coeff = mo_occ = None
+    has_mo = mo_coeff is not None
+
+    if has_mo:
+        pos = mo_occ > OCCDROP
+        if np.any(pos):
+            cpos = np.einsum("ij,j->ij", mo_coeff[:, pos], np.sqrt(mo_occ[pos]))
+            c0 = _dot_ao_dm(mol, ao[0], cpos, screen_index, shls_slice, ao_loc)
+            c1 = _dot_ao_dm(mol, ao[1], cpos, screen_index, shls_slice, ao_loc)
+            c2 = _dot_ao_dm(mol, ao[2], cpos, screen_index, shls_slice, ao_loc)
+            c3 = _dot_ao_dm(mol, ao[3], cpos, screen_index, shls_slice, ao_loc)
+            rho_in_1[0, :] += 2 * _contract_rho(c1, c0)
+            rho_in_1[1, :] += 2 * _contract_rho(c2, c0)
+            rho_in_1[2, :] += 2 * _contract_rho(c3, c0)
+
+            c4 = _dot_ao_dm(mol, ao[4], cpos, screen_index, shls_slice, ao_loc)
+            c5 = _dot_ao_dm(mol, ao[5], cpos, screen_index, shls_slice, ao_loc)
+            c6 = _dot_ao_dm(mol, ao[6], cpos, screen_index, shls_slice, ao_loc)
+            c7 = _dot_ao_dm(mol, ao[7], cpos, screen_index, shls_slice, ao_loc)
+            c8 = _dot_ao_dm(mol, ao[8], cpos, screen_index, shls_slice, ao_loc)
+            c9 = _dot_ao_dm(mol, ao[9], cpos, screen_index, shls_slice, ao_loc)
+
+            rho_in_2[0, 0, :] += _contract_rho(c4, c0) + _contract_rho(c1, c1)
+            rho_in_2[0, 1, :] += _contract_rho(c5, c0) + _contract_rho(c1, c2)
+            rho_in_2[0, 2, :] += _contract_rho(c6, c0) + _contract_rho(c1, c3)
+            rho_in_2[1, 1, :] += _contract_rho(c7, c0) + _contract_rho(c2, c2)
+            rho_in_2[1, 2, :] += _contract_rho(c8, c0) + _contract_rho(c2, c3)
+            rho_in_2[2, 2, :] += _contract_rho(c9, c0) + _contract_rho(c3, c3)
+    else:
+        c0 = _dot_ao_dm(mol, ao[0], dm, screen_index, shls_slice, ao_loc)
+        rho_in_1[0, :] += 2 * _contract_rho(ao[1], c0)
+        rho_in_1[1, :] += 2 * _contract_rho(ao[2], c0)
+        rho_in_1[2, :] += 2 * _contract_rho(ao[3], c0)
+
+        c1 = _dot_ao_dm(mol, ao[1], dm, screen_index, shls_slice, ao_loc)
+        c2 = _dot_ao_dm(mol, ao[2], dm, screen_index, shls_slice, ao_loc)
+        c3 = _dot_ao_dm(mol, ao[3], dm, screen_index, shls_slice, ao_loc)
+
+        rho_in_2[0, 0, :] += _contract_rho(ao[4], c0) + _contract_rho(ao[1], c1)
+        rho_in_2[0, 1, :] += _contract_rho(ao[5], c0) + _contract_rho(ao[1], c2)
+        rho_in_2[0, 2, :] += _contract_rho(ao[6], c0) + _contract_rho(ao[1], c3)
+        rho_in_2[1, 1, :] += _contract_rho(ao[7], c0) + _contract_rho(ao[2], c2)
+        rho_in_2[1, 2, :] += _contract_rho(ao[8], c0) + _contract_rho(ao[2], c3)
+        rho_in_2[2, 2, :] += _contract_rho(ao[9], c0) + _contract_rho(ao[3], c3)
+
+
+class Grid(GridsCPU):
     """
     Documentation for a class.
 
@@ -136,7 +240,6 @@ class Grid(dft.gen_grid.Grids):
         input_level=4,
         cube_type="cube",
         cube_size=EDGE_SIZE**3,
-        test=False,
     ):
         super().__init__(mol)
 
@@ -169,19 +272,6 @@ class Grid(dft.gen_grid.Grids):
             mol: An instance of :class:`Mole'.
             dms: Density matrix, 2D array with shape (nao, nao). The orientation of the cube is determined by the eigenvectors of the Hessian matrix(secondary derivation of the density).
         """
-        if mol.spin == 0:
-            assert (
-                np.linalg.norm(dms.conj().T - dms) < 1e-10
-            ), "Density matrix is not symmetric."
-            dm = dms
-        else:
-            assert (
-                np.linalg.norm(dms[0].conj().T - dms[0]) < 1e-10
-            ), "Density matrix is not symmetric."
-            assert (
-                np.linalg.norm(dms[1].conj().T - dms[1]) < 1e-10
-            ), "Density matrix is not symmetric."
-            dm = dms[0] + dms[1]
 
         # Hessian matrix
         shls_slice = (0, mol.nbas)
@@ -191,21 +281,18 @@ class Grid(dft.gen_grid.Grids):
         rho_in_2 = np.zeros((3, 3, len(coords)))
         ao = eval_ao(mol, coords, deriv=2)
 
-        c0 = _dot_ao_dm(mol, ao[0], dm, screen_index, shls_slice, ao_loc)
-        rho_in_1[0, :] = 2 * _contract_rho(ao[1], c0)
-        rho_in_1[1, :] = 2 * _contract_rho(ao[2], c0)
-        rho_in_1[2, :] = 2 * _contract_rho(ao[3], c0)
-
-        c1 = _dot_ao_dm(mol, ao[1], dm, screen_index, shls_slice, ao_loc)
-        c2 = _dot_ao_dm(mol, ao[2], dm, screen_index, shls_slice, ao_loc)
-        c3 = _dot_ao_dm(mol, ao[3], dm, screen_index, shls_slice, ao_loc)
-
-        rho_in_2[0, 0, :] = _contract_rho(ao[4], c0) + _contract_rho(ao[1], c1)
-        rho_in_2[0, 1, :] = _contract_rho(ao[5], c0) + _contract_rho(ao[1], c2)
-        rho_in_2[0, 2, :] = _contract_rho(ao[6], c0) + _contract_rho(ao[1], c3)
-        rho_in_2[1, 1, :] = _contract_rho(ao[7], c0) + _contract_rho(ao[2], c2)
-        rho_in_2[1, 2, :] = _contract_rho(ao[8], c0) + _contract_rho(ao[2], c3)
-        rho_in_2[2, 2, :] = _contract_rho(ao[9], c0) + _contract_rho(ao[3], c3)
+        if mol.spin == 0:
+            eval_rho_cube(
+                mol, ao, dms, rho_in_1, rho_in_2, screen_index, shls_slice, ao_loc
+            )
+        else:
+            dma, dmb = _format_uks_dm(dms)
+            eval_rho_cube(
+                mol, ao, dma, rho_in_1, rho_in_2, screen_index, shls_slice, ao_loc
+            )
+            eval_rho_cube(
+                mol, ao, dmb, rho_in_1, rho_in_2, screen_index, shls_slice, ao_loc
+            )
 
         rho_in_2[1, 0, :] = rho_in_2[0, 1, :]
         rho_in_2[2, 0, :] = rho_in_2[0, 2, :]
@@ -263,8 +350,9 @@ class GridCube:
             self.mol, self.coords, deriv=ao_deriv, non0tab=self.non0tab
         )
         t1 = logger.timer(self.mol, "           ao_value", *t1)
-        rho = ni.eval_rho(
-            self.mol, ao_value[:4], dms, non0tab=self.non0tab, xctype="GGA"
+
+        rho = rho_evaluator(
+            ni, self.mol, ao_value[:4], dms, non0tab=self.non0tab, xctype="GGA"
         )
         rho0 = rho[0]
         t1 = logger.timer(self.mol, "           eval_rho", *t1)
@@ -330,11 +418,11 @@ class GridCube:
         ao_value = ni.eval_ao(
             self.mol, self.coords, deriv=ao_deriv, non0tab=self.non0tab
         )
-        rho_a = ni.eval_rho(
-            self.mol, ao_value[:4], dma, non0tab=self.non0tab, xctype="GGA"
+        rho_a = rho_evaluator(
+            ni, self.mol, ao_value[:4], dma, non0tab=self.non0tab, xctype="GGA"
         )
-        rho_b = ni.eval_rho(
-            self.mol, ao_value[:4], dmb, non0tab=self.non0tab, xctype="GGA"
+        rho_b = rho_evaluator(
+            ni, self.mol, ao_value[:4], dmb, non0tab=self.non0tab, xctype="GGA"
         )
         rho = (rho_a, rho_b)
         rho_lda = (rho_a[0], rho_b[0])

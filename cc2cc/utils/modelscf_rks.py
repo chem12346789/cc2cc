@@ -12,16 +12,11 @@ import numpy as np
 import pyscf
 from pyscf import lib
 from pyscf.lib import logger
-from pyscf.dft.numint import (
-    NumInt,
-    _scale_ao_sparse,
-    _dot_ao_ao_sparse,
-)
-from pyscf.dft.gen_grid import NBINS
+from pyscf.dft.numint import NumInt, _scale_ao, _dot_ao_ao_dense
 from pyscf.grad.rks import _gga_grad_sum_
 
 from cc2cc.utils.ModelClass import ModelClass
-from cc2cc.utils.Grids import Grid
+from cc2cc.utils.Grids import Grid, iterate_grid_segments
 
 lib.logger.TIMER_LEVEL = 4
 
@@ -48,23 +43,22 @@ def get_veff_modified(ks, modeldict):
         """
         xctype = ni._xc_type(xc_code)
         ao_loc = mol.ao_loc_nr()
-        cutoff = grids.cutoff * 1e2
-        nbins = NBINS * 2 - int(NBINS * np.log(cutoff) / np.log(grids.cutoff))
+        shls_slice = (0, mol.nbas)
 
         nset = 1
         nao = mol.nao
 
         def block_loop(ao_deriv):
-            for ao, mask, weights_, coords_ in ni.block_loop(
+            for mask, weights_, coords_ in iterate_grid_segments(
                 mol,
                 grids,
                 nao,
                 ao_deriv,
-                max_memory=max_memory // (nset * modeldict.model.cube_size),
+                max_memory=max_memory // (2 * nset * modeldict.model.cube_size),
                 non0tab=None,
             ):
-                t0 = (logger.process_clock(), logger.perf_counter())
                 for i in range(nset):
+                    t0 = (logger.process_clock(), logger.perf_counter())
                     gridcube = grids.gen_cube(mol, dms, coords_, mask)
                     t0 = logger.timer(mol, "    gen cube", *t0)
                     rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(ni, dms)
@@ -73,12 +67,7 @@ def get_veff_modified(ks, modeldict):
                     t0 = logger.timer(mol, "    model eval", *t0)
 
                     excsum[i] += np.sum(energy_den)
-                    wv = np.einsum(
-                        "ixgC,giC->xgC",
-                        vxc_mat,
-                        middle_cube,
-                        optimize=True,
-                    )
+                    wv = np.einsum("ixgC,giC->xgC", vxc_mat, middle_cube, optimize=True)
 
                     t0 = logger.timer(mol, "    post model eval", *t0)
 
@@ -89,7 +78,6 @@ def get_veff_modified(ks, modeldict):
         nelec = np.zeros(nset)
         excsum = np.zeros(nset)
         vmat = np.zeros((nset, nao, nao))
-        pair_mask = mol.get_overlap_cond() < -np.log(ni.cutoff)
 
         t0 = (logger.process_clock(), logger.perf_counter())
         if xctype == "GGA":
@@ -98,18 +86,8 @@ def get_veff_modified(ks, modeldict):
                 t0 = logger.timer(mol, "  vxc on grids", *t0)
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
 
-                aow = _scale_ao_sparse(ao, wv, mask, ao_loc, out=aow)
-                _dot_ao_ao_sparse(
-                    ao[0],
-                    aow,
-                    None,
-                    nbins,
-                    mask,
-                    pair_mask,
-                    ao_loc,
-                    hermi=0,
-                    out=vmat[i],
-                )
+                aow = _scale_ao(ao, wv)
+                _dot_ao_ao_dense(ao[0], aow, None, vmat[i])
                 t0 = logger.timer(mol, "  vxc mat", *t0)
             vmat = lib.hermi_sum(vmat, axes=(0, 2, 1))
         else:
@@ -259,7 +237,7 @@ def get_veff_grad_modified(ks_grad, modeldict):
                 grids,
                 nao,
                 ao_deriv,
-                max_memory=max_memory // (nset * modeldict.model.cube_size),
+                max_memory=max_memory // (2 * nset * modeldict.model.cube_size),
                 non0tab=None,
             ):
                 for idm in range(nset):

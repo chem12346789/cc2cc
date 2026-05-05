@@ -5,7 +5,6 @@ from timeit import default_timer as timer
 
 import pyscf
 import pyscf.dft
-from pyscf.dft import numint
 from gpu4pyscf.dft import numint as numint_gpu
 import torch
 
@@ -36,7 +35,6 @@ def test_model_rks(
         input_level=modeldict.input_level,
         cube_type=modeldict.cube_type,
         cube_size=modeldict.cube_size,
-        test=True,
     )
     mdft.xc = "b3lyp"
 
@@ -121,11 +119,11 @@ def test_model_rks(
         print(
             f"electronic density (dft vs cc) {diff_rho(mol, data["dm1_cc"], data["dm1_dft"], mdft.grids)}"
         )
-        print(f"dipole (ai vs dft) {np.linalg.norm(scf_dipole - data['dipole_dft'])}")
-        print(f"dipole (ai vs cc) {np.linalg.norm(scf_dipole - data['dipole_cc'])}")
-        print(
-            f"dipole (dft vs cc) {np.linalg.norm(data['dipole_dft'] - data['dipole_cc'])}"
-        )
+        dipole_dft = pyscf.scf.hf.dip_moment(mol=mol, dm=data["dm1_dft"], unit="A.U.")
+        dipole_cc = pyscf.scf.hf.dip_moment(mol=mol, dm=data["dm1_cc"], unit="A.U.")
+        print(f"dipole (ai vs dft) {np.linalg.norm(scf_dipole - dipole_dft)}")
+        print(f"dipole (ai vs cc) {np.linalg.norm(scf_dipole - dipole_cc)}")
+        print(f"dipole (dft vs cc) {np.linalg.norm(dipole_dft - dipole_cc)}")
         if args.if_grad:
             print(
                 f"gradient (ai vs dft) {np.linalg.norm(grad_mdft - data['grad_dft'])}"
