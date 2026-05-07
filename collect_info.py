@@ -31,6 +31,16 @@ class Collect_info:
         self.verbose = verbose
         self.data_set = data_set
         self.is_sota = is_sota
+        if self.data_set == "gmtkn-def2":
+            self.data_frame_name_list = [
+                "subset_mean_df",
+                "subset_wtmad_2_df",
+                "wtmad_1_df",
+                "wtmad_2_df",
+            ]
+        else:
+            self.data_frame_name_list = ["subset_mapd_df", "subset_mpd_df"]
+        self.data_frame_dict = {}
 
         self.data_path = (
             Path("validate_hkqai")
@@ -54,7 +64,7 @@ class Collect_info:
             name=f"collect_{self.model_load}_{self.basis}_{'sota' if self.is_sota else 'standard'}",
             config=experiment_dict,
             allow_val_change=True,
-            mode="disabled",
+            mode="online" if self.data_set == "gmtkn-def2" else "disabled",
         )
 
         print("Collect_info initialized with the following parameters:")
@@ -126,10 +136,7 @@ class Collect_info:
             return
 
         for i, name in enumerate(self.data["name"]):
-            if "_0_1_0.0000" not in name:
-                name = name.replace(self.basis, "def2-QZVP_0_1_0.0000")
-            else:
-                name = name.replace(self.basis, "def2-QZVP")
+            name = name.replace(self.basis, "def2-QZVP")
             col = np.where(data_test_name == name)[0]
             b3lyp_ene = data_test.loc[col, "b3lyp_ene"].values[0]
             b3lyp_d3bj_ene = data_test.loc[col, "b3lyp-d3bj_ene"].values[0]
@@ -230,49 +237,32 @@ class Collect_info:
             "modified_ai_d3bj": "AI(M BJ)",
         }
 
-        if Path(f"validate_hkqai_done/{self.data_set}_subset_mean_df.csv").exists():
-            subset_mean_df = pd.read_csv(
-                f"validate_hkqai_done/{self.data_set}_subset_mean_df.csv",
-                index_col=0,
-            )
-        else:
-            subset_mean_df = pd.DataFrame(
-                index=self.name_subset_list, columns=dft_type_list
-            )
-        if Path(f"validate_hkqai_done/{self.data_set}_wtmad_2_subset_df.csv").exists():
-            wtmad_2_subset_df = pd.read_csv(
-                f"validate_hkqai_done/{self.data_set}_wtmad_2_subset_df.csv",
-                index_col=0,
-            )
-        else:
-            wtmad_2_subset_df = pd.DataFrame(
-                index=self.name_subset_list, columns=dft_type_list
-            )
-        if Path(f"validate_hkqai_done/{self.data_set}_wtmad_1_df.csv").exists():
-            wtmad_1_df = pd.read_csv(
-                f"validate_hkqai_done/{self.data_set}_wtmad_1_df.csv",
-                index_col=0,
-            )
-        else:
-            wtmad_1_df = pd.DataFrame(
-                index=self.name_set_list + ["summary"], columns=dft_type_list
-            )
-        if Path(f"validate_hkqai_done/{self.data_set}_wtmad_2_df.csv").exists():
-            wtmad_2_df = pd.read_csv(
-                f"validate_hkqai_done/{self.data_set}_wtmad_2_df.csv",
-                index_col=0,
-            )
-        else:
-            wtmad_2_df = pd.DataFrame(
-                index=self.name_set_list + ["summary"], columns=dft_type_list
-            )
-
-        for df in [subset_mean_df, wtmad_2_subset_df, wtmad_1_df, wtmad_2_df]:
-            for col in header:
-                if col not in df.columns:
-                    df[col] = 0.0
-            # move Processed column to the end
-            df.pop("Processed")
+        for data_frame_name in self.data_frame_name_list:
+            if Path(
+                f"validate_hkqai_done/{data_frame_name}_{self.data_set}.csv"
+            ).exists():
+                df = pd.read_csv(
+                    f"validate_hkqai_done/{data_frame_name}_{self.data_set}.csv",
+                    index_col=0,
+                )
+                for col in header:
+                    if col not in df.columns:
+                        df[col] = 0.0
+                # move Processed column to the end
+                df.pop("Processed")
+            else:
+                print(
+                    f"DataFrame {data_frame_name}_{self.data_set} not found. Initializing new DataFrame."
+                )
+                if data_frame_name.startswith("subset"):
+                    df = pd.DataFrame(
+                        index=self.name_subset_list, columns=dft_type_list
+                    )
+                else:
+                    df = pd.DataFrame(
+                        index=self.name_set_list + ["summary"], columns=dft_type_list
+                    )
+            self.data_frame_dict[data_frame_name] = df
 
         print(
             f"Number of reactions process/done in each subset: {completed_counts_subset}/{total_counts_subset}"
@@ -305,12 +295,13 @@ class Collect_info:
         )
         print(f"Total number of reactions process/done: {status_summary}")
 
-        for df in (subset_mean_df, wtmad_2_subset_df):
-            df.loc[self.name_subset_list, "Processed"] = status_subset
-
-        for df in (wtmad_1_df, wtmad_2_df):
-            df.loc[self.name_set_list, "Processed"] = status_set
-            df.loc["summary", "Processed"] = status_summary
+        for df_name in self.data_frame_name_list:
+            df = self.data_frame_dict[df_name]
+            if df_name.startswith("subset"):
+                df.loc[self.name_subset_list, "Processed"] = status_subset
+            else:
+                df.loc[self.name_set_list, "Processed"] = status_set
+                df.loc["summary", "Processed"] = status_summary
 
         # mae: mean_relative_abs_energies
         mean_relative_abs_energies = np.einsum(
@@ -325,17 +316,17 @@ class Collect_info:
         wtmad_1_multiplier[mean_relative_abs_energies > 75] = 0.1
         wtmad_1_multiplier[mean_relative_abs_energies < 7.5] = 10
 
-        if self.model_load == "":
-            subset_mean_df.loc[self.name_subset_list, "mae"] = (
-                mean_relative_abs_energies
-            )
+        if self.model_load == "" and self.data_set == "gmtkn-def2":
+            self.data_frame_dict["subset_mean_df"].loc[
+                self.name_subset_list, "mae"
+            ] = mean_relative_abs_energies
         mean_absolute_deviation = 56.84 / 1505
 
         for dft_type in dft_type_list:
             if dft_type not in self.data.columns:
                 if self.verbose > 3:
                     print(f"Warning: {dft_type} not found in data columns.")
-                for df in [subset_mean_df, wtmad_2_subset_df, wtmad_1_df, wtmad_2_df]:
+                for df in self.data_frame_dict.values():
                     df.pop(dft_type)
                 continue
             data_dft_ene = self.data[dft_type].to_numpy() * AU2KCALMOL
@@ -352,33 +343,46 @@ class Collect_info:
                 divide(1, completed_counts_subset),
             )
 
-            wtmad_1_subset = wtmad_1_multiplier * mean_reaction_energy
-            wtmad_1_df.loc[self.name_set_list, dft_type] = np.einsum(
-                "i,ij->j", wtmad_1_subset, subset2set
-            ) / len(self.name_subset_list)
-            wtmad_1_df.loc["summary", dft_type] = np.sum(
-                wtmad_1_df.loc[self.name_set_list, dft_type]
-            )
-
             if self.data_set == "gmtkn-def2":
-                subset_mean_df.loc[self.name_subset_list, dft_type] = (
-                    mean_reaction_energy
+                wtmad_1_subset = wtmad_1_multiplier * mean_reaction_energy
+                self.data_frame_dict["wtmad_1_df"].loc[self.name_set_list, dft_type] = (
+                    np.einsum("i,ij->j", wtmad_1_subset, subset2set)
+                    / len(self.name_subset_list)
                 )
+                self.data_frame_dict["wtmad_1_df"].loc["summary", dft_type] = np.sum(
+                    self.data_frame_dict["wtmad_1_df"].loc[self.name_set_list, dft_type]
+                )
+                self.data_frame_dict["subset_mean_df"].loc[
+                    self.name_subset_list, dft_type
+                ] = mean_reaction_energy
                 wtmad_2_subset = mean_absolute_deviation * np.einsum(
                     "i,i,i->i",
                     total_counts_subset,
                     inverse_mae,
                     mean_reaction_energy,
                 )
+                self.data_frame_dict["wtmad_2_subset_df"].loc[
+                    self.name_subset_list, dft_type
+                ] = wtmad_2_subset
+                self.data_frame_dict["wtmad_2_df"].loc[self.name_set_list, dft_type] = (
+                    np.einsum("i,ij->j", wtmad_2_subset, subset2set)
+                )
+                self.data_frame_dict["wtmad_2_df"].loc["summary", dft_type] = np.sum(
+                    self.data_frame_dict["wtmad_2_df"].loc[self.name_set_list, dft_type]
+                )
             else:
-                subset_mean_df.loc[self.name_subset_list, dft_type] = 100 * np.einsum(
+                self.data_frame_dict["subset_mpd_df"].loc[
+                    self.name_subset_list, dft_type
+                ] = 100 * np.einsum(
                     "i,ij,j,j->j",
                     (reference_energy - reaction_energy_dft),
                     reactions_to_subset,
                     inverse_mae,
                     divide(1, completed_counts_subset),
                 )
-                wtmad_2_subset = 100 * np.einsum(
+                self.data_frame_dict["subset_mapd_df"].loc[
+                    self.name_subset_list, dft_type
+                ] = 100 * np.einsum(
                     "i,ij,j,j->j",
                     np.abs(reference_energy - reaction_energy_dft),
                     reactions_to_subset,
@@ -386,29 +390,26 @@ class Collect_info:
                     divide(1, completed_counts_subset),
                 )
 
-            wtmad_2_subset_df.loc[self.name_subset_list, dft_type] = wtmad_2_subset
-            wtmad_2_df.loc[self.name_set_list, dft_type] = np.einsum(
-                "i,ij->j", wtmad_2_subset, subset2set
-            )
-            wtmad_2_df.loc["summary", dft_type] = np.sum(
-                wtmad_2_df.loc[self.name_set_list, dft_type]
-            )
+        if self.data_set == "gmtkn-def2":
+            len_processed = np.sum(completed_counts_subset)
+            log_dict = {
+                "WTMAD-2_min": self.data_frame_dict["wtmad_2_df"].loc[
+                    "summary", dft_type_list[0]
+                ],
+                "WTMAD-2_max": self.data_frame_dict["wtmad_2_df"].loc[
+                    "summary", dft_type_list[0]
+                ]
+                / len_processed
+                * 1505,
+                "len_processed": len_processed,
+            }
+            for name_set in self.full_subset_dict:
+                log_dict[f"WTMAD-2_{name_set}"] = float(
+                    self.data_frame_dict["wtmad_2_df"].loc[name_set, dft_type_list[0]]
+                )
+            self.run.log(log_dict)
 
-        len_processed = np.sum(completed_counts_subset)
-        log_dict = {
-            "WTMAD-2_min": wtmad_2_df.loc["summary", dft_type_list[0]],
-            "WTMAD-2_max": wtmad_2_df.loc["summary", dft_type_list[0]]
-            / len_processed
-            * 1505,
-            "len_processed": len_processed,
-        }
-        for name_set in self.full_subset_dict:
-            log_dict[f"WTMAD-2_{name_set}"] = float(
-                wtmad_2_df.loc[name_set, dft_type_list[0]]
-            )
-        self.run.log(log_dict)
-
-        for df in [subset_mean_df, wtmad_2_subset_df, wtmad_1_df, wtmad_2_df]:
+        for df in self.data_frame_dict.values():
             # rename columns
             df.rename(columns=rename_dict, inplace=True)
             if "AI(M BJ)" in self.data.columns:
@@ -422,37 +423,23 @@ class Collect_info:
             "display.float_format",
             "{:.2f}".format,
         ):
-            print(wtmad_1_df)
-            print(wtmad_2_df)
+            for df_name in self.data_frame_name_list:
+                print(self.data_frame_dict[df_name])
 
         if self.is_sota:
-            for df in [subset_mean_df, wtmad_2_subset_df, wtmad_1_df, wtmad_2_df]:
+            for df in self.data_frame_dict.values():
                 # raname AI to SOTA and AI(BJ) to SOTA(BJ)
                 if "AI" in df.columns and "AI(BJ)" in df.columns:
                     df["SOTA"] = df["AI"]
                     df["SOTA(BJ)"] = df["AI(BJ)"]
 
         print(f"Saving excel backup files with timestamp: {self.stamp}")
-        subset_mean_df.to_csv(
-            f"validate_hkqai/csv_backup/subset_mean_df_{self.stamp}.csv"
-        )
-        wtmad_2_subset_df.to_csv(
-            f"validate_hkqai/csv_backup/wtmad_2_subset_df_{self.stamp}.csv"
-        )
-        wtmad_1_df.to_csv(f"validate_hkqai/csv_backup/wtmad_1_df_{self.stamp}.csv")
-        wtmad_2_df.to_csv(f"validate_hkqai/csv_backup/wtmad_2_df_{self.stamp}.csv")
-        subset_mean_df.round(3).to_excel(
-            f"validate_hkqai/excel_backup/subset_mean_df_{self.stamp}.xlsx"
-        )
-        wtmad_2_subset_df.round(3).to_excel(
-            f"validate_hkqai/excel_backup/wtmad_2_subset_df_{self.stamp}.xlsx"
-        )
-        wtmad_1_df.round(3).to_excel(
-            f"validate_hkqai/excel_backup/wtmad_1_df_{self.stamp}.xlsx"
-        )
-        wtmad_2_df.round(3).to_excel(
-            f"validate_hkqai/excel_backup/wtmad_2_df_{self.stamp}.xlsx"
-        )
+        for df_name, df in self.data_frame_dict.items():
+            print(f"{df_name}:\n{df}\n")
+            df.to_csv(f"validate_hkqai/csv_backup/{df_name}_{self.stamp}.csv")
+            df.round(3).to_excel(
+                f"validate_hkqai/excel_backup/{df_name}_{self.stamp}.xlsx"
+            )
 
     def save_csv(self):
         self.data.to_csv(self.data_path, index=False)
