@@ -21,7 +21,7 @@ from cc2cc.utils.Grids import Grid, iterate_grid_segments
 lib.logger.TIMER_LEVEL = 4
 
 
-def get_veff_modified(ks, modeldict):
+def get_veff_modified_rks(ks, modeldict):
     """
     Get the method of "Get the effective potential for the RKS method".
     """
@@ -206,7 +206,7 @@ def get_veff_modified(ks, modeldict):
     ks.get_veff = types.MethodType(get_veff, ks)
 
 
-def get_veff_grad_modified(ks_grad, modeldict):
+def get_veff_grad_modified_rks(ks_grad, modeldict):
     """
     Get the method of "Get the effective potential for the RKS Gradients method".
     """

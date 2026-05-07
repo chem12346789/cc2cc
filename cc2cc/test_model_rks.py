@@ -1,15 +1,15 @@
 """Test the model. Restrict Khon-Sham (no spin)."""
 
-import numpy as np
 from timeit import default_timer as timer
+
+import numpy as np
+import torch
 
 import pyscf
 import pyscf.dft
-from gpu4pyscf.dft import numint as numint_gpu
-import torch
 
 from cc2cc.utils import get_veff_modified_rks, get_veff_grad_modified_rks, diff_rho
-from cc2cc.utils import Grid, TestDataDFT, DATA_PATH, AU2KCALMOL
+from cc2cc.utils import GridCPU, GridGPU, TestDataDFT, DATA_PATH, AU2KCALMOL
 
 
 def test_model_rks(
@@ -24,10 +24,12 @@ def test_model_rks(
     """
     # 2.0 Prepare
     time_ai_start = timer()
-    # if torch.cuda.is_available():
-    #     mdft = pyscf.dft.RKS(mol).density_fit().to_gpu()
-    # else:
-    mdft = pyscf.dft.RKS(mol).density_fit()
+    if torch.cuda.is_available():
+        mdft = pyscf.dft.RKS(mol).density_fit().to_gpu()
+        Grid = GridGPU
+    else:
+        Grid = GridCPU
+        mdft = pyscf.dft.RKS(mol).density_fit()
     get_veff_modified_rks(mdft, modeldict)
     mdft.grids = Grid(
         mol,

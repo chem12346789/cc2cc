@@ -16,7 +16,7 @@ from cc2cc.utils.Grids import Grid, iterate_grid_segments
 lib.logger.TIMER_LEVEL = 4
 
 
-def get_veff_modified(ks, modeldict: ModelClass):
+def get_veff_modified_uks(ks, modeldict: ModelClass):
     """
     Get the method of "Get the effective potential for the UKS method".
     Note the max_memory=2000 use around 8GB gpu memory.
@@ -207,7 +207,7 @@ def get_veff_modified(ks, modeldict: ModelClass):
     ks.get_veff = types.MethodType(get_veff, ks)
 
 
-def get_veff_grad_modified(ks_grad, modeldict):
+def get_veff_grad_modified_uks(ks_grad, modeldict: ModelClass):
     """
     Get the method of "Get the effective potential for the UKS Gradients method".
     """
