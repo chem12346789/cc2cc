@@ -12,17 +12,16 @@ import numpy as np
 from numba import njit
 
 import cupy as cp
+from pyscf import __config__
 from gpu4pyscf.dft import gen_grid, numint, radi
 from gpu4pyscf.lib import logger
+from gpu4pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_LEN, EDGE_SIZE
 
 GridsGPU = gen_grid.Grids
-BLKSIZE = getattr(gen_grid, "BLKSIZE", 56)
-NBINS = getattr(gen_grid, "NBINS", 100)
-ALIGNMENT_UNIT = getattr(gen_grid, "ALIGNMENT_UNIT", 128)
-OCCDROP = getattr(numint, "OCCDROP", 1e-12)
-SWITCH_SIZE = 800
+OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
+SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
 
 
 def _asnumpy(a):
@@ -246,6 +245,7 @@ class Grid(GridsGPU):
         self.cube_type = cube_type
         self.cube_size = cube_size
 
+        # Set default parameters, please refer to pyscf.dft.gen_grid.Grids for details.
         self.radi_method = radi.gauss_chebyshev
         self.becke_scheme = gen_grid.original_becke
         self.atomic_radii = None
@@ -454,12 +454,9 @@ class GridCube:
 
 
 GridGPU = Grid
+GridCubeGPU = GridCube
 
 __all__ = [
-    "Grid",
     "GridGPU",
-    "GridCube",
-    "iterate_grid_segments",
-    "rho_evaluator",
-    "eval_rho_cube",
+    "GridCubeGPU",
 ]

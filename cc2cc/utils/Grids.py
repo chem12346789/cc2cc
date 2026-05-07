@@ -1,42 +1,28 @@
-"""@package docstring
-Documentation for this module.
+"""CPU-backed DFT grids for cc2cc.
 
-More details.
+This module is the PySCF counterpart of :mod:`cc2cc.utils.grids_gpu`.
 """
 
-import numpy as np
-from numba import njit, prange
+from __future__ import annotations
 
-import pyscf
-from pyscf import dft, lib
-from pyscf.lib import logger
-from pyscf.dft.gen_grid import Grids as GridsCPU
-from pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
-from pyscf.dft.numint import (
-    NumInt,
-    _dot_ao_dm,
-    _contract_rho,
-    _format_uks_dm,
-    eval_ao,
-    _sparse_enough,
-)
+import numpy as np
+from numba import njit
+
 from pyscf import __config__
+from pyscf.dft import gen_grid, numint, radi
+from pyscf.lib import logger
+from pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 
 from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 
-libdft = lib.load_library("libdft")
+GridsCPU = gen_grid.Grids
 OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
-# The system size above which to consider the sparsity of the density matrix.
-# If the number of AOs in the system is less than this value, all tensors are
-# treated as dense quantities and contracted by dgemm directly.
 SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
 
 
 def iterate_grid_segments(mol, grids, nao, deriv, max_memory, non0tab=None):
     ngrids = grids.coords.shape[0]
     comp = (deriv + 1) * (deriv + 2) * (deriv + 3) // 6
-    # NOTE to index grids.non0tab, the blksize needs to be an integer
-    # multiplier of BLKSIZE
     blksize = int(max_memory * 1e6 / ((comp + 1) * nao * 8 * BLKSIZE))
     blksize = max(4, min(blksize, ngrids // BLKSIZE + 1, 1200)) * BLKSIZE
     assert blksize % BLKSIZE == 0
@@ -47,25 +33,22 @@ def iterate_grid_segments(mol, grids, nao, deriv, max_memory, non0tab=None):
         non0tab = np.empty(
             ((ngrids + BLKSIZE - 1) // BLKSIZE, mol.nbas), dtype=np.uint8
         )
-        non0tab[:] = NBINS + 1  # Corresponding to AO value ~= 1
+        non0tab[:] = NBINS + 1
     screen_index = non0tab
 
-    # the xxx_sparse() functions require ngrids 8-byte aligned
     allow_sparse = ngrids % ALIGNMENT_UNIT == 0 and nao > SWITCH_SIZE
-
-    for ip0, ip1 in lib.prange(0, ngrids, blksize):
+    for ip0 in range(0, ngrids, blksize):
+        ip1 = min(ip0 + blksize, ngrids)
         coords = grids.coords[ip0:ip1]
         weight = grids.weights[ip0:ip1]
         mask = screen_index[ip0 // BLKSIZE :]
-        if not allow_sparse and not _sparse_enough(mask):
-            # Unset mask for dense AO tensor. It determines which eval_rho
-            # to be called in make_rho
+        if not allow_sparse:
             mask = None
         yield mask, weight, coords
 
 
 def rho_evaluator(
-    ni: NumInt,
+    ni: numint.NumInt,
     mol,
     ao,
     dms,
@@ -74,38 +57,23 @@ def rho_evaluator(
     hermi=0,
     with_lapl=True,
 ):
+    """Evaluate density with PySCF ``NumInt``."""
     if getattr(dms, "mo_coeff", None) is not None:
-        # TODO: test whether dm.mo_coeff matching dm
-        mo_coeff = dms.mo_coeff
-        mo_occ = dms.mo_occ
-    else:
-        mo_coeff = mo_occ = None
-    has_mo = mo_coeff is not None
-
-    if has_mo:
-        return ni.eval_rho2(mol, ao, mo_coeff, mo_occ, non0tab, xctype, with_lapl)
-    else:
-        return ni.eval_rho(mol, ao, dms, non0tab, xctype, hermi, with_lapl)
-        # it has a sparse version, but has_mo is False only for a few cases, so we use the dense version here.
+        return ni.eval_rho2(
+            mol, ao, dms.mo_coeff, dms.mo_occ, non0tab, xctype, with_lapl
+        )
+    return ni.eval_rho(mol, ao, dms, non0tab, xctype, hermi, with_lapl)
 
 
 @njit(fastmath=True)
-def gen_cube_njit(
-    rho_in_2,
-    rho_in_1,
-    coords,
-    coor_cube,
-):
-    """
-    Generate the cube coordinates for the given molecule.
-    """
+def gen_cube_njit(rho_in_2, rho_in_1, coords, coor_cube):
+    """Generate full cube coordinates around every grid point."""
     for p in range(len(coords)):
         norm_2d = rho_in_2[:, :, p]
         eig_val, eig_vec = np.linalg.eigh(norm_2d)
         eig_val_sort = np.argsort(eig_val)
         eig_vec = eig_vec[:, eig_val_sort]
         norm_1d = rho_in_1[:, p]
-        # norm_1d = np.array([np.pi, np.e, 1])
         for i in range(3):
             if (
                 eig_vec[0, i] * norm_1d[0]
@@ -127,15 +95,8 @@ def gen_cube_njit(
 
 
 @njit(fastmath=True)
-def gen_cube5_njit(
-    rho_in_2,
-    rho_in_1,
-    coords,
-    coor_cube,
-):
-    """
-    Generate the center coordinates for the given molecule.
-    """
+def gen_cube5_njit(rho_in_2, rho_in_1, coords, coor_cube):
+    """Generate the five-point cube representation around every grid point."""
     for p in range(len(coords)):
         norm_2d = rho_in_2[:, :, p]
         eig_val, eig_vec = np.linalg.eigh(norm_2d)
@@ -175,63 +136,71 @@ def eval_rho_cube(mol, ao, dm, rho_in_1, rho_in_2, screen_index, shls_slice, ao_
         pos = mo_occ > OCCDROP
         if np.any(pos):
             cpos = np.einsum("ij,j->ij", mo_coeff[:, pos], np.sqrt(mo_occ[pos]))
-            c0 = _dot_ao_dm(mol, ao[0], cpos, screen_index, shls_slice, ao_loc)
-            c1 = _dot_ao_dm(mol, ao[1], cpos, screen_index, shls_slice, ao_loc)
-            c2 = _dot_ao_dm(mol, ao[2], cpos, screen_index, shls_slice, ao_loc)
-            c3 = _dot_ao_dm(mol, ao[3], cpos, screen_index, shls_slice, ao_loc)
-            rho_in_1[0, :] += 2 * _contract_rho(c1, c0)
-            rho_in_1[1, :] += 2 * _contract_rho(c2, c0)
-            rho_in_1[2, :] += 2 * _contract_rho(c3, c0)
+            c0 = numint._dot_ao_dm(mol, ao[0], cpos, screen_index, shls_slice, ao_loc)
+            c1 = numint._dot_ao_dm(mol, ao[1], cpos, screen_index, shls_slice, ao_loc)
+            c2 = numint._dot_ao_dm(mol, ao[2], cpos, screen_index, shls_slice, ao_loc)
+            c3 = numint._dot_ao_dm(mol, ao[3], cpos, screen_index, shls_slice, ao_loc)
+            rho_in_1[0, :] += 2 * numint._contract_rho(c1, c0)
+            rho_in_1[1, :] += 2 * numint._contract_rho(c2, c0)
+            rho_in_1[2, :] += 2 * numint._contract_rho(c3, c0)
 
-            c4 = _dot_ao_dm(mol, ao[4], cpos, screen_index, shls_slice, ao_loc)
-            c5 = _dot_ao_dm(mol, ao[5], cpos, screen_index, shls_slice, ao_loc)
-            c6 = _dot_ao_dm(mol, ao[6], cpos, screen_index, shls_slice, ao_loc)
-            c7 = _dot_ao_dm(mol, ao[7], cpos, screen_index, shls_slice, ao_loc)
-            c8 = _dot_ao_dm(mol, ao[8], cpos, screen_index, shls_slice, ao_loc)
-            c9 = _dot_ao_dm(mol, ao[9], cpos, screen_index, shls_slice, ao_loc)
+            c4 = numint._dot_ao_dm(mol, ao[4], cpos, screen_index, shls_slice, ao_loc)
+            c5 = numint._dot_ao_dm(mol, ao[5], cpos, screen_index, shls_slice, ao_loc)
+            c6 = numint._dot_ao_dm(mol, ao[6], cpos, screen_index, shls_slice, ao_loc)
+            c7 = numint._dot_ao_dm(mol, ao[7], cpos, screen_index, shls_slice, ao_loc)
+            c8 = numint._dot_ao_dm(mol, ao[8], cpos, screen_index, shls_slice, ao_loc)
+            c9 = numint._dot_ao_dm(mol, ao[9], cpos, screen_index, shls_slice, ao_loc)
 
-            rho_in_2[0, 0, :] += _contract_rho(c4, c0) + _contract_rho(c1, c1)
-            rho_in_2[0, 1, :] += _contract_rho(c5, c0) + _contract_rho(c1, c2)
-            rho_in_2[0, 2, :] += _contract_rho(c6, c0) + _contract_rho(c1, c3)
-            rho_in_2[1, 1, :] += _contract_rho(c7, c0) + _contract_rho(c2, c2)
-            rho_in_2[1, 2, :] += _contract_rho(c8, c0) + _contract_rho(c2, c3)
-            rho_in_2[2, 2, :] += _contract_rho(c9, c0) + _contract_rho(c3, c3)
+            rho_in_2[0, 0, :] += numint._contract_rho(c4, c0) + numint._contract_rho(
+                c1, c1
+            )
+            rho_in_2[0, 1, :] += numint._contract_rho(c5, c0) + numint._contract_rho(
+                c1, c2
+            )
+            rho_in_2[0, 2, :] += numint._contract_rho(c6, c0) + numint._contract_rho(
+                c1, c3
+            )
+            rho_in_2[1, 1, :] += numint._contract_rho(c7, c0) + numint._contract_rho(
+                c2, c2
+            )
+            rho_in_2[1, 2, :] += numint._contract_rho(c8, c0) + numint._contract_rho(
+                c2, c3
+            )
+            rho_in_2[2, 2, :] += numint._contract_rho(c9, c0) + numint._contract_rho(
+                c3, c3
+            )
     else:
-        c0 = _dot_ao_dm(mol, ao[0], dm, screen_index, shls_slice, ao_loc)
-        rho_in_1[0, :] += 2 * _contract_rho(ao[1], c0)
-        rho_in_1[1, :] += 2 * _contract_rho(ao[2], c0)
-        rho_in_1[2, :] += 2 * _contract_rho(ao[3], c0)
+        c0 = numint._dot_ao_dm(mol, ao[0], dm, screen_index, shls_slice, ao_loc)
+        rho_in_1[0, :] += 2 * numint._contract_rho(ao[1], c0)
+        rho_in_1[1, :] += 2 * numint._contract_rho(ao[2], c0)
+        rho_in_1[2, :] += 2 * numint._contract_rho(ao[3], c0)
 
-        c1 = _dot_ao_dm(mol, ao[1], dm, screen_index, shls_slice, ao_loc)
-        c2 = _dot_ao_dm(mol, ao[2], dm, screen_index, shls_slice, ao_loc)
-        c3 = _dot_ao_dm(mol, ao[3], dm, screen_index, shls_slice, ao_loc)
+        c1 = numint._dot_ao_dm(mol, ao[1], dm, screen_index, shls_slice, ao_loc)
+        c2 = numint._dot_ao_dm(mol, ao[2], dm, screen_index, shls_slice, ao_loc)
+        c3 = numint._dot_ao_dm(mol, ao[3], dm, screen_index, shls_slice, ao_loc)
 
-        rho_in_2[0, 0, :] += _contract_rho(ao[4], c0) + _contract_rho(ao[1], c1)
-        rho_in_2[0, 1, :] += _contract_rho(ao[5], c0) + _contract_rho(ao[1], c2)
-        rho_in_2[0, 2, :] += _contract_rho(ao[6], c0) + _contract_rho(ao[1], c3)
-        rho_in_2[1, 1, :] += _contract_rho(ao[7], c0) + _contract_rho(ao[2], c2)
-        rho_in_2[1, 2, :] += _contract_rho(ao[8], c0) + _contract_rho(ao[2], c3)
-        rho_in_2[2, 2, :] += _contract_rho(ao[9], c0) + _contract_rho(ao[3], c3)
+        rho_in_2[0, 0, :] += numint._contract_rho(ao[4], c0) + numint._contract_rho(
+            ao[1], c1
+        )
+        rho_in_2[0, 1, :] += numint._contract_rho(ao[5], c0) + numint._contract_rho(
+            ao[1], c2
+        )
+        rho_in_2[0, 2, :] += numint._contract_rho(ao[6], c0) + numint._contract_rho(
+            ao[1], c3
+        )
+        rho_in_2[1, 1, :] += numint._contract_rho(ao[7], c0) + numint._contract_rho(
+            ao[2], c2
+        )
+        rho_in_2[1, 2, :] += numint._contract_rho(ao[8], c0) + numint._contract_rho(
+            ao[2], c3
+        )
+        rho_in_2[2, 2, :] += numint._contract_rho(ao[9], c0) + numint._contract_rho(
+            ao[3], c3
+        )
 
 
 class Grid(GridsCPU):
-    """
-    Documentation for a class.
-
-    This class is modified from pyscf.dft.gen_grid.Grids. Some default parameters are changed.
-    New attributes:
-    input_level:
-        The input level for the grid generation.
-        For example, 4 means the input is 4 energy density used by b3lyp functional.
-    --------------------------------------------------------------------------
-    Methods:
-    gen_cube: Generate the cube coordinates for the given molecule.
-    get_center_density: Get the center density of the cube.
-    gen_cube_rho_rks: Generate the cube density for the given molecule in RKS.
-    gen_cube_rho_uks: Generate the cube density for the given molecule in UKS.
-    gen_rho_rks: Generate the center density for the given molecule in RKS.
-    gen_rho_uks: Generate the center density for the given molecule in UKS.
-    """
+    """PySCF-backed version of :class:`cc2cc.utils.grids_gpu.Grid`."""
 
     def __init__(
         self,
@@ -249,8 +218,8 @@ class Grid(GridsCPU):
         self.cube_size = cube_size
 
         # Set default parameters, please refer to pyscf.dft.gen_grid.Grids for details.
-        self.radi_method = dft.radi.gauss_chebyshev
-        self.becke_scheme = dft.gen_grid.original_becke
+        self.radi_method = radi.gauss_chebyshev
+        self.becke_scheme = gen_grid.original_becke
         self.atomic_radii = None
         self.radii_adjust = None
         self.prune = None
@@ -265,28 +234,20 @@ class Grid(GridsCPU):
         coords,
         screen_index=None,
     ):
-        """
-        Generate the cube coordinates for the given molecule.
-
-        Args:
-            mol: An instance of :class:`Mole'.
-            dms: Density matrix, 2D array with shape (nao, nao). The orientation of the cube is determined by the eigenvectors of the Hessian matrix(secondary derivation of the density).
-        """
-
-        # Hessian matrix
+        """Generate cube coordinates with PySCF AO/rho contractions."""
         shls_slice = (0, mol.nbas)
         ao_loc = mol.ao_loc_nr()
 
         rho_in_1 = np.zeros((3, len(coords)))
         rho_in_2 = np.zeros((3, 3, len(coords)))
-        ao = eval_ao(mol, coords, deriv=2)
+        ao = numint.eval_ao(mol, coords, deriv=2)
 
         if mol.spin == 0:
             eval_rho_cube(
                 mol, ao, dms, rho_in_1, rho_in_2, screen_index, shls_slice, ao_loc
             )
         else:
-            dma, dmb = _format_uks_dm(dms)
+            dma, dmb = numint._format_uks_dm(dms)
             eval_rho_cube(
                 mol, ao, dma, rho_in_1, rho_in_2, screen_index, shls_slice, ao_loc
             )
@@ -313,34 +274,25 @@ class Grid(GridsCPU):
 
 
 class GridCube:
-    """
-    Generate the Grids for the cube.
-    Note that the no center weights are 0.
-    The cutoff is the cutoff for the cube.
-    """
+    """Cube grids whose coordinates are stored as NumPy arrays for PySCF."""
 
     def __init__(self, coords, grid: Grid):
         self.number_of_cube = len(coords)
-        # size of coords: (number * EDGE_SIZE * EDGE_SIZE * EDGE_SIZE, 3) or (number * 5, 3)
         self.input_level = grid.input_level
         self.cube_type = grid.cube_type
         self.cube_size = grid.cube_size
         self.coords = coords.reshape((-1, 3))
         self.mol = grid.mol
         self.cutoff = grid.cutoff
-        # sparse version seems to be not pallelized, and is slower than dense version.
-        # So we use dense version here (set non0tab tobe None) for all system sizes.
         self.non0tab = None
 
     def gen_cube_rho_rks(
         self,
-        ni: pyscf.dft.numint.NumInt,
+        ni: numint.NumInt,
         dms,
         ao_deriv=1,
     ):
-        """
-        Generate the cube density for the given molecule.
-        """
+        """Generate RKS cube densities and XC inputs on the CPU."""
         t0 = (logger.process_clock(), logger.perf_counter())
         t1 = (logger.process_clock(), logger.perf_counter())
         input_mat = np.zeros((self.input_level, len(self.coords)))
@@ -391,8 +343,7 @@ class GridCube:
 
         input_mat = input_mat.reshape(
             (self.input_level, self.number_of_cube, self.cube_size)
-        )
-        input_mat = input_mat.transpose(1, 0, 2)
+        ).transpose(1, 0, 2)
         vxc_mat = vxc_mat.reshape(
             (self.input_level, 4, self.number_of_cube, self.cube_size)
         )
@@ -402,18 +353,16 @@ class GridCube:
 
     def gen_cube_rho_uks(
         self,
-        ni: pyscf.dft.numint.NumInt,
+        ni: numint.NumInt,
         dms,
         ao_deriv=1,
     ):
-        """
-        Generate the cube density for the given molecule.
-        """
+        """Generate UKS cube densities and XC inputs on the CPU."""
         t0 = (logger.process_clock(), logger.perf_counter())
         input_mat = np.zeros((self.input_level, len(self.coords)))
         vxc_mat = np.zeros((self.input_level, 2, 4, len(self.coords)))
 
-        dma, dmb = _format_uks_dm(dms)
+        dma, dmb = numint._format_uks_dm(dms)
 
         ao_value = ni.eval_ao(
             self.mol, self.coords, deriv=ao_deriv, non0tab=self.non0tab
@@ -462,11 +411,19 @@ class GridCube:
 
         input_mat = input_mat.reshape(
             (self.input_level, self.number_of_cube, self.cube_size)
-        )
-        input_mat = input_mat.transpose(1, 0, 2)
+        ).transpose(1, 0, 2)
         vxc_mat = vxc_mat.reshape(
             (self.input_level, 2, 4, self.number_of_cube, self.cube_size)
         )
 
         t0 = logger.timer(self.mol, "      gen exc and vxc", *t0)
         return input_mat, vxc_mat, ao_value
+
+
+GridCPU = Grid
+GridCubeCPU = GridCube
+
+__all__ = [
+    "GridCPU",
+    "GridCubeCPU",
+]
