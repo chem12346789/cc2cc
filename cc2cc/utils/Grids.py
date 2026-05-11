@@ -421,9 +421,7 @@ class GridCube:
 
 
 GridCPU = Grid
-GridCubeCPU = GridCube
 
 __all__ = [
     "GridCPU",
-    "GridCubeCPU",
 ]

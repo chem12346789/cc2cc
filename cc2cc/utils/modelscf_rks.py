@@ -18,8 +18,6 @@ from pyscf.grad.rks import _gga_grad_sum_
 from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.Grids import Grid, iterate_grid_segments
 
-lib.logger.TIMER_LEVEL = 4
-
 
 def get_veff_modified_rks(ks, modeldict):
     """
@@ -42,8 +40,6 @@ def get_veff_modified_rks(ks, modeldict):
         Modified from pyscf.dft.numint.nr_rks (https://github.com/pyscf/pyscf/blob/v2.9.0/pyscf/dft/numint.py)
         """
         xctype = ni._xc_type(xc_code)
-        ao_loc = mol.ao_loc_nr()
-        shls_slice = (0, mol.nbas)
 
         nset = 1
         nao = mol.nao
@@ -54,7 +50,7 @@ def get_veff_modified_rks(ks, modeldict):
                 grids,
                 nao,
                 ao_deriv,
-                max_memory=max_memory // (2 * nset * modeldict.model.cube_size),
+                max_memory=max_memory // (2 * modeldict.model.cube_size),
                 non0tab=None,
             ):
                 for i in range(nset):
@@ -232,12 +228,12 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
 
         if xctype == "GGA":
             ao_deriv = 2
-            for ao, mask, weights_, coords_ in ni.block_loop(
+            for mask, weights_, coords_ in iterate_grid_segments(
                 mol,
                 grids,
                 nao,
                 ao_deriv,
-                max_memory=max_memory // (2 * nset * modeldict.model.cube_size),
+                max_memory=max_memory // (2 * modeldict.model.cube_size),
                 non0tab=None,
             ):
                 for idm in range(nset):

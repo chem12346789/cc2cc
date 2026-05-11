@@ -7,7 +7,6 @@ from e3nn.math import soft_one_hot_linspace
 
 from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 
-
 # E3NN-based octahedral equivariant network for 3D scalar field prediction.
 
 # This module implements an E3NN network that processes 27 points in a cube,
@@ -36,11 +35,18 @@ class E3nn(torch.nn.Module):
         self.lmax = lmax
 
         if self.cube_type == "cube":
-            edge_vec = torch.zeros(
-                (EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3),
-                device="cuda",
-                dtype=torch.float64,
-            )
+            if torch.cuda.is_available():
+                edge_vec = torch.zeros(
+                    (EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3),
+                    device="cuda",
+                    dtype=torch.float64,
+                )
+            else:
+                edge_vec = torch.zeros(
+                    (EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3),
+                    device="cpu",
+                    dtype=torch.float64,
+                )
             self.register_buffer("edge_vec", edge_vec, persistent=False)
             for i in range(EDGE_SIZE):
                 for j in range(EDGE_SIZE):
@@ -50,7 +56,10 @@ class E3nn(torch.nn.Module):
                         self.edge_vec[i, j, k, 2] = (k - CUBE_MIDDLE) * EDGE_LEN
         else:
             raise NotImplementedError("Only cube type is implemented.")
-        center_vec = torch.zeros(1, 3, device="cuda", dtype=torch.float64)
+        if torch.cuda.is_available():
+            center_vec = torch.zeros(1, 3, device="cuda", dtype=torch.float64)
+        else:
+            center_vec = torch.zeros(1, 3, device="cpu", dtype=torch.float64)
         self.register_buffer("center_vec", center_vec, persistent=False)
         self.edge_vec = self.edge_vec.reshape(EDGE_SIZE**3, 3)
 

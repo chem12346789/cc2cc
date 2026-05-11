@@ -361,7 +361,7 @@ class Collect_info:
                     inverse_mae,
                     mean_reaction_energy,
                 )
-                self.data_frame_dict["wtmad_2_subset_df"].loc[
+                self.data_frame_dict["subset_wtmad_2_df"].loc[
                     self.name_subset_list, dft_type
                 ] = wtmad_2_subset
                 self.data_frame_dict["wtmad_2_df"].loc[self.name_set_list, dft_type] = (

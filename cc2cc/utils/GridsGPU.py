@@ -8,13 +8,10 @@ opt in to GPU4PySCF explicitly.
 
 from __future__ import annotations
 
-import numpy as np
-from numba import njit
-
 import cupy as cp
 from pyscf import __config__
 from gpu4pyscf.dft import gen_grid, numint, radi
-from gpu4pyscf.lib import logger
+from pyscf.lib import logger
 from gpu4pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_LEN, EDGE_SIZE
@@ -24,26 +21,12 @@ OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
 SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
 
 
-def _asnumpy(a):
-    """Return *a* as a NumPy array without importing PySCF helpers."""
-    if isinstance(a, cp.ndarray):
-        return cp.asnumpy(a)
-    return np.asarray(a)
-
-
-def _ascupy(a):
-    """Return *a* as a CuPy array."""
-    if isinstance(a, cp.ndarray):
-        return a
-    return cp.asarray(a)
-
-
 def _format_uks_dm_gpu(dms):
     """Small GPU-local replacement for PySCF's ``_format_uks_dm``."""
     if isinstance(dms, (tuple, list)) and len(dms) == 2:
-        return dms[0], dms[1]
+        return cp.asarray(dms[0]), cp.asarray(dms[1])
     if getattr(dms, "ndim", None) == 3 and dms.shape[0] == 2:
-        return dms[0], dms[1]
+        return cp.asarray(dms[0]), cp.asarray(dms[1])
     raise ValueError("UKS density matrix must contain alpha and beta matrices")
 
 
@@ -62,8 +45,8 @@ def iterate_grid_segments(mol, grids, nao, deriv, max_memory, non0tab=None):
     if mol is grids.mol:
         non0tab = grids.non0tab
     if non0tab is None:
-        non0tab = np.empty(
-            ((ngrids + BLKSIZE - 1) // BLKSIZE, mol.nbas), dtype=np.uint8
+        non0tab = cp.empty(
+            ((ngrids + BLKSIZE - 1) // BLKSIZE, mol.nbas), dtype=cp.uint8
         )
         non0tab[:] = NBINS + 1
     screen_index = non0tab
@@ -97,70 +80,55 @@ def rho_evaluator(
     return ni.eval_rho(mol, ao, dms, non0tab, xctype, hermi, with_lapl)
 
 
-@njit(fastmath=True)
+def _oriented_eigvec(rho_in_2, rho_in_1):
+    hess = cp.transpose(rho_in_2, (2, 0, 1))
+    _, eig_vec = cp.linalg.eigh(hess)
+    norm_1d = cp.transpose(rho_in_1, (1, 0))
+    dots = cp.einsum("nij,ni->nj", eig_vec, norm_1d)
+    signs = cp.where(dots < 0, -1.0, 1.0)
+    return eig_vec * signs[:, cp.newaxis, :]
+
+
+def gen_cube_cp(rho_in_2, rho_in_1, coords):
+    """Generate full cube coordinates around every grid point on GPU."""
+    eig_vec = _oriented_eigvec(rho_in_2, rho_in_1)
+
+    idx = cp.arange(EDGE_SIZE, dtype=coords.dtype) - CUBE_MIDDLE
+    ii, jj, kk = cp.meshgrid(idx, idx, idx, indexing="ij")
+    offsets = cp.stack((ii.ravel(), jj.ravel(), kk.ravel()), axis=1) * EDGE_LEN
+
+    rot = cp.einsum("mj,nkj->nmk", offsets, eig_vec)
+    coor_flat = coords[:, cp.newaxis, :] + rot
+    return coor_flat.reshape((-1, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3))
+
+
+def gen_cube5_cp(rho_in_2, rho_in_1, coords):
+    """Generate the five-point cube representation around every grid point on GPU."""
+    eig_vec = _oriented_eigvec(rho_in_2, rho_in_1)
+    points = cp.asarray(
+        [(0, 0, 0), (0, 2, 2), (1, 1, 1), (2, 2, 0), (2, 0, 2)],
+        dtype=coords.dtype,
+    )
+    offsets = (points - CUBE_MIDDLE) * EDGE_LEN
+    rot = cp.einsum("mj,nkj->nmk", offsets, eig_vec)
+    return coords[:, cp.newaxis, :] + rot
+
+
 def gen_cube_njit(rho_in_2, rho_in_1, coords, coor_cube):
-    """Generate full cube coordinates around every grid point."""
-    for p in range(len(coords)):
-        norm_2d = rho_in_2[:, :, p]
-        eig_val, eig_vec = np.linalg.eigh(norm_2d)
-        eig_val_sort = np.argsort(eig_val)
-        eig_vec = eig_vec[:, eig_val_sort]
-        norm_1d = rho_in_1[:, p]
-        for i in range(3):
-            if (
-                eig_vec[0, i] * norm_1d[0]
-                + eig_vec[1, i] * norm_1d[1]
-                + eig_vec[2, i] * norm_1d[2]
-            ) < 0:
-                eig_vec[:, i] *= -1
-
-        p_coords = coords[p]
-        for i in range(EDGE_SIZE):
-            for j in range(EDGE_SIZE):
-                for k in range(EDGE_SIZE):
-                    coor_cube[p, i, j, k, :] = (
-                        p_coords
-                        + (i - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 0]
-                        + (j - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 1]
-                        + (k - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 2]
-                    )
+    """CPU-compatible signature that writes cube coordinates in-place."""
+    coor_cube[...] = gen_cube_cp(rho_in_2, rho_in_1, coords)
 
 
-@njit(fastmath=True)
 def gen_cube5_njit(rho_in_2, rho_in_1, coords, coor_cube):
-    """Generate the five-point cube representation around every grid point."""
-    for p in range(len(coords)):
-        norm_2d = rho_in_2[:, :, p]
-        eig_val, eig_vec = np.linalg.eigh(norm_2d)
-        eig_val_sort = np.argsort(eig_val)
-        eig_vec = eig_vec[:, eig_val_sort]
-        norm_1d = rho_in_1[:, p]
-        for i in range(3):
-            if (
-                eig_vec[0, i] * norm_1d[0]
-                + eig_vec[1, i] * norm_1d[1]
-                + eig_vec[2, i] * norm_1d[2]
-            ) < 0:
-                eig_vec[:, i] *= -1
-
-        p_coords = coords[p]
-        for iter_, (i, j, k) in enumerate(
-            [(0, 0, 0), (0, 2, 2), (1, 1, 1), (2, 2, 0), (2, 0, 2)]
-        ):
-            coor_cube[p, iter_, :] = (
-                p_coords
-                + (i - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 0]
-                + (j - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 1]
-                + (k - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 2]
-            )
+    """CPU-compatible signature that writes five-point coordinates in-place."""
+    coor_cube[...] = gen_cube5_cp(rho_in_2, rho_in_1, coords)
 
 
 def eval_rho_cube(mol, ao, dm, rho_in_1, rho_in_2, screen_index, shls_slice, ao_loc):
     """Accumulate density gradient/Hessian terms for cube orientation."""
-    dm = _ascupy(dm)
     if getattr(dm, "mo_coeff", None) is not None:
-        mo_coeff = _ascupy(dm.mo_coeff)
-        mo_occ = _ascupy(dm.mo_occ)
+        mo_coeff = cp.asarray(dm.mo_coeff)
+        mo_occ = cp.asarray(dm.mo_occ)
         pos = mo_occ > OCCDROP
         if bool(cp.any(pos)):
             cpos = mo_coeff[:, pos] * cp.sqrt(mo_occ[pos])
@@ -168,9 +136,9 @@ def eval_rho_cube(mol, ao, dm, rho_in_1, rho_in_2, screen_index, shls_slice, ao_
             c1 = numint._dot_ao_dm(mol, ao[1], cpos, screen_index, shls_slice, ao_loc)
             c2 = numint._dot_ao_dm(mol, ao[2], cpos, screen_index, shls_slice, ao_loc)
             c3 = numint._dot_ao_dm(mol, ao[3], cpos, screen_index, shls_slice, ao_loc)
-            rho_in_1[0, :] += _asnumpy(2 * numint._contract_rho(c1, c0))
-            rho_in_1[1, :] += _asnumpy(2 * numint._contract_rho(c2, c0))
-            rho_in_1[2, :] += _asnumpy(2 * numint._contract_rho(c3, c0))
+            rho_in_1[0, :] += 2 * numint._contract_rho(c1, c0)
+            rho_in_1[1, :] += 2 * numint._contract_rho(c2, c0)
+            rho_in_1[2, :] += 2 * numint._contract_rho(c3, c0)
 
             c4 = numint._dot_ao_dm(mol, ao[4], cpos, screen_index, shls_slice, ao_loc)
             c5 = numint._dot_ao_dm(mol, ao[5], cpos, screen_index, shls_slice, ao_loc)
@@ -179,50 +147,51 @@ def eval_rho_cube(mol, ao, dm, rho_in_1, rho_in_2, screen_index, shls_slice, ao_
             c8 = numint._dot_ao_dm(mol, ao[8], cpos, screen_index, shls_slice, ao_loc)
             c9 = numint._dot_ao_dm(mol, ao[9], cpos, screen_index, shls_slice, ao_loc)
 
-            rho_in_2[0, 0, :] += _asnumpy(
+            rho_in_2[0, 0, :] += (
                 numint._contract_rho(c4, c0) + numint._contract_rho(c1, c1)
             )
-            rho_in_2[0, 1, :] += _asnumpy(
+            rho_in_2[0, 1, :] += (
                 numint._contract_rho(c5, c0) + numint._contract_rho(c1, c2)
             )
-            rho_in_2[0, 2, :] += _asnumpy(
+            rho_in_2[0, 2, :] += (
                 numint._contract_rho(c6, c0) + numint._contract_rho(c1, c3)
             )
-            rho_in_2[1, 1, :] += _asnumpy(
+            rho_in_2[1, 1, :] += (
                 numint._contract_rho(c7, c0) + numint._contract_rho(c2, c2)
             )
-            rho_in_2[1, 2, :] += _asnumpy(
+            rho_in_2[1, 2, :] += (
                 numint._contract_rho(c8, c0) + numint._contract_rho(c2, c3)
             )
-            rho_in_2[2, 2, :] += _asnumpy(
+            rho_in_2[2, 2, :] += (
                 numint._contract_rho(c9, c0) + numint._contract_rho(c3, c3)
             )
     else:
+        dm = cp.asarray(dm)
         c0 = numint._dot_ao_dm(mol, ao[0], dm, screen_index, shls_slice, ao_loc)
-        rho_in_1[0, :] += _asnumpy(2 * numint._contract_rho(ao[1], c0))
-        rho_in_1[1, :] += _asnumpy(2 * numint._contract_rho(ao[2], c0))
-        rho_in_1[2, :] += _asnumpy(2 * numint._contract_rho(ao[3], c0))
+        rho_in_1[0, :] += 2 * numint._contract_rho(ao[1], c0)
+        rho_in_1[1, :] += 2 * numint._contract_rho(ao[2], c0)
+        rho_in_1[2, :] += 2 * numint._contract_rho(ao[3], c0)
 
         c1 = numint._dot_ao_dm(mol, ao[1], dm, screen_index, shls_slice, ao_loc)
         c2 = numint._dot_ao_dm(mol, ao[2], dm, screen_index, shls_slice, ao_loc)
         c3 = numint._dot_ao_dm(mol, ao[3], dm, screen_index, shls_slice, ao_loc)
 
-        rho_in_2[0, 0, :] += _asnumpy(
+        rho_in_2[0, 0, :] += (
             numint._contract_rho(ao[4], c0) + numint._contract_rho(ao[1], c1)
         )
-        rho_in_2[0, 1, :] += _asnumpy(
+        rho_in_2[0, 1, :] += (
             numint._contract_rho(ao[5], c0) + numint._contract_rho(ao[1], c2)
         )
-        rho_in_2[0, 2, :] += _asnumpy(
+        rho_in_2[0, 2, :] += (
             numint._contract_rho(ao[6], c0) + numint._contract_rho(ao[1], c3)
         )
-        rho_in_2[1, 1, :] += _asnumpy(
+        rho_in_2[1, 1, :] += (
             numint._contract_rho(ao[7], c0) + numint._contract_rho(ao[2], c2)
         )
-        rho_in_2[1, 2, :] += _asnumpy(
+        rho_in_2[1, 2, :] += (
             numint._contract_rho(ao[8], c0) + numint._contract_rho(ao[2], c3)
         )
-        rho_in_2[2, 2, :] += _asnumpy(
+        rho_in_2[2, 2, :] += (
             numint._contract_rho(ao[9], c0) + numint._contract_rho(ao[3], c3)
         )
 
@@ -257,14 +226,14 @@ class Grid(GridsGPU):
 
     def gen_cube(self, mol, dms, coords, screen_index=None):
         """Generate cube coordinates with GPU AO/rho contractions."""
-        coords_np = _asnumpy(coords)
+        coords = cp.asarray(coords)
         shls_slice = (0, mol.nbas)
         ao_loc = mol.ao_loc_nr()
 
-        rho_in_1 = np.zeros((3, len(coords_np)))
-        rho_in_2 = np.zeros((3, 3, len(coords_np)))
+        rho_in_1 = cp.zeros((3, len(coords)))
+        rho_in_2 = cp.zeros((3, 3, len(coords)))
         ao = numint.eval_ao(
-            mol, _ascupy(coords_np), deriv=2, non0tab=screen_index, transpose=False
+            mol, coords, deriv=2, non0tab=screen_index, transpose=False
         )
 
         if mol.spin == 0:
@@ -285,17 +254,17 @@ class Grid(GridsGPU):
         rho_in_2[2, 1, :] = rho_in_2[1, 2, :]
 
         if self.cube_type == "center":
-            coor_cube = coords_np.copy().reshape((len(coords_np), 1, 3))
+            coor_cube = coords.copy().reshape((len(coords), 1, 3))
         elif self.cube_type == "cube":
-            coor_cube = np.zeros((len(coords_np), EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3))
-            gen_cube_njit(rho_in_2, rho_in_1, coords_np, coor_cube)
+            coor_cube = cp.zeros((len(coords), EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3))
+            gen_cube_njit(rho_in_2, rho_in_1, coords, coor_cube)
         elif self.cube_type == "cube5":
-            coor_cube = np.zeros((len(coords_np), 5, 3))
-            gen_cube5_njit(rho_in_2, rho_in_1, coords_np, coor_cube)
+            coor_cube = cp.zeros((len(coords), 5, 3))
+            gen_cube5_njit(rho_in_2, rho_in_1, coords, coor_cube)
         else:
             raise ValueError("Unknown cube type.")
 
-        return GridCube(_ascupy(coor_cube), self)
+        return GridCube(coor_cube, self)
 
 
 class GridCube:
@@ -306,7 +275,7 @@ class GridCube:
         self.input_level = grid.input_level
         self.cube_type = grid.cube_type
         self.cube_size = grid.cube_size
-        self.coords = _ascupy(coords).reshape((-1, 3))
+        self.coords = cp.asarray(coords).reshape((-1, 3))
         self.mol = grid.mol
         self.cutoff = grid.cutoff
         self.non0tab = None
@@ -340,34 +309,34 @@ class GridCube:
         t0 = logger.timer(self.mol, "       gen input", *t0)
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho0, xctype="LDA")[:2]
-        input_mat[0] = exc_lda * rho0
+        input_mat[0] = exc_lda[:, 0] * rho0
         vxc_mat[0, 0:1, :] = vxc_lda
 
         exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho0, xctype="LDA")[:2]
-        input_mat[1] = exc_vwn * rho0
+        input_mat[1] = exc_vwn[:, 0] * rho0
         vxc_mat[1, 0:1, :] = vxc_vwn
 
         exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
-        input_mat[2] = exc_b88 * rho0
+        input_mat[2] = exc_b88[:, 0] * rho0
         vxc_mat[2, :, :] = vxc_b88
 
         exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
-        input_mat[3] = exc_lyp * rho0
+        input_mat[3] = exc_lyp[:, 0] * rho0
         vxc_mat[3, :, :] = vxc_lyp
 
         if self.input_level > 4:
             exc_pbec, vxc_pbec = ni.eval_xc_eff("PBE,", rho, xctype="GGA")[:2]
-            input_mat[4] = exc_pbec * rho0
+            input_mat[4] = exc_pbec[:, 0] * rho0
             vxc_mat[4, :, :] = vxc_pbec
 
         if self.input_level > 5:
             exc_pbex, vxc_pbex = ni.eval_xc_eff(",PBE", rho, xctype="GGA")[:2]
-            input_mat[5] = exc_pbex * rho0
+            input_mat[5] = exc_pbex[:, 0] * rho0
             vxc_mat[5, :, :] = vxc_pbex
 
         if self.input_level > 6:
             exc_tfk, vxc_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho, xctype="GGA")[:2]
-            input_mat[6] = exc_tfk * rho0
+            input_mat[6] = exc_tfk[:, 0] * rho0
             vxc_mat[6, :, :] = vxc_tfk
 
         input_mat = input_mat.reshape(
@@ -412,34 +381,34 @@ class GridCube:
         t0 = logger.timer(self.mol, "      gen input", *t0)
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
-        input_mat[0] = exc_lda * rho0
+        input_mat[0] = exc_lda[:, 0] * rho0
         vxc_mat[0, :, 0:1, :] = vxc_lda
 
         exc_vwn, vxc_vwn = ni.eval_xc_eff(",VWN3", rho_lda, xctype="LDA")[:2]
-        input_mat[1] = exc_vwn * rho0
+        input_mat[1] = exc_vwn[:, 0] * rho0
         vxc_mat[1, :, 0:1, :] = vxc_vwn
 
         exc_b88, vxc_b88 = ni.eval_xc_eff("B88,", rho, xctype="GGA")[:2]
-        input_mat[2] = exc_b88 * rho0
+        input_mat[2] = exc_b88[:, 0] * rho0
         vxc_mat[2, :, :, :] = vxc_b88
 
         exc_lyp, vxc_lyp = ni.eval_xc_eff(",LYP", rho, xctype="GGA")[:2]
-        input_mat[3] = exc_lyp * rho0
+        input_mat[3] = exc_lyp[:, 0] * rho0
         vxc_mat[3, :, :, :] = vxc_lyp
 
         if self.input_level > 4:
             exc_pbec, vxc_pbec = ni.eval_xc_eff("PBE,", rho, xctype="GGA")[:2]
-            input_mat[4] = exc_pbec * rho0
+            input_mat[4] = exc_pbec[:, 0] * rho0
             vxc_mat[4, :, :, :] = vxc_pbec
 
         if self.input_level > 5:
             exc_pbex, vxc_pbex = ni.eval_xc_eff(",PBE", rho, xctype="GGA")[:2]
-            input_mat[5] = exc_pbex * rho0
+            input_mat[5] = exc_pbex[:, 0] * rho0
             vxc_mat[5, :, :, :] = vxc_pbex
 
         if self.input_level > 6:
             exc_tfk, vxc_tfk = ni.eval_xc_eff("GGA_K_TFVW", rho, xctype="GGA")[:2]
-            input_mat[6] = exc_tfk * rho0
+            input_mat[6] = exc_tfk[:, 0] * rho0
             vxc_mat[6, :, :, :] = vxc_tfk
 
         input_mat = input_mat.reshape(
@@ -454,9 +423,7 @@ class GridCube:
 
 
 GridGPU = Grid
-GridCubeGPU = GridCube
 
 __all__ = [
     "GridGPU",
-    "GridCubeGPU",
 ]

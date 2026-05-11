@@ -18,16 +18,6 @@ from cc2cc.utils.modelscf_uks import get_veff_modified_uks, get_veff_grad_modifi
 
 _GPU_EXPORTS = {"GridGPU"}
 
-
-def __getattr__(name):
-    if name in _GPU_EXPORTS:
-        from cc2cc.utils.Grids_gpu import GridGPU
-
-        globals().update(GridGPU=GridGPU)
-        return globals()[name]
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
 __all__ = [
     "add_args",
     "gen_mole",
@@ -42,10 +32,40 @@ __all__ = [
     "Timer",
     "Grid",
     "GridCPU",
-    "GridGPU",
     "ModelClass",
     "DATA_PATH",
     "MAIN_PATH",
     "AU2KCALMOL",
     "AU2DEBYE",
 ]
+
+
+def _is_cuda_available():
+    try:
+        import cupy
+
+        return True
+    except ImportError:
+        return False
+
+
+def __getattr__(name):
+    if name in _GPU_EXPORTS:
+        if _is_cuda_available():
+            from cc2cc.utils.GridsGPU import GridGPU
+            from cc2cc.utils.modelscf_rks_gpu import (
+                get_veff_modified_rks_gpu,
+                get_veff_grad_modified_rks_gpu,
+            )
+
+            globals().update(GridGPU=GridGPU)
+            globals().update(get_veff_modified_rks_gpu=get_veff_modified_rks_gpu)
+            globals().update(
+                get_veff_grad_modified_rks_gpu=get_veff_grad_modified_rks_gpu
+            )
+            __all__.append("GridGPU")
+            __all__.append("get_veff_modified_rks_gpu")
+            __all__.append("get_veff_grad_modified_rks_gpu")
+            return globals()[name]
+        raise ImportError(f"CUDA is not available. Cannot import {name}")
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

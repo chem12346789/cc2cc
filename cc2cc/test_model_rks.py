@@ -1,15 +1,16 @@
 """Test the model. Restrict Khon-Sham (no spin)."""
 
-from timeit import default_timer as timer
-
+import timeit
 import numpy as np
 import torch
 
 import pyscf
 import pyscf.dft
+import pyscf.lib
 
-from cc2cc.utils import get_veff_modified_rks, get_veff_grad_modified_rks, diff_rho
-from cc2cc.utils import GridCPU, GridGPU, TestDataDFT, DATA_PATH, AU2KCALMOL
+import cc2cc.utils as utils
+
+pyscf.lib.logger.TIMER_LEVEL = 4
 
 
 def test_model_rks(
@@ -23,14 +24,15 @@ def test_model_rks(
     Test the model. Restrict Khon-Sham (no spin).
     """
     # 2.0 Prepare
-    time_ai_start = timer()
+    time_ai_start = timeit.default_timer()
     if torch.cuda.is_available():
         mdft = pyscf.dft.RKS(mol).density_fit().to_gpu()
-        Grid = GridGPU
+        Grid = utils.GridGPU
+        utils.get_veff_modified_rks_gpu(mdft, modeldict)
     else:
-        Grid = GridCPU
+        Grid = utils.GridCPU
         mdft = pyscf.dft.RKS(mol).density_fit()
-    get_veff_modified_rks(mdft, modeldict)
+        utils.get_veff_modified_rks(mdft, modeldict)
     mdft.grids = Grid(
         mol,
         args.grid_level,
@@ -48,7 +50,7 @@ def test_model_rks(
     if args.max_cycle == -1:
         mdft.max_cycle = -1
         if_retry = False
-        test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
+        test_data = utils.TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
         mdft.kernel(dm0=test_data.dm1_dft)
     else:
         # mdft.max_cycle = args.max_cycle
@@ -82,22 +84,25 @@ def test_model_rks(
         g = mdft.Gradients()
         g.xc = "b3lyp"
         g.grids = mdft.grids
-        get_veff_grad_modified_rks(g, modeldict)
+        if torch.cuda.is_available():
+            utils.get_veff_grad_modified_rks_gpu(g, modeldict)
+        else:
+            utils.get_veff_grad_modified_rks(g, modeldict)
         grad_mdft = g.kernel()
     else:
         grad_mdft = None
 
-    scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
-    time_ai = timer() - time_ai_start
+    # scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
+    time_ai = timeit.default_timer() - time_ai_start
 
     # 3.0 Collect data
     dict_ = {
         "name": name,
         "time_ai": time_ai,
         "scf_ene": e_scf,
-        "scf_dipole_x": scf_dipole[0],
-        "scf_dipole_y": scf_dipole[1],
-        "scf_dipole_z": scf_dipole[2],
+        # "scf_dipole_x": scf_dipole[0],
+        # "scf_dipole_y": scf_dipole[1],
+        # "scf_dipole_z": scf_dipole[2],
     }
 
     if args.if_grad:
@@ -106,20 +111,22 @@ def test_model_rks(
         else:
             dict_.update({"grad_scf": 0})
 
-    if (DATA_PATH / f"data_{name}.npz").exists():
-        data = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
+    if (utils.DATA_PATH / f"data_{name}.npz").exists():
+        data = np.load(utils.DATA_PATH / f"data_{name}.npz", allow_pickle=True)
         print(data["mol"])
         print(mol.tostring(format="xyz"))
-        print(f"energy (ai vs dft) {(e_scf - data['e_dft']) * AU2KCALMOL} Kcal/mol")
-        print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * AU2KCALMOL} Kcal/mol")
         print(
-            f"electronic density (ai vs dft) {diff_rho(mol, data["dm1_dft"], mdft.make_rdm1(), mdft.grids)}"
+            f"energy (ai vs dft) {(e_scf - data['e_dft']) * utils.AU2KCALMOL} Kcal/mol"
+        )
+        print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * utils.AU2KCALMOL} Kcal/mol")
+        print(
+            f"electronic density (ai vs dft) {utils.diff_rho(mol, data['dm1_dft'], mdft.make_rdm1(), mdft.grids)}"
         )
         print(
-            f"electronic density (ai vs cc) {diff_rho(mol, data["dm1_cc"], mdft.make_rdm1(), mdft.grids)}"
+            f"electronic density (ai vs cc) {utils.diff_rho(mol, data['dm1_cc'], mdft.make_rdm1(), mdft.grids)}"
         )
         print(
-            f"electronic density (dft vs cc) {diff_rho(mol, data["dm1_cc"], data["dm1_dft"], mdft.grids)}"
+            f"electronic density (dft vs cc) {utils.diff_rho(mol, data['dm1_cc'], data['dm1_dft'], mdft.grids)}"
         )
         dipole_dft = pyscf.scf.hf.dip_moment(mol=mol, dm=data["dm1_dft"], unit="A.U.")
         dipole_cc = pyscf.scf.hf.dip_moment(mol=mol, dm=data["dm1_cc"], unit="A.U.")
