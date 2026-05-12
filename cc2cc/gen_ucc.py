@@ -92,7 +92,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         d2 = u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
         print("u_gamma2_intermediates DONE", flush=True)
         nocca, noccb, nvira, nvirb = t2[1].shape
-        ((doo, dOO), (dov, dOV), (dvo, dVO), (dvv, dVV)) = d1
+        (doo, dOO), (dov, dOV), (dvo, dVO), (dvv, dVV) = d1
         doo_grad, dvv_grad = doo.copy(), dvv.copy()
         dOO_grad, dVV_grad = dOO.copy(), dVV.copy()
         doo[np.diag_indices(nocca)] -= goo.diagonal()
@@ -335,20 +335,21 @@ def ucc(mol, grids, name, args, evaluate=False):
             np.sum(data_dict["tol_delta_zmp_grids"] * grids.weights) - energy_train
         )
         print(f"Error ZMP: {AU2KCALMOL * error_zmp}")
+        data_dict["e_zmp"] = e_zmp
+        data_dict["dm1_zmp"] = dm1_zmp
 
     data_dict.update(
         {
             "mol": mol.tostring(format="xyz"),
             "charge": mol.charge,
             "spin": mol.spin,
+            "e_hf": e_hf,
             "e_cc": e_cc,
             "e_dft": e_dft,
-            "e_hf": e_hf,
-            "dm1_hf": dm1_hf,
-            "dm1_dft": dm1_dft,
-            "dm1_cc": dm1_cc,
-            "dm1_zmp": dm1_zmp,
             "e_dft_d3bj": e_dft_d3bj,
+            "dm1_hf": dm1_hf,
+            "dm1_cc": dm1_cc,
+            "dm1_dft": dm1_dft,
             "energy_train": energy_train,
             "weights": grids.weights,
         }

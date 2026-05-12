@@ -21,6 +21,7 @@ from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc
 
 from cc2cc.utils.get_zmp import get_zmp_rks, get_zmp_uks
+from cc2cc.utils.zmp import RZMP, UZMP
 
 from cc2cc.utils.get_dft_energy_rks import get_dft_energy as get_dft_energy_rks
 from cc2cc.utils.get_dft_energy_uks import get_dft_energy as get_dft_energy_uks
@@ -255,17 +256,15 @@ if __name__ == "__main__":
                 data_dict = dict(np.load(DATA_PATH / f"data_{name}.npz"))
                 dm1_zmp = data_dict["dm1_zmp"]
                 dm1_tar = data_dict["dm1_cc"]
-                dm1_dft = data_dict["dm1_dft"]
                 e_cc = data_dict["e_cc"]
                 tol_delta_zmp_grids = data_dict["tol_delta_zmp_grids"]
                 weights = data_dict["weights"]
                 if mol.spin == 0:
-                    mzmp, dm1_zmp = get_zmp_rks(mol, dm1_tar, dm1_dft, grids, max_l=0)
-                    e_zmp = mzmp.energy_tot(dm1_zmp)
+                    mzmp = RZMP(mol, dm1_tar, grids, dftxc=1, xc="b3lyp")
                 else:
-                    mzmp, dm1_zmp = get_zmp_uks(mol, dm1_tar, dm1_dft, grids, max_l=0)
-                    e_zmp = mzmp.energy_tot(dm1_zmp)
+                    mzmp = UZMP(mol, dm1_tar, grids, dftxc=1, xc="b3lyp")
 
+                e_zmp = mzmp.energy_tot(dm1_zmp)
                 energy_train = e_cc - e_zmp
                 error_zmp = np.sum(tol_delta_zmp_grids * weights) - energy_train
                 print(f"Error ZMP: {AU2KCALMOL * error_zmp}")

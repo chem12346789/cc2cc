@@ -300,20 +300,21 @@ def cc(
             np.sum(data_dict["tol_delta_zmp_grids"] * grids.weights) - energy_train
         )
         print(f"Error ZMP: {AU2KCALMOL * error_zmp}")
+        data_dict["e_zmp"] = e_zmp
+        data_dict["dm1_zmp"] = dm1_zmp
 
     data_dict.update(
         {
             "mol": mol.tostring(format="xyz"),
             "charge": mol.charge,
             "spin": mol.spin,
+            "e_hf": e_hf,
             "e_cc": e_cc,
             "e_dft": e_dft,
-            "e_hf": e_hf,
-            "dm1_hf": dm1_hf,
-            "dm1_dft": dm1_dft,
-            "dm1_cc": dm1_cc,
-            "dm1_zmp": dm1_zmp,
             "e_dft_d3bj": e_dft_d3bj,
+            "dm1_hf": dm1_hf,
+            "dm1_cc": dm1_cc,
+            "dm1_dft": dm1_dft,
             "energy_train": energy_train,
             "weights": grids.weights,
         }
