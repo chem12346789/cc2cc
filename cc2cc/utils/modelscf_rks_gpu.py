@@ -11,7 +11,7 @@ import torch
 
 from gpu4pyscf import lib
 from gpu4pyscf.lib import logger
-from gpu4pyscf.dft.numint import NumInt, _scale_ao
+from gpu4pyscf.dft.numint import NumInt, _scale_ao, _GDFTOpt
 from gpu4pyscf.grad.rks import _gga_grad_sum_
 from gpu4pyscf.lib.cupy_helper import tag_array, transpose_sum
 
@@ -40,47 +40,59 @@ def get_veff_modified_rks_gpu(ks, modeldict):
         """
         xctype = ni._xc_type(xc_code)
 
+        grids.opt = _GDFTOpt.from_mol(mol)
+        _sorted_mol = grids.opt._sorted_mol
+        mo_coeff = getattr(dms, "mo_coeff", None)
+        mo_occ = getattr(dms, "mo_occ", None)
+        print("mo_coeff", mo_coeff.shape if mo_coeff is not None else None)
+        print("mo_occ", mo_occ.shape if mo_occ is not None else None)
+        if mo_coeff is not None:
+            mo_coeff = grids.opt.sort_orbitals(mo_coeff, axis=[0])
+        else:
+            assert dms.ndim == 2
+            dms = cp.asarray(dms)
+            dms = grids.opt.sort_orbitals(dms, axis=[0, 1])
+        dms_sorted = tag_array(dms, mo_coeff=mo_coeff, mo_occ=mo_occ)
+
         nset = 1
         nao = mol.nao
 
         def block_loop(ao_deriv):
             for mask, weights_, coords_ in iterate_grid_segments(
-                mol,
+                _sorted_mol,
                 grids,
                 nao,
                 ao_deriv,
                 max_memory=max_memory // (2 * modeldict.model.cube_size),
                 non0tab=None,
             ):
-                for i in range(nset):
+                gridcube = grids.gen_cube(_sorted_mol, dms_sorted, coords_)
+                t0 = (logger.process_clock(), logger.perf_counter())
+                rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(ni, dms_sorted)
+                t0 = logger.timer(mol, "    cube rho vxc", *t0)
+                energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
+                energy_den = cp.asarray(energy_den)
+                middle_cube = cp.asarray(middle_cube)
 
-                    gridcube = grids.gen_cube(mol, dms, coords_, mask)
-                    t0 = (logger.process_clock(), logger.perf_counter())
-                    rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(ni, dms)
-                    t0 = logger.timer(mol, "    cube rho vxc", *t0)
-                    energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
-                    energy_den = cp.asarray(energy_den)
-                    middle_cube = cp.asarray(middle_cube)
+                excsum[0] += cp.sum(energy_den)
+                wv = cp.einsum("ixgC,giC->xgC", vxc_mat, middle_cube, optimize=True)
+                wv = wv.reshape(4, len(gridcube.coords))  # xgC -> xG
 
-                    excsum[i] += cp.sum(energy_den)
-                    wv = cp.einsum("ixgC,giC->xgC", vxc_mat, middle_cube, optimize=True)
-                    wv = wv.reshape(4, len(gridcube.coords))  # xgC -> xG
+                yield ao_value, wv
 
-                    yield i, ao_value, gridcube.non0tab, wv
-
-        nelec = cp.zeros(nset)
-        excsum = cp.zeros(nset)
-        vmat = cp.zeros((nset, nao, nao))
+        nelec = cp.zeros(1)
+        excsum = cp.zeros(1)
+        vmat = cp.zeros((1, nao, nao))
 
         t0 = (logger.process_clock(), logger.perf_counter())
         if xctype == "GGA":
             ao_deriv = 1
-            for i, ao, _, wv in block_loop(ao_deriv):
+            for ao, wv in block_loop(ao_deriv):
                 t0 = logger.timer(mol, "  vxc on grids", *t0)
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
 
                 aow = _scale_ao(ao, wv)
-                vmat[i] += cp.dot(ao[0], aow.T)
+                vmat[0] += cp.dot(ao[0], aow.T)
 
                 t0 = logger.timer(mol, "  vxc mat", *t0)
             vmat = transpose_sum(vmat)
@@ -92,9 +104,9 @@ def get_veff_modified_rks_gpu(ks, modeldict):
             nelec = nelec[0]
             excsum = excsum[0]
 
-        dtype = dms.dtype if isinstance(dms, cp.ndarray) else cp.result_type(*dms)
-        if vmat.dtype != dtype:
-            vmat = cp.asarray(vmat, dtype=dtype)
+        if grids.opt is not None:
+            vmat = grids.opt.unsort_orbitals(vmat, axis=[0, 1])
+            grids.opt = None
 
         return nelec, excsum, vmat
 

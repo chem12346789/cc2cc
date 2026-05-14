@@ -10,7 +10,7 @@ import cupy as cp
 
 from gpu4pyscf import lib
 from gpu4pyscf.lib import logger
-from gpu4pyscf.dft.numint import NumInt, _scale_ao
+from gpu4pyscf.dft.numint import NumInt, _scale_ao, _GDFTOpt
 from gpu4pyscf.grad.rks import _gga_grad_sum_
 from gpu4pyscf.lib.cupy_helper import tag_array
 
@@ -26,6 +26,7 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass):
     """
     Get the method of "Get the effective potential for the UKS method".
     """
+
     def nr_uks(
         modeldict: ModelClass,
         ni: NumInt,
@@ -42,48 +43,67 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass):
         del hermi
         xctype = ni._xc_type(xc_code)
 
+        grids.opt = _GDFTOpt.from_mol(mol)
+        _sorted_mol = grids.opt._sorted_mol
+        mo_coeff = getattr(dms, "mo_coeff", None)
+        mo_occ = getattr(dms, "mo_occ", None)
         dma, dmb = dms
-        nao = dma.shape[-1]
-        nset = 1
+        dma = cp.asarray(dma)
+        dmb = cp.asarray(dmb)
         nao = mol.nao
+
+        print("mo_coeff", mo_coeff.shape if mo_coeff is not None else None)
+        print("mo_occ", mo_occ.shape if mo_occ is not None else None)
+        if mo_coeff is not None and mo_occ is not None:
+            mo_coeff = grids.opt.sort_orbitals(mo_coeff, axis=[1])
+            dms_sorted = (
+                tag_array(dma, mo_coeff=mo_coeff[0], mo_occ=mo_occ[0]),
+                tag_array(dmb, mo_coeff=mo_coeff[1], mo_occ=mo_occ[1]),
+            )
+        else:
+            dma = grids.opt.sort_orbitals(dma, axis=[0, 1])
+            dmb = grids.opt.sort_orbitals(dmb, axis=[0, 1])
+            dms_sorted = (
+                tag_array(dma, mo_coeff=None, mo_occ=None),
+                tag_array(dmb, mo_coeff=None, mo_occ=None),
+            )
 
         def block_loop(ao_deriv):
             for mask, weights_, coords_ in iterate_grid_segments(
-                mol,
+                _sorted_mol,
                 grids,
                 nao,
                 ao_deriv,
                 max_memory=max_memory // (2 * modeldict.model.cube_size),
                 non0tab=None,
             ):
-                for i in range(nset):
-                    gridcube = grids.gen_cube(mol, dms, coords_, mask)
-                    t0 = (logger.process_clock(), logger.perf_counter())
-                    rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_uks(ni, dms)
-                    t0 = logger.timer(mol, "    cube rho vxc", *t0)
-                    energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
-                    energy_den = cp.asarray(energy_den)
-                    middle_cube = cp.asarray(middle_cube)
+                gridcube = grids.gen_cube(_sorted_mol, dms_sorted, coords_)
+                t0 = (logger.process_clock(), logger.perf_counter())
+                rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_uks(ni, dms_sorted)
+                t0 = logger.timer(mol, "    cube rho vxc", *t0)
+                energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
+                energy_den = cp.asarray(energy_den)
+                middle_cube = cp.asarray(middle_cube)
 
-                    excsum[i] += cp.sum(energy_den)
-                    wv = cp.einsum(
-                        "islpC,piC->slpC",
-                        vxc_mat,
-                        middle_cube,
-                        optimize=True,
-                    )
+                excsum[0] += cp.sum(energy_den)
+                wv = cp.einsum(
+                    "islpC,piC->slpC",
+                    vxc_mat,
+                    middle_cube,
+                    optimize=True,
+                )
 
-                    wv = wv.reshape(2, 4, len(gridcube.coords))  # slpC -> slP
-                    yield i, ao_value, gridcube.non0tab, wv
+                wv = wv.reshape(2, 4, len(gridcube.coords))  # slpC -> slP
+                yield ao_value, wv
 
-        nelec = cp.zeros((2, nset))
-        excsum = cp.zeros(nset)
-        vmat = cp.zeros((2, nset, nao, nao))
+        nelec = cp.zeros((2, 1))
+        excsum = cp.zeros(1)
+        vmat = cp.zeros((2, 1, nao, nao))
 
         t0 = (logger.process_clock(), logger.perf_counter())
         if xctype == "GGA":
             ao_deriv = 1
-            for i, ao, _, wv in block_loop(ao_deriv):
+            for ao, wv in block_loop(ao_deriv):
                 t0 = logger.timer(mol, "  vxc on grids", *t0)
                 wv[:, 0] *= 0.5
                 wva, wvb = wv
@@ -91,16 +111,11 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass):
                 # ao shape in GPU4PySCF (transpose=False): (comp, nao, ngrids)
                 aowa = _scale_ao(ao, wva)
                 aowb = _scale_ao(ao, wvb)
-                vmat[0, i] += cp.dot(ao[0], aowa.T)
-                vmat[1, i] += cp.dot(ao[0], aowb.T)
-
-                # aowa = cp.einsum("xng,xg->ng", ao, wva, optimize=True)
-                # aowb = cp.einsum("xng,xg->ng", ao, wvb, optimize=True)
-                # vmat[0, i] += cp.einsum("ng,mg->nm", ao[0], aowa, optimize=True)
-                # vmat[1, i] += cp.einsum("ng,mg->nm", ao[0], aowb, optimize=True)
+                vmat[0, 0] += cp.dot(ao[0], aowa.T)
+                vmat[1, 0] += cp.dot(ao[0], aowb.T)
                 t0 = logger.timer(mol, "  vxc mat", *t0)
 
-            vmat = _hermi_sum(vmat.reshape((-1, nao, nao))).reshape(2, nset, nao, nao)
+            vmat = _hermi_sum(vmat.reshape((-1, nao, nao))).reshape(2, 1, nao, nao)
         else:
             raise NotImplementedError(f"numint.nr_uks for functional {xc_code}")
 
@@ -109,9 +124,10 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass):
             nelec = nelec.reshape(2)
             excsum = excsum[0]
 
-        dtype = cp.result_type(dma, dmb)
-        if vmat.dtype != dtype:
-            vmat = cp.asarray(vmat, dtype=dtype)
+        if grids.opt is not None:
+            vmat[0] = grids.opt.unsort_orbitals(vmat[0], axis=[0, 1])
+            vmat[1] = grids.opt.unsort_orbitals(vmat[1], axis=[0, 1])
+            grids.opt = None
 
         return nelec, excsum, vmat
 
