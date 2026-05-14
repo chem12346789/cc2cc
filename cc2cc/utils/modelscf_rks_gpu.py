@@ -11,7 +11,7 @@ import torch
 
 from gpu4pyscf import lib
 from gpu4pyscf.lib import logger
-from gpu4pyscf.dft.numint import NumInt
+from gpu4pyscf.dft.numint import NumInt, _scale_ao
 from gpu4pyscf.grad.rks import _gga_grad_sum_
 from gpu4pyscf.lib.cupy_helper import tag_array, asarray
 
@@ -57,22 +57,18 @@ def get_veff_modified_rks_gpu(ks, modeldict):
                 non0tab=None,
             ):
                 for i in range(nset):
-                    t0 = (logger.process_clock(), logger.perf_counter())
 
                     gridcube = grids.gen_cube(mol, dms, coords_, mask)
-                    t0 = logger.timer(mol, "    gen cube", *t0)
+                    t0 = (logger.process_clock(), logger.perf_counter())
                     rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(ni, dms)
                     t0 = logger.timer(mol, "    cube rho vxc", *t0)
                     energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
                     energy_den = cp.asarray(energy_den)
                     middle_cube = cp.asarray(middle_cube)
-                    t0 = logger.timer(mol, "    model eval", *t0)
 
                     excsum[i] += cp.sum(energy_den)
                     wv = cp.einsum("ixgC,giC->xgC", vxc_mat, middle_cube, optimize=True)
                     wv = wv.reshape(4, len(gridcube.coords))  # xgC -> xG
-
-                    t0 = logger.timer(mol, "    post model eval", *t0)
 
                     yield i, ao_value, gridcube.non0tab, wv
 
@@ -87,9 +83,11 @@ def get_veff_modified_rks_gpu(ks, modeldict):
                 t0 = logger.timer(mol, "  vxc on grids", *t0)
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
 
-                # ao shape in GPU4PySCF (transpose=False): (comp, nao, ngrids)
-                aow = cp.einsum("xng,xg->ng", ao, wv, optimize=True)
-                vmat[i] += cp.einsum("ng,mg->nm", ao[0], aow, optimize=True)
+                aow = _scale_ao(ao, wv)
+                vmat[i] += cp.dot(ao[0], aow.T)
+
+                # aow = cp.einsum("xng,xg->ng", ao, wv, optimize=True)
+                # vmat[i] += cp.einsum("ng,mg->nm", ao[0], aow, optimize=True)
                 t0 = logger.timer(mol, "  vxc mat", *t0)
             vmat = _hermi_sum(vmat)
         else:
@@ -209,6 +207,7 @@ def get_veff_grad_modified_rks_gpu(ks_grad, modeldict):
     """
 
     raise NotImplementedError("get_veff_grad_modified_rks_gpu is not implemented yet")
+
     def get_vxc(
         ni: NumInt,
         mol,

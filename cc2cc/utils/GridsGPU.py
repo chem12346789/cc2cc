@@ -285,10 +285,10 @@ class GridCube:
         ao_deriv=1,
     ):
         """Generate RKS cube densities and XC inputs on the GPU."""
-        t1 = (logger.process_clock(), logger.perf_counter())
         input_mat = cp.zeros((self.input_level, len(self.coords)))
         vxc_mat = cp.zeros((self.input_level, 4, len(self.coords)))
 
+        t1 = (logger.process_clock(), logger.perf_counter())
         ao_value = numint.eval_ao(
             self.mol,
             self.coords,
@@ -296,7 +296,6 @@ class GridCube:
             non0tab=self.non0tab,
             transpose=False,
         )
-
         t11 = (logger.process_clock(), logger.perf_counter())
         print(
             f"    CPU time for            ao_value {t11[0] - t1[0]:.2f} sec, "

@@ -10,7 +10,7 @@ import cupy as cp
 
 from gpu4pyscf import lib
 from gpu4pyscf.lib import logger
-from gpu4pyscf.dft.numint import NumInt
+from gpu4pyscf.dft.numint import NumInt, _scale_ao
 from gpu4pyscf.grad.rks import _gga_grad_sum_
 from gpu4pyscf.lib.cupy_helper import tag_array
 
@@ -26,7 +26,6 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass):
     """
     Get the method of "Get the effective potential for the UKS method".
     """
-    raise NotImplementedError("get_veff_modified_uks_gpu is not implemented yet")
     def nr_uks(
         modeldict: ModelClass,
         ni: NumInt,
@@ -58,15 +57,13 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass):
                 non0tab=None,
             ):
                 for i in range(nset):
-                    t0 = (logger.process_clock(), logger.perf_counter())
                     gridcube = grids.gen_cube(mol, dms, coords_, mask)
-                    t0 = logger.timer(mol, "    gen cube", *t0)
+                    t0 = (logger.process_clock(), logger.perf_counter())
                     rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_uks(ni, dms)
                     t0 = logger.timer(mol, "    cube rho vxc", *t0)
                     energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
                     energy_den = cp.asarray(energy_den)
                     middle_cube = cp.asarray(middle_cube)
-                    t0 = logger.timer(mol, "    model eval", *t0)
 
                     excsum[i] += cp.sum(energy_den)
                     wv = cp.einsum(
@@ -75,8 +72,6 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass):
                         middle_cube,
                         optimize=True,
                     )
-
-                    t0 = logger.timer(mol, "    post model eval", *t0)
 
                     wv = wv.reshape(2, 4, len(gridcube.coords))  # slpC -> slP
                     yield i, ao_value, gridcube.non0tab, wv
@@ -94,10 +89,15 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass):
                 wva, wvb = wv
 
                 # ao shape in GPU4PySCF (transpose=False): (comp, nao, ngrids)
-                aowa = cp.einsum("xng,xg->ng", ao, wva, optimize=True)
-                aowb = cp.einsum("xng,xg->ng", ao, wvb, optimize=True)
-                vmat[0, i] += cp.einsum("ng,mg->nm", ao[0], aowa, optimize=True)
-                vmat[1, i] += cp.einsum("ng,mg->nm", ao[0], aowb, optimize=True)
+                aowa = _scale_ao(ao, wva)
+                aowb = _scale_ao(ao, wvb)
+                vmat[0, i] += cp.dot(ao[0], aowa.T)
+                vmat[1, i] += cp.dot(ao[0], aowb.T)
+
+                # aowa = cp.einsum("xng,xg->ng", ao, wva, optimize=True)
+                # aowb = cp.einsum("xng,xg->ng", ao, wvb, optimize=True)
+                # vmat[0, i] += cp.einsum("ng,mg->nm", ao[0], aowa, optimize=True)
+                # vmat[1, i] += cp.einsum("ng,mg->nm", ao[0], aowb, optimize=True)
                 t0 = logger.timer(mol, "  vxc mat", *t0)
 
             vmat = _hermi_sum(vmat.reshape((-1, nao, nao))).reshape(2, nset, nao, nao)
@@ -213,6 +213,7 @@ def get_veff_grad_modified_uks_gpu(ks_grad, modeldict: ModelClass):
     """
     Get the method of "Get the effective potential for the UKS Gradients method".
     """
+    raise NotImplementedError("get_veff_grad_modified_uks_gpu is not implemented yet")
 
     def get_vxc(
         ni: NumInt,
