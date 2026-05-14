@@ -75,14 +75,14 @@ def main():
         # try:
         #     _run_one(mol, name, modeldict, data_record, args)
         # except (ValueError, RuntimeError) as e:
-        #     print(f"ERROR: {name_mol}")
-        #     print(e)
+        #     print(f"ERROR: {name_mol}", flush=True)
+        #     print(e, flush=True)
         #     error_molecule.append(name)
-        #     print(f"Error molecule: {error_molecule}")
+        #     print(f"Error molecule: {error_molecule}", flush=True)
         # finally:
-        #     print(f"Processed: {name_mol}")
+        #     print(f"Processed: {name_mol}", flush=True)
 
-    print(f"Error molecule: {error_molecule}")
+    print(f"Error molecule: {error_molecule}", flush=True)
 
 
 if __name__ == "__main__":

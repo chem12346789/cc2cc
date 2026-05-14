@@ -79,10 +79,7 @@ class ModelClass:
         self.max_norm = self.args.max_norm
         self.start_step = 0
 
-        self.dir_checkpoint = (
-            CHECKPOINTS_PATH
-            / f"checkpoint_{datetime.datetime.today():%Y-%m-%d-%H-%M-%S}/"
-        ).resolve()
+        self.dir_checkpoint = None
         self.state_dict = None
         self.optimizer_state_dict = None
 
@@ -167,6 +164,7 @@ class ModelClass:
         self.dir_checkpoint = (
             CHECKPOINTS_PATH / f"checkpoint_{self.args.save_dir}"
         ).resolve()
+        print(f"Checkpoint directory: {self.dir_checkpoint}")
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=True)
@@ -199,6 +197,9 @@ class ModelClass:
         """
         Load the model from the checkpoint.
         """
+        if self.load is None or self.load == "":
+            self.print("No checkpoint specified, starting from scratch.")
+            return
         load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.load}/").resolve()
         load_path = load_checkpoint / f"{self.args.load_epoch}.pth"
         self.print(f"Checking path {load_path}")

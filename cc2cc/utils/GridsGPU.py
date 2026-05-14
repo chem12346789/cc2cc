@@ -13,6 +13,7 @@ from pyscf import __config__
 from gpu4pyscf.dft import gen_grid, numint, radi
 from pyscf.lib import logger
 from gpu4pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
+from gpu4pyscf.lib.cupy_helper import asarray
 
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_LEN, EDGE_SIZE
 
@@ -24,9 +25,9 @@ SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
 def _format_uks_dm_gpu(dms):
     """Small GPU-local replacement for PySCF's ``_format_uks_dm``."""
     if isinstance(dms, (tuple, list)) and len(dms) == 2:
-        return cp.asarray(dms[0]), cp.asarray(dms[1])
+        return asarray(dms[0]), asarray(dms[1])
     if getattr(dms, "ndim", None) == 3 and dms.shape[0] == 2:
-        return cp.asarray(dms[0]), cp.asarray(dms[1])
+        return asarray(dms[0]), asarray(dms[1])
     raise ValueError("UKS density matrix must contain alpha and beta matrices")
 
 
@@ -105,7 +106,7 @@ def gen_cube_cp(rho_in_2, rho_in_1, coords):
 def gen_cube5_cp(rho_in_2, rho_in_1, coords):
     """Generate the five-point cube representation around every grid point on GPU."""
     eig_vec = _oriented_eigvec(rho_in_2, rho_in_1)
-    points = cp.asarray(
+    points = asarray(
         [(0, 0, 0), (0, 2, 2), (1, 1, 1), (2, 2, 0), (2, 0, 2)],
         dtype=coords.dtype,
     )
@@ -127,8 +128,8 @@ def gen_cube5_njit(rho_in_2, rho_in_1, coords, coor_cube):
 def eval_rho_cube(mol, ao, dm, rho_in_1, rho_in_2, screen_index, shls_slice, ao_loc):
     """Accumulate density gradient/Hessian terms for cube orientation."""
     if getattr(dm, "mo_coeff", None) is not None:
-        mo_coeff = cp.asarray(dm.mo_coeff)
-        mo_occ = cp.asarray(dm.mo_occ)
+        mo_coeff = asarray(dm.mo_coeff)
+        mo_occ = asarray(dm.mo_occ)
         pos = mo_occ > OCCDROP
         if bool(cp.any(pos)):
             cpos = mo_coeff[:, pos] * cp.sqrt(mo_occ[pos])
@@ -166,7 +167,7 @@ def eval_rho_cube(mol, ao, dm, rho_in_1, rho_in_2, screen_index, shls_slice, ao_
                 c3, c3
             )
     else:
-        dm = cp.asarray(dm)
+        dm = asarray(dm)
         c0 = numint._dot_ao_dm(mol, ao[0], dm, screen_index, shls_slice, ao_loc)
         rho_in_1[0, :] += 2 * numint._contract_rho(ao[1], c0)
         rho_in_1[1, :] += 2 * numint._contract_rho(ao[2], c0)
@@ -226,7 +227,7 @@ class Grid(GridsGPU):
 
     def gen_cube(self, mol, dms, coords, screen_index=None):
         """Generate cube coordinates with GPU AO/rho contractions."""
-        coords = cp.asarray(coords)
+        coords = asarray(coords)
         shls_slice = (0, mol.nbas)
         ao_loc = mol.ao_loc_nr()
 
@@ -273,7 +274,7 @@ class GridCube:
         self.input_level = grid.input_level
         self.cube_type = grid.cube_type
         self.cube_size = grid.cube_size
-        self.coords = cp.asarray(coords).reshape((-1, 3))
+        self.coords = asarray(coords).reshape((-1, 3))
         self.mol = grid.mol
         self.cutoff = grid.cutoff
         self.non0tab = None
@@ -354,12 +355,12 @@ class GridCube:
         ao_deriv=1,
     ):
         """Generate UKS cube densities and XC inputs on the GPU."""
-        t0 = (logger.process_clock(), logger.perf_counter())
         input_mat = cp.zeros((self.input_level, len(self.coords)))
         vxc_mat = cp.zeros((self.input_level, 2, 4, len(self.coords)))
 
         dma, dmb = _format_uks_dm_gpu(dms)
 
+        t0 = (logger.process_clock(), logger.perf_counter())
         ao_value = numint.eval_ao(
             self.mol,
             self.coords,
@@ -367,7 +368,6 @@ class GridCube:
             non0tab=self.non0tab,
             transpose=False,
         )
-
         t01 = (logger.process_clock(), logger.perf_counter())
         print(
             f"    CPU time for            ao_value {t01[0] - t0[0]:.2f} sec, "

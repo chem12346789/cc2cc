@@ -13,14 +13,10 @@ from gpu4pyscf import lib
 from gpu4pyscf.lib import logger
 from gpu4pyscf.dft.numint import NumInt, _scale_ao
 from gpu4pyscf.grad.rks import _gga_grad_sum_
-from gpu4pyscf.lib.cupy_helper import tag_array, asarray
+from gpu4pyscf.lib.cupy_helper import tag_array, transpose_sum
 
 from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.GridsGPU import GridGPU as Grid, iterate_grid_segments
-
-
-def _hermi_sum(vmat):
-    return vmat + vmat.transpose(0, 2, 1)
 
 
 def get_veff_modified_rks_gpu(ks, modeldict):
@@ -86,10 +82,8 @@ def get_veff_modified_rks_gpu(ks, modeldict):
                 aow = _scale_ao(ao, wv)
                 vmat[i] += cp.dot(ao[0], aow.T)
 
-                # aow = cp.einsum("xng,xg->ng", ao, wv, optimize=True)
-                # vmat[i] += cp.einsum("ng,mg->nm", ao[0], aow, optimize=True)
                 t0 = logger.timer(mol, "  vxc mat", *t0)
-            vmat = _hermi_sum(vmat)
+            vmat = transpose_sum(vmat)
         else:
             raise NotImplementedError(f"numint.nr_rks for functional {xc_code}")
 

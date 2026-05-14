@@ -21,7 +21,7 @@ from cc2cc.train_model import train_model
 
 train_str_list = [
     "molecule0-W4_11",
-    "molecule_ADDON",
+    # "molecule_ADDON",
     "AHB21-1A",
     "AHB21-4A",
     "ALK8-li+",
@@ -64,7 +64,7 @@ train_str_list = [
     # #######################
     # #########   2  ########
     # #######################
-    # "molecule2-W4_11",
+    "molecule2-W4_11",
 ]
 
 eval_str_list = [
