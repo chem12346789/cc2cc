@@ -241,16 +241,27 @@ class UZMP(pyscf.dft.uks.UKS):
             ]
             wva = self.weights * (rho_zmp[0] - self.rho_tar[0])
             wvb = self.weights * (rho_zmp[1] - self.rho_tar[1])
+
             Fa = Fa + l * _dot_ao_ao_dense(self.ao, self.ao, wva)
             Fb = Fb + l * _dot_ao_ao_dense(self.ao, self.ao, wvb)
-
             Fa = pyscf.scf.hf.level_shift(self.S, self.dm[0], Fa, self.level_shift)
             Fb = pyscf.scf.hf.level_shift(self.S, self.dm[1], Fb, self.level_shift)
-            Fa, diis_e_a = self.zdiis_a.extrapolate(cycle, Fa, self.dm[0])
-            Fb, diis_e_b = self.zdiis_b.extrapolate(cycle, Fb, self.dm[1])
 
-            e_a, c_a = pyscf.scf.hf.eig(Fa, self.S)
-            e_b, c_b = pyscf.scf.hf.eig(Fb, self.S)
+            # check if Fa and Fb is singular, if so, set e_a, c_a to be the same as the previous step to avoid numerical instability
+            if np.linalg.cond(Fa) > 1e12 or np.linalg.norm(self.dm[0]) < 1e-12:
+                e_a = np.zeros(self.mol.nao)
+                c_a = np.zeros((self.mol.nao, self.mol.nao))
+                diis_e_a = 0.0
+            else:
+                Fa, diis_e_a = self.zdiis_a.extrapolate(cycle, Fa, self.dm[0])
+                e_a, c_a = pyscf.scf.hf.eig(Fa, self.S)
+            if np.linalg.cond(Fb) > 1e12 or np.linalg.norm(self.dm[1]) < 1e-12:
+                e_b = np.zeros(self.mol.nao)
+                c_b = np.zeros((self.mol.nao, self.mol.nao))
+                diis_e_b = 0.0
+            else:
+                Fb, diis_e_b = self.zdiis_b.extrapolate(cycle, Fb, self.dm[1])
+                e_b, c_b = pyscf.scf.hf.eig(Fb, self.S)
             self.mo_energy = np.array((e_a, e_b))
             self.mo_coeff = np.array((c_a, c_b))
 
