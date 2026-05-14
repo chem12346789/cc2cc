@@ -128,7 +128,7 @@ class Collect_info:
             return
 
         data_test = pd.read_csv(
-            f"validate_hkqai_done/ccdft_def2-QZVP__{self.data_set}.csv"
+            f"validate_hkqai_done/ccdft_def2-QZVP(D)__{self.data_set}.csv"
         )
         data_test_name = np.array(data_test["name"])
 
@@ -136,7 +136,7 @@ class Collect_info:
             return
 
         for i, name in enumerate(self.data["name"]):
-            name = name.replace(self.basis, "def2-QZVP")
+            name = name.replace(self.basis, "def2-QZVP(D)")
             col = np.where(data_test_name == name)[0]
             b3lyp_ene = data_test.loc[col, "b3lyp_ene"].values[0]
             b3lyp_d3bj_ene = data_test.loc[col, "b3lyp-d3bj_ene"].values[0]
@@ -312,10 +312,6 @@ class Collect_info:
         )
         inverse_mae = divide(1, mean_relative_abs_energies)
 
-        wtmad_1_multiplier = np.ones_like(mean_relative_abs_energies)
-        wtmad_1_multiplier[mean_relative_abs_energies > 75] = 0.1
-        wtmad_1_multiplier[mean_relative_abs_energies < 7.5] = 10
-
         if self.model_load == "" and self.data_set == "gmtkn-def2":
             self.data_frame_dict["subset_mean_df"].loc[
                 self.name_subset_list, "mae"
@@ -344,6 +340,10 @@ class Collect_info:
             )
 
             if self.data_set == "gmtkn-def2":
+                wtmad_1_multiplier = np.ones_like(mean_relative_abs_energies)
+                wtmad_1_multiplier[mean_relative_abs_energies > 75] = 0.1
+                wtmad_1_multiplier[mean_relative_abs_energies < 7.5] = 10
+
                 wtmad_1_subset = wtmad_1_multiplier * mean_reaction_energy
                 self.data_frame_dict["wtmad_1_df"].loc[self.name_set_list, dft_type] = (
                     np.einsum("i,ij->j", wtmad_1_subset, subset2set)
