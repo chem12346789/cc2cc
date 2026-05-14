@@ -57,15 +57,25 @@ def __getattr__(name):
                 get_veff_modified_rks_gpu,
                 get_veff_grad_modified_rks_gpu,
             )
+            from cc2cc.utils.modelscf_uks_gpu import (
+                get_veff_modified_uks_gpu,
+                get_veff_grad_modified_uks_gpu,
+            )
 
             globals().update(GridGPU=GridGPU)
             globals().update(get_veff_modified_rks_gpu=get_veff_modified_rks_gpu)
             globals().update(
                 get_veff_grad_modified_rks_gpu=get_veff_grad_modified_rks_gpu
             )
+            globals().update(get_veff_modified_uks_gpu=get_veff_modified_uks_gpu)
+            globals().update(
+                get_veff_grad_modified_uks_gpu=get_veff_grad_modified_uks_gpu
+            )
             __all__.append("GridGPU")
             __all__.append("get_veff_modified_rks_gpu")
             __all__.append("get_veff_grad_modified_rks_gpu")
+            __all__.append("get_veff_modified_uks_gpu")
+            __all__.append("get_veff_grad_modified_uks_gpu")
             return globals()[name]
         raise ImportError(f"CUDA is not available. Cannot import {name}")
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

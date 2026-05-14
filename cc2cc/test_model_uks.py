@@ -2,13 +2,14 @@
 
 import numpy as np
 from timeit import default_timer as timer
+import torch
 
 import pyscf
 import pyscf.dft
-import torch
 
-from cc2cc.utils import get_veff_modified_uks, get_veff_grad_modified_uks, diff_rho
-from cc2cc.utils import Grid, TestDataDFT, DATA_PATH
+import cc2cc.utils as utils
+
+pyscf.lib.logger.TIMER_LEVEL = 4
 
 
 def test_model_uks(
@@ -23,10 +24,17 @@ def test_model_uks(
     """
     # 2.0 Prepare
     time_ai_start = timer()
-    # if torch.cuda.is_available():
-    #     mdft = pyscf.dft.UKS(mol).density_fit().to_gpu()
-    # else:
-    mdft = pyscf.dft.UKS(mol).density_fit()
+    if torch.cuda.is_available():
+        mdft = pyscf.dft.UKS(mol).density_fit().to_gpu()
+        Grid = utils.GridGPU
+        mol.stdout = mdft.stdout
+        mdft.max_memory = 8000
+        utils.get_veff_modified_uks_gpu(mdft, modeldict)
+    else:
+        mdft = pyscf.dft.UKS(mol).density_fit()
+        Grid = utils.GridCPU
+        utils.get_veff_modified_uks(mdft, modeldict)
+
     mdft.xc = "b3lyp"
     mdft.grids = Grid(
         mol,
@@ -35,7 +43,6 @@ def test_model_uks(
         cube_type=modeldict.cube_type,
         cube_size=modeldict.cube_size,
     )
-    get_veff_modified_uks(mdft, modeldict)
 
     mdft.verbose = 4
     mdft.mol.verbose = 4
@@ -45,7 +52,7 @@ def test_model_uks(
     if args.max_cycle == -1:
         mdft.max_cycle = -1
         if_retry = False
-        test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
+        test_data = utils.TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
         mdft.kernel(dm0=test_data.dm1_dft)
     else:
         # mdft.max_cycle = args.max_cycle
@@ -78,7 +85,7 @@ def test_model_uks(
         g = mdft.Gradients()
         g.xc = "b3lyp"
         g.grids = mdft.grids
-        get_veff_grad_modified_uks(g, modeldict)
+        utils.get_veff_grad_modified_uks(g, modeldict)
         grad_mdft = g.kernel()
     else:
         grad_mdft = None
@@ -86,6 +93,11 @@ def test_model_uks(
     time_ai = timer() - time_ai_start
 
     # 3.0 Collect data
+
+    if torch.cuda.is_available():
+        import cupy as cp
+
+        dm1_scf = cp.asnumpy(dm1_scf)
     scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
 
     dict_ = {
@@ -103,18 +115,18 @@ def test_model_uks(
         else:
             dict_.update({"grad_scf": 0})
 
-    if (DATA_PATH / f"data_{name}.npz").exists():
-        data = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
+    if (utils.DATA_PATH / f"data_{name}.npz").exists():
+        data = np.load(utils.DATA_PATH / f"data_{name}.npz", allow_pickle=True)
         print(data["mol"])
         print(mol.tostring(format="xyz"))
         print(
-            f"electronic density (ai vs dft) {diff_rho(mol, data["dm1_dft"], mdft.make_rdm1(), mdft.grids)}"
+            f"electronic density (ai vs dft) {utils.diff_rho(mol, data["dm1_dft"], mdft.make_rdm1(), mdft.grids)}"
         )
         print(
-            f"electronic density (ai vs cc) {diff_rho(mol, data["dm1_cc"], mdft.make_rdm1(), mdft.grids)}"
+            f"electronic density (ai vs cc) {utils.diff_rho(mol, data["dm1_cc"], mdft.make_rdm1(), mdft.grids)}"
         )
         print(
-            f"electronic density (dft vs cc) {diff_rho(mol, data["dm1_cc"], data["dm1_dft"], mdft.grids)}"
+            f"electronic density (dft vs cc) {utils.diff_rho(mol, data["dm1_cc"], data["dm1_dft"], mdft.grids)}"
         )
         print(f"energy (ai vs dft) {(e_scf - data['e_dft']) * 627.509} Kcal/mol")
         print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * 627.509} Kcal/mol")

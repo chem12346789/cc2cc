@@ -8,6 +8,7 @@ from __future__ import annotations
 import numpy as np
 from numba import njit
 
+import pyscf
 from pyscf import __config__
 from pyscf.dft import gen_grid, numint, radi
 from pyscf.lib import logger
@@ -18,6 +19,7 @@ from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 GridsCPU = gen_grid.Grids
 OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
 SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
+pyscf.lib.logger.TIMER_LEVEL = 4
 
 
 def iterate_grid_segments(mol, grids, nao, deriv, max_memory, non0tab=None):

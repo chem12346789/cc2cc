@@ -29,10 +29,13 @@ def test_model_rks(
         mdft = pyscf.dft.RKS(mol).density_fit().to_gpu()
         Grid = utils.GridGPU
         utils.get_veff_modified_rks_gpu(mdft, modeldict)
+        mol.stdout = mdft.stdout
     else:
         Grid = utils.GridCPU
         mdft = pyscf.dft.RKS(mol).density_fit()
         utils.get_veff_modified_rks(mdft, modeldict)
+
+    mdft.xc = "b3lyp"
     mdft.grids = Grid(
         mol,
         args.grid_level,
@@ -40,7 +43,7 @@ def test_model_rks(
         cube_type=modeldict.cube_type,
         cube_size=modeldict.cube_size,
     )
-    mdft.xc = "b3lyp"
+    mdft.grids.mol.stdout = mdft.stdout
 
     mdft.verbose = 4
     mdft.mol.verbose = 4
@@ -58,22 +61,11 @@ def test_model_rks(
         if_retry = True
         mdft.kernel()
 
-    if mdft.converged is False and if_retry:
-        print("RKS not converged. Add dynamic level shift.")
-        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=1.0)
-        mdft.kernel()
-    if mdft.converged is False and if_retry:
-        print("RKS not converged. Add dynamic level shift.")
-        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=2.0)
-        mdft.kernel()
-    if mdft.converged is False and if_retry:
-        print("RKS not converged. Add dynamic level shift.")
-        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=4.0)
-        mdft.kernel()
-    if mdft.converged is False and if_retry:
-        print("RKS not converged. Add dynamic level shift.")
-        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=8.0)
-        mdft.kernel()
+    for factor in [1.0, 2.0, 4.0, 8.0]:
+        if mdft.converged is False and if_retry:
+            print(f"RKS not converged. Add dynamic level shift with factor {factor}.")
+            pyscf.scf.addons.dynamic_level_shift_(mdft, factor=factor)
+            mdft.kernel()
     if mdft.converged is False:
         print("Error: RKS not converged!!! Just use the current result.")
 
@@ -92,17 +84,21 @@ def test_model_rks(
     else:
         grad_mdft = None
 
-    # scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
+    # 3.0 Collect data
+    if torch.cuda.is_available():
+        import cupy as cp
+
+        dm1_scf = cp.asnumpy(dm1_scf)
+    scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
     time_ai = timeit.default_timer() - time_ai_start
 
-    # 3.0 Collect data
     dict_ = {
         "name": name,
         "time_ai": time_ai,
         "scf_ene": e_scf,
-        # "scf_dipole_x": scf_dipole[0],
-        # "scf_dipole_y": scf_dipole[1],
-        # "scf_dipole_z": scf_dipole[2],
+        "scf_dipole_x": scf_dipole[0],
+        "scf_dipole_y": scf_dipole[1],
+        "scf_dipole_z": scf_dipole[2],
     }
 
     if args.if_grad:
