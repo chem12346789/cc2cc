@@ -50,8 +50,6 @@ def test_model_rks(
     mdft.conv_tol = 1e-7
     mdft.conv_tol_grad = 1e-3
 
-    torch.cuda.memory._record_memory_history(max_entries=100000)
-
     if args.max_cycle == -1:
         mdft.max_cycle = -1
         if_retry = False
@@ -70,17 +68,6 @@ def test_model_rks(
             mdft.kernel()
     if mdft.converged is False:
         print("Error: RKS not converged!!! Just use the current result.")
-
-    # In this sample, we save the snapshot after running 5 iterations.
-    #   - Save as many snapshots as you'd like.
-    #   - Snapshots will save last `max_entries` number of memory events
-    #     (100,000 in this example).
-    try:
-        torch.cuda.memory._dump_snapshot(f"log/{name}.pickle")
-    except Exception as e:
-        print(f"Failed to capture memory snapshot {e}")
-    # Stop recording memory snapshot history.
-    torch.cuda.memory._record_memory_history(enabled=None)
 
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
