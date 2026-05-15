@@ -23,7 +23,7 @@ OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
 SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
 
 
-def iterate_grid_segments(mol, grids, nao, deriv, max_memory, non0tab=None):
+def iterate_grid_segments(mol, grids, nao, deriv, max_memory):
     """Iterate grid blocks using GPU4PySCF grid arrays.
 
     The yielded ``coords`` and ``weight`` objects keep the backend used by
@@ -35,24 +35,11 @@ def iterate_grid_segments(mol, grids, nao, deriv, max_memory, non0tab=None):
     blksize = max(4, min(blksize, ngrids // BLKSIZE + 1, 1200)) * BLKSIZE
     assert blksize % BLKSIZE == 0
 
-    if mol is grids.mol:
-        non0tab = grids.non0tab
-    if non0tab is None:
-        non0tab = cp.empty(
-            ((ngrids + BLKSIZE - 1) // BLKSIZE, mol.nbas), dtype=cp.uint8
-        )
-        non0tab[:] = NBINS + 1
-    screen_index = non0tab
-
-    allow_sparse = ngrids % ALIGNMENT_UNIT == 0 and nao > SWITCH_SIZE
     for ip0 in range(0, ngrids, blksize):
         ip1 = min(ip0 + blksize, ngrids)
         coords = grids.coords[ip0:ip1]
         weight = grids.weights[ip0:ip1]
-        mask = screen_index[ip0 // BLKSIZE :]
-        if not allow_sparse:
-            mask = None
-        yield mask, weight, coords
+        yield weight, coords
 
 
 def rho_evaluator(
@@ -120,7 +107,6 @@ def gen_cube5_njit(rho_in_2, rho_in_1, coords, coor_cube):
 def eval_rho_cube(mol, ao, dm, rho_in_1, rho_in_2):
     """Accumulate density gradient/Hessian terms for cube orientation."""
     if getattr(dm, "mo_coeff", None) is not None:
-        print("    Evaluating density for cube orientation with MO coefficients.")
         mo_coeff = asarray(dm.mo_coeff)
         mo_occ = asarray(dm.mo_occ)
         pos = mo_occ > OCCDROP
@@ -160,7 +146,6 @@ def eval_rho_cube(mol, ao, dm, rho_in_1, rho_in_2):
                 c3, c3
             )
     else:
-        print("    Evaluating density for cube orientation with density matrix.")
         dm = asarray(dm)
         c0 = numint._dot_ao_dm(mol, ao[0], dm, None, None, None)
         rho_in_1[0, :] += 2 * numint._contract_rho(ao[1], c0)
@@ -275,16 +260,9 @@ class GridCube:
         input_mat = cp.zeros((self.input_level, len(self.coords)))
         vxc_mat = cp.zeros((self.input_level, 4, len(self.coords)))
 
-        t1 = (logger.process_clock(), logger.perf_counter())
         ao_value = numint.eval_ao(
             self.mol, self.coords, deriv=ao_deriv, transpose=False, gdftopt=self.opt
         )
-        t11 = (logger.process_clock(), logger.perf_counter())
-        print(
-            f"    CPU time for            ao_value {t11[0] - t1[0]:.2f} sec, "
-            f"wall time {t11[1] - t1[1]:.2f} sec"
-        )
-
         rho = rho_evaluator(ni, self.mol, ao_value[:4], dms, xctype="GGA")
         rho0 = rho[0]
 
@@ -340,16 +318,9 @@ class GridCube:
 
         dma, dmb = dms
 
-        t0 = (logger.process_clock(), logger.perf_counter())
         ao_value = numint.eval_ao(
             self.mol, self.coords, deriv=ao_deriv, transpose=False, gdftopt=self.opt
         )
-        t01 = (logger.process_clock(), logger.perf_counter())
-        print(
-            f"    CPU time for            ao_value {t01[0] - t0[0]:.2f} sec, "
-            f"wall time {t01[1] - t0[1]:.2f} sec"
-        )
-
         rho_a = rho_evaluator(ni, self.mol, ao_value[:4], dma, xctype="GGA")
         rho_b = rho_evaluator(ni, self.mol, ao_value[:4], dmb, xctype="GGA")
         rho = cp.empty([2, 4, len(self.coords)])

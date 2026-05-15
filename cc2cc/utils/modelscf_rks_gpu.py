@@ -44,8 +44,6 @@ def get_veff_modified_rks_gpu(ks, modeldict):
         _sorted_mol = grids.opt._sorted_mol
         mo_coeff = getattr(dms, "mo_coeff", None)
         mo_occ = getattr(dms, "mo_occ", None)
-        print("mo_coeff", mo_coeff.shape if mo_coeff is not None else None)
-        print("mo_occ", mo_occ.shape if mo_occ is not None else None)
         if mo_coeff is not None:
             mo_coeff = grids.opt.sort_orbitals(mo_coeff, axis=[0])
         else:
@@ -58,18 +56,15 @@ def get_veff_modified_rks_gpu(ks, modeldict):
         nao = mol.nao
 
         def block_loop(ao_deriv):
-            for mask, weights_, coords_ in iterate_grid_segments(
+            for weights_, coords_ in iterate_grid_segments(
                 _sorted_mol,
                 grids,
                 nao,
                 ao_deriv,
                 max_memory=max_memory // (2 * modeldict.model.cube_size),
-                non0tab=None,
             ):
                 gridcube = grids.gen_cube(_sorted_mol, dms_sorted, coords_)
-                t0 = (logger.process_clock(), logger.perf_counter())
                 rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(ni, dms_sorted)
-                t0 = logger.timer(mol, "    cube rho vxc", *t0)
                 energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
                 energy_den = cp.asarray(energy_den)
                 middle_cube = cp.asarray(middle_cube)
@@ -84,17 +79,12 @@ def get_veff_modified_rks_gpu(ks, modeldict):
         excsum = cp.zeros(1)
         vmat = cp.zeros((1, nao, nao))
 
-        t0 = (logger.process_clock(), logger.perf_counter())
         if xctype == "GGA":
             ao_deriv = 1
             for ao, wv in block_loop(ao_deriv):
-                t0 = logger.timer(mol, "  vxc on grids", *t0)
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
-
                 aow = _scale_ao(ao, wv)
                 vmat[0] += cp.dot(ao[0], aow.T)
-
-                t0 = logger.timer(mol, "  vxc mat", *t0)
             vmat = transpose_sum(vmat)
         else:
             raise NotImplementedError(f"numint.nr_rks for functional {xc_code}")
@@ -200,6 +190,7 @@ def get_veff_modified_rks_gpu(ks, modeldict):
             ecoul = None
 
         t0 = logger.timer(ks_, "jk", *t0)
+        # trace the total memory usage after vj and vk are calculated, which are the most memory intensive parts
 
         vxc = tag_array(vxc, ecoul=ecoul, exc=exc, vj=vj, vk=vk)
         return vxc
