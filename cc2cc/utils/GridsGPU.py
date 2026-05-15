@@ -11,8 +11,6 @@ from __future__ import annotations
 import cupy as cp
 from pyscf import __config__
 from gpu4pyscf.dft import gen_grid, numint, radi
-from pyscf.gto import NORMALIZE_GTO
-from pyscf.lib import logger
 from gpu4pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 from gpu4pyscf.lib.cupy_helper import asarray
 

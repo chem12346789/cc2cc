@@ -145,8 +145,6 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass):
         if hermi == 2:  # because rho = 0
             n, exc, vxc = (0, 0), 0, 0
         else:
-            current_memory = getattr(lib, "current_memory", lambda: (0,))()[0]
-            max_memory = ks_.max_memory - current_memory
             n, exc, vxc = nr_uks(
                 modeldict,
                 ni,
@@ -154,7 +152,7 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass):
                 ks_.grids,
                 ks_.xc,
                 dm,
-                max_memory=max_memory,
+                max_memory=ks_.max_memory,
                 hermi=hermi,
             )
             logger.debug(ks_, "nelec by numeric integration = %s", n)
@@ -283,15 +281,13 @@ def get_veff_grad_modified_uks_gpu(ks_grad, modeldict: ModelClass):
         mf = ks_grad_.base
         ni = mf._numint
 
-        current_memory = getattr(lib, "current_memory", lambda: (0,))()[0]
-        max_memory = ks_grad_.max_memory * 0.9 - current_memory
         exc, vxc = get_vxc(
             ni,
             mol,
             ks_grad_.grids,
             mf.xc,
             dm,
-            max_memory,
+            ks_grad_.max_memory,
             verbose=ks_grad_.verbose,
         )
         t0 = logger.timer(ks_grad_, "vxc", *t0)
