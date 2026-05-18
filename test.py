@@ -4,7 +4,15 @@ Other parameter are from the argparse.
 """
 
 import argparse
+import gc
 from pathlib import Path
+
+import torch
+
+try:
+    import cupy as cp
+except Exception:  # pragma: no cover
+    cp = None
 
 from cc2cc.utils import gen_mole, print_computer_info, add_args
 from cc2cc.utils import ModelClass, DataRecord
@@ -33,6 +41,19 @@ def _run_one(mol, name, modeldict, data_record, args):
         test_model_uks(mol, name, modeldict, data_record, args)
 
 
+def _release_memory(device) -> None:
+    gc.collect()
+    if "cuda" in str(device).lower() and torch.cuda.is_available():
+        if cp is not None:
+            try:
+                cp.get_default_memory_pool().free_all_blocks()
+                cp.get_default_pinned_memory_pool().free_all_blocks()
+            except Exception:
+                pass
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate the inversed potential and energy."
@@ -54,34 +75,31 @@ def main():
 
     for name_mol in args.name_mol:
         name = f"{name_mol}_{args.basis}"
-        mol = gen_mole(
-            name_mol,
-            args.basis,
-            dataset_name=args.dataset,
-            if_rotate=args.if_rotate,
-            if_rotate_random=args.if_rotate_random,
-        )
+        mol = None
+        try:
+            mol = gen_mole(
+                name_mol,
+                args.basis,
+                dataset_name=args.dataset,
+                if_rotate=args.if_rotate,
+                if_rotate_random=args.if_rotate_random,
+            )
 
-        if mol is None:
-            print(f"SKIP: {name}")
-            continue
+            if mol is None:
+                print(f"SKIP: {name}")
+                continue
 
-        if _should_skip(name, data_record, args):
-            print(f"SKIP: {name}")
-            continue
+            if _should_skip(name, data_record, args):
+                print(f"SKIP: {name}")
+                continue
 
-        _run_one(mol, name, modeldict, data_record, args)
+            _run_one(mol, name, modeldict, data_record, args)
+        finally:
+            del mol
+            _release_memory(args.device)
 
-        # try:
-        #     _run_one(mol, name, modeldict, data_record, args)
-        # except (ValueError, RuntimeError) as e:
-        #     print(f"ERROR: {name_mol}", flush=True)
-        #     print(e, flush=True)
-        #     error_molecule.append(name)
-        #     print(f"Error molecule: {error_molecule}", flush=True)
-        # finally:
-        #     print(f"Processed: {name_mol}", flush=True)
-
+    del modeldict
+    _release_memory(args.device)
     print(f"Error molecule: {error_molecule}", flush=True)
 
 
