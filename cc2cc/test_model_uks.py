@@ -25,11 +25,11 @@ def test_model_uks(
     # 2.0 Prepare
     time_ai_start = timer()
     if torch.cuda.is_available():
-        mdft = pyscf.dft.UKS(mol).density_fit().to_gpu()
+        mdft = pyscf.dft.UKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
-        mol.stdout = mdft.stdout
-        mdft.max_memory = 8000
         utils.get_veff_modified_uks_gpu(mdft, modeldict)
+        mol.stdout = mdft.stdout
+        mdft.use_gpu_memory = False
     else:
         mdft = pyscf.dft.UKS(mol).density_fit()
         Grid = utils.GridCPU
