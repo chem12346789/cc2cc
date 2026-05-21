@@ -29,7 +29,8 @@ from cc2cc.utils.get_dft_grad_rks import get_dft_grad as get_dft_grad_rks
 from cc2cc.utils.get_dft_grad_uks import get_dft_grad as get_dft_grad_uks
 
 train_str_list = [
-    # # "molecule2-W4_11",
+    "molecule1-W4_11",
+    "molecule2-W4_11",
 ]
 
 eval_str_list = [
