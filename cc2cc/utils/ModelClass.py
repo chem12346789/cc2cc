@@ -325,7 +325,11 @@ class ModelClass:
                 )
             else:
                 raise ValueError(f"Unknown cube type: {self.cube_type}")
-            return np.transpose(x, (2, 1, 3, 0, 4))
+            # flatten the last two dimensions to get piCX
+            x = np.transpose(x, (2, 1, 3, 0, 4))
+            shape_x = x.shape
+            x = x.reshape(shape_x[0], shape_x[1], shape_x[2], -1)
+            return x
 
         self.database_train = DataBase(
             train_str_dict,
@@ -394,16 +398,17 @@ class ModelClass:
 
         if if_train:
             input_.requires_grad = True
-            if self.model.before_weight:
-                output = self.model(torch.einsum("p...,pi->p...", input_, weight))
-            else:
-                output = self.model(input_) * weight
+
+        if self.model.before_weight:
+            model_arg = torch.einsum("p...,pi->p...", input_, weight)
+            model_output = self.model(model_arg)
+            output = model_output
         else:
-            with torch.no_grad():
-                if self.model.before_weight:
-                    output = self.model(torch.einsum("p...,pi->p...", input_, weight))
-                else:
-                    output = self.model(input_) * weight
+            model_output = self.model(input_)
+            output = model_output * weight
+
+        if not if_train:
+            output = output.detach()
 
         tot_loss = loss_multiplier * self.loss_ene(
             data_weight * sum_target, data_weight * torch.sum(output)
@@ -430,12 +435,30 @@ class ModelClass:
                 loss_abs_record = torch.zeros_like(loss_record)
 
             if self.args.if_grad:
+                if self.model.before_weight:
+                    grad_output = torch.ones_like(model_output)
+                else:
+                    grad_output = weight
                 middle_ = torch.autograd.grad(
-                    torch.sum(output), input_, create_graph=True
+                    outputs=model_output,
+                    inputs=input_,
+                    grad_outputs=grad_output,
+                    create_graph=True,
                 )[0]
                 grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
                 grad2force = batch["grad2force"]
-                force = (middle_[:, :, :, None, None] * grad2force).sum((0, 1, 2))
+
+                # chunk_size = 2**15
+                # force = torch.zeros_like(grad_cc_train)
+                # for start in range(0, middle_.shape[0], chunk_size):
+                #     end = min(start + chunk_size, middle_.shape[0])
+                #     force_chunk = torch.einsum(
+                #         "piC,piCx->x", middle_[start:end], grad2force[start:end]
+                #     )
+                #     force = force + force_chunk
+
+                force = torch.einsum("piC,piCx->x", middle_, grad2force)
+
                 tot_loss += loss_multiplier_grad * self.loss_grad(grad_cc_train, force)
                 loss_grad_record = torch.sum(torch.abs(grad_cc_train - force))
             else:

@@ -14,7 +14,6 @@ from cc2cc.utils.mol import gen_mole
 from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import AU2KCALMOL
 
-
 PRINT_DEBUG = False
 
 
@@ -279,13 +278,21 @@ class DataBase:
             "weight": weight_mat.reshape((-1, 1)),
         }
 
+        # if the input_mat is too large, we filter the columns with small values to avoid the numrical instability in training. We keep the columns with the sum of absolute values larger than 1e-15.
+        # if you want to keep all the data, you can set the threshold to 0.
+        # if you want to save more memory, you can set the threshold to a larger value.
+        if data_dict["input"].shape[0] > 1e6:
+            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-15
+        else:
+            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-10
+        data_dict["input"] = data_dict["input"][filter_idx]
+        data_dict["weight"] = data_dict["weight"][filter_idx]
+        del input_mat, weight_mat
+
         if self.if_eval:
             data_dict["output"] = 0
             data_dict["grad2force"] = 0
             data_dict["grad_cc_train"] = 0
-            if self.args.output_target == "b3lyp" and "exc_dft_grids" in data:
-                output_mat = data["exc_dft_grids"]
-                energy_target = np.sum(output_mat * weight_mat)
         else:
             if self.args.output_target == "tol_delta_grids":
                 if self.args.rho_input == "dft":
@@ -296,15 +303,18 @@ class DataBase:
                     raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
             else:
                 raise ValueError(f"Unknown output_target: {self.args.output_target}")
-            data_dict["output"] = output_mat.reshape((-1, 1))
+            data_dict["output"] = output_mat.reshape((-1, 1))[filter_idx]
+            del output_mat
 
             if self.args.if_relative_weight_abs:
-                loss_multiplier_abs /= self.loss_ene(np.abs(output_mat * weight_mat))
+                loss_multiplier_abs /= self.loss_ene(
+                    np.abs(data_dict["output"] * data_dict["weight"])
+                )
                 self.print(
                     f"Adjusted loss_multiplier_abs: {loss_multiplier_abs:>6.3f}",
                 )
             error_energy = AU2KCALMOL * abs(
-                energy_target - np.sum(output_mat * weight_mat)
+                energy_target - np.sum(data_dict["output"] * data_dict["weight"])
             )
             if np.abs(error_energy) > 0.01:
                 print(
@@ -316,8 +326,10 @@ class DataBase:
             if self.args.if_grad:
                 grad2force = data["grad2force"]
                 grad_cc_train = data["grad_cc_train"]
-                data_dict["grad2force"] = self.process_grad2force(grad2force)
-                data_dict["grad_cc_train"] = grad_cc_train
+                data_dict["grad2force"] = self.process_grad2force(grad2force)[
+                    filter_idx
+                ]
+                data_dict["grad_cc_train"] = grad_cc_train.reshape(-1)
                 # loss_multiplier_grad /= self.loss_ene(np.abs(grad_cc_train)) + 1e-4
             else:
                 data_dict["grad2force"] = 0
@@ -385,6 +397,11 @@ class DataBase:
         )
 
         for key in self.array_key:
+            if isinstance(data_dict[key], np.ndarray):
+                if len(data_dict[key].shape) > 0:
+                    print(
+                        f"key : {key}, shape of data_dict[key] : {data_dict[key].shape}",
+                    )
             data_dict[key] = torch.tensor(
                 np.array(data_dict[key]), dtype=self.dtype, device="cpu"
             )

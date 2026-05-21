@@ -158,10 +158,12 @@ def train_model(train_str_dict, eval_str_dict, args):
                             modeldict.dir_checkpoint / "loss" / f"eval-{epoch}.csv"
                         )
 
+                    train_record_loss_ene = np.mean(train_record.data_dict["loss_ene"])
+                    eval_record_loss_ene = np.mean(eval_record.data_dict["loss_ene"])
                     print(
                         f"Epoch: {epoch:>9} "
-                        f"Loss: {np.mean(train_record.data_dict["loss_ene"]):>9.2e} "
-                        f"Eval: {np.mean(eval_record.data_dict["loss_ene"]):>9.2e} "
+                        f"Loss: {train_record_loss_ene:>9.2e} "
+                        f"Eval: {eval_record_loss_ene:>9.2e} "
                         f"lr: {epoch_lr:>9.2e} "
                         f"{timer.measure()}",
                         flush=True,
