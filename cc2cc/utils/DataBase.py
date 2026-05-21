@@ -284,7 +284,7 @@ class DataBase:
         if data_dict["input"].shape[0] > 1e6:
             filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-15
         else:
-            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-10
+            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-15
         data_dict["input"] = data_dict["input"][filter_idx]
         data_dict["weight"] = data_dict["weight"][filter_idx]
         del input_mat, weight_mat
