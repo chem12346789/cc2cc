@@ -120,24 +120,34 @@ def test_model_uks(
         print(data["mol"])
         print(mol.tostring(format="xyz"))
         print(
-            f"electronic density (ai vs dft) {utils.diff_rho(mol, data["dm1_dft"], mdft.make_rdm1(), mdft.grids)}"
+            f"energy (ai vs dft) {(e_scf - data['e_dft']) * utils.AU2KCALMOL} Kcal/mol"
+        )
+        print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * utils.AU2KCALMOL} Kcal/mol")
+
+        dm1_dft = data["dm1_dft"]
+        dm1_cc = data["dm1_cc"]
+        dm1_ai = dm1_scf
+        print(
+            f"electronic density (ai vs dft) {utils.diff_rho(mol, dm1_dft, dm1_ai, mdft.grids)}"
         )
         print(
-            f"electronic density (ai vs cc) {utils.diff_rho(mol, data["dm1_cc"], mdft.make_rdm1(), mdft.grids)}"
+            f"electronic density (ai vs cc) {utils.diff_rho(mol, dm1_cc, dm1_ai, mdft.grids)}"
         )
         print(
-            f"electronic density (dft vs cc) {utils.diff_rho(mol, data["dm1_cc"], data["dm1_dft"], mdft.grids)}"
+            f"electronic density (dft vs cc) {utils.diff_rho(mol, dm1_cc, dm1_dft, mdft.grids)}"
         )
-        print(f"energy (ai vs dft) {(e_scf - data['e_dft']) * 627.509} Kcal/mol")
-        print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * 627.509} Kcal/mol")
+        dipole_dft = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
+        dipole_cc = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
+
+        print(f"dipole (ai vs dft) {np.linalg.norm(scf_dipole - dipole_dft)}")
+        print(f"dipole (ai vs cc) {np.linalg.norm(scf_dipole - dipole_cc)}")
+        print(f"dipole (dft vs cc) {np.linalg.norm(dipole_dft - dipole_cc)}")
+        grad_dft = data["grad_dft"]
+        grad_cc = data["grad_cc"]
         if args.if_grad:
-            print(
-                f"gradient (ai vs dft) {np.linalg.norm(grad_mdft - data['grad_dft'])}"
-            )
-            print(f"gradient (ai vs cc) {np.linalg.norm(grad_mdft - data['grad_cc'])}")
-            print(
-                f"gradient (dft vs cc) {np.linalg.norm(data['grad_dft'] - data['grad_cc'])}"
-            )
+            print(f"gradient (ai vs dft) {np.linalg.norm(grad_mdft - grad_dft)}")
+            print(f"gradient (ai vs cc) {np.linalg.norm(grad_mdft - grad_cc)}")
+            print(f"gradient (dft vs cc) {np.linalg.norm(grad_dft - grad_cc)}")
 
     data_record.add_data(dict_)
     data_record.save_csv()
