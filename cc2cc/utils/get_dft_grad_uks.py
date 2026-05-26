@@ -7,7 +7,7 @@ from cc2cc.utils.modelscf_rks import get_veff_grad_modified_zeros
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
 
 
-def get_dft_input(mol, grids, dm1_dft, data_dict, max_memory=8000):
+def get_dft_input(mol, grids, dm1_dft, max_memory=8000):
     """
     Calculate the input of (exchange-correlation energy - DFT energy) on the grids.
     """
@@ -45,7 +45,7 @@ def get_dft_input(mol, grids, dm1_dft, data_dict, max_memory=8000):
     }
 
 
-def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
+def get_dft_grad(mol, grids, dm1_dft, max_memory=8000):
     """
     Calculate the gradient of (exchange-correlation energy - DFT energy) on the grids.
     Note the max_memory is hard to predict (a large memory usage is due to grad2force and grad_mat), so just set it to a relative small value to avoid OOM.
@@ -152,7 +152,7 @@ def get_dft_grad(mol, grids, dm1_dft, data_dict, max_memory=8000):
         "p,ipabc,tipabcx->tx",
         grids.weights,
         grad_mat,
-        data_dict["grad2force"],
+        grad2force,
         optimize=True,
     )
     print("Error force DFT: ", np.linalg.norm(force - (grad_dft - grad_dft_zeros)))

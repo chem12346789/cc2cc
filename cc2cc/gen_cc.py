@@ -209,9 +209,9 @@ def cc(
         )
 
     if not evaluate:
-        data_append_dict = get_dft_grad(mol, grids, dm1_dft, data_dict)
+        data_append_dict = get_dft_grad(mol, grids, dm1_dft)
         data_dict.update(data_append_dict)
-        data_append_dict = get_dft_grad(mol, grids, dm1_zmp, data_dict)
+        data_append_dict = get_dft_grad(mol, grids, dm1_zmp)
         for key in data_append_dict:
             if "dft" in key:
                 key_zmp = key.replace("dft", "zmp")
@@ -241,9 +241,9 @@ def cc(
         data_dict["grad_dft_d3bj"] = grad_dft_d3bj
         data_dict["grad_zmp"] = grad_zmp
     else:
-        data_append_dict = get_dft_input(mol, grids, dm1_dft, data_dict)
+        data_append_dict = get_dft_input(mol, grids, dm1_dft)
         data_dict.update(data_append_dict)
-        data_append_dict = get_dft_input(mol, grids, dm1_zmp, data_dict)
+        data_append_dict = get_dft_input(mol, grids, dm1_zmp)
         for key in data_append_dict:
             key_zmp = key.replace("dft", "zmp")
             data_dict[key_zmp] = data_append_dict[key]
