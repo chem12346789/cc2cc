@@ -54,18 +54,13 @@ def get_veff_modified_rks(ks, modeldict):
                 non0tab=None,
             ):
                 for i in range(nset):
-                    t0 = (logger.process_clock(), logger.perf_counter())
                     gridcube = grids.gen_cube(mol, dms, coords_, mask)
-                    t0 = logger.timer(mol, "    gen cube", *t0)
                     rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(ni, dms)
-                    t0 = logger.timer(mol, "    cube rho vxc", *t0)
                     energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
-                    t0 = logger.timer(mol, "    model eval", *t0)
 
                     excsum[i] += np.sum(energy_den)
                     wv = np.einsum("ixgC,giC->xgC", vxc_mat, middle_cube, optimize=True)
 
-                    t0 = logger.timer(mol, "    post model eval", *t0)
 
                     wv = wv.reshape(4, len(gridcube.coords))  # xgC -> xG
                     yield i, ao_value, gridcube.non0tab, wv
@@ -75,16 +70,13 @@ def get_veff_modified_rks(ks, modeldict):
         excsum = np.zeros(nset)
         vmat = np.zeros((nset, nao, nao))
 
-        t0 = (logger.process_clock(), logger.perf_counter())
         if xctype == "GGA":
             ao_deriv = 1
             for i, ao, mask, wv in block_loop(ao_deriv):
-                t0 = logger.timer(mol, "  vxc on grids", *t0)
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
 
                 aow = _scale_ao(ao, wv)
                 _dot_ao_ao_dense(ao[0], aow, None, vmat[i])
-                t0 = logger.timer(mol, "  vxc mat", *t0)
             vmat = lib.hermi_sum(vmat, axes=(0, 2, 1))
         else:
             raise NotImplementedError(f"numint.nr_rks for functional {xc_code}")
