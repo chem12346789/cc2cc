@@ -108523,6 +108523,6934 @@
             "reference": -0.49
         }
     },
+    "reaction-S66x8-HB-090": {
+        "01-090": {
+            "systems": [
+                "01-090",
+                "01-A",
+                "01-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.57
+        },
+        "02-090": {
+            "systems": [
+                "02-090",
+                "02-A",
+                "02-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.19
+        },
+        "03-090": {
+            "systems": [
+                "03-090",
+                "03-A",
+                "03-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.49
+        },
+        "04-090": {
+            "systems": [
+                "04-090",
+                "04-A",
+                "04-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.63
+        },
+        "05-090": {
+            "systems": [
+                "05-090",
+                "05-A",
+                "05-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.28
+        },
+        "06-090": {
+            "systems": [
+                "06-090",
+                "06-A",
+                "06-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.97
+        },
+        "07-090": {
+            "systems": [
+                "07-090",
+                "07-A",
+                "07-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.63
+        },
+        "08-090": {
+            "systems": [
+                "08-090",
+                "08-A",
+                "08-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.59
+        },
+        "09-090": {
+            "systems": [
+                "09-090",
+                "09-A",
+                "09-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.81
+        },
+        "10-090": {
+            "systems": [
+                "10-090",
+                "10-A",
+                "10-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.7
+        },
+        "11-090": {
+            "systems": [
+                "11-090",
+                "11-A",
+                "11-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.95
+        },
+        "12-090": {
+            "systems": [
+                "12-090",
+                "12-A",
+                "12-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.75
+        },
+        "13-090": {
+            "systems": [
+                "13-090",
+                "13-A",
+                "13-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.67
+        },
+        "14-090": {
+            "systems": [
+                "14-090",
+                "14-A",
+                "14-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.81
+        },
+        "15-090": {
+            "systems": [
+                "15-090",
+                "15-A",
+                "15-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -8.02
+        },
+        "16-090": {
+            "systems": [
+                "16-090",
+                "16-A",
+                "16-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.7
+        },
+        "17-090": {
+            "systems": [
+                "17-090",
+                "17-A",
+                "17-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -15.7
+        },
+        "18-090": {
+            "systems": [
+                "18-090",
+                "18-A",
+                "18-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.39
+        },
+        "19-090": {
+            "systems": [
+                "19-090",
+                "19-A",
+                "19-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.78
+        },
+        "20-090": {
+            "systems": [
+                "20-090",
+                "20-A",
+                "20-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -17.45
+        },
+        "21-090": {
+            "systems": [
+                "21-090",
+                "21-A",
+                "21-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -14.93
+        },
+        "22-090": {
+            "systems": [
+                "22-090",
+                "22-A",
+                "22-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -17.9
+        },
+        "23-090": {
+            "systems": [
+                "23-090",
+                "23-A",
+                "23-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -17.7
+        }
+    },
+    "reaction-S66x8-HB-095": {
+        "01-095": {
+            "systems": [
+                "01-095",
+                "01-A",
+                "01-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.88
+        },
+        "02-095": {
+            "systems": [
+                "02-095",
+                "02-A",
+                "02-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.55
+        },
+        "03-095": {
+            "systems": [
+                "03-095",
+                "03-A",
+                "03-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.87
+        },
+        "04-095": {
+            "systems": [
+                "04-095",
+                "04-A",
+                "04-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -8.06
+        },
+        "05-095": {
+            "systems": [
+                "05-095",
+                "05-A",
+                "05-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.69
+        },
+        "06-095": {
+            "systems": [
+                "06-095",
+                "06-A",
+                "06-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.47
+        },
+        "07-095": {
+            "systems": [
+                "07-095",
+                "07-A",
+                "07-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -8.14
+        },
+        "08-095": {
+            "systems": [
+                "08-095",
+                "08-A",
+                "08-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.95
+        },
+        "09-095": {
+            "systems": [
+                "09-095",
+                "09-A",
+                "09-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.04
+        },
+        "10-095": {
+            "systems": [
+                "10-095",
+                "10-A",
+                "10-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.09
+        },
+        "11-095": {
+            "systems": [
+                "11-095",
+                "11-A",
+                "11-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.36
+        },
+        "12-095": {
+            "systems": [
+                "12-095",
+                "12-A",
+                "12-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.2
+        },
+        "13-095": {
+            "systems": [
+                "13-095",
+                "13-A",
+                "13-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.11
+        },
+        "14-095": {
+            "systems": [
+                "14-095",
+                "14-A",
+                "14-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.34
+        },
+        "15-095": {
+            "systems": [
+                "15-095",
+                "15-A",
+                "15-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -8.53
+        },
+        "16-095": {
+            "systems": [
+                "16-095",
+                "16-A",
+                "16-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.06
+        },
+        "17-095": {
+            "systems": [
+                "17-095",
+                "17-A",
+                "17-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -16.9
+        },
+        "18-095": {
+            "systems": [
+                "18-095",
+                "18-A",
+                "18-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.8
+        },
+        "19-095": {
+            "systems": [
+                "19-095",
+                "19-A",
+                "19-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.31
+        },
+        "20-095": {
+            "systems": [
+                "20-095",
+                "20-A",
+                "20-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -18.79
+        },
+        "21-095": {
+            "systems": [
+                "21-095",
+                "21-A",
+                "21-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -16.03
+        },
+        "22-095": {
+            "systems": [
+                "22-095",
+                "22-A",
+                "22-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -19.19
+        },
+        "23-095": {
+            "systems": [
+                "23-095",
+                "23-A",
+                "23-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -18.89
+        }
+    },
+    "reaction-S66x8-HB-100": {
+        "01-100": {
+            "systems": [
+                "01-100",
+                "01-A",
+                "01-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.89
+        },
+        "02-100": {
+            "systems": [
+                "02-100",
+                "02-A",
+                "02-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.57
+        },
+        "03-100": {
+            "systems": [
+                "03-100",
+                "03-A",
+                "03-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.88
+        },
+        "04-100": {
+            "systems": [
+                "04-100",
+                "04-A",
+                "04-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -8.08
+        },
+        "05-100": {
+            "systems": [
+                "05-100",
+                "05-A",
+                "05-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.75
+        },
+        "06-100": {
+            "systems": [
+                "06-100",
+                "06-A",
+                "06-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.54
+        },
+        "07-100": {
+            "systems": [
+                "07-100",
+                "07-A",
+                "07-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -8.22
+        },
+        "08-100": {
+            "systems": [
+                "08-100",
+                "08-A",
+                "08-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.0
+        },
+        "09-100": {
+            "systems": [
+                "09-100",
+                "09-A",
+                "09-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.04
+        },
+        "10-100": {
+            "systems": [
+                "10-100",
+                "10-A",
+                "10-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.15
+        },
+        "11-100": {
+            "systems": [
+                "11-100",
+                "11-A",
+                "11-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.41
+        },
+        "12-100": {
+            "systems": [
+                "12-100",
+                "12-A",
+                "12-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.25
+        },
+        "13-100": {
+            "systems": [
+                "13-100",
+                "13-A",
+                "13-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.18
+        },
+        "14-100": {
+            "systems": [
+                "14-100",
+                "14-A",
+                "14-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.45
+        },
+        "15-100": {
+            "systems": [
+                "15-100",
+                "15-A",
+                "15-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -8.62
+        },
+        "16-100": {
+            "systems": [
+                "16-100",
+                "16-A",
+                "16-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.12
+        },
+        "17-100": {
+            "systems": [
+                "17-100",
+                "17-A",
+                "17-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -17.18
+        },
+        "18-100": {
+            "systems": [
+                "18-100",
+                "18-A",
+                "18-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.83
+        },
+        "19-100": {
+            "systems": [
+                "19-100",
+                "19-A",
+                "19-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.4
+        },
+        "20-100": {
+            "systems": [
+                "20-100",
+                "20-A",
+                "20-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -19.09
+        },
+        "21-100": {
+            "systems": [
+                "21-100",
+                "21-A",
+                "21-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -16.26
+        },
+        "22-100": {
+            "systems": [
+                "22-100",
+                "22-A",
+                "22-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -19.49
+        },
+        "23-100": {
+            "systems": [
+                "23-100",
+                "23-A",
+                "23-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -19.19
+        }
+    },
+    "reaction-S66x8-HB-105": {
+        "01-105": {
+            "systems": [
+                "01-105",
+                "01-A",
+                "01-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.72
+        },
+        "02-105": {
+            "systems": [
+                "02-105",
+                "02-A",
+                "02-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.38
+        },
+        "03-105": {
+            "systems": [
+                "03-105",
+                "03-A",
+                "03-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.65
+        },
+        "04-105": {
+            "systems": [
+                "04-105",
+                "04-A",
+                "04-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.84
+        },
+        "05-105": {
+            "systems": [
+                "05-105",
+                "05-A",
+                "05-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.58
+        },
+        "06-105": {
+            "systems": [
+                "06-105",
+                "06-A",
+                "06-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.34
+        },
+        "07-105": {
+            "systems": [
+                "07-105",
+                "07-A",
+                "07-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -8.02
+        },
+        "08-105": {
+            "systems": [
+                "08-105",
+                "08-A",
+                "08-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.85
+        },
+        "09-105": {
+            "systems": [
+                "09-105",
+                "09-A",
+                "09-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.9
+        },
+        "10-105": {
+            "systems": [
+                "10-105",
+                "10-A",
+                "10-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.01
+        },
+        "11-105": {
+            "systems": [
+                "11-105",
+                "11-A",
+                "11-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.24
+        },
+        "12-105": {
+            "systems": [
+                "12-105",
+                "12-A",
+                "12-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.03
+        },
+        "13-105": {
+            "systems": [
+                "13-105",
+                "13-A",
+                "13-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.03
+        },
+        "14-105": {
+            "systems": [
+                "14-105",
+                "14-A",
+                "14-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.29
+        },
+        "15-105": {
+            "systems": [
+                "15-105",
+                "15-A",
+                "15-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -8.45
+        },
+        "16-105": {
+            "systems": [
+                "16-105",
+                "16-A",
+                "16-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.98
+        },
+        "17-105": {
+            "systems": [
+                "17-105",
+                "17-A",
+                "17-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -16.86
+        },
+        "18-105": {
+            "systems": [
+                "18-105",
+                "18-A",
+                "18-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.62
+        },
+        "19-105": {
+            "systems": [
+                "19-105",
+                "19-A",
+                "19-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.23
+        },
+        "20-105": {
+            "systems": [
+                "20-105",
+                "20-A",
+                "20-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -18.72
+        },
+        "21-105": {
+            "systems": [
+                "21-105",
+                "21-A",
+                "21-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -15.94
+        },
+        "22-105": {
+            "systems": [
+                "22-105",
+                "22-A",
+                "22-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -19.15
+        },
+        "23-105": {
+            "systems": [
+                "23-105",
+                "23-A",
+                "23-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -18.9
+        }
+    },
+    "reaction-S66x8-HB-110": {
+        "01-110": {
+            "systems": [
+                "01-110",
+                "01-A",
+                "01-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.45
+        },
+        "02-110": {
+            "systems": [
+                "02-110",
+                "02-A",
+                "02-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.08
+        },
+        "03-110": {
+            "systems": [
+                "03-110",
+                "03-A",
+                "03-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.28
+        },
+        "04-110": {
+            "systems": [
+                "04-110",
+                "04-A",
+                "04-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.46
+        },
+        "05-110": {
+            "systems": [
+                "05-110",
+                "05-A",
+                "05-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.28
+        },
+        "06-110": {
+            "systems": [
+                "06-110",
+                "06-A",
+                "06-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.97
+        },
+        "07-110": {
+            "systems": [
+                "07-110",
+                "07-A",
+                "07-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.66
+        },
+        "08-110": {
+            "systems": [
+                "08-110",
+                "08-A",
+                "08-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.59
+        },
+        "09-110": {
+            "systems": [
+                "09-110",
+                "09-A",
+                "09-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.69
+        },
+        "10-110": {
+            "systems": [
+                "10-110",
+                "10-A",
+                "10-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.75
+        },
+        "11-110": {
+            "systems": [
+                "11-110",
+                "11-A",
+                "11-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.94
+        },
+        "12-110": {
+            "systems": [
+                "12-110",
+                "12-A",
+                "12-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.66
+        },
+        "13-110": {
+            "systems": [
+                "13-110",
+                "13-A",
+                "13-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.74
+        },
+        "14-110": {
+            "systems": [
+                "14-110",
+                "14-A",
+                "14-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.97
+        },
+        "15-110": {
+            "systems": [
+                "15-110",
+                "15-A",
+                "15-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -8.1
+        },
+        "16-110": {
+            "systems": [
+                "16-110",
+                "16-A",
+                "16-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.74
+        },
+        "17-110": {
+            "systems": [
+                "17-110",
+                "17-A",
+                "17-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -16.17
+        },
+        "18-110": {
+            "systems": [
+                "18-110",
+                "18-A",
+                "18-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.27
+        },
+        "19-110": {
+            "systems": [
+                "19-110",
+                "19-A",
+                "19-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.88
+        },
+        "20-110": {
+            "systems": [
+                "20-110",
+                "20-A",
+                "20-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -17.94
+        },
+        "21-110": {
+            "systems": [
+                "21-110",
+                "21-A",
+                "21-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -15.26
+        },
+        "22-110": {
+            "systems": [
+                "22-110",
+                "22-A",
+                "22-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -18.41
+        },
+        "23-110": {
+            "systems": [
+                "23-110",
+                "23-A",
+                "23-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -18.22
+        }
+    },
+    "reaction-S66x8-HB-125": {
+        "01-125": {
+            "systems": [
+                "01-125",
+                "01-A",
+                "01-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.46
+        },
+        "02-125": {
+            "systems": [
+                "02-125",
+                "02-A",
+                "02-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.94
+        },
+        "03-125": {
+            "systems": [
+                "03-125",
+                "03-A",
+                "03-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.92
+        },
+        "04-125": {
+            "systems": [
+                "04-125",
+                "04-A",
+                "04-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.99
+        },
+        "05-125": {
+            "systems": [
+                "05-125",
+                "05-A",
+                "05-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.14
+        },
+        "06-125": {
+            "systems": [
+                "06-125",
+                "06-A",
+                "06-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.5
+        },
+        "07-125": {
+            "systems": [
+                "07-125",
+                "07-A",
+                "07-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.18
+        },
+        "08-125": {
+            "systems": [
+                "08-125",
+                "08-A",
+                "08-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.59
+        },
+        "09-125": {
+            "systems": [
+                "09-125",
+                "09-A",
+                "09-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.98
+        },
+        "10-125": {
+            "systems": [
+                "10-125",
+                "10-A",
+                "10-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.79
+        },
+        "11-125": {
+            "systems": [
+                "11-125",
+                "11-A",
+                "11-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.21
+        },
+        "12-125": {
+            "systems": [
+                "12-125",
+                "12-A",
+                "12-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.22
+        },
+        "13-125": {
+            "systems": [
+                "13-125",
+                "13-A",
+                "13-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.6
+        },
+        "14-125": {
+            "systems": [
+                "14-125",
+                "14-A",
+                "14-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.61
+        },
+        "15-125": {
+            "systems": [
+                "15-125",
+                "15-A",
+                "15-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.66
+        },
+        "16-125": {
+            "systems": [
+                "16-125",
+                "16-A",
+                "16-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.79
+        },
+        "17-125": {
+            "systems": [
+                "17-125",
+                "17-A",
+                "17-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -13.15
+        },
+        "18-125": {
+            "systems": [
+                "18-125",
+                "18-A",
+                "18-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.93
+        },
+        "19-125": {
+            "systems": [
+                "19-125",
+                "19-A",
+                "19-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.48
+        },
+        "20-125": {
+            "systems": [
+                "20-125",
+                "20-A",
+                "20-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -14.56
+        },
+        "21-125": {
+            "systems": [
+                "21-125",
+                "21-A",
+                "21-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -12.42
+        },
+        "22-125": {
+            "systems": [
+                "22-125",
+                "22-A",
+                "22-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -15.14
+        },
+        "23-125": {
+            "systems": [
+                "23-125",
+                "23-A",
+                "23-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -15.21
+        }
+    },
+    "reaction-S66x8-HB-150": {
+        "01-150": {
+            "systems": [
+                "01-150",
+                "01-A",
+                "01-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.11
+        },
+        "02-150": {
+            "systems": [
+                "02-150",
+                "02-A",
+                "02-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.39
+        },
+        "03-150": {
+            "systems": [
+                "03-150",
+                "03-A",
+                "03-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.98
+        },
+        "04-150": {
+            "systems": [
+                "04-150",
+                "04-A",
+                "04-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.83
+        },
+        "05-150": {
+            "systems": [
+                "05-150",
+                "05-A",
+                "05-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.52
+        },
+        "06-150": {
+            "systems": [
+                "06-150",
+                "06-A",
+                "06-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.35
+        },
+        "07-150": {
+            "systems": [
+                "07-150",
+                "07-A",
+                "07-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.65
+        },
+        "08-150": {
+            "systems": [
+                "08-150",
+                "08-A",
+                "08-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.2
+        },
+        "09-150": {
+            "systems": [
+                "09-150",
+                "09-A",
+                "09-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.1
+        },
+        "10-150": {
+            "systems": [
+                "10-150",
+                "10-A",
+                "10-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.31
+        },
+        "11-150": {
+            "systems": [
+                "11-150",
+                "11-A",
+                "11-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.4
+        },
+        "12-150": {
+            "systems": [
+                "12-150",
+                "12-A",
+                "12-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.15
+        },
+        "13-150": {
+            "systems": [
+                "13-150",
+                "13-A",
+                "13-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.95
+        },
+        "14-150": {
+            "systems": [
+                "14-150",
+                "14-A",
+                "14-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.55
+        },
+        "15-150": {
+            "systems": [
+                "15-150",
+                "15-A",
+                "15-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.42
+        },
+        "16-150": {
+            "systems": [
+                "16-150",
+                "16-A",
+                "16-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.45
+        },
+        "17-150": {
+            "systems": [
+                "17-150",
+                "17-A",
+                "17-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -8.35
+        },
+        "18-150": {
+            "systems": [
+                "18-150",
+                "18-A",
+                "18-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.01
+        },
+        "19-150": {
+            "systems": [
+                "19-150",
+                "19-A",
+                "19-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.38
+        },
+        "20-150": {
+            "systems": [
+                "20-150",
+                "20-A",
+                "20-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -9.21
+        },
+        "21-150": {
+            "systems": [
+                "21-150",
+                "21-A",
+                "21-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -8.0
+        },
+        "22-150": {
+            "systems": [
+                "22-150",
+                "22-A",
+                "22-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -9.86
+        },
+        "23-150": {
+            "systems": [
+                "23-150",
+                "23-A",
+                "23-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -10.23
+        }
+    },
+    "reaction-S66x8-HB-200": {
+        "01-200": {
+            "systems": [
+                "01-200",
+                "01-A",
+                "01-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.87
+        },
+        "02-200": {
+            "systems": [
+                "02-200",
+                "02-A",
+                "02-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.95
+        },
+        "03-200": {
+            "systems": [
+                "03-200",
+                "03-A",
+                "03-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.14
+        },
+        "04-200": {
+            "systems": [
+                "04-200",
+                "04-A",
+                "04-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.44
+        },
+        "05-200": {
+            "systems": [
+                "05-200",
+                "05-A",
+                "05-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.01
+        },
+        "06-200": {
+            "systems": [
+                "06-200",
+                "06-A",
+                "06-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.27
+        },
+        "07-200": {
+            "systems": [
+                "07-200",
+                "07-A",
+                "07-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.1
+        },
+        "08-200": {
+            "systems": [
+                "08-200",
+                "08-A",
+                "08-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.91
+        },
+        "09-200": {
+            "systems": [
+                "09-200",
+                "09-A",
+                "09-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.39
+        },
+        "10-200": {
+            "systems": [
+                "10-200",
+                "10-A",
+                "10-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.39
+        },
+        "11-200": {
+            "systems": [
+                "11-200",
+                "11-A",
+                "11-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.46
+        },
+        "12-200": {
+            "systems": [
+                "12-200",
+                "12-A",
+                "12-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.2
+        },
+        "13-200": {
+            "systems": [
+                "13-200",
+                "13-A",
+                "13-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.3
+        },
+        "14-200": {
+            "systems": [
+                "14-200",
+                "14-A",
+                "14-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.49
+        },
+        "15-200": {
+            "systems": [
+                "15-200",
+                "15-A",
+                "15-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.77
+        },
+        "16-200": {
+            "systems": [
+                "16-200",
+                "16-A",
+                "16-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.13
+        },
+        "17-200": {
+            "systems": [
+                "17-200",
+                "17-A",
+                "17-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.33
+        },
+        "18-200": {
+            "systems": [
+                "18-200",
+                "18-A",
+                "18-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.19
+        },
+        "19-200": {
+            "systems": [
+                "19-200",
+                "19-A",
+                "19-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.33
+        },
+        "20-200": {
+            "systems": [
+                "20-200",
+                "20-A",
+                "20-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.59
+        },
+        "21-200": {
+            "systems": [
+                "21-200",
+                "21-A",
+                "21-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.0
+        },
+        "22-200": {
+            "systems": [
+                "22-200",
+                "22-A",
+                "22-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.15
+        },
+        "23-200": {
+            "systems": [
+                "23-200",
+                "23-A",
+                "23-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.65
+        }
+    },
+    "reaction-S66x8-pi-090": {
+        "24-090": {
+            "systems": [
+                "24-090",
+                "24-A",
+                "24-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.23
+        },
+        "25-090": {
+            "systems": [
+                "25-090",
+                "25-A",
+                "25-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.32
+        },
+        "26-090": {
+            "systems": [
+                "26-090",
+                "26-A",
+                "26-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -7.86
+        },
+        "27-090": {
+            "systems": [
+                "27-090",
+                "27-A",
+                "27-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.73
+        },
+        "28-090": {
+            "systems": [
+                "28-090",
+                "28-A",
+                "28-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.53
+        },
+        "29-090": {
+            "systems": [
+                "29-090",
+                "29-A",
+                "29-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.74
+        },
+        "30-090": {
+            "systems": [
+                "30-090",
+                "30-A",
+                "30-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.26
+        },
+        "31-090": {
+            "systems": [
+                "31-090",
+                "31-A",
+                "31-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.57
+        },
+        "32-090": {
+            "systems": [
+                "32-090",
+                "32-A",
+                "32-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.79
+        },
+        "33-090": {
+            "systems": [
+                "33-090",
+                "33-A",
+                "33-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.89
+        }
+    },
+    "reaction-S66x8-pi-095": {
+        "24-095": {
+            "systems": [
+                "24-095",
+                "24-A",
+                "24-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.07
+        },
+        "25-095": {
+            "systems": [
+                "25-095",
+                "25-A",
+                "25-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.17
+        },
+        "26-095": {
+            "systems": [
+                "26-095",
+                "26-A",
+                "26-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -9.5
+        },
+        "27-095": {
+            "systems": [
+                "27-095",
+                "27-A",
+                "27-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.69
+        },
+        "28-095": {
+            "systems": [
+                "28-095",
+                "28-A",
+                "28-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.22
+        },
+        "29-095": {
+            "systems": [
+                "29-095",
+                "29-A",
+                "29-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.17
+        },
+        "30-095": {
+            "systems": [
+                "30-095",
+                "30-A",
+                "30-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.13
+        },
+        "31-095": {
+            "systems": [
+                "31-095",
+                "31-A",
+                "31-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.24
+        },
+        "32-095": {
+            "systems": [
+                "32-095",
+                "32-A",
+                "32-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.56
+        },
+        "33-095": {
+            "systems": [
+                "33-095",
+                "33-A",
+                "33-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.62
+        }
+    },
+    "reaction-S66x8-pi-100": {
+        "24-100": {
+            "systems": [
+                "24-100",
+                "24-A",
+                "24-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.74
+        },
+        "25-100": {
+            "systems": [
+                "25-100",
+                "25-A",
+                "25-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.83
+        },
+        "26-100": {
+            "systems": [
+                "26-100",
+                "26-A",
+                "26-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -9.82
+        },
+        "27-100": {
+            "systems": [
+                "27-100",
+                "27-A",
+                "27-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.37
+        },
+        "28-100": {
+            "systems": [
+                "28-100",
+                "28-A",
+                "28-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.71
+        },
+        "29-100": {
+            "systems": [
+                "29-100",
+                "29-A",
+                "29-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.81
+        },
+        "30-100": {
+            "systems": [
+                "30-100",
+                "30-A",
+                "30-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.41
+        },
+        "31-100": {
+            "systems": [
+                "31-100",
+                "31-A",
+                "31-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.38
+        },
+        "32-100": {
+            "systems": [
+                "32-100",
+                "32-A",
+                "32-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.74
+        },
+        "33-100": {
+            "systems": [
+                "33-100",
+                "33-A",
+                "33-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.86
+        }
+    },
+    "reaction-S66x8-pi-105": {
+        "24-105": {
+            "systems": [
+                "24-105",
+                "24-A",
+                "24-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.8
+        },
+        "25-105": {
+            "systems": [
+                "25-105",
+                "25-A",
+                "25-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.86
+        },
+        "26-105": {
+            "systems": [
+                "26-105",
+                "26-A",
+                "26-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -9.43
+        },
+        "27-105": {
+            "systems": [
+                "27-105",
+                "27-A",
+                "27-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.4
+        },
+        "28-105": {
+            "systems": [
+                "28-105",
+                "28-A",
+                "28-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.55
+        },
+        "29-105": {
+            "systems": [
+                "29-105",
+                "29-A",
+                "29-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.58
+        },
+        "30-105": {
+            "systems": [
+                "30-105",
+                "30-A",
+                "30-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.4
+        },
+        "31-105": {
+            "systems": [
+                "31-105",
+                "31-A",
+                "31-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.24
+        },
+        "32-105": {
+            "systems": [
+                "32-105",
+                "32-A",
+                "32-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.59
+        },
+        "33-105": {
+            "systems": [
+                "33-105",
+                "33-A",
+                "33-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.83
+        }
+    },
+    "reaction-S66x8-pi-110": {
+        "24-110": {
+            "systems": [
+                "24-110",
+                "24-A",
+                "24-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.58
+        },
+        "25-110": {
+            "systems": [
+                "25-110",
+                "25-A",
+                "25-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.58
+        },
+        "26-110": {
+            "systems": [
+                "26-110",
+                "26-A",
+                "26-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -8.69
+        },
+        "27-110": {
+            "systems": [
+                "27-110",
+                "27-A",
+                "27-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.13
+        },
+        "28-110": {
+            "systems": [
+                "28-110",
+                "28-A",
+                "28-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.08
+        },
+        "29-110": {
+            "systems": [
+                "29-110",
+                "29-A",
+                "29-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.97
+        },
+        "30-110": {
+            "systems": [
+                "30-110",
+                "30-A",
+                "30-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.26
+        },
+        "31-110": {
+            "systems": [
+                "31-110",
+                "31-A",
+                "31-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.96
+        },
+        "32-110": {
+            "systems": [
+                "32-110",
+                "32-A",
+                "32-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.29
+        },
+        "33-110": {
+            "systems": [
+                "33-110",
+                "33-A",
+                "33-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.67
+        }
+    },
+    "reaction-S66x8-pi-125": {
+        "24-125": {
+            "systems": [
+                "24-125",
+                "24-A",
+                "24-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.54
+        },
+        "25-125": {
+            "systems": [
+                "25-125",
+                "25-A",
+                "25-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.36
+        },
+        "26-125": {
+            "systems": [
+                "26-125",
+                "26-A",
+                "26-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -6.07
+        },
+        "27-125": {
+            "systems": [
+                "27-125",
+                "27-A",
+                "27-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.97
+        },
+        "28-125": {
+            "systems": [
+                "28-125",
+                "28-A",
+                "28-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.29
+        },
+        "29-125": {
+            "systems": [
+                "29-125",
+                "29-A",
+                "29-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.87
+        },
+        "30-125": {
+            "systems": [
+                "30-125",
+                "30-A",
+                "30-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.69
+        },
+        "31-125": {
+            "systems": [
+                "31-125",
+                "31-A",
+                "31-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.99
+        },
+        "32-125": {
+            "systems": [
+                "32-125",
+                "32-A",
+                "32-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.23
+        },
+        "33-125": {
+            "systems": [
+                "33-125",
+                "33-A",
+                "33-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.03
+        }
+    },
+    "reaction-S66x8-pi-150": {
+        "24-150": {
+            "systems": [
+                "24-150",
+                "24-A",
+                "24-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.49
+        },
+        "25-150": {
+            "systems": [
+                "25-150",
+                "25-A",
+                "25-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.96
+        },
+        "26-150": {
+            "systems": [
+                "26-150",
+                "26-A",
+                "26-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.1
+        },
+        "27-150": {
+            "systems": [
+                "27-150",
+                "27-A",
+                "27-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.72
+        },
+        "28-150": {
+            "systems": [
+                "28-150",
+                "28-A",
+                "28-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.36
+        },
+        "29-150": {
+            "systems": [
+                "29-150",
+                "29-A",
+                "29-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.78
+        },
+        "30-150": {
+            "systems": [
+                "30-150",
+                "30-A",
+                "30-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.17
+        },
+        "31-150": {
+            "systems": [
+                "31-150",
+                "31-A",
+                "31-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.93
+        },
+        "32-150": {
+            "systems": [
+                "32-150",
+                "32-A",
+                "32-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.04
+        },
+        "33-150": {
+            "systems": [
+                "33-150",
+                "33-A",
+                "33-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.37
+        }
+    },
+    "reaction-S66x8-pi-200": {
+        "24-200": {
+            "systems": [
+                "24-200",
+                "24-A",
+                "24-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.06
+        },
+        "25-200": {
+            "systems": [
+                "25-200",
+                "25-A",
+                "25-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.24
+        },
+        "26-200": {
+            "systems": [
+                "26-200",
+                "26-A",
+                "26-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.99
+        },
+        "27-200": {
+            "systems": [
+                "27-200",
+                "27-A",
+                "27-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.15
+        },
+        "28-200": {
+            "systems": [
+                "28-200",
+                "28-A",
+                "28-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.25
+        },
+        "29-200": {
+            "systems": [
+                "29-200",
+                "29-A",
+                "29-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.53
+        },
+        "30-200": {
+            "systems": [
+                "30-200",
+                "30-A",
+                "30-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.01
+        },
+        "31-200": {
+            "systems": [
+                "31-200",
+                "31-A",
+                "31-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.25
+        },
+        "32-200": {
+            "systems": [
+                "32-200",
+                "32-A",
+                "32-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.27
+        },
+        "33-200": {
+            "systems": [
+                "33-200",
+                "33-A",
+                "33-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.05
+        }
+    },
+    "reaction-S66x8-london-090": {
+        "34-090": {
+            "systems": [
+                "34-090",
+                "34-A",
+                "34-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.86
+        },
+        "35-090": {
+            "systems": [
+                "35-090",
+                "35-A",
+                "35-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.85
+        },
+        "36-090": {
+            "systems": [
+                "36-090",
+                "36-A",
+                "36-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.45
+        },
+        "37-090": {
+            "systems": [
+                "37-090",
+                "37-A",
+                "37-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.61
+        },
+        "38-090": {
+            "systems": [
+                "38-090",
+                "38-A",
+                "38-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.24
+        },
+        "39-090": {
+            "systems": [
+                "39-090",
+                "39-A",
+                "39-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.16
+        },
+        "40-090": {
+            "systems": [
+                "40-090",
+                "40-A",
+                "40-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.86
+        },
+        "41-090": {
+            "systems": [
+                "41-090",
+                "41-A",
+                "41-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.83
+        },
+        "42-090": {
+            "systems": [
+                "42-090",
+                "42-A",
+                "42-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.05
+        },
+        "43-090": {
+            "systems": [
+                "43-090",
+                "43-A",
+                "43-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.87
+        },
+        "44-090": {
+            "systems": [
+                "44-090",
+                "44-A",
+                "44-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.66
+        },
+        "45-090": {
+            "systems": [
+                "45-090",
+                "45-A",
+                "45-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.13
+        },
+        "46-090": {
+            "systems": [
+                "46-090",
+                "46-A",
+                "46-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.75
+        }
+    },
+    "reaction-S66x8-london-095": {
+        "34-095": {
+            "systems": [
+                "34-095",
+                "34-A",
+                "34-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.62
+        },
+        "35-095": {
+            "systems": [
+                "35-095",
+                "35-A",
+                "35-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.49
+        },
+        "36-095": {
+            "systems": [
+                "36-095",
+                "36-A",
+                "36-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.74
+        },
+        "37-095": {
+            "systems": [
+                "37-095",
+                "37-A",
+                "37-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.25
+        },
+        "38-095": {
+            "systems": [
+                "38-095",
+                "38-A",
+                "38-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.84
+        },
+        "39-095": {
+            "systems": [
+                "39-095",
+                "39-A",
+                "39-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.24
+        },
+        "40-095": {
+            "systems": [
+                "40-095",
+                "40-A",
+                "40-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.68
+        },
+        "41-095": {
+            "systems": [
+                "41-095",
+                "41-A",
+                "41-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.69
+        },
+        "42-095": {
+            "systems": [
+                "42-095",
+                "42-A",
+                "42-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.97
+        },
+        "43-095": {
+            "systems": [
+                "43-095",
+                "43-A",
+                "43-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.6
+        },
+        "44-095": {
+            "systems": [
+                "44-095",
+                "44-A",
+                "44-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.97
+        },
+        "45-095": {
+            "systems": [
+                "45-095",
+                "45-A",
+                "45-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.63
+        },
+        "46-095": {
+            "systems": [
+                "46-095",
+                "46-A",
+                "46-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.21
+        }
+    },
+    "reaction-S66x8-london-100": {
+        "34-100": {
+            "systems": [
+                "34-100",
+                "34-A",
+                "34-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.77
+        },
+        "35-100": {
+            "systems": [
+                "35-100",
+                "35-A",
+                "35-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.61
+        },
+        "36-100": {
+            "systems": [
+                "36-100",
+                "36-A",
+                "36-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.77
+        },
+        "37-100": {
+            "systems": [
+                "37-100",
+                "37-A",
+                "37-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.41
+        },
+        "38-100": {
+            "systems": [
+                "38-100",
+                "38-A",
+                "38-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.0
+        },
+        "39-100": {
+            "systems": [
+                "39-100",
+                "39-A",
+                "39-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.57
+        },
+        "40-100": {
+            "systems": [
+                "40-100",
+                "40-A",
+                "40-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.89
+        },
+        "41-100": {
+            "systems": [
+                "41-100",
+                "41-A",
+                "41-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.84
+        },
+        "42-100": {
+            "systems": [
+                "42-100",
+                "42-A",
+                "42-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.13
+        },
+        "43-100": {
+            "systems": [
+                "43-100",
+                "43-A",
+                "43-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.7
+        },
+        "44-100": {
+            "systems": [
+                "44-100",
+                "44-A",
+                "44-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.99
+        },
+        "45-100": {
+            "systems": [
+                "45-100",
+                "45-A",
+                "45-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.75
+        },
+        "46-100": {
+            "systems": [
+                "46-100",
+                "46-A",
+                "46-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.24
+        }
+    },
+    "reaction-S66x8-london-105": {
+        "34-105": {
+            "systems": [
+                "34-105",
+                "34-A",
+                "34-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.61
+        },
+        "35-105": {
+            "systems": [
+                "35-105",
+                "35-A",
+                "35-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.48
+        },
+        "36-105": {
+            "systems": [
+                "36-105",
+                "36-A",
+                "36-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.68
+        },
+        "37-105": {
+            "systems": [
+                "37-105",
+                "37-A",
+                "37-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.33
+        },
+        "38-105": {
+            "systems": [
+                "38-105",
+                "38-A",
+                "38-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.86
+        },
+        "39-105": {
+            "systems": [
+                "39-105",
+                "39-A",
+                "39-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.47
+        },
+        "40-105": {
+            "systems": [
+                "40-105",
+                "40-A",
+                "40-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.8
+        },
+        "41-105": {
+            "systems": [
+                "41-105",
+                "41-A",
+                "41-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.6
+        },
+        "42-105": {
+            "systems": [
+                "42-105",
+                "42-A",
+                "42-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.92
+        },
+        "43-105": {
+            "systems": [
+                "43-105",
+                "43-A",
+                "43-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.49
+        },
+        "44-105": {
+            "systems": [
+                "44-105",
+                "44-A",
+                "44-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.86
+        },
+        "45-105": {
+            "systems": [
+                "45-105",
+                "45-A",
+                "45-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.68
+        },
+        "46-105": {
+            "systems": [
+                "46-105",
+                "46-A",
+                "46-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.05
+        }
+    },
+    "reaction-S66x8-london-110": {
+        "34-110": {
+            "systems": [
+                "34-110",
+                "34-A",
+                "34-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.3
+        },
+        "35-110": {
+            "systems": [
+                "35-110",
+                "35-A",
+                "35-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.25
+        },
+        "36-110": {
+            "systems": [
+                "36-110",
+                "36-A",
+                "36-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.54
+        },
+        "37-110": {
+            "systems": [
+                "37-110",
+                "37-A",
+                "37-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.14
+        },
+        "38-110": {
+            "systems": [
+                "38-110",
+                "38-A",
+                "38-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.6
+        },
+        "39-110": {
+            "systems": [
+                "39-110",
+                "39-A",
+                "39-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.17
+        },
+        "40-110": {
+            "systems": [
+                "40-110",
+                "40-A",
+                "40-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.57
+        },
+        "41-110": {
+            "systems": [
+                "41-110",
+                "41-A",
+                "41-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.08
+        },
+        "42-110": {
+            "systems": [
+                "42-110",
+                "42-A",
+                "42-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.54
+        },
+        "43-110": {
+            "systems": [
+                "43-110",
+                "43-A",
+                "43-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.15
+        },
+        "44-110": {
+            "systems": [
+                "44-110",
+                "44-A",
+                "44-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.67
+        },
+        "45-110": {
+            "systems": [
+                "45-110",
+                "45-A",
+                "45-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.52
+        },
+        "46-110": {
+            "systems": [
+                "46-110",
+                "46-A",
+                "46-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.73
+        }
+    },
+    "reaction-S66x8-london-125": {
+        "34-125": {
+            "systems": [
+                "34-125",
+                "34-A",
+                "34-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.24
+        },
+        "35-125": {
+            "systems": [
+                "35-125",
+                "35-A",
+                "35-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.5
+        },
+        "36-125": {
+            "systems": [
+                "36-125",
+                "36-A",
+                "36-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.05
+        },
+        "37-125": {
+            "systems": [
+                "37-125",
+                "37-A",
+                "37-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.47
+        },
+        "38-125": {
+            "systems": [
+                "38-125",
+                "38-A",
+                "38-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.71
+        },
+        "39-125": {
+            "systems": [
+                "39-125",
+                "39-A",
+                "39-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.07
+        },
+        "40-125": {
+            "systems": [
+                "40-125",
+                "40-A",
+                "40-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.7
+        },
+        "41-125": {
+            "systems": [
+                "41-125",
+                "41-A",
+                "41-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.44
+        },
+        "42-125": {
+            "systems": [
+                "42-125",
+                "42-A",
+                "42-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.29
+        },
+        "43-125": {
+            "systems": [
+                "43-125",
+                "43-A",
+                "43-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.05
+        },
+        "44-125": {
+            "systems": [
+                "44-125",
+                "44-A",
+                "44-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.09
+        },
+        "45-125": {
+            "systems": [
+                "45-125",
+                "45-A",
+                "45-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.98
+        },
+        "46-125": {
+            "systems": [
+                "46-125",
+                "46-A",
+                "46-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.63
+        }
+    },
+    "reaction-S66x8-london-150": {
+        "34-150": {
+            "systems": [
+                "34-150",
+                "34-A",
+                "34-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.05
+        },
+        "35-150": {
+            "systems": [
+                "35-150",
+                "35-A",
+                "35-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.7
+        },
+        "36-150": {
+            "systems": [
+                "36-150",
+                "36-A",
+                "36-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.5
+        },
+        "37-150": {
+            "systems": [
+                "37-150",
+                "37-A",
+                "37-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.71
+        },
+        "38-150": {
+            "systems": [
+                "38-150",
+                "38-A",
+                "38-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.79
+        },
+        "39-150": {
+            "systems": [
+                "39-150",
+                "39-A",
+                "39-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.9
+        },
+        "40-150": {
+            "systems": [
+                "40-150",
+                "40-A",
+                "40-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.77
+        },
+        "41-150": {
+            "systems": [
+                "41-150",
+                "41-A",
+                "41-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.98
+        },
+        "42-150": {
+            "systems": [
+                "42-150",
+                "42-A",
+                "42-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.02
+        },
+        "43-150": {
+            "systems": [
+                "43-150",
+                "43-A",
+                "43-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.92
+        },
+        "44-150": {
+            "systems": [
+                "44-150",
+                "44-A",
+                "44-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.49
+        },
+        "45-150": {
+            "systems": [
+                "45-150",
+                "45-A",
+                "45-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.42
+        },
+        "46-150": {
+            "systems": [
+                "46-150",
+                "46-A",
+                "46-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.19
+        }
+    },
+    "reaction-S66x8-london-200": {
+        "34-200": {
+            "systems": [
+                "34-200",
+                "34-A",
+                "34-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.27
+        },
+        "35-200": {
+            "systems": [
+                "35-200",
+                "35-A",
+                "35-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.18
+        },
+        "36-200": {
+            "systems": [
+                "36-200",
+                "36-A",
+                "36-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.14
+        },
+        "37-200": {
+            "systems": [
+                "37-200",
+                "37-A",
+                "37-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.19
+        },
+        "38-200": {
+            "systems": [
+                "38-200",
+                "38-A",
+                "38-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.2
+        },
+        "39-200": {
+            "systems": [
+                "39-200",
+                "39-A",
+                "39-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.19
+        },
+        "40-200": {
+            "systems": [
+                "40-200",
+                "40-A",
+                "40-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.19
+        },
+        "41-200": {
+            "systems": [
+                "41-200",
+                "41-A",
+                "41-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.21
+        },
+        "42-200": {
+            "systems": [
+                "42-200",
+                "42-A",
+                "42-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.25
+        },
+        "43-200": {
+            "systems": [
+                "43-200",
+                "43-A",
+                "43-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.23
+        },
+        "44-200": {
+            "systems": [
+                "44-200",
+                "44-A",
+                "44-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.12
+        },
+        "45-200": {
+            "systems": [
+                "45-200",
+                "45-A",
+                "45-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.1
+        },
+        "46-200": {
+            "systems": [
+                "46-200",
+                "46-A",
+                "46-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.29
+        }
+    },
+    "reaction-S66x8-mix-090": {
+        "47-090": {
+            "systems": [
+                "47-090",
+                "47-A",
+                "47-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.64
+        },
+        "48-090": {
+            "systems": [
+                "48-090",
+                "48-A",
+                "48-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.53
+        },
+        "49-090": {
+            "systems": [
+                "49-090",
+                "49-A",
+                "49-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.09
+        },
+        "50-090": {
+            "systems": [
+                "50-090",
+                "50-A",
+                "50-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.87
+        },
+        "51-090": {
+            "systems": [
+                "51-090",
+                "51-A",
+                "51-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.21
+        },
+        "52-090": {
+            "systems": [
+                "52-090",
+                "52-A",
+                "52-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.97
+        },
+        "53-090": {
+            "systems": [
+                "53-090",
+                "53-A",
+                "53-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.79
+        },
+        "54-090": {
+            "systems": [
+                "54-090",
+                "54-A",
+                "54-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.8
+        },
+        "55-090": {
+            "systems": [
+                "55-090",
+                "55-A",
+                "55-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.45
+        },
+        "56-090": {
+            "systems": [
+                "56-090",
+                "56-A",
+                "56-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.51
+        },
+        "57-090": {
+            "systems": [
+                "57-090",
+                "57-A",
+                "57-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.75
+        },
+        "58-090": {
+            "systems": [
+                "58-090",
+                "58-A",
+                "58-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.8
+        },
+        "59-090": {
+            "systems": [
+                "59-090",
+                "59-A",
+                "59-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.52
+        },
+        "60-090": {
+            "systems": [
+                "60-090",
+                "60-A",
+                "60-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.28
+        },
+        "61-090": {
+            "systems": [
+                "61-090",
+                "61-A",
+                "61-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.7
+        },
+        "62-090": {
+            "systems": [
+                "62-090",
+                "62-A",
+                "62-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.15
+        },
+        "63-090": {
+            "systems": [
+                "63-090",
+                "63-A",
+                "63-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.73
+        },
+        "64-090": {
+            "systems": [
+                "64-090",
+                "64-A",
+                "64-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.6
+        },
+        "65-090": {
+            "systems": [
+                "65-090",
+                "65-A",
+                "65-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.54
+        },
+        "66-090": {
+            "systems": [
+                "66-090",
+                "66-A",
+                "66-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.45
+        }
+    },
+    "reaction-S66x8-mix-095": {
+        "47-095": {
+            "systems": [
+                "47-095",
+                "47-A",
+                "47-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.58
+        },
+        "48-095": {
+            "systems": [
+                "48-095",
+                "48-A",
+                "48-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.31
+        },
+        "49-095": {
+            "systems": [
+                "49-095",
+                "49-A",
+                "49-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.04
+        },
+        "50-095": {
+            "systems": [
+                "50-095",
+                "50-A",
+                "50-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.65
+        },
+        "51-095": {
+            "systems": [
+                "51-095",
+                "51-A",
+                "51-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.47
+        },
+        "52-095": {
+            "systems": [
+                "52-095",
+                "52-A",
+                "52-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.58
+        },
+        "53-095": {
+            "systems": [
+                "53-095",
+                "53-A",
+                "53-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.27
+        },
+        "54-095": {
+            "systems": [
+                "54-095",
+                "54-A",
+                "54-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.21
+        },
+        "55-095": {
+            "systems": [
+                "55-095",
+                "55-A",
+                "55-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.05
+        },
+        "56-095": {
+            "systems": [
+                "56-095",
+                "56-A",
+                "56-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.09
+        },
+        "57-095": {
+            "systems": [
+                "57-095",
+                "57-A",
+                "57-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.96
+        },
+        "58-095": {
+            "systems": [
+                "58-095",
+                "58-A",
+                "58-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.82
+        },
+        "59-095": {
+            "systems": [
+                "59-095",
+                "59-A",
+                "59-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.8
+        },
+        "60-095": {
+            "systems": [
+                "60-095",
+                "60-A",
+                "60-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.78
+        },
+        "61-095": {
+            "systems": [
+                "61-095",
+                "61-A",
+                "61-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.9
+        },
+        "62-095": {
+            "systems": [
+                "62-095",
+                "62-A",
+                "62-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.5
+        },
+        "63-095": {
+            "systems": [
+                "63-095",
+                "63-A",
+                "63-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.6
+        },
+        "64-095": {
+            "systems": [
+                "64-095",
+                "64-A",
+                "64-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.95
+        },
+        "65-095": {
+            "systems": [
+                "65-095",
+                "65-A",
+                "65-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.91
+        },
+        "66-095": {
+            "systems": [
+                "66-095",
+                "66-A",
+                "66-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.88
+        }
+    },
+    "reaction-S66x8-mix-100": {
+        "47-100": {
+            "systems": [
+                "47-100",
+                "47-A",
+                "47-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.87
+        },
+        "48-100": {
+            "systems": [
+                "48-100",
+                "48-A",
+                "48-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.53
+        },
+        "49-100": {
+            "systems": [
+                "49-100",
+                "49-A",
+                "49-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.32
+        },
+        "50-100": {
+            "systems": [
+                "50-100",
+                "50-A",
+                "50-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.86
+        },
+        "51-100": {
+            "systems": [
+                "51-100",
+                "51-A",
+                "51-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.52
+        },
+        "52-100": {
+            "systems": [
+                "52-100",
+                "52-A",
+                "52-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.7
+        },
+        "53-100": {
+            "systems": [
+                "53-100",
+                "53-A",
+                "53-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.36
+        },
+        "54-100": {
+            "systems": [
+                "54-100",
+                "54-A",
+                "54-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.27
+        },
+        "55-100": {
+            "systems": [
+                "55-100",
+                "55-A",
+                "55-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.19
+        },
+        "56-100": {
+            "systems": [
+                "56-100",
+                "56-A",
+                "56-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.23
+        },
+        "57-100": {
+            "systems": [
+                "57-100",
+                "57-A",
+                "57-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.28
+        },
+        "58-100": {
+            "systems": [
+                "58-100",
+                "58-A",
+                "58-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.15
+        },
+        "59-100": {
+            "systems": [
+                "59-100",
+                "59-A",
+                "59-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.85
+        },
+        "60-100": {
+            "systems": [
+                "60-100",
+                "60-A",
+                "60-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.86
+        },
+        "61-100": {
+            "systems": [
+                "61-100",
+                "61-A",
+                "61-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.88
+        },
+        "62-100": {
+            "systems": [
+                "62-100",
+                "62-A",
+                "62-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.51
+        },
+        "63-100": {
+            "systems": [
+                "63-100",
+                "63-A",
+                "63-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.8
+        },
+        "64-100": {
+            "systems": [
+                "64-100",
+                "64-A",
+                "64-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.99
+        },
+        "65-100": {
+            "systems": [
+                "65-100",
+                "65-A",
+                "65-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.99
+        },
+        "66-100": {
+            "systems": [
+                "66-100",
+                "66-A",
+                "66-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.97
+        }
+    },
+    "reaction-S66x8-mix-105": {
+        "47-105": {
+            "systems": [
+                "47-105",
+                "47-A",
+                "47-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.82
+        },
+        "48-105": {
+            "systems": [
+                "48-105",
+                "48-A",
+                "48-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.45
+        },
+        "49-105": {
+            "systems": [
+                "49-105",
+                "49-A",
+                "49-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.26
+        },
+        "50-105": {
+            "systems": [
+                "50-105",
+                "50-A",
+                "50-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.79
+        },
+        "51-105": {
+            "systems": [
+                "51-105",
+                "51-A",
+                "51-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.46
+        },
+        "52-105": {
+            "systems": [
+                "52-105",
+                "52-A",
+                "52-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.55
+        },
+        "53-105": {
+            "systems": [
+                "53-105",
+                "53-A",
+                "53-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.23
+        },
+        "54-105": {
+            "systems": [
+                "54-105",
+                "54-A",
+                "54-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.13
+        },
+        "55-105": {
+            "systems": [
+                "55-105",
+                "55-A",
+                "55-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.07
+        },
+        "56-105": {
+            "systems": [
+                "56-105",
+                "56-A",
+                "56-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.12
+        },
+        "57-105": {
+            "systems": [
+                "57-105",
+                "57-A",
+                "57-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -5.14
+        },
+        "58-105": {
+            "systems": [
+                "58-105",
+                "58-A",
+                "58-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.89
+        },
+        "59-105": {
+            "systems": [
+                "59-105",
+                "59-A",
+                "59-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.76
+        },
+        "60-105": {
+            "systems": [
+                "60-105",
+                "60-A",
+                "60-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.69
+        },
+        "61-105": {
+            "systems": [
+                "61-105",
+                "61-A",
+                "61-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.73
+        },
+        "62-105": {
+            "systems": [
+                "62-105",
+                "62-A",
+                "62-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.32
+        },
+        "63-105": {
+            "systems": [
+                "63-105",
+                "63-A",
+                "63-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.65
+        },
+        "64-105": {
+            "systems": [
+                "64-105",
+                "64-A",
+                "64-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.85
+        },
+        "65-105": {
+            "systems": [
+                "65-105",
+                "65-A",
+                "65-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.89
+        },
+        "66-105": {
+            "systems": [
+                "66-105",
+                "66-A",
+                "66-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.85
+        }
+    },
+    "reaction-S66x8-mix-110": {
+        "47-110": {
+            "systems": [
+                "47-110",
+                "47-A",
+                "47-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.6
+        },
+        "48-110": {
+            "systems": [
+                "48-110",
+                "48-A",
+                "48-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.22
+        },
+        "49-110": {
+            "systems": [
+                "49-110",
+                "49-A",
+                "49-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.02
+        },
+        "50-110": {
+            "systems": [
+                "50-110",
+                "50-A",
+                "50-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.58
+        },
+        "51-110": {
+            "systems": [
+                "51-110",
+                "51-A",
+                "51-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.35
+        },
+        "52-110": {
+            "systems": [
+                "52-110",
+                "52-A",
+                "52-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.25
+        },
+        "53-110": {
+            "systems": [
+                "53-110",
+                "53-A",
+                "53-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.97
+        },
+        "54-110": {
+            "systems": [
+                "54-110",
+                "54-A",
+                "54-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.9
+        },
+        "55-110": {
+            "systems": [
+                "55-110",
+                "55-A",
+                "55-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.8
+        },
+        "56-110": {
+            "systems": [
+                "56-110",
+                "56-A",
+                "56-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.86
+        },
+        "57-110": {
+            "systems": [
+                "57-110",
+                "57-A",
+                "57-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.78
+        },
+        "58-110": {
+            "systems": [
+                "58-110",
+                "58-A",
+                "58-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.45
+        },
+        "59-110": {
+            "systems": [
+                "59-110",
+                "59-A",
+                "59-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.6
+        },
+        "60-110": {
+            "systems": [
+                "60-110",
+                "60-A",
+                "60-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -4.39
+        },
+        "61-110": {
+            "systems": [
+                "61-110",
+                "61-A",
+                "61-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.52
+        },
+        "62-110": {
+            "systems": [
+                "62-110",
+                "62-A",
+                "62-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.04
+        },
+        "63-110": {
+            "systems": [
+                "63-110",
+                "63-A",
+                "63-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.34
+        },
+        "64-110": {
+            "systems": [
+                "64-110",
+                "64-A",
+                "64-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.63
+        },
+        "65-110": {
+            "systems": [
+                "65-110",
+                "65-A",
+                "65-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.68
+        },
+        "66-110": {
+            "systems": [
+                "66-110",
+                "66-A",
+                "66-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.62
+        }
+    },
+    "reaction-S66x8-mix-125": {
+        "47-125": {
+            "systems": [
+                "47-125",
+                "47-A",
+                "47-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.77
+        },
+        "48-125": {
+            "systems": [
+                "48-125",
+                "48-A",
+                "48-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.29
+        },
+        "49-125": {
+            "systems": [
+                "49-125",
+                "49-A",
+                "49-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.1
+        },
+        "50-125": {
+            "systems": [
+                "50-125",
+                "50-A",
+                "50-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.79
+        },
+        "51-125": {
+            "systems": [
+                "51-125",
+                "51-A",
+                "51-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.93
+        },
+        "52-125": {
+            "systems": [
+                "52-125",
+                "52-A",
+                "52-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.13
+        },
+        "53-125": {
+            "systems": [
+                "53-125",
+                "53-A",
+                "53-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.97
+        },
+        "54-125": {
+            "systems": [
+                "54-125",
+                "54-A",
+                "54-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.1
+        },
+        "55-125": {
+            "systems": [
+                "55-125",
+                "55-A",
+                "55-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.8
+        },
+        "56-125": {
+            "systems": [
+                "56-125",
+                "56-A",
+                "56-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.95
+        },
+        "57-125": {
+            "systems": [
+                "57-125",
+                "57-A",
+                "57-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.41
+        },
+        "58-125": {
+            "systems": [
+                "58-125",
+                "58-A",
+                "58-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.18
+        },
+        "59-125": {
+            "systems": [
+                "59-125",
+                "59-A",
+                "59-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.98
+        },
+        "60-125": {
+            "systems": [
+                "60-125",
+                "60-A",
+                "60-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -3.26
+        },
+        "61-125": {
+            "systems": [
+                "61-125",
+                "61-A",
+                "61-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.79
+        },
+        "62-125": {
+            "systems": [
+                "62-125",
+                "62-A",
+                "62-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.12
+        },
+        "63-125": {
+            "systems": [
+                "63-125",
+                "63-A",
+                "63-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.24
+        },
+        "64-125": {
+            "systems": [
+                "64-125",
+                "64-A",
+                "64-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.86
+        },
+        "65-125": {
+            "systems": [
+                "65-125",
+                "65-A",
+                "65-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.84
+        },
+        "66-125": {
+            "systems": [
+                "66-125",
+                "66-A",
+                "66-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -2.71
+        }
+    },
+    "reaction-S66x8-mix-150": {
+        "47-150": {
+            "systems": [
+                "47-150",
+                "47-A",
+                "47-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.83
+        },
+        "48-150": {
+            "systems": [
+                "48-150",
+                "48-A",
+                "48-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.18
+        },
+        "49-150": {
+            "systems": [
+                "49-150",
+                "49-A",
+                "49-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.05
+        },
+        "50-150": {
+            "systems": [
+                "50-150",
+                "50-A",
+                "50-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.89
+        },
+        "51-150": {
+            "systems": [
+                "51-150",
+                "51-A",
+                "51-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.46
+        },
+        "52-150": {
+            "systems": [
+                "52-150",
+                "52-A",
+                "52-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.7
+        },
+        "53-150": {
+            "systems": [
+                "53-150",
+                "53-A",
+                "53-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.65
+        },
+        "54-150": {
+            "systems": [
+                "54-150",
+                "54-A",
+                "54-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.16
+        },
+        "55-150": {
+            "systems": [
+                "55-150",
+                "55-A",
+                "55-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.53
+        },
+        "56-150": {
+            "systems": [
+                "56-150",
+                "56-A",
+                "56-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.94
+        },
+        "57-150": {
+            "systems": [
+                "57-150",
+                "57-A",
+                "57-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.8
+        },
+        "58-150": {
+            "systems": [
+                "58-150",
+                "58-A",
+                "58-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.01
+        },
+        "59-150": {
+            "systems": [
+                "59-150",
+                "59-A",
+                "59-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.17
+        },
+        "60-150": {
+            "systems": [
+                "60-150",
+                "60-A",
+                "60-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.77
+        },
+        "61-150": {
+            "systems": [
+                "61-150",
+                "61-A",
+                "61-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.78
+        },
+        "62-150": {
+            "systems": [
+                "62-150",
+                "62-A",
+                "62-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.04
+        },
+        "63-150": {
+            "systems": [
+                "63-150",
+                "63-A",
+                "63-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.02
+        },
+        "64-150": {
+            "systems": [
+                "64-150",
+                "64-A",
+                "64-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.88
+        },
+        "65-150": {
+            "systems": [
+                "65-150",
+                "65-A",
+                "65-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.67
+        },
+        "66-150": {
+            "systems": [
+                "66-150",
+                "66-A",
+                "66-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -1.5
+        }
+    },
+    "reaction-S66x8-mix-200": {
+        "47-200": {
+            "systems": [
+                "47-200",
+                "47-A",
+                "47-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.22
+        },
+        "48-200": {
+            "systems": [
+                "48-200",
+                "48-A",
+                "48-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.37
+        },
+        "49-200": {
+            "systems": [
+                "49-200",
+                "49-A",
+                "49-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.33
+        },
+        "50-200": {
+            "systems": [
+                "50-200",
+                "50-A",
+                "50-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.27
+        },
+        "51-200": {
+            "systems": [
+                "51-200",
+                "51-A",
+                "51-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.14
+        },
+        "52-200": {
+            "systems": [
+                "52-200",
+                "52-A",
+                "52-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.55
+        },
+        "53-200": {
+            "systems": [
+                "53-200",
+                "53-A",
+                "53-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.48
+        },
+        "54-200": {
+            "systems": [
+                "54-200",
+                "54-A",
+                "54-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.42
+        },
+        "55-200": {
+            "systems": [
+                "55-200",
+                "55-A",
+                "55-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.52
+        },
+        "56-200": {
+            "systems": [
+                "56-200",
+                "56-A",
+                "56-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.26
+        },
+        "57-200": {
+            "systems": [
+                "57-200",
+                "57-A",
+                "57-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.62
+        },
+        "58-200": {
+            "systems": [
+                "58-200",
+                "58-A",
+                "58-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.28
+        },
+        "59-200": {
+            "systems": [
+                "59-200",
+                "59-A",
+                "59-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.46
+        },
+        "60-200": {
+            "systems": [
+                "60-200",
+                "60-A",
+                "60-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.56
+        },
+        "61-200": {
+            "systems": [
+                "61-200",
+                "61-A",
+                "61-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.17
+        },
+        "62-200": {
+            "systems": [
+                "62-200",
+                "62-A",
+                "62-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.27
+        },
+        "63-200": {
+            "systems": [
+                "63-200",
+                "63-A",
+                "63-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.26
+        },
+        "64-200": {
+            "systems": [
+                "64-200",
+                "64-A",
+                "64-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.19
+        },
+        "65-200": {
+            "systems": [
+                "65-200",
+                "65-A",
+                "65-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.62
+        },
+        "66-200": {
+            "systems": [
+                "66-200",
+                "66-A",
+                "66-B"
+            ],
+            "stoichiometry": [
+                1,
+                -1,
+                -1
+            ],
+            "reference": -0.49
+        }
+    },
     "molecule_NCIBLIND10": [
         "NCIBLIND10-01-1",
         "NCIBLIND10-01-2",
