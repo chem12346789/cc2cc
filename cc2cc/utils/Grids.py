@@ -295,22 +295,17 @@ class GridCube:
         ao_deriv=1,
     ):
         """Generate RKS cube densities and XC inputs on the CPU."""
-        t0 = (logger.process_clock(), logger.perf_counter())
-        t1 = (logger.process_clock(), logger.perf_counter())
         input_mat = np.zeros((self.input_level, len(self.coords)))
         vxc_mat = np.zeros((self.input_level, 4, len(self.coords)))
 
         ao_value = ni.eval_ao(
             self.mol, self.coords, deriv=ao_deriv, non0tab=self.non0tab
         )
-        t1 = logger.timer(self.mol, "           ao_value", *t1)
 
         rho = rho_evaluator(
             ni, self.mol, ao_value[:4], dms, non0tab=self.non0tab, xctype="GGA"
         )
         rho0 = rho[0]
-        t1 = logger.timer(self.mol, "           eval_rho", *t1)
-        t0 = logger.timer(self.mol, "       gen input", *t0)
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho0, xctype="LDA")[:2]
         input_mat[0] = exc_lda * rho0
@@ -350,7 +345,6 @@ class GridCube:
             (self.input_level, 4, self.number_of_cube, self.cube_size)
         )
 
-        t0 = logger.timer(self.mol, "       gen exc and vxc", *t0)
         return input_mat, vxc_mat, ao_value
 
     def gen_cube_rho_uks(
@@ -360,7 +354,6 @@ class GridCube:
         ao_deriv=1,
     ):
         """Generate UKS cube densities and XC inputs on the CPU."""
-        t0 = (logger.process_clock(), logger.perf_counter())
         input_mat = np.zeros((self.input_level, len(self.coords)))
         vxc_mat = np.zeros((self.input_level, 2, 4, len(self.coords)))
 
@@ -378,7 +371,6 @@ class GridCube:
         rho = (rho_a, rho_b)
         rho_lda = (rho_a[0], rho_b[0])
         rho0 = rho_a[0] + rho_b[0]
-        t0 = logger.timer(self.mol, "      gen input", *t0)
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
         input_mat[0] = exc_lda * rho0
@@ -418,7 +410,6 @@ class GridCube:
             (self.input_level, 2, 4, self.number_of_cube, self.cube_size)
         )
 
-        t0 = logger.timer(self.mol, "      gen exc and vxc", *t0)
         return input_mat, vxc_mat, ao_value
 
 

@@ -5,3 +5,4 @@ pyscf-dispersion
 wandb
 numba
 torchinfo
+pandas

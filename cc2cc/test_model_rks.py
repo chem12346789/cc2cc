@@ -26,12 +26,14 @@ def test_model_rks(
     # 2.0 Prepare
     time_ai_start = timeit.default_timer()
     if torch.cuda.is_available():
+        print("Use GPU for DFT calculation.")
         mdft = pyscf.dft.RKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
         utils.get_veff_modified_rks_gpu(mdft, modeldict)
         mol.stdout = mdft.stdout
         mdft.use_gpu_memory = False
     else:
+        print("Use CPU for DFT calculation.")
         Grid = utils.GridCPU
         mdft = pyscf.dft.RKS(mol).density_fit()
         utils.get_veff_modified_rks(mdft, modeldict)
@@ -56,8 +58,7 @@ def test_model_rks(
         test_data = utils.TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
         mdft.kernel(dm0=test_data.dm1_dft)
     else:
-        # mdft.max_cycle = args.max_cycle
-        mdft.max_cycle = 200
+        mdft.max_cycle = args.max_cycle
         if_retry = True
         mdft.kernel()
 
@@ -115,28 +116,31 @@ def test_model_rks(
             f"energy (ai vs dft) {(e_scf - data['e_dft']) * utils.AU2KCALMOL} Kcal/mol"
         )
         print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * utils.AU2KCALMOL} Kcal/mol")
+
+        dm1_dft = data["dm1_dft"]
+        dm1_cc = data["dm1_cc"]
+        dm1_ai = dm1_scf
         print(
-            f"electronic density (ai vs dft) {utils.diff_rho(mol, data['dm1_dft'], mdft.make_rdm1(), mdft.grids)}"
+            f"electronic density (ai vs dft) {utils.diff_rho(mol, dm1_dft, dm1_ai, mdft.grids)}"
         )
         print(
-            f"electronic density (ai vs cc) {utils.diff_rho(mol, data['dm1_cc'], mdft.make_rdm1(), mdft.grids)}"
+            f"electronic density (ai vs cc) {utils.diff_rho(mol, dm1_cc, dm1_ai, mdft.grids)}"
         )
         print(
-            f"electronic density (dft vs cc) {utils.diff_rho(mol, data['dm1_cc'], data['dm1_dft'], mdft.grids)}"
+            f"electronic density (dft vs cc) {utils.diff_rho(mol, dm1_cc, dm1_dft, mdft.grids)}"
         )
-        dipole_dft = pyscf.scf.hf.dip_moment(mol=mol, dm=data["dm1_dft"], unit="A.U.")
-        dipole_cc = pyscf.scf.hf.dip_moment(mol=mol, dm=data["dm1_cc"], unit="A.U.")
+        dipole_dft = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
+        dipole_cc = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
+
         print(f"dipole (ai vs dft) {np.linalg.norm(scf_dipole - dipole_dft)}")
         print(f"dipole (ai vs cc) {np.linalg.norm(scf_dipole - dipole_cc)}")
         print(f"dipole (dft vs cc) {np.linalg.norm(dipole_dft - dipole_cc)}")
+        grad_dft = data["grad_dft"]
+        grad_cc = data["grad_cc"]
         if args.if_grad:
-            print(
-                f"gradient (ai vs dft) {np.linalg.norm(grad_mdft - data['grad_dft'])}"
-            )
-            print(f"gradient (ai vs cc) {np.linalg.norm(grad_mdft - data['grad_cc'])}")
-            print(
-                f"gradient (dft vs cc) {np.linalg.norm(data['grad_dft'] - data['grad_cc'])}"
-            )
+            print(f"gradient (ai vs dft) {np.linalg.norm(grad_mdft - grad_dft)}")
+            print(f"gradient (ai vs cc) {np.linalg.norm(grad_mdft - grad_cc)}")
+            print(f"gradient (dft vs cc) {np.linalg.norm(grad_dft - grad_cc)}")
 
     data_record.add_data(dict_)
     data_record.save_csv()
