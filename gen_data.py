@@ -9,24 +9,12 @@ import numpy as np
 import pyscf
 import pyscf.md
 
-from cc2cc.utils import (
-    gen_mole,
-    print_computer_info,
-    add_args,
-)
+from cc2cc.utils import gen_mole, print_computer_info, add_args
 from cc2cc.utils.rotate import rotate
-from cc2cc.utils import Grid, DATA_PATH, AU2KCALMOL
+from cc2cc.utils import Grid, DATA_PATH
 from cc2cc.utils.parser import gen_name_args
 from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc
-
-from cc2cc.utils.get_zmp import get_zmp_rks, get_zmp_uks
-from cc2cc.utils.zmp import RZMP, UZMP
-
-from cc2cc.utils.get_dft_energy_rks import get_dft_energy as get_dft_energy_rks
-from cc2cc.utils.get_dft_energy_uks import get_dft_energy as get_dft_energy_uks
-from cc2cc.utils.get_dft_grad_rks import get_dft_grad as get_dft_grad_rks
-from cc2cc.utils.get_dft_grad_uks import get_dft_grad as get_dft_grad_uks
 
 train_str_list = [
     "molecule1-W4_11",

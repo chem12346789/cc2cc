@@ -7,10 +7,12 @@ from cc2cc.utils.zmp import RZMP, UZMP
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
 
-LEVEL_SHIFT = 2.5
+LEVEL_SHIFT = 3
+MAX_CYCLE = 20000
+
 
 def get_zmp_rks(
-    mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0, max_cycle=20000
+    mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0, max_cycle=MAX_CYCLE
 ):
     if dm_tar is None:
         return None, None
@@ -39,6 +41,10 @@ def get_zmp_rks(
     nuc_tar_grids = rho_tar * nuc_grids
     nuc_dft_grids = rho_dft * nuc_grids
 
+    diff_rho_best = None
+    dm_zmp_old = None
+    converged = True
+
     for l in np.linspace(start_l, max_l, max_l - start_l + 1):
         mzmp.level_shift = LEVEL_SHIFT**l
         print(f"Running ZMP with lambda_ZMP = {2**l}")
@@ -59,6 +65,15 @@ def get_zmp_rks(
             f"dipole diff = {np.linalg.norm(dft_dipole - tar_dipole):.3e} ",
             flush=True,
         )
+        if (
+            diff_rho_best is None
+            or diff_rho(mol, dm_zmp, dm_tar, grids) < diff_rho_best
+        ):
+            diff_rho_best = diff_rho(mol, dm_zmp, dm_tar, grids)
+        elif diff_rho(mol, dm_zmp, dm_tar, grids) > diff_rho_best * 10:
+            print("Warning: rho difference increased significantly, may be diverged.")
+            converged = False
+            break
 
         # hatree part from dm1_zmp
         rho_zmp = pyscf.dft.numint.eval_rho(mol, ao, dm_zmp, xctype="LDA")
@@ -71,13 +86,18 @@ def get_zmp_rks(
         print(
             f"Difference in nuclear grids between CCSD: DFT {np.sum(np.abs(nuc_tar_grids - nuc_dft_grids) * grids.weights) * AU2KCALMOL}, ZMP {np.sum(np.abs(nuc_tar_grids - nuc_zmp_grids) * grids.weights) * AU2KCALMOL}"
         )
+        dm_zmp_old = dm_zmp.copy()
 
-    dm_zmp = mzmp.make_rdm1()
-    return mzmp, dm_zmp
+    if converged:
+        dm_zmp = mzmp.make_rdm1()
+        return mzmp, dm_zmp
+
+    print("Warning: rho difference increased significantly, may be diverged.")
+    return mzmp, dm_zmp_old
 
 
 def get_zmp_uks(
-    mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0, max_cycle=20000
+    mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0, max_cycle=MAX_CYCLE
 ):
     if dm_tar is None:
         return None, None
@@ -120,6 +140,10 @@ def get_zmp_uks(
     nuc_tar_grids = (rho_tar[0] + rho_tar[1]) * nuc_grids
     nuc_dft_grids = (rho_dft[0] + rho_dft[1]) * nuc_grids
 
+    diff_rho_best = None
+    dm_zmp_old = None
+    converged = True
+
     for l in np.linspace(start_l, max_l, max_l - start_l + 1):
         mzmp.level_shift = LEVEL_SHIFT**l
         print(f"Running ZMP with lambda_ZMP = {2**l}")
@@ -141,6 +165,16 @@ def get_zmp_uks(
             flush=True,
         )
 
+        if (
+            diff_rho_best is None
+            or diff_rho(mol, dm_zmp, dm_tar, grids) < diff_rho_best
+        ):
+            diff_rho_best = diff_rho(mol, dm_zmp, dm_tar, grids)
+        elif diff_rho(mol, dm_zmp, dm_tar, grids) > diff_rho_best * 10:
+            print("Warning: rho difference increased significantly, may be diverged.")
+            converged = False
+            break
+
         # hatree part from dm1_zmp
         rho_zmp = [
             pyscf.dft.numint.eval_rho(mol, ao, dm_zmp[0], xctype="LDA"),
@@ -159,6 +193,10 @@ def get_zmp_uks(
         print(
             f"Difference in nuclear grids between CCSD: DFT {np.sum(np.abs(nuc_tar_grids - nuc_dft_grids) * grids.weights) * AU2KCALMOL}, ZMP {np.sum(np.abs(nuc_tar_grids - nuc_zmp_grids) * grids.weights) * AU2KCALMOL}"
         )
+        dm_zmp_old = [dm.copy() for dm in dm_zmp]
 
-    dm_zmp = mzmp.make_rdm1()
-    return mzmp, dm_zmp
+    if converged:
+        dm_zmp = mzmp.make_rdm1()
+        return mzmp, dm_zmp
+    print("Warning: rho difference increased significantly, may be diverged.")
+    return mzmp, dm_zmp_old
