@@ -26,12 +26,14 @@ def test_model_rks(
     # 2.0 Prepare
     time_ai_start = timeit.default_timer()
     if torch.cuda.is_available():
+        print("Use GPU for DFT calculation.")
         mdft = pyscf.dft.RKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
         utils.get_veff_modified_rks_gpu(mdft, modeldict)
         mol.stdout = mdft.stdout
         mdft.use_gpu_memory = False
     else:
+        print("Use CPU for DFT calculation.")
         Grid = utils.GridCPU
         mdft = pyscf.dft.RKS(mol).density_fit()
         utils.get_veff_modified_rks(mdft, modeldict)

@@ -159,6 +159,7 @@ class Collect_info:
             data_set_json = json.load(f)
 
         reference_energy = []
+        name_reaction_list = []
         molecules_to_reactions = []
         reactions_to_subset = []
         total_counts_subset = []
@@ -181,9 +182,11 @@ class Collect_info:
                 stoichiometry_list = i_reaction["stoichiometry"]
                 molecule_stoichiometry = np.zeros(len(data_name_list))
                 finished = True
+                name_reaction = ""
 
                 for i in range(len(systems_list)):
                     mole_name = f"{i_subset_name}-{systems_list[i]}"
+                    name_reaction += f"{mole_name}({stoichiometry_list[i]}) "
                     stoichiometry = int(stoichiometry_list[i])
 
                     if mole_name in data_set_json:
@@ -202,6 +205,7 @@ class Collect_info:
 
                 if finished:
                     reference_energy.append(i_reaction["reference"])
+                    name_reaction_list.append(name_reaction.strip())
                     molecules_to_reactions.append(molecule_stoichiometry)
                     subset_index = np.zeros(len(self.name_subset_list))
                     subset_index[i_subset] = 1
@@ -331,6 +335,21 @@ class Collect_info:
                 "ji,i->j",
                 molecules_to_reactions,
                 data_dft_ene,
+            )
+            argmax_reaction_energy_dft = np.argsort(
+                np.abs(reference_energy - reaction_energy_dft)
+            )[:100]
+            name_reaction_list = [
+                name_reaction_list[i] for i in argmax_reaction_energy_dft
+            ]
+            max_reaction_energy_dft = np.abs(reference_energy - reaction_energy_dft)[
+                argmax_reaction_energy_dft
+            ]
+            max_reaction_energy_reactions = np.array(
+                [max_reaction_energy_dft, name_reaction_list], dtype=object
+            ).transpose()
+            print(
+                f"max 100 reaction_energy_dft with reactions: {max_reaction_energy_reactions}"
             )
             mean_reaction_energy = np.einsum(
                 "i,ij,j->j",
