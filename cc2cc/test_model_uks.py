@@ -55,8 +55,8 @@ def test_model_uks(
         test_data = utils.TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
         mdft.kernel(dm0=test_data.dm1_dft)
     else:
-        # mdft.max_cycle = args.max_cycle
-        mdft.max_cycle = 200
+        mdft.max_cycle = args.max_cycle
+        mdft.diis_space = 8
         if_retry = True
         mdft.kernel()
 
