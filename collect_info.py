@@ -302,6 +302,8 @@ class Collect_info:
         for df_name in self.data_frame_name_list:
             df = self.data_frame_dict[df_name]
             if df_name.startswith("subset"):
+                print(df)
+                print(status_subset)
                 df.loc[self.name_subset_list, "Processed"] = status_subset
             else:
                 df.loc[self.name_set_list, "Processed"] = status_set
@@ -335,21 +337,6 @@ class Collect_info:
                 "ji,i->j",
                 molecules_to_reactions,
                 data_dft_ene,
-            )
-            argmax_reaction_energy_dft = np.argsort(
-                np.abs(reference_energy - reaction_energy_dft)
-            )[:100]
-            name_reaction_list = [
-                name_reaction_list[i] for i in argmax_reaction_energy_dft
-            ]
-            max_reaction_energy_dft = np.abs(reference_energy - reaction_energy_dft)[
-                argmax_reaction_energy_dft
-            ]
-            max_reaction_energy_reactions = np.array(
-                [max_reaction_energy_dft, name_reaction_list], dtype=object
-            ).transpose()
-            print(
-                f"max 100 reaction_energy_dft with reactions: {max_reaction_energy_reactions}"
             )
             mean_reaction_energy = np.einsum(
                 "i,ij,j->j",
@@ -431,7 +418,7 @@ class Collect_info:
         for df in self.data_frame_dict.values():
             # rename columns
             df.rename(columns=rename_dict, inplace=True)
-            if "AI(M BJ)" in self.data.columns:
+            if not self.is_sota and "AI(M BJ)" in self.data.columns:
                 df.pop("AI(M BJ)")
 
         with pd.option_context(
