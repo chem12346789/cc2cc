@@ -42,9 +42,9 @@ class Collect_info:
             self.data_frame_name_list = ["subset_mapd_df", "subset_mpd_df"]
         self.data_frame_dict = {}
 
+        dir_str = os.environ.get("VALIDATE_DIR", "validate_hkqai")
         self.data_path = (
-            Path("validate_hkqai")
-            / f"ccdft_{self.basis}_{self.model_load}_{self.data_set}.csv"
+            Path(dir_str) / f"ccdft_{self.basis}_{self.model_load}_{self.data_set}.csv"
         )
         self.if_done = False
         if self.is_sota:

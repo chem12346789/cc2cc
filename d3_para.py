@@ -1,7 +1,5 @@
 import argparse
 import json
-import os
-import random
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
@@ -13,6 +11,7 @@ import torch.nn as nn
 from ase import units
 from ase.atoms import Atoms
 from pyscf.data.elements import _std_symbol
+from scipy.optimize import minimize
 from torch_dftd.torch_dftd3_calculator import TorchDFTD3Calculator
 from torch_dftd.dftd3_xc_params import get_dftd3_default_params
 
@@ -20,6 +19,7 @@ from cc2cc.utils import AU2KCALMOL
 
 DTYPE = torch.float64
 DEFAULT_DEVICE = "cuda"
+PARAM_NAMES = ("s6", "rs6", "s18", "rs18", "alp")
 SUBSET_JSON_PATH = Path("jupyter-notebook/subset.json")
 DATASET_JSON_DIR = Path("cc2cc/utils")
 VALIDATE_DIR = Path("validate_hkqai_done")
@@ -34,6 +34,7 @@ class ReactionTensors:
     one_over_number_of_reactions: torch.Tensor
     average_relative_absolute_energies: torch.Tensor
     one_over_mae: torch.Tensor
+    reaction_weight: Optional[torch.Tensor] = None
 
 
 class D3Model(nn.Module):
@@ -57,11 +58,11 @@ class D3Model(nn.Module):
 
         trainable_params = {}
         const_params = {}
-        for param_name in ["s6", "rs6", "s18", "rs18", "alp"]:
+        for param_name in PARAM_NAMES:
             if initial_params.get(param_name, None) is None:
                 trainable_params[param_name] = get_dftd3_default_params(
                     damping, xc="b3-lyp", old=False
-                )[param_name] * (2 * np.random.rand())
+                )[param_name]
             else:
                 if initial_params[param_name] < -999:
                     const_params[param_name] = get_dftd3_default_params(
@@ -86,8 +87,7 @@ class D3Model(nn.Module):
             self.params[param_name] = self.trainable_params[param_name]
         for param_name in const_params.keys():
             self.params[param_name] = const_params[param_name]
-        # sort it back to ["s6", "rs6", "s18", "rs18", "alp"]
-        self.params = {k: self.params[k] for k in ["s6", "rs6", "s18", "rs18", "alp"]}
+        self.params = {k: self.params[k] for k in PARAM_NAMES}
 
         self.calc.dftd_module.params = self.params
 
@@ -202,10 +202,15 @@ def build_reaction_tensors(
     dataset_json: Dict,
     data_name_list: np.ndarray,
     device: str,
+    name_subset_weight_dict: Optional[Dict[str, float]] = None,
 ) -> ReactionTensors:
     reference_energy = []
     molecules_to_reactions = []
     reactions_to_subset = []
+    if name_subset_weight_dict is not None:
+        reaction_weight = []
+    else:
+        reaction_weight = None
 
     for i_subset, subset_name in enumerate(batch_subset):
         reaction_dict = dataset_json[f"reaction-{subset_name}"]
@@ -238,6 +243,10 @@ def build_reaction_tensors(
                 subset_index = torch.zeros(len(batch_subset))
                 subset_index[i_subset] = 1
                 reactions_to_subset.append(subset_index)
+                if name_subset_weight_dict is not None:
+                    reaction_weight.append(
+                        name_subset_weight_dict.get(subset_name, 1.0)
+                    )
 
     reference_energy_t = torch.tensor(
         np.array(reference_energy), device=device, dtype=DTYPE
@@ -274,6 +283,11 @@ def build_reaction_tensors(
         one_over_number_of_reactions=one_over_number_of_reactions,
         average_relative_absolute_energies=average_relative_absolute_energies,
         one_over_mae=one_over_mae,
+        reaction_weight=(
+            torch.tensor(reaction_weight, device=device, dtype=DTYPE)
+            if reaction_weight
+            else None
+        ),
     )
 
 
@@ -289,6 +303,8 @@ def train_loss(
         reaction_tensors.molecules_to_reactions,
         e_disp_kcalmol + data_dft_ene_kcalmol,
     )
+    if reaction_tensors.reaction_weight is not None:
+        reaction_energy = reaction_energy * reaction_tensors.reaction_weight
     return torch.mean(torch.abs(reaction_tensors.reference_energy - reaction_energy))
 
 
@@ -304,21 +320,9 @@ def reaction_residuals(
         reaction_tensors.molecules_to_reactions,
         e_disp_kcalmol + data_dft_ene_kcalmol,
     )
+    if reaction_tensors.reaction_weight is not None:
+        reaction_energy = reaction_energy * reaction_tensors.reaction_weight
     return reaction_tensors.reference_energy - reaction_energy
-
-
-def _trainable_param_names(model: D3Model) -> List[str]:
-    return [
-        k
-        for k, v in model.params.items()
-        if isinstance(v, torch.Tensor) and v.requires_grad
-    ]
-
-
-def _get_param_vector(model: D3Model, names: List[str]) -> torch.Tensor:
-    if len(names) == 0:
-        return torch.empty(0, dtype=DTYPE)
-    return torch.stack([model.params[n].detach().clone() for n in names])
 
 
 def _set_param_vector(model: D3Model, names: List[str], values: torch.Tensor) -> None:
@@ -327,224 +331,62 @@ def _set_param_vector(model: D3Model, names: List[str], values: torch.Tensor) ->
             model.params[n].copy_(values[i])
 
 
-def train_with_lm(
+def _update_best(
+    best: Dict[str, float], epoch: int, loss_value: float, params: Dict[str, float]
+) -> None:
+    if ("loss" not in best) or (loss_value < best["loss"]):
+        best.update({"epoch": epoch, "loss": loss_value, "parameters": params})
+
+
+def _train_with_scipy_minimize(
     model: D3Model,
     input_batch: Dict[str, torch.Tensor],
     reaction_tensors: ReactionTensors,
     data_dft_ene_kcalmol: torch.Tensor,
-    epochs: int,
     print_step: int,
+    method: str,
+    optimizer_label: str,
+    options: Dict,
 ) -> Dict[str, float]:
-    names = _trainable_param_names(model)
-    if len(names) == 0:
-        loss_value = float(
-            train_loss(
-                model, input_batch, reaction_tensors, data_dft_ene_kcalmol
-            ).item()
-        )
-        return {"epoch": 0, "loss": loss_value, "parameters": model.current_params()}
+    names = list(model.trainable_params.keys())
 
-    lam = 1e-4
-    lam_min = 1e-12
-    lam_max = 1e8
-    lm_eps = 1e-5
-    max_trials = 8
-    max_step_norm = 1.0
     best = {}
+    state = {"nfev": 0}
+    x0_t = torch.stack([model.params[n].detach().clone() for n in names])
+    x0 = x0_t.detach().cpu().numpy()
 
     print(
-        f"Epoch\t: Loss, Para={list(model.params.keys())}, Optimizer=LM",
+        f"Epoch\t: Loss, Para={list(model.params.keys())}, Optimizer={optimizer_label}",
         flush=True,
     )
 
-    for epoch in range(epochs + 1):
-        theta = _get_param_vector(model, names)
-        r = reaction_residuals(
-            model, input_batch, reaction_tensors, data_dft_ene_kcalmol
-        ).detach()
-        obj = 0.5 * torch.sum(r * r)
-
-        m = r.shape[0]
-        n = theta.shape[0]
-        jac = torch.empty((m, n), device=theta.device, dtype=theta.dtype)
-
-        for i in range(n):
-            step = lm_eps * (1.0 + torch.abs(theta[i]))
-            theta_plus = theta.clone()
-            theta_minus = theta.clone()
-            theta_plus[i] = theta_plus[i] + step
-            theta_minus[i] = theta_minus[i] - step
-            _set_param_vector(model, names, theta_plus)
-            r_plus = reaction_residuals(
-                model, input_batch, reaction_tensors, data_dft_ene_kcalmol
-            ).detach()
-            _set_param_vector(model, names, theta_minus)
-            r_minus = reaction_residuals(
-                model, input_batch, reaction_tensors, data_dft_ene_kcalmol
-            ).detach()
-            jac[:, i] = (r_plus - r_minus) / (2.0 * step)
-
-        _set_param_vector(model, names, theta)
-        a = jac.T @ jac
-        g = jac.T @ r
-        d = torch.clamp(torch.diag(a), min=1e-12)
-
-        accepted = False
-        rho = float("nan")
-        nu = 2.0
-
-        for _ in range(max_trials):
-            h = a + lam * torch.diag(d)
-            try:
-                delta = torch.linalg.solve(h, g)
-            except RuntimeError:
-                lam = min(lam * nu, lam_max)
-                nu *= 2.0
-                continue
-
-            delta_norm = torch.linalg.norm(delta)
-            if torch.isfinite(delta_norm) and delta_norm > max_step_norm:
-                delta = delta * (max_step_norm / (delta_norm + 1e-12))
-
-            theta_new = theta - delta
-            _set_param_vector(model, names, theta_new)
-            r_new = reaction_residuals(
-                model, input_batch, reaction_tensors, data_dft_ene_kcalmol
-            ).detach()
-            obj_new = 0.5 * torch.sum(r_new * r_new)
-
-            pred = 0.5 * torch.dot(delta, (lam * d * delta + g))
-            if (not torch.isfinite(obj_new)) or (not torch.isfinite(pred)) or pred <= 0:
-                _set_param_vector(model, names, theta)
-                lam = min(lam * nu, lam_max)
-                nu *= 2.0
-                continue
-
-            rho = float((obj - obj_new) / pred)
-            if rho > 0:
-                accepted = True
-                _set_param_vector(model, names, theta_new)
-                lam_factor = max(1.0 / 3.0, 1.0 - (2.0 * rho - 1.0) ** 3)
-                lam = max(lam * lam_factor, lam_min)
-                break
-
-            _set_param_vector(model, names, theta)
-            lam = min(lam * nu, lam_max)
-            nu *= 2.0
-
-        if not accepted:
-            _set_param_vector(model, names, theta)
-
-        if epoch % print_step == 0:
-            loss_value = float(
-                train_loss(
-                    model, input_batch, reaction_tensors, data_dft_ene_kcalmol
-                ).item()
-            )
-            params = model.current_params()
-            print(
-                f"Epoch {epoch}: Loss={loss_value:.6f}, Para={[f'{v:.2f}' for v in params.values()]}, "
-                f"Lambda={lam:.2e}, Rho={rho:.2e}, Accept={accepted}",
-                flush=True,
-            )
-            if ("loss" not in best) or (loss_value < best["loss"]):
-                best = {"epoch": epoch, "loss": loss_value, "parameters": params}
-
-    return best
-
-
-def train_with_nelder_mead(
-    model: D3Model,
-    input_batch: Dict[str, torch.Tensor],
-    reaction_tensors: ReactionTensors,
-    data_dft_ene_kcalmol: torch.Tensor,
-    epochs: int,
-    print_step: int,
-) -> Dict[str, float]:
-    names = _trainable_param_names(model)
-    if len(names) == 0:
-        loss_value = float(
-            train_loss(
-                model, input_batch, reaction_tensors, data_dft_ene_kcalmol
-            ).item()
-        )
-        return {"epoch": 0, "loss": loss_value, "parameters": model.current_params()}
-
-    x0 = _get_param_vector(model, names)
-    n = x0.numel()
-    step = 5e-2
-
-    def f(x: torch.Tensor) -> float:
-        _set_param_vector(model, names, x)
+    def objective_fn(x: np.ndarray) -> float:
+        theta_t = torch.tensor(x, dtype=DTYPE, device=x0_t.device)
+        _set_param_vector(model, names, theta_t)
         with torch.no_grad():
-            return float(
-                train_loss(
-                    model, input_batch, reaction_tensors, data_dft_ene_kcalmol
-                ).item()
+            r = reaction_residuals(
+                model, input_batch, reaction_tensors, data_dft_ene_kcalmol
             )
+            train_loss_value = float(torch.mean(torch.abs(r)).item())
+            epoch = state["nfev"]
+            if epoch % print_step == 0:
+                params = model.current_params()
+                print(
+                    f"Epoch {epoch}: Loss={train_loss_value:.6f}, Para={[f'{v:.2f}' for v in params.values()]}",
+                    flush=True,
+                )
+            _update_best(best, epoch, train_loss_value, model.current_params())
+            state["nfev"] += 1
+            return float((0.5 * torch.sum(r * r)).item())
 
-    simplex = [x0]
-    for i in range(n):
-        xi = x0.clone()
-        xi[i] = xi[i] + step * (1.0 + torch.abs(x0[i]))
-        simplex.append(xi)
-    fvals = [f(x) for x in simplex]
-
-    alpha, gamma, rho, sigma = 1.0, 2.0, 0.5, 0.5
-    best = {}
-
-    print(
-        f"Epoch\t: Loss, Para={list(model.params.keys())}, Optimizer=Nelder-Mead",
-        flush=True,
+    result = minimize(
+        objective_fn,
+        x0,
+        method=method,
+        options=options,
     )
-
-    for epoch in range(epochs + 1):
-        order = sorted(range(len(simplex)), key=lambda i: fvals[i])
-        simplex = [simplex[i] for i in order]
-        fvals = [fvals[i] for i in order]
-
-        if epoch % print_step == 0:
-            _set_param_vector(model, names, simplex[0])
-            loss_value = fvals[0]
-            params = model.current_params()
-            print(
-                f"Epoch {epoch}: Loss={loss_value:.6f}, Para={[f'{v:.2f}' for v in params.values()]}",
-                flush=True,
-            )
-            if ("loss" not in best) or (loss_value < best["loss"]):
-                best = {"epoch": epoch, "loss": loss_value, "parameters": params}
-
-        centroid = torch.stack(simplex[:-1], dim=0).mean(dim=0)
-        xr = centroid + alpha * (centroid - simplex[-1])
-        fr = f(xr)
-
-        if fr < fvals[0]:
-            xe = centroid + gamma * (xr - centroid)
-            fe = f(xe)
-            if fe < fr:
-                simplex[-1], fvals[-1] = xe, fe
-            else:
-                simplex[-1], fvals[-1] = xr, fr
-        elif fr < fvals[-2]:
-            simplex[-1], fvals[-1] = xr, fr
-        else:
-            if fr < fvals[-1]:
-                xc = centroid + rho * (xr - centroid)
-            else:
-                xc = centroid + rho * (simplex[-1] - centroid)
-            fc = f(xc)
-            if fc < fvals[-1]:
-                simplex[-1], fvals[-1] = xc, fc
-            else:
-                best_x = simplex[0]
-                simplex = [best_x] + [
-                    best_x + sigma * (simplex[i] - best_x)
-                    for i in range(1, len(simplex))
-                ]
-                fvals = [f(x) for x in simplex]
-
-    order = sorted(range(len(simplex)), key=lambda i: fvals[i])
-    _set_param_vector(model, names, simplex[order[0]])
+    theta_opt_t = torch.tensor(result.x, dtype=DTYPE, device=x0_t.device)
+    _set_param_vector(model, names, theta_opt_t)
     return best
 
 
@@ -606,37 +448,16 @@ def parse_args() -> argparse.Namespace:
         default="adagrad",
     )
     parser.add_argument("--output-column", type=str, default="modified_ai_d3bj")
-    parser.add_argument(
-        "--s6",
-        type=float,
-        default=None,
-        help="Pass a value to make it a constant parameter, or pass a negative value to use the default value as a constant parameter. If not passed, it will be a trainable parameter.",
+    param_help = (
+        "Pass a value to make it a constant parameter, or pass a negative value to "
+        "use the default value as a constant parameter. If not passed, it will be a "
+        "trainable parameter."
     )
-    parser.add_argument(
-        "--rs6",
-        type=float,
-        default=None,
-        help="Pass a value to make it a constant parameter, or pass a negative value to use the default value as a constant parameter. If not passed, it will be a trainable parameter.",
-    )
-    parser.add_argument(
-        "--s18",
-        type=float,
-        default=None,
-        help="Pass a value to make it a constant parameter, or pass a negative value to use the default value as a constant parameter. If not passed, it will be a trainable parameter.",
-    )
-    parser.add_argument(
-        "--rs18",
-        type=float,
-        default=None,
-        help="Pass a value to make it a constant parameter, or pass a negative value to use the default value as a constant parameter. If not passed, it will be a trainable parameter.",
-    )
-    parser.add_argument(
-        "--alp",
-        type=float,
-        default=None,
-        help="Pass a value to make it a constant parameter, or pass a negative value to use the default value as a constant parameter. If not passed, it will be a trainable parameter.",
-    )
-    parser.add_argument("--print_step", type=int, default=100)
+    for param_name in PARAM_NAMES:
+        parser.add_argument(
+            f"--{param_name}", type=float, default=None, help=param_help
+        )
+    parser.add_argument("--print_step", type=int, default=5000)
     return parser.parse_args()
 
 
@@ -649,7 +470,12 @@ def run_train(args: argparse.Namespace) -> None:
     dataset_json_path = DATASET_JSON_DIR / "dft-fitset-def2.json"
 
     with open(SUBSET_JSON_PATH, "r", encoding="utf-8") as f:
-        batch_subset = flatten_subset(json.load(f)["dft-fitset-def2"])
+        json_file = json.load(f)
+        batch_subset = flatten_subset(json_file["dft-fitset-def2"])
+        if "dft-fitset-def2-weight" in json_file:
+            name_subset_weight_dict = json_file["dft-fitset-def2-weight"]
+        else:
+            name_subset_weight_dict = None
 
     with open(dataset_json_path, "r", encoding="utf-8") as f:
         dataset_json = json.load(f)
@@ -663,17 +489,15 @@ def run_train(args: argparse.Namespace) -> None:
     model = D3Model(
         device=args.device,
         damping=args.damping,
-        initial_params={
-            "s6": args.s6,
-            "rs6": args.rs6,
-            "s18": args.s18,
-            "rs18": args.rs18,
-            "alp": args.alp,
-        },
+        initial_params={name: getattr(args, name) for name in PARAM_NAMES},
     )
     input_batch = model.obtain_batch_dicts(build_atoms(data_name_list, dataset_json))
     reaction_tensors = build_reaction_tensors(
-        batch_subset, dataset_json, data_name_list, args.device
+        batch_subset,
+        dataset_json,
+        data_name_list,
+        args.device,
+        name_subset_weight_dict,
     )
 
     if args.optimizer == "adagrad":
@@ -693,7 +517,10 @@ def run_train(args: argparse.Namespace) -> None:
         for epoch in range(args.epochs + 1):
             optimizer.zero_grad(set_to_none=True)
             loss = train_loss(
-                model, input_batch, reaction_tensors, data_dft_ene_kcalmol
+                model,
+                input_batch,
+                reaction_tensors,
+                data_dft_ene_kcalmol,
             )
             loss.backward()
             optimizer.step()
@@ -709,23 +536,29 @@ def run_train(args: argparse.Namespace) -> None:
                 )
                 if ("loss" not in best) or (loss_value < best["loss"]):
                     best = {"epoch": epoch, "loss": loss_value, "parameters": params}
-    elif args.optimizer == "levenberg-marquardt":
-        best = train_with_lm(
-            model,
-            input_batch,
-            reaction_tensors,
-            data_dft_ene_kcalmol,
-            args.epochs,
-            args.print_step,
-        )
-    elif args.optimizer == "nelder-mead":
-        best = train_with_nelder_mead(
-            model,
-            input_batch,
-            reaction_tensors,
-            data_dft_ene_kcalmol,
-            args.epochs,
-            args.print_step,
+    elif args.optimizer in ["levenberg-marquardt", "nelder-mead"]:
+        if args.optimizer == "levenberg-marquardt":
+            method = "L-BFGS-B"
+            options = {"maxiter": max(1, args.epochs), "maxfun": max(1, args.epochs)}
+        else:
+            method = "Nelder-Mead"
+            options = {
+                "maxiter": max(1, args.epochs),
+                "maxfev": max(1, args.epochs),
+                "xatol": 0.0,
+                "fatol": 0.0,
+                "adaptive": True,
+            }
+        optimizer_label = f"{args.optimizer.upper()} (SciPy minimize)"
+        best = _train_with_scipy_minimize(
+            model=model,
+            input_batch=input_batch,
+            reaction_tensors=reaction_tensors,
+            data_dft_ene_kcalmol=data_dft_ene_kcalmol,
+            print_step=args.print_step,
+            method=method,
+            optimizer_label=optimizer_label,
+            options=options,
         )
     else:
         raise ValueError(f"Unsupported optimizer: {args.optimizer}")
@@ -765,7 +598,10 @@ def run_test(args: argparse.Namespace) -> None:
 
     input_batch = model.obtain_batch_dicts(build_atoms(data_name_list, dataset_json))
     reaction_tensors = build_reaction_tensors(
-        batch_subset, dataset_json, data_name_list, args.device
+        batch_subset,
+        dataset_json,
+        data_name_list,
+        args.device,
     )
 
     reaction_energy_dft = torch.einsum(

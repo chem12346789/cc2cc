@@ -25,6 +25,9 @@ include = ["cc2cc"]
 exclude = []
 namespaces = false
 
+[tool.black]
+line-length = 88
+
 [tool.pyright]
 reportGeneralTypeIssues = "warning"
 reportArgumentType = "warning"
