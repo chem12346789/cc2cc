@@ -64,7 +64,7 @@ class Collect_info:
             name=f"collect_{self.model_load}_{self.basis}_{'sota' if self.is_sota else 'standard'}",
             config=experiment_dict,
             allow_val_change=True,
-            mode="online" if self.data_set == "gmtkn-def2" else "disabled",
+            mode="disabled" if self.verbose < 3 else "online",
         )
 
         print("Collect_info initialized with the following parameters:")

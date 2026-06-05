@@ -11,7 +11,7 @@ import torch.nn as nn
 from ase import units
 from ase.atoms import Atoms
 from pyscf.data.elements import _std_symbol
-from scipy.optimize import minimize
+from scipy.optimize import Bounds, minimize
 from torch_dftd.torch_dftd3_calculator import TorchDFTD3Calculator
 from torch_dftd.dftd3_xc_params import get_dftd3_default_params
 
@@ -19,10 +19,35 @@ from cc2cc.utils import AU2KCALMOL
 
 DTYPE = torch.float64
 DEFAULT_DEVICE = "cuda"
+POSITIVE_PARAM_EPS = 0.0
 PARAM_NAMES = ("s6", "rs6", "s18", "rs18", "alp")
 SUBSET_JSON_PATH = Path("jupyter-notebook/subset.json")
 DATASET_JSON_DIR = Path("cc2cc/utils")
 VALIDATE_DIR = Path("validate_hkqai_done")
+SCIPY_MINIMIZE_METHODS = {
+    "levenberg-marquardt": ("L-BFGS-B", True),
+    "l-bfgs-b": ("L-BFGS-B", True),
+    "nelder-mead": ("Nelder-Mead", False),
+    "powell": ("Powell", False),
+    "slsqp": ("SLSQP", True),
+    "tnc": ("TNC", True),
+    "trust-constr": ("trust-constr", True),
+}
+OPTIMIZERS = {"adagrad", *SCIPY_MINIMIZE_METHODS}
+OPTIMIZER_ALIASES = {
+    "ada": "adagrad",
+    "ag": "adagrad",
+    "levenberg": "levenberg-marquardt",
+    "lm": "levenberg-marquardt",
+    "lbfgsb": "l-bfgs-b",
+    "lbfgs": "l-bfgs-b",
+    "nelder": "nelder-mead",
+    "nm": "nelder-mead",
+    "pow": "powell",
+    "trust": "trust-constr",
+    "trust-region": "trust-constr",
+    "tr": "trust-constr",
+}
 
 
 @dataclass
@@ -62,7 +87,7 @@ class D3Model(nn.Module):
             if initial_params.get(param_name, None) is None:
                 trainable_params[param_name] = get_dftd3_default_params(
                     damping, xc="b3-lyp", old=False
-                )[param_name]
+                )[param_name] * np.random.uniform(0.8, 2.0)
             else:
                 if initial_params[param_name] < -999:
                     const_params[param_name] = get_dftd3_default_params(
@@ -320,8 +345,6 @@ def reaction_residuals(
         reaction_tensors.molecules_to_reactions,
         e_disp_kcalmol + data_dft_ene_kcalmol,
     )
-    if reaction_tensors.reaction_weight is not None:
-        reaction_energy = reaction_energy * reaction_tensors.reaction_weight
     return reaction_tensors.reference_energy - reaction_energy
 
 
@@ -338,6 +361,44 @@ def _update_best(
         best.update({"epoch": epoch, "loss": loss_value, "parameters": params})
 
 
+def normalize_optimizer(value: str) -> str:
+    key = value.lower().replace("_", "-")
+    if key in OPTIMIZERS:
+        return key
+    if key not in OPTIMIZER_ALIASES:
+        choices = ", ".join(sorted(OPTIMIZERS | set(OPTIMIZER_ALIASES)))
+        raise argparse.ArgumentTypeError(
+            f"unknown optimizer '{value}'. Available optimizers/aliases: {choices}"
+        )
+    return OPTIMIZER_ALIASES[key]
+
+
+def scipy_minimize_options(optimizer: str, epochs: int) -> Dict:
+    max_steps = max(1, epochs)
+    if optimizer == "nelder-mead":
+        return {
+            "maxiter": max_steps,
+            "maxfev": max_steps,
+            "xatol": 0.0,
+            "fatol": 0.0,
+            "adaptive": True,
+        }
+    if optimizer == "powell":
+        return {"maxiter": max_steps, "maxfev": max_steps, "xtol": 0.0, "ftol": 0.0}
+    if optimizer == "tnc":
+        return {"maxfun": max_steps}
+    if optimizer == "trust-constr":
+        return {
+            "maxiter": max_steps,
+            "gtol": 1e-8,
+            "xtol": 1e-8,
+            "barrier_tol": 1e-8,
+        }
+    if optimizer in {"levenberg-marquardt", "l-bfgs-b"}:
+        return {"maxiter": max_steps, "maxfun": max_steps}
+    return {"maxiter": max_steps}
+
+
 def _train_with_scipy_minimize(
     model: D3Model,
     input_batch: Dict[str, torch.Tensor],
@@ -346,6 +407,7 @@ def _train_with_scipy_minimize(
     print_step: int,
     method: str,
     optimizer_label: str,
+    use_jac: bool,
     options: Dict,
 ) -> Dict[str, float]:
     names = list(model.trainable_params.keys())
@@ -354,35 +416,86 @@ def _train_with_scipy_minimize(
     state = {"nfev": 0}
     x0_t = torch.stack([model.params[n].detach().clone() for n in names])
     x0 = x0_t.detach().cpu().numpy()
+    bounds = Bounds(
+        lb=np.full(len(names), POSITIVE_PARAM_EPS),
+        ub=np.full(len(names), np.inf),
+    )
+    cache = {"x": None, "grad": None, "obj": 0.0, "train_loss": 0.0}
 
     print(
         f"Epoch\t: Loss, Para={list(model.params.keys())}, Optimizer={optimizer_label}",
         flush=True,
     )
 
-    def objective_fn(x: np.ndarray) -> float:
-        theta_t = torch.tensor(x, dtype=DTYPE, device=x0_t.device)
+    def _objective_and_grad(x: np.ndarray) -> tuple[float, np.ndarray, float]:
+        x_arr = np.asarray(x, dtype=np.float64)
+        if cache["x"] is not None and np.array_equal(cache["x"], x_arr):
+            return cache["obj"], cache["grad"], cache["train_loss"]
+
+        theta_t = torch.tensor(x_arr, dtype=DTYPE, device=x0_t.device)
         _set_param_vector(model, names, theta_t)
-        with torch.no_grad():
-            r = reaction_residuals(
-                model, input_batch, reaction_tensors, data_dft_ene_kcalmol
+        r = reaction_residuals(
+            model, input_batch, reaction_tensors, data_dft_ene_kcalmol
+        )
+        train_loss_value = torch.einsum(
+            "i,ij,j,j->j",
+            torch.abs(r),
+            reaction_tensors.reactions_to_subset,
+            reaction_tensors.one_over_mae,
+            reaction_tensors.one_over_number_of_reactions,
+        )
+        train_loss_value = float(torch.mean(torch.abs(train_loss_value)).item())
+        if reaction_tensors.reaction_weight is not None:
+            r = r * reaction_tensors.reaction_weight
+        obj_t = torch.einsum(
+            "i,ij,j,j->j",
+            torch.abs(r),
+            reaction_tensors.reactions_to_subset,
+            reaction_tensors.one_over_mae,
+            reaction_tensors.one_over_number_of_reactions,
+        )
+        obj_t = torch.mean(torch.abs(obj_t))
+        obj_value = float(obj_t.item())
+        grads = torch.autograd.grad(
+            obj_t,
+            [model.params[n] for n in names],
+            retain_graph=False,
+            create_graph=False,
+        )
+        grad = np.array(
+            [float(g.detach().item()) for g in grads],
+            dtype=np.float64,
+        )
+        cache["x"] = x_arr.copy()
+        cache["grad"] = grad
+        cache["obj"] = obj_value
+        cache["train_loss"] = train_loss_value
+        return obj_value, grad, train_loss_value
+
+    def objective_fn(x: np.ndarray) -> float:
+        obj_value, _, train_loss_value = _objective_and_grad(x)
+
+        epoch = state["nfev"]
+        if epoch % print_step == 0:
+            params = model.current_params()
+            print(
+                f"Epoch {epoch}: Loss={train_loss_value:.6f}, Para={[f'{v:.2f}' for v in params.values()]}",
+                flush=True,
             )
-            train_loss_value = float(torch.mean(torch.abs(r)).item())
-            epoch = state["nfev"]
-            if epoch % print_step == 0:
-                params = model.current_params()
-                print(
-                    f"Epoch {epoch}: Loss={train_loss_value:.6f}, Para={[f'{v:.2f}' for v in params.values()]}",
-                    flush=True,
-                )
-            _update_best(best, epoch, train_loss_value, model.current_params())
-            state["nfev"] += 1
-            return float((0.5 * torch.sum(r * r)).item())
+        _update_best(best, epoch, train_loss_value, model.current_params())
+        state["nfev"] += 1
+        return obj_value
+
+    def jac_fn(x: np.ndarray) -> np.ndarray:
+        _, grad, _ = _objective_and_grad(x)
+        return grad
 
     result = minimize(
         objective_fn,
         x0,
         method=method,
+        jac=jac_fn if use_jac else None,
+        bounds=bounds,
         options=options,
     )
     theta_opt_t = torch.tensor(result.x, dtype=DTYPE, device=x0_t.device)
@@ -443,11 +556,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", type=str, default=DEFAULT_DEVICE)
     parser.add_argument(
         "--optimizer",
-        type=str,
-        choices=["adagrad", "levenberg-marquardt", "nelder-mead"],
+        type=normalize_optimizer,
         default="adagrad",
+        metavar="OPT",
+        help=(
+            "Optimizer name or alias. Examples: adagrad/ada, "
+            "levenberg-marquardt/lm, nelder-mead/nm, lbfgs, powell, slsqp, "
+            "tnc, trust-constr/tr."
+        ),
     )
-    parser.add_argument("--output-column", type=str, default="modified_ai_d3bj")
     param_help = (
         "Pass a value to make it a constant parameter, or pass a negative value to "
         "use the default value as a constant parameter. If not passed, it will be a "
@@ -536,19 +653,8 @@ def run_train(args: argparse.Namespace) -> None:
                 )
                 if ("loss" not in best) or (loss_value < best["loss"]):
                     best = {"epoch": epoch, "loss": loss_value, "parameters": params}
-    elif args.optimizer in ["levenberg-marquardt", "nelder-mead"]:
-        if args.optimizer == "levenberg-marquardt":
-            method = "L-BFGS-B"
-            options = {"maxiter": max(1, args.epochs), "maxfun": max(1, args.epochs)}
-        else:
-            method = "Nelder-Mead"
-            options = {
-                "maxiter": max(1, args.epochs),
-                "maxfev": max(1, args.epochs),
-                "xatol": 0.0,
-                "fatol": 0.0,
-                "adaptive": True,
-            }
+    elif args.optimizer in SCIPY_MINIMIZE_METHODS:
+        method, use_jac = SCIPY_MINIMIZE_METHODS[args.optimizer]
         optimizer_label = f"{args.optimizer.upper()} (SciPy minimize)"
         best = _train_with_scipy_minimize(
             model=model,
@@ -558,13 +664,20 @@ def run_train(args: argparse.Namespace) -> None:
             print_step=args.print_step,
             method=method,
             optimizer_label=optimizer_label,
-            options=options,
+            use_jac=use_jac,
+            options=scipy_minimize_options(args.optimizer, args.epochs),
         )
     else:
         raise ValueError(f"Unsupported optimizer: {args.optimizer}")
 
     with open(save_para_path, "w", encoding="utf-8") as f:
         json.dump(best, f, indent=4)
+
+    # save the final data after training for testing
+    data[f"modified_ai_d3{args.damping}"] = model.total_energy_hartree(
+        input_batch, data["scf_ene"].to_numpy()
+    )
+    data.to_csv(data_path, index=False)
 
 
 def run_test(args: argparse.Namespace) -> None:
@@ -627,7 +740,9 @@ def run_test(args: argparse.Namespace) -> None:
     )
     print(f"After fitting: {loss.item()}", flush=True)
 
-    data[args.output_column] = model.total_energy_hartree(input_batch, scf_ene_au)
+    data[f"modified_ai_d3{args.damping}"] = model.total_energy_hartree(
+        input_batch, scf_ene_au
+    )
     data.to_csv(data_path, index=False)
 
 
