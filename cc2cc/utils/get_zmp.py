@@ -193,7 +193,7 @@ def get_zmp_uks(
         print(
             f"Difference in nuclear grids between CCSD: DFT {np.sum(np.abs(nuc_tar_grids - nuc_dft_grids) * grids.weights) * AU2KCALMOL}, ZMP {np.sum(np.abs(nuc_tar_grids - nuc_zmp_grids) * grids.weights) * AU2KCALMOL}"
         )
-        dm_zmp_old = [dm.copy() for dm in dm_zmp]
+        dm_zmp_old = np.array([dm.copy() for dm in dm_zmp])
 
     if converged:
         dm_zmp = mzmp.make_rdm1()
