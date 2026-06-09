@@ -42,14 +42,15 @@ def cc(
     print(f"Generate data for {name}")
     # RHF calculation
     mf = pyscf.scf.RHF(mol)
-    mf.conv_tol = 1e-10
+    mf.conv_tol = 1e-12
     mf.conv_tol_grad = 1e-8
     mf.max_cycle = 2500
     mf.verbose = 4
     mf.kernel()
-    if args.check_convergence and not mf.converged:
-        pyscf.scf.addons.dynamic_level_shift_(mf, factor=0.5)
-        mf.kernel()
+    for level_shift in range(5):
+        if args.check_convergence and not mf.converged:
+            mf.level_shift = 4 ** (level_shift)
+            mf.kernel()
     dm1_hf = mf.make_rdm1(ao_repr=True)
     e_hf = mf.e_tot
 
@@ -75,10 +76,9 @@ def cc(
     # CCSD calculation
     mycc = pyscf.cc.CCSD(mf)
     mycc.verbose = 9  # to trace the usage of memory.
-    mycc.conv_tol = 1e-10
+    mf.conv_tol = 1e-12
     mycc.conv_tol_normt = 1e-8
     mycc.max_cycle = 200
-    mycc.BLKMIN = 1
     _, t1, t2 = mycc.kernel()
     eris = mycc.ao2mo()
     e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
