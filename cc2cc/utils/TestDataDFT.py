@@ -9,11 +9,22 @@ import pyscf.dft
 from cc2cc.utils.env_var import DATA_TEST_PATH
 
 
+def _to_numpy(array):
+    """Convert cupy/numpy-like arrays to numpy arrays."""
+    if hasattr(array, "get"):
+        return array.get()
+    return np.asarray(array)
+
+
 def diff_rho(mol, dm1_compare1, dm1_compare2, grids):
     """
     Calculate the difference between two density matrices.
     """
-    ao = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=0)
+    coords = _to_numpy(grids.coords)
+    weights = _to_numpy(grids.weights)
+    dm1_compare1 = _to_numpy(dm1_compare1)
+    dm1_compare2 = _to_numpy(dm1_compare2)
+    ao = pyscf.dft.numint.eval_ao(mol, coords, deriv=0)
     if len(np.shape(dm1_compare1)) != len(np.shape(dm1_compare2)):
         raise ValueError("dm1_compare1 and dm1_compare2 must have the same dimension.")
     if len(np.shape(dm1_compare1)) == 3:
@@ -22,7 +33,7 @@ def diff_rho(mol, dm1_compare1, dm1_compare2, grids):
     ddm = dm1_compare1 - dm1_compare2
     drho = pyscf.dft.numint.eval_rho(mol, ao, ddm, xctype="LDA")
 
-    return np.sum(np.abs(drho) * grids.weights)
+    return np.sum(np.abs(drho) * weights)
 
 
 def diff_I_value(mol, dm1_compare1, dm1_compare2, grids):
@@ -30,7 +41,11 @@ def diff_I_value(mol, dm1_compare1, dm1_compare2, grids):
     Calculate the difference between two density.
     I = \frac{\int |rho1 - rho2|^2 \d r}{\int |rho1|^2 \d r + \int |rho2|^2 \d r}
     """
-    ao = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=0)
+    coords = _to_numpy(grids.coords)
+    weights = _to_numpy(grids.weights)
+    dm1_compare1 = _to_numpy(dm1_compare1)
+    dm1_compare2 = _to_numpy(dm1_compare2)
+    ao = pyscf.dft.numint.eval_ao(mol, coords, deriv=0)
     if len(np.shape(dm1_compare1)) != len(np.shape(dm1_compare2)):
         raise ValueError("dm1_compare1 and dm1_compare2 must have the same dimension.")
     if len(np.shape(dm1_compare1)) == 3:
@@ -39,9 +54,9 @@ def diff_I_value(mol, dm1_compare1, dm1_compare2, grids):
     rho1 = pyscf.dft.numint.eval_rho(mol, ao, dm1_compare1, xctype="LDA")
     rho2 = pyscf.dft.numint.eval_rho(mol, ao, dm1_compare2, xctype="LDA")
     drho = rho1 - rho2
-    I_value = np.sum(np.abs(drho) ** 2 * grids.weights) / (
-        np.sum(np.abs(rho1) ** 2 * grids.weights)
-        + np.sum(np.abs(rho2) ** 2 * grids.weights)
+    I_value = np.sum(np.abs(drho) ** 2 * weights) / (
+        np.sum(np.abs(rho1) ** 2 * weights)
+        + np.sum(np.abs(rho2) ** 2 * weights)
     )
 
     return I_value
