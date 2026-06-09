@@ -230,6 +230,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=1,
+        help="Number of workers for data loading. Default is 1. You can set it to the number of CPU cores for faster data loading.",
+    )
+
+    parser.add_argument(
         "--precision",
         type=str,
         default="float64",

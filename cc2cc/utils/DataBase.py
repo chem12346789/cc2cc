@@ -15,7 +15,7 @@ from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import AU2KCALMOL
 
 PRINT_DEBUG = False
-
+EPS = 1e-5
 
 class BasicDataset(Dataset):
     """
@@ -185,7 +185,7 @@ class DataBase:
             self.dataset,
             shuffle=shuffle,
             batch_size=args.batch_size,
-            num_workers=int(os.environ.get("OMP_NUM_THREADS", 0)),
+            num_workers=args.num_workers,
             pin_memory=True,
             persistent_workers=True,
             prefetch_factor=4,
@@ -297,6 +297,8 @@ class DataBase:
             if self.args.output_target == "tol_delta_grids":
                 if self.args.rho_input == "dft":
                     output_mat = data["tol_delta_grids"]
+                elif self.args.rho_input == "dft_d3bj":
+                    output_mat = data["tol_delta_grids"]
                 elif self.args.rho_input == "zmp":
                     output_mat = data["tol_delta_zmp_grids"]
                 else:
@@ -330,7 +332,7 @@ class DataBase:
                     filter_idx
                 ]
                 data_dict["grad_cc_train"] = grad_cc_train.reshape(-1)
-                # loss_multiplier_grad /= self.loss_ene(np.abs(grad_cc_train)) + 1e-4
+                loss_multiplier_grad /= self.loss_ene(np.abs(grad_cc_train)) + EPS
             else:
                 data_dict["grad2force"] = 0
                 data_dict["grad_cc_train"] = 0
@@ -400,7 +402,7 @@ class DataBase:
             if isinstance(data_dict[key], np.ndarray):
                 if len(data_dict[key].shape) > 0:
                     print(
-                        f"key : {key}, shape of data_dict[key] : {data_dict[key].shape}",
+                        f"key: {key}, shape: {data_dict[key].shape}",
                     )
             data_dict[key] = torch.tensor(
                 np.array(data_dict[key]), dtype=self.dtype, device="cpu"

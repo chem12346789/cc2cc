@@ -74,11 +74,7 @@ class ModelClass:
             model_dict: dictionary of models
         """
         self.args = args
-        self.model_name = self.args.model
-        self.load = self.args.load
-        self.max_norm = self.args.max_norm
         self.start_step = 0
-
         self.dir_checkpoint = None
         self.state_dict = None
         self.optimizer_state_dict = None
@@ -159,7 +155,6 @@ class ModelClass:
         if self.args.if_resume:
             self.print("Resuming training from checkpoint.")
             self.start_step = self.args.load_epoch
-            self.args.save_dir = f"atom-{self.args.load}"
 
         self.dir_checkpoint = (
             CHECKPOINTS_PATH / f"checkpoint_{self.args.save_dir}"
@@ -197,10 +192,10 @@ class ModelClass:
         """
         Load the model from the checkpoint.
         """
-        if self.load is None or self.load == "":
+        if self.args.load is None or self.args.load == "":
             self.print("No checkpoint specified, starting from scratch.")
             return
-        load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.load}/").resolve()
+        load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.args.load}/").resolve()
         load_path = load_checkpoint / f"{self.args.load_epoch}.pth"
         self.print(f"Checking path {load_path}")
         if load_path.exists():
@@ -533,7 +528,7 @@ class ModelClass:
             tot_loss, data_record, event = self.loss(batch)
 
             tot_loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_norm)
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
             self.optimizer.step()
             self.optimizer.zero_grad(set_to_none=True)
 
