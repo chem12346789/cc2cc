@@ -18,6 +18,32 @@ from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, CUBE_MIDDLE
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBase import DataBase
 
+CUBE9_INDEX = np.array(
+    [
+        [0, 0, 0],
+        [0, 0, 2],
+        [0, 2, 0],
+        [0, 2, 2],
+        [1, 1, 1],
+        [2, 0, 0],
+        [2, 0, 2],
+        [2, 2, 0],
+        [2, 2, 2],
+    ],
+    dtype=np.int64,
+)
+
+CUBE5_INDEX = np.array(
+    [
+        [0, 0, 0],
+        [0, 2, 2],
+        [1, 1, 1],
+        [2, 2, 0],
+        [2, 0, 2],
+    ],
+    dtype=np.int64,
+)
+
 
 class DataRecordList:
     """
@@ -247,31 +273,21 @@ class ModelClass:
                     x.shape[0], self.input_level, self.cube_size
                 )
             if self.cube_type == "cube9":
-                return np.stack(
-                    [
-                        x[:, : self.input_level, 0, 0, 0],
-                        x[:, : self.input_level, 0, 0, 2],
-                        x[:, : self.input_level, 0, 2, 0],
-                        x[:, : self.input_level, 0, 2, 2],
-                        x[:, : self.input_level, 1, 1, 1],
-                        x[:, : self.input_level, 2, 0, 0],
-                        x[:, : self.input_level, 2, 0, 2],
-                        x[:, : self.input_level, 2, 2, 0],
-                        x[:, : self.input_level, 2, 2, 2],
-                    ],
-                    axis=-1,
-                )
+                return x[
+                    :,
+                    : self.input_level,
+                    CUBE9_INDEX[:, 0],
+                    CUBE9_INDEX[:, 1],
+                    CUBE9_INDEX[:, 2],
+                ]
             if self.cube_type == "cube5":
-                return np.stack(
-                    [
-                        x[:, : self.input_level, 0, 0, 0],
-                        x[:, : self.input_level, 0, 2, 2],
-                        x[:, : self.input_level, 1, 1, 1],
-                        x[:, : self.input_level, 2, 2, 0],
-                        x[:, : self.input_level, 2, 0, 2],
-                    ],
-                    axis=-1,
-                )
+                return x[
+                    :,
+                    : self.input_level,
+                    CUBE5_INDEX[:, 0],
+                    CUBE5_INDEX[:, 1],
+                    CUBE5_INDEX[:, 2],
+                ]
             raise ValueError(f"Unknown cube type: {self.cube_type}")
 
         def process_grad2force(x):
@@ -289,31 +305,25 @@ class ModelClass:
                     x.shape[-1],
                 )
             elif self.cube_type == "cube9":
-                x = np.stack(
-                    [
-                        x[:, : self.input_level, :, 0, 0, 0, :],
-                        x[:, : self.input_level, :, 0, 0, 2, :],
-                        x[:, : self.input_level, :, 0, 2, 0, :],
-                        x[:, : self.input_level, :, 0, 2, 2, :],
-                        x[:, : self.input_level, :, 1, 1, 1, :],
-                        x[:, : self.input_level, :, 2, 0, 0, :],
-                        x[:, : self.input_level, :, 2, 0, 2, :],
-                        x[:, : self.input_level, :, 2, 2, 0, :],
-                        x[:, : self.input_level, :, 2, 2, 2, :],
-                    ],
-                    axis=-2,
-                )
+                x = x[
+                    :,
+                    : self.input_level,
+                    :,
+                    CUBE9_INDEX[:, 0],
+                    CUBE9_INDEX[:, 1],
+                    CUBE9_INDEX[:, 2],
+                    :,
+                ]
             elif self.cube_type == "cube5":
-                x = np.stack(
-                    [
-                        x[:, : self.input_level, :, 0, 0, 0, :],
-                        x[:, : self.input_level, :, 0, 2, 2, :],
-                        x[:, : self.input_level, :, 1, 1, 1, :],
-                        x[:, : self.input_level, :, 2, 2, 0, :],
-                        x[:, : self.input_level, :, 2, 0, 2, :],
-                    ],
-                    axis=-2,
-                )
+                x = x[
+                    :,
+                    : self.input_level,
+                    :,
+                    CUBE5_INDEX[:, 0],
+                    CUBE5_INDEX[:, 1],
+                    CUBE5_INDEX[:, 2],
+                    :,
+                ]
             else:
                 raise ValueError(f"Unknown cube type: {self.cube_type}")
             # flatten the last two dimensions to get piCX

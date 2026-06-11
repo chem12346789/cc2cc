@@ -192,7 +192,7 @@ class DataBase:
             self.dataset,
             shuffle=shuffle,
             batch_size=None,
-            num_workers=args.num_workers,
+            num_workers=0,
             pin_memory=True,
             sampler=self.sampler,
         )
@@ -251,9 +251,9 @@ class DataBase:
         # if you want to keep all the data, you can set the threshold to 0.
         # if you want to save more memory, you can set the threshold to a larger value.
         if data_dict["input"].shape[0] > 1e6:
-            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-5
+            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-15
         else:
-            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-5
+            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-15
         data_dict["input"] = data_dict["input"][filter_idx]
         data_dict["weight"] = data_dict["weight"][filter_idx]
         del input_mat, weight_mat
