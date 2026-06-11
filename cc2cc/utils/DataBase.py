@@ -17,6 +17,7 @@ from cc2cc.utils.mol import AU2KCALMOL
 PRINT_DEBUG = False
 EPS = 1e-5
 
+
 class BasicDataset(Dataset):
     """
     Documentation for a class.
@@ -195,7 +196,7 @@ class DataBase:
     def __len__(self):
         return len(self.dataset.name_list)
 
-    def process_batch(self, batch, device="cuda"):
+    def process_batch(self, batch, device: str | int = "cuda"):
         """
         Load the batch data to the GPU.
         Note all data is in the list ([data]), so we need to access the first element.
@@ -233,7 +234,7 @@ class DataBase:
                     )
         return batch_gpu
 
-    def process_batch_dataset(self, batch, device="cuda"):
+    def process_batch_dataset(self, batch, device: str | int = "cuda"):
         """
         Load the batch data to the GPU.
         """

@@ -3,7 +3,6 @@ Generate list of model.
 """
 
 from pathlib import Path
-import datetime
 import os
 
 import numpy as np
@@ -15,7 +14,7 @@ import torch.optim as optim
 from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
 
-from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, EDGE_SIZE, CUBE_MIDDLE
+from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, CUBE_MIDDLE
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBase import DataBase
 
@@ -159,7 +158,7 @@ class ModelClass:
         self.dir_checkpoint = (
             CHECKPOINTS_PATH / f"checkpoint_{self.args.save_dir}"
         ).resolve()
-        print(f"Checkpoint directory: {self.dir_checkpoint}")
+        self.print(f"Checkpoint directory: {self.dir_checkpoint}")
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=True)
@@ -195,7 +194,9 @@ class ModelClass:
         if self.args.load is None or self.args.load == "":
             self.print("No checkpoint specified, starting from scratch.")
             return
-        load_checkpoint = Path(CHECKPOINTS_PATH / f"checkpoint_{self.args.load}/").resolve()
+        load_checkpoint = Path(
+            CHECKPOINTS_PATH / f"checkpoint_{self.args.load}/"
+        ).resolve()
         load_path = load_checkpoint / f"{self.args.load_epoch}.pth"
         self.print(f"Checking path {load_path}")
         if load_path.exists():
@@ -221,22 +222,17 @@ class ModelClass:
         """
         Initialize the optimizer, scheduler, loss function and checkpoint_dir.
         """
-        if self.args.loss_ene == "L1Loss":
-            self.loss_ene = torch.nn.L1Loss(reduction="sum").cuda(self.local_rank)
-            self.loss_ene_atomic = torch.nn.L1Loss(reduction="sum").cuda(
-                self.local_rank
-            )
-            self.loss_ene_abs = torch.nn.L1Loss(reduction="sum").cuda(self.local_rank)
-            self.loss_grad = torch.nn.L1Loss(reduction="sum").cuda(self.local_rank)
-        elif self.args.loss_ene == "MSELoss":
-            self.loss_ene = torch.nn.MSELoss(reduction="sum").cuda(self.local_rank)
-            self.loss_ene_atomic = torch.nn.MSELoss(reduction="sum").cuda(
-                self.local_rank
-            )
-            self.loss_ene_abs = torch.nn.MSELoss(reduction="sum").cuda(self.local_rank)
-            self.loss_grad = torch.nn.MSELoss(reduction="sum").cuda(self.local_rank)
-        else:
+        loss_dict = {
+            "L1Loss": torch.nn.L1Loss,
+            "MSELoss": torch.nn.MSELoss,
+        }
+        loss_class = loss_dict.get(self.args.loss_ene)
+        if loss_class is None:
             raise ValueError(f"Unknown loss function {self.args.loss_ene}")
+        self.loss_ene = loss_class(reduction="sum").cuda(self.local_rank)
+        self.loss_ene_atomic = loss_class(reduction="sum").cuda(self.local_rank)
+        self.loss_ene_abs = loss_class(reduction="sum").cuda(self.local_rank)
+        self.loss_grad = loss_class(reduction="sum").cuda(self.local_rank)
 
     def init_database(self, train_str_dict, eval_str_dict):
         """
@@ -365,6 +361,20 @@ class ModelClass:
             self.dir_checkpoint / f"{epoch}.pth",
         )
 
+    def _forward(self, input_, weight):
+        """
+        Run the model and return:
+            model_output: direct output from the model
+            weighted_output: weighted output used for energy/loss terms
+        """
+        if self.model.before_weight:
+            model_output = self.model(torch.einsum("p...,pi->p...", input_, weight))
+            weighted_output = model_output
+        else:
+            model_output = self.model(input_)
+            weighted_output = model_output * weight
+        return model_output, weighted_output
+
     def train(self):
         """
         Set the model to train mode.
@@ -394,13 +404,7 @@ class ModelClass:
         if if_train:
             input_.requires_grad = True
 
-        if self.model.before_weight:
-            model_arg = torch.einsum("p...,pi->p...", input_, weight)
-            model_output = self.model(model_arg)
-            output = model_output
-        else:
-            model_output = self.model(input_)
-            output = model_output * weight
+        model_output, output = self._forward(input_, weight)
 
         if not if_train:
             output = output.detach()
@@ -443,15 +447,6 @@ class ModelClass:
                 grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
                 grad2force = batch["grad2force"]
 
-                # chunk_size = 2**15
-                # force = torch.zeros_like(grad_cc_train)
-                # for start in range(0, middle_.shape[0], chunk_size):
-                #     end = min(start + chunk_size, middle_.shape[0])
-                #     force_chunk = torch.einsum(
-                #         "piC,piCx->x", middle_[start:end], grad2force[start:end]
-                #     )
-                #     force = force + force_chunk
-
                 force = torch.einsum("piC,piCx->x", middle_, grad2force)
 
                 tot_loss += loss_multiplier_grad * self.loss_grad(grad_cc_train, force)
@@ -482,14 +477,8 @@ class ModelClass:
                 )
                 atomic_input_ = atomic_batch["input"]
                 atomic_weight = atomic_batch["weight"]
-                if self.model.before_weight:
-                    atomic_output = torch.sum(
-                        self.model(
-                            torch.einsum("p...,pi->p...", atomic_input_, atomic_weight)
-                        )
-                    )
-                else:
-                    atomic_output = torch.sum(self.model(atomic_input_) * atomic_weight)
+                _, atomic_weighted_output = self._forward(atomic_input_, atomic_weight)
+                atomic_output = torch.sum(atomic_weighted_output)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
             tot_loss += loss_multiplier_atomic * self.loss_ene_atomic(
@@ -510,9 +499,7 @@ class ModelClass:
             "name": batch["name"],
         }
 
-        if if_train:
-            return tot_loss, data_record, event
-        return data_record, event
+        return tot_loss, data_record, event
 
     def train_model(self):
         """
@@ -550,8 +537,8 @@ class ModelClass:
         data_record_l = DataRecordList(len(self.database_eval))
 
         for batch in self.database_eval.data_gpu:
-            batch = self.database_train.process_batch(batch, device=self.local_rank)
-            data_record, event = self.loss(batch, if_train=False)
+            batch = self.database_eval.process_batch(batch, device=self.local_rank)
+            _, data_record, event = self.loss(batch, if_train=False)
 
             while data_record is not None:
                 if event.query():
@@ -570,22 +557,14 @@ class ModelClass:
                 + rho_cube[:, 2] * 0.72
                 + rho_cube[:, 3] * 0.81
             )
-        elif self.cube_type == "cube":
+        if self.cube_type in ("cube", "cube5"):
             return (
                 rho_cube[:, 0, self.model.cube_middle] * 0.08
                 + rho_cube[:, 1, self.model.cube_middle] * 0.19
                 + rho_cube[:, 2, self.model.cube_middle] * 0.72
                 + rho_cube[:, 3, self.model.cube_middle] * 0.81
             )
-        elif self.cube_type == "cube5":
-            return (
-                rho_cube[:, 0, self.model.cube_middle] * 0.08
-                + rho_cube[:, 1, self.model.cube_middle] * 0.19
-                + rho_cube[:, 2, self.model.cube_middle] * 0.72
-                + rho_cube[:, 3, self.model.cube_middle] * 0.81
-            )
-        else:
-            raise ValueError(f"Unknown cube type: {self.cube_type}")
+        raise ValueError(f"Unknown cube type: {self.cube_type}")
 
     def modified_b3lyp_potential(self, middle_cube):
         if self.cube_type == "center_4":
@@ -593,12 +572,7 @@ class ModelClass:
             middle_cube[:, 1] += 0.19
             middle_cube[:, 2] += 0.72
             middle_cube[:, 3] += 0.81
-        elif self.cube_type == "cube":
-            middle_cube[:, 0, self.model.cube_middle] += 0.08
-            middle_cube[:, 1, self.model.cube_middle] += 0.19
-            middle_cube[:, 2, self.model.cube_middle] += 0.72
-            middle_cube[:, 3, self.model.cube_middle] += 0.81
-        elif self.cube_type == "cube5":
+        elif self.cube_type in ("cube", "cube5"):
             middle_cube[:, 0, self.model.cube_middle] += 0.08
             middle_cube[:, 1, self.model.cube_middle] += 0.19
             middle_cube[:, 2, self.model.cube_middle] += 0.72
@@ -621,10 +595,7 @@ class ModelClass:
             weights_.reshape((-1, 1)), dtype=self.dtype, device=self.device
         )
         input_mat.requires_grad = True
-        if self.model.before_weight:
-            exc_cube = self.model(torch.einsum("p...,pi->p...", input_mat, weights_mat))
-        else:
-            exc_cube = self.model(input_mat) * weights_mat
+        _, exc_cube = self._forward(input_mat, weights_mat)
         exc_cube += torch.einsum("i,ij->ij", self.get_b3lyp_ene(input_mat), weights_mat)
         middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
         exc_cube = exc_cube.detach().cpu().numpy().squeeze(-1)
