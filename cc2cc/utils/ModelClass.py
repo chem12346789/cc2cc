@@ -394,7 +394,7 @@ class ModelClass:
         """
         input_ = batch["input"]
         weight = batch["weight"]
-        sum_target = batch["energy_target"].cuda(self.local_rank)
+        sum_target = batch["energy_target"]
         data_weight = batch["data_weight"]
         loss_multiplier = batch["loss_multiplier"]
         loss_multiplier_abs = batch["loss_multiplier_abs"]
@@ -444,7 +444,7 @@ class ModelClass:
                     grad_outputs=grad_output,
                     create_graph=True,
                 )[0]
-                grad_cc_train = batch["grad_cc_train"].cuda(self.local_rank)
+                grad_cc_train = batch["grad_cc_train"]
                 grad2force = batch["grad2force"]
 
                 force = torch.einsum("piC,piCx->x", middle_, grad2force)
@@ -458,7 +458,7 @@ class ModelClass:
             loss_grad_record = torch.zeros_like(loss_record)
 
         if self.args.if_atomic:
-            ae_target = batch["ae_target"].cuda(self.local_rank)
+            ae_target = batch["ae_target"]
             ae_output = torch.sum(output)
 
             for i_system in range(len(batch["atomic_systems"])):
@@ -472,7 +472,7 @@ class ModelClass:
                     )
                     break
                 atomic_batch = self.database_train.dataset.get_from_name(name_atom)
-                atomic_batch = self.database_train.process_batch_dataset(
+                atomic_batch = self.database_train.process_batch(
                     atomic_batch, device=self.local_rank
                 )
                 atomic_input_ = atomic_batch["input"]

@@ -2,8 +2,8 @@
 Module for handling molecular data and generating datasets for machine learning tasks, for cube data.
 """
 
-import os
 from itertools import product
+from collections import Counter
 import numpy as np
 
 import torch
@@ -14,8 +14,8 @@ from cc2cc.utils.mol import gen_mole
 from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import AU2KCALMOL
 
-PRINT_DEBUG = False
 EPS = 1e-5
+MAX_ERROR_ENERGY = 1.0  # kcal/mol, if the error energy is larger than this value, we set the absolute loss multiplier to 0 to avoid the numerical instability in training.
 
 
 class BasicDataset(Dataset):
@@ -24,7 +24,7 @@ class BasicDataset(Dataset):
     """
 
     def __init__(self, name_list, mol_info_dict, load_data):
-        super(BasicDataset, self).__init__()
+        super().__init__()
         self.data = {}
         self.name_list = []
         total_number_of_atom = 0
@@ -38,7 +38,7 @@ class BasicDataset(Dataset):
             # Add more copies of the atomic data to balance the dataset.
             # This is useful when we need to have more data for single-atom systems.
             if num_data_used == 1:
-                append_number = 20 // int(data_dict["data_weight"]) - 1
+                append_number = max(20 // int(data_dict["data_weight"]) - 1, 0)
                 self.name_list.extend([name] * append_number)
                 total_number_of_atom += num_data_used * append_number
         print(
@@ -92,28 +92,33 @@ class DataBase:
         self.process_input = process_input
         self.process_grad2force = process_grad2force
         self.verbose = verbose
-        self.array_key = ["input", "weight", "output", "grad2force"]
+        self.gpu_key = (
+            "input",
+            "weight",
+            "output",
+            "energy_target",
+            "ae_target",
+            "grad2force",
+            "grad_cc_train",
+        )
 
-        if args.normal_loss_ene == "L1Loss":
-            self.loss_ene = lambda x: np.sum(np.abs(x))
-        elif args.normal_loss_ene == "MSELoss":
-            self.loss_ene = lambda x: np.sum(x**2)
-        else:
+        loss_func_dict = {
+            "L1Loss": lambda x: np.sum(np.abs(x)),
+            "MSELoss": lambda x: np.sum(x**2),
+        }
+        if args.normal_loss_ene not in loss_func_dict:
             raise ValueError(f"Unknown loss function {args.normal_loss_ene}")
+        self.loss_ene = loss_func_dict[args.normal_loss_ene]
 
         self.print = lambda msg: print(msg, flush=True) if self.verbose else None
 
         name_list = []
         error_molecule = []
         mol_info_dict = {}
-        if atomic_name_dict is None:
-            self.atomic_name_dict = {}
-        else:
-            self.atomic_name_dict = atomic_name_dict
-        if atomic_energy_dict is None:
-            self.atomic_energy_dict = {}
-        else:
-            self.atomic_energy_dict = atomic_energy_dict
+        self.atomic_name_dict = {} if atomic_name_dict is None else atomic_name_dict
+        self.atomic_energy_dict = (
+            {} if atomic_energy_dict is None else atomic_energy_dict
+        )
 
         training_cycle_list = [""]
         if args.md_number > 0:
@@ -172,6 +177,7 @@ class DataBase:
                 self.print(
                     f"Warning: atomic {atom_name} as {atom_key} is atom.",
                 )
+        self.atomic_name_values = set(self.atomic_name_dict.values())
         self.print(name_list)
 
         self.dataset = BasicDataset(name_list, mol_info_dict, self.load_data)
@@ -185,11 +191,9 @@ class DataBase:
         self.data_gpu = DataLoader(
             self.dataset,
             shuffle=shuffle,
-            batch_size=args.batch_size,
+            batch_size=None,
             num_workers=args.num_workers,
             pin_memory=True,
-            persistent_workers=True,
-            prefetch_factor=4,
             sampler=self.sampler,
         )
 
@@ -201,46 +205,10 @@ class DataBase:
         Load the batch data to the GPU.
         Note all data is in the list ([data]), so we need to access the first element.
         """
-        batch_gpu = {}
-        for key, val in batch.items():
-            if key in self.array_key:
-                if PRINT_DEBUG:
-                    self.print(f"key : {key}, shape of val : {val.size()}")
-                batch_gpu[key] = val[0].to(device=device, non_blocking=True)
-                if PRINT_DEBUG:
-                    self.print(
-                        f"After processing, key : {key}, type of val : {type(batch_gpu[key])}, shape of val : {batch_gpu[key].size()}"
-                    )
-            else:
-                if PRINT_DEBUG:
-                    self.print(f"key : {key}, len of val : {len(val)}, val : {val}")
-                if isinstance(val, list):
-                    val_shape = np.shape(val)
-                    if len(val_shape) == 1:
-                        batch_gpu[key] = val[0]
-                    elif len(val_shape) == 2:
-                        batch_gpu[key] = list(np.array(val)[:, 0])
-                    elif len(val_shape) == 3:
-                        batch_gpu[key] = list(np.array(val)[:, :, 0])
-                    elif len(val_shape) == 4:
-                        batch_gpu[key] = list(np.array(val)[:, :, :, 0])
-                    else:
-                        raise ValueError(f"Unknown shape for key {key}: {val_shape}")
-                else:
-                    batch_gpu[key] = val[0]
-                if PRINT_DEBUG:
-                    self.print(
-                        f"After processing, key : {key}, type of val : {type(batch_gpu[key])}, val : {batch_gpu[key]}",
-                    )
-        return batch_gpu
 
-    def process_batch_dataset(self, batch, device: str | int = "cuda"):
-        """
-        Load the batch data to the GPU.
-        """
         batch_gpu = {}
         for key, val in batch.items():
-            if key in ["input", "weight"]:
+            if key in self.gpu_key:
                 batch_gpu[key] = val.to(device=device, non_blocking=True)
             else:
                 batch_gpu[key] = val
@@ -283,9 +251,9 @@ class DataBase:
         # if you want to keep all the data, you can set the threshold to 0.
         # if you want to save more memory, you can set the threshold to a larger value.
         if data_dict["input"].shape[0] > 1e6:
-            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-15
+            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-5
         else:
-            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-15
+            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-5
         data_dict["input"] = data_dict["input"][filter_idx]
         data_dict["weight"] = data_dict["weight"][filter_idx]
         del input_mat, weight_mat
@@ -296,9 +264,7 @@ class DataBase:
             data_dict["grad_cc_train"] = 0
         else:
             if self.args.output_target == "tol_delta_grids":
-                if self.args.rho_input == "dft":
-                    output_mat = data["tol_delta_grids"]
-                elif self.args.rho_input == "dft_d3bj":
+                if self.args.rho_input in ("dft", "dft_d3bj"):
                     output_mat = data["tol_delta_grids"]
                 elif self.args.rho_input == "zmp":
                     output_mat = data["tol_delta_zmp_grids"]
@@ -319,7 +285,7 @@ class DataBase:
             error_energy = AU2KCALMOL * abs(
                 energy_target - np.sum(data_dict["output"] * data_dict["weight"])
             )
-            if np.abs(error_energy) > 0.01:
+            if error_energy > MAX_ERROR_ENERGY:
                 print(
                     f"Warning: Large error energy {error_energy:>9.6f} kcal/mol "
                     f"for {name:>40} set to 0 in absolute loss calculation.",
@@ -338,24 +304,18 @@ class DataBase:
                 data_dict["grad2force"] = 0
                 data_dict["grad_cc_train"] = 0
 
-        atomic_systems = []
-        atomic_stoichiometry = []
+        element_counts = Counter(mol_info["elements"])
+        atomic_systems = list(element_counts.keys())
+        atomic_stoichiometry = list(element_counts.values())
         num_data_used = mol_info["natm"]
         if num_data_used == 1:
             data_weight = self.args.atomic_weighting
         else:
             data_weight = np.sqrt(num_data_used)
-        for i_atom in range(mol_info["natm"]):
-            atom_name = mol_info["elements"][i_atom]
-            if atom_name not in atomic_systems:
-                atomic_systems.append(atom_name)
-                atomic_stoichiometry.append(1)
-            else:
-                atomic_stoichiometry[atomic_systems.index(atom_name)] += 1
 
         ae_target = 0.0
         if self.args.if_atomic:
-            if name in list(self.atomic_name_dict.values()):
+            if name in self.atomic_name_values:
                 assert mol_info["natm"] == 1
                 atom_name = mol_info["elements"][0]
                 self.atomic_energy_dict[atom_name] = energy_target
@@ -399,14 +359,12 @@ class DataBase:
             f"Adjusted loss_multiplier: {loss_multiplier:>6.3f}, grad {loss_multiplier_grad:>6.3f}, atomic {loss_multiplier_atomic:>6.3f}, abs {loss_multiplier_abs:>6.3f}",
         )
 
-        for key in self.array_key:
+        for key in self.gpu_key:
             if isinstance(data_dict[key], np.ndarray):
                 if len(data_dict[key].shape) > 0:
-                    print(
+                    self.print(
                         f"key: {key}, shape: {data_dict[key].shape}",
                     )
-            data_dict[key] = torch.tensor(
-                np.array(data_dict[key]), dtype=self.dtype, device="cpu"
-            )
+            data_dict[key] = torch.as_tensor(data_dict[key], dtype=self.dtype)
 
         return num_data_used, data_dict
