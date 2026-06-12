@@ -10,6 +10,7 @@ from cc2cc.train_model import train_model
 #     "W4_11-f",
 #     "W4_11-h",
 #     "W4_11-si2h6",
+#     "W4_11-c2h6",
 # ]
 
 # eval_str_list = [
