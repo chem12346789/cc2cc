@@ -474,7 +474,9 @@ class ModelClass:
 
         t_forward_start = time.perf_counter()
         model_output, output = self._forward(input_, weight)
-        self._add_timer("model_forward_ms", (time.perf_counter() - t_forward_start) * 1000.0)
+        self._add_timer(
+            "model_forward_ms", (time.perf_counter() - t_forward_start) * 1000.0
+        )
 
         if not if_train:
             output = output.detach()
@@ -492,14 +494,20 @@ class ModelClass:
                     topk_indices = torch.topk(
                         torch.abs(target - output).sum(dim=1), self.args.topk_abs
                     ).indices
-                    tot_loss += loss_multiplier_abs * self.loss_ene_abs(
-                        data_weight * target[topk_indices],
-                        data_weight * output[topk_indices],
-                    ) / np.sqrt(self.args.topk_abs)
+                    tot_loss += (
+                        loss_multiplier_abs
+                        * self.loss_ene_abs(
+                            data_weight * target[topk_indices],
+                            data_weight * output[topk_indices],
+                        )
+                        / np.sqrt(self.args.topk_abs)
+                    )
                 else:
-                    tot_loss += loss_multiplier_abs * self.loss_ene_abs(
-                        data_weight * target, data_weight * output
-                    ) / np.sqrt(target.shape[0])
+                    tot_loss += (
+                        loss_multiplier_abs
+                        * self.loss_ene_abs(data_weight * target, data_weight * output)
+                        / np.sqrt(target.shape[0])
+                    )
             else:
                 loss_abs_record = torch.zeros_like(loss_record)
 
@@ -545,7 +553,9 @@ class ModelClass:
                 self._add_timer("autograd_grad_ms", grad_time_ms)
                 self._add_timer("einsum_force_ms", einsum_time_ms)
 
-                tot_loss += loss_multiplier_grad * self.loss_grad(grad_cc_train, force)
+                tot_loss += loss_multiplier_grad * self.loss_grad(
+                    data_weight * grad_cc_train, data_weight * force
+                )
                 loss_grad_record = torch.sum(torch.abs(grad_cc_train - force))
             else:
                 loss_grad_record = torch.zeros_like(loss_record)
@@ -582,7 +592,9 @@ class ModelClass:
                 data_weight * ae_target, data_weight * ae_output
             )
             loss_atomic_record = torch.abs(ae_target - ae_output)
-            self._add_timer("atomic_loss_ms", (time.perf_counter() - t_atomic_start) * 1000.0)
+            self._add_timer(
+                "atomic_loss_ms", (time.perf_counter() - t_atomic_start) * 1000.0
+            )
         else:
             loss_atomic_record = torch.zeros_like(loss_record)
 
@@ -616,10 +628,15 @@ class ModelClass:
             t_batch_start = time.perf_counter()
             t_process_batch_start = time.perf_counter()
             batch = self.database_train.process_batch(batch, device=self.local_rank)
-            self._add_timer("process_batch_ms", (time.perf_counter() - t_process_batch_start) * 1000.0)
+            self._add_timer(
+                "process_batch_ms",
+                (time.perf_counter() - t_process_batch_start) * 1000.0,
+            )
             t_loss_start = time.perf_counter()
             tot_loss, data_record, event = self.loss(batch)
-            self._add_timer("loss_forward_total_ms", (time.perf_counter() - t_loss_start) * 1000.0)
+            self._add_timer(
+                "loss_forward_total_ms", (time.perf_counter() - t_loss_start) * 1000.0
+            )
 
             if tot_loss.is_cuda:
                 backward_start = torch.cuda.Event(enable_timing=True)
@@ -638,15 +655,21 @@ class ModelClass:
 
             t_clip_start = time.perf_counter()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
-            self._add_timer("clip_grad_norm_ms", (time.perf_counter() - t_clip_start) * 1000.0)
+            self._add_timer(
+                "clip_grad_norm_ms", (time.perf_counter() - t_clip_start) * 1000.0
+            )
 
             t_step_start = time.perf_counter()
             self.optimizer.step()
-            self._add_timer("optimizer_step_ms", (time.perf_counter() - t_step_start) * 1000.0)
+            self._add_timer(
+                "optimizer_step_ms", (time.perf_counter() - t_step_start) * 1000.0
+            )
 
             t_zero_start = time.perf_counter()
             self.optimizer.zero_grad(set_to_none=True)
-            self._add_timer("zero_grad_ms", (time.perf_counter() - t_zero_start) * 1000.0)
+            self._add_timer(
+                "zero_grad_ms", (time.perf_counter() - t_zero_start) * 1000.0
+            )
 
             t_event_wait_start = time.perf_counter()
             while data_record is not None:
@@ -655,8 +678,13 @@ class ModelClass:
                     data_record = None
                 else:
                     break
-            self._add_timer("event_query_wait_ms", (time.perf_counter() - t_event_wait_start) * 1000.0)
-            self._add_timer("train_batch_total_ms", (time.perf_counter() - t_batch_start) * 1000.0)
+            self._add_timer(
+                "event_query_wait_ms",
+                (time.perf_counter() - t_event_wait_start) * 1000.0,
+            )
+            self._add_timer(
+                "train_batch_total_ms", (time.perf_counter() - t_batch_start) * 1000.0
+            )
             self._record_cuda_memory(prefix="train_")
         self._print_timer_summary(tag="train")
         self._print_memory_summary(tag="train")
@@ -679,10 +707,16 @@ class ModelClass:
             t_batch_start = time.perf_counter()
             t_process_batch_start = time.perf_counter()
             batch = self.database_eval.process_batch(batch, device=self.local_rank)
-            self._add_timer("eval_process_batch_ms", (time.perf_counter() - t_process_batch_start) * 1000.0)
+            self._add_timer(
+                "eval_process_batch_ms",
+                (time.perf_counter() - t_process_batch_start) * 1000.0,
+            )
             t_loss_start = time.perf_counter()
             _, data_record, event = self.loss(batch, if_train=False)
-            self._add_timer("eval_loss_forward_total_ms", (time.perf_counter() - t_loss_start) * 1000.0)
+            self._add_timer(
+                "eval_loss_forward_total_ms",
+                (time.perf_counter() - t_loss_start) * 1000.0,
+            )
 
             t_event_wait_start = time.perf_counter()
             while data_record is not None:
@@ -691,8 +725,13 @@ class ModelClass:
                     data_record = None
                 else:
                     break
-            self._add_timer("eval_event_query_wait_ms", (time.perf_counter() - t_event_wait_start) * 1000.0)
-            self._add_timer("eval_batch_total_ms", (time.perf_counter() - t_batch_start) * 1000.0)
+            self._add_timer(
+                "eval_event_query_wait_ms",
+                (time.perf_counter() - t_event_wait_start) * 1000.0,
+            )
+            self._add_timer(
+                "eval_batch_total_ms", (time.perf_counter() - t_batch_start) * 1000.0
+            )
             self._record_cuda_memory(prefix="eval_")
         self._print_timer_summary(tag="eval")
         self._print_memory_summary(tag="eval")
