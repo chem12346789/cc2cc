@@ -15,7 +15,7 @@ from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import AU2KCALMOL
 
 EPS = 1e-5
-MAX_ERROR_ENERGY = 1.0  # kcal/mol, if the error energy is larger than this value, we set the absolute loss multiplier to 0 to avoid the numerical instability in training.
+MAX_ERROR_ENERGY = 0.01  # kcal/mol per atom, if the error energy is larger than this value, we set the absolute loss multiplier to 0 to avoid the numerical instability in training.
 
 
 class BasicDataset(Dataset):
@@ -285,7 +285,7 @@ class DataBase:
             error_energy = AU2KCALMOL * abs(
                 energy_target - np.sum(data_dict["output"] * data_dict["weight"])
             )
-            if error_energy > MAX_ERROR_ENERGY:
+            if error_energy > MAX_ERROR_ENERGY * mol_info["natm"]:
                 print(
                     f"Warning: Large error energy {error_energy:>9.6f} kcal/mol "
                     f"for {name:>40} set to 0 in absolute loss calculation.",

@@ -435,11 +435,11 @@ class ModelClass:
                     tot_loss += loss_multiplier_abs * self.loss_ene_abs(
                         data_weight * target[topk_indices],
                         data_weight * output[topk_indices],
-                    )
+                    ) / np.sqrt(self.args.topk_abs)
                 else:
                     tot_loss += loss_multiplier_abs * self.loss_ene_abs(
                         data_weight * target, data_weight * output
-                    )
+                    ) / np.sqrt(target.shape[0])
             else:
                 loss_abs_record = torch.zeros_like(loss_record)
 
