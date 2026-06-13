@@ -4,7 +4,6 @@ Generate list of model.
 
 from pathlib import Path
 import os
-import time
 
 import numpy as np
 import pandas as pd
@@ -104,8 +103,6 @@ class ModelClass:
         self.dir_checkpoint = None
         self.state_dict = None
         self.optimizer_state_dict = None
-        self._timer_stats = {}
-        self._memory_stats = {}
 
         # for distributed training
         if self.args.distributed:
@@ -215,61 +212,6 @@ class ModelClass:
         """
         if self.verbose:
             print(msg, flush=True)
-
-    def _reset_timers(self):
-        self._timer_stats = {}
-
-    def _add_timer(self, name, value_ms):
-        if name not in self._timer_stats:
-            self._timer_stats[name] = {"sum_ms": 0.0, "count": 0}
-        self._timer_stats[name]["sum_ms"] += float(value_ms)
-        self._timer_stats[name]["count"] += 1
-
-    def _print_timer_summary(self, tag="epoch"):
-        if not self._timer_stats:
-            return
-        items = []
-        for name, stat in self._timer_stats.items():
-            avg = stat["sum_ms"] / max(stat["count"], 1)
-            items.append(
-                f"{name}: total={stat['sum_ms']:.3f} ms, avg={avg:.3f} ms, n={stat['count']}"
-            )
-        self.print(f"[timer][{tag}] " + " | ".join(items))
-
-    def _reset_memory_stats(self):
-        self._memory_stats = {}
-
-    def _add_memory(self, name, value_mb):
-        if name not in self._memory_stats:
-            self._memory_stats[name] = {"sum_mb": 0.0, "count": 0, "max_mb": 0.0}
-        self._memory_stats[name]["sum_mb"] += float(value_mb)
-        self._memory_stats[name]["count"] += 1
-        self._memory_stats[name]["max_mb"] = max(
-            self._memory_stats[name]["max_mb"], float(value_mb)
-        )
-
-    def _record_cuda_memory(self, prefix=""):
-        if self.device.type != "cuda":
-            return
-        allocated_mb = torch.cuda.memory_allocated(self.device) / (1024**2)
-        reserved_mb = torch.cuda.memory_reserved(self.device) / (1024**2)
-        peak_allocated_mb = torch.cuda.max_memory_allocated(self.device) / (1024**2)
-        peak_reserved_mb = torch.cuda.max_memory_reserved(self.device) / (1024**2)
-        self._add_memory(f"{prefix}cuda_allocated_mb", allocated_mb)
-        self._add_memory(f"{prefix}cuda_reserved_mb", reserved_mb)
-        self._add_memory(f"{prefix}cuda_peak_allocated_mb", peak_allocated_mb)
-        self._add_memory(f"{prefix}cuda_peak_reserved_mb", peak_reserved_mb)
-
-    def _print_memory_summary(self, tag="epoch"):
-        if not self._memory_stats:
-            return
-        items = []
-        for name, stat in self._memory_stats.items():
-            avg = stat["sum_mb"] / max(stat["count"], 1)
-            items.append(
-                f"{name}: avg={avg:.2f} MB, max={stat['max_mb']:.2f} MB, n={stat['count']}"
-            )
-        self.print(f"[memory][{tag}] " + " | ".join(items))
 
     def load_model(self):
         """
@@ -472,11 +414,7 @@ class ModelClass:
         if if_train:
             input_.requires_grad = True
 
-        t_forward_start = time.perf_counter()
         model_output, output = self._forward(input_, weight)
-        self._add_timer(
-            "model_forward_ms", (time.perf_counter() - t_forward_start) * 1000.0
-        )
 
         if not if_train:
             output = output.detach()
@@ -518,40 +456,13 @@ class ModelClass:
                     grad_output = weight
                 grad_cc_train = batch["grad_cc_train"]
                 grad2force = batch["grad2force"]
-                if input_.is_cuda:
-                    grad_start = torch.cuda.Event(enable_timing=True)
-                    grad_end = torch.cuda.Event(enable_timing=True)
-                    einsum_start = torch.cuda.Event(enable_timing=True)
-                    einsum_end = torch.cuda.Event(enable_timing=True)
-                    grad_start.record()
-                    middle_ = torch.autograd.grad(
-                        outputs=model_output,
-                        inputs=input_,
-                        grad_outputs=grad_output,
-                        create_graph=True,
-                    )[0]
-                    grad_end.record()
-                    einsum_start.record()
-                    force = torch.einsum("piC,piCx->x", middle_, grad2force)
-                    einsum_end.record()
-                    einsum_end.synchronize()
-                    grad_time_ms = grad_start.elapsed_time(grad_end)
-                    einsum_time_ms = einsum_start.elapsed_time(einsum_end)
-                else:
-                    t0 = time.perf_counter()
-                    middle_ = torch.autograd.grad(
-                        outputs=model_output,
-                        inputs=input_,
-                        grad_outputs=grad_output,
-                        create_graph=True,
-                    )[0]
-                    t1 = time.perf_counter()
-                    force = torch.einsum("piC,piCx->x", middle_, grad2force)
-                    t2 = time.perf_counter()
-                    grad_time_ms = (t1 - t0) * 1000.0
-                    einsum_time_ms = (t2 - t1) * 1000.0
-                self._add_timer("autograd_grad_ms", grad_time_ms)
-                self._add_timer("einsum_force_ms", einsum_time_ms)
+                middle_ = torch.autograd.grad(
+                    outputs=model_output,
+                    inputs=input_,
+                    grad_outputs=grad_output,
+                    create_graph=True,
+                )[0]
+                force = torch.einsum("piC,piCx->x", middle_, grad2force)
 
                 tot_loss += loss_multiplier_grad * self.loss_grad(
                     data_weight * grad_cc_train, data_weight * force
@@ -564,7 +475,6 @@ class ModelClass:
             loss_grad_record = torch.zeros_like(loss_record)
 
         if self.args.if_atomic:
-            t_atomic_start = time.perf_counter()
             ae_target = batch["ae_target"]
             ae_output = torch.sum(output)
 
@@ -592,9 +502,6 @@ class ModelClass:
                 data_weight * ae_target, data_weight * ae_output
             )
             loss_atomic_record = torch.abs(ae_target - ae_output)
-            self._add_timer(
-                "atomic_loss_ms", (time.perf_counter() - t_atomic_start) * 1000.0
-            )
         else:
             loss_atomic_record = torch.zeros_like(loss_record)
 
@@ -617,77 +524,23 @@ class ModelClass:
         """
         self.train()
         self.optimizer.zero_grad(set_to_none=True)
-        self._reset_timers()
-        self._reset_memory_stats()
         data_record_l = DataRecordList(len(self.database_train))
         data_record = None
 
         for batch in self.database_train.data_gpu:
-            if self.device.type == "cuda":
-                torch.cuda.reset_peak_memory_stats(self.device)
-            t_batch_start = time.perf_counter()
-            t_process_batch_start = time.perf_counter()
             batch = self.database_train.process_batch(batch, device=self.local_rank)
-            self._add_timer(
-                "process_batch_ms",
-                (time.perf_counter() - t_process_batch_start) * 1000.0,
-            )
-            t_loss_start = time.perf_counter()
             tot_loss, data_record, event = self.loss(batch)
-            self._add_timer(
-                "loss_forward_total_ms", (time.perf_counter() - t_loss_start) * 1000.0
-            )
-
-            if tot_loss.is_cuda:
-                backward_start = torch.cuda.Event(enable_timing=True)
-                backward_end = torch.cuda.Event(enable_timing=True)
-                backward_start.record()
-                tot_loss.backward()
-                backward_end.record()
-                backward_end.synchronize()
-                backward_time_ms = backward_start.elapsed_time(backward_end)
-            else:
-                t0 = time.perf_counter()
-                tot_loss.backward()
-                t1 = time.perf_counter()
-                backward_time_ms = (t1 - t0) * 1000.0
-            self._add_timer("tot_loss_backward_ms", backward_time_ms)
-
-            t_clip_start = time.perf_counter()
+            tot_loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
-            self._add_timer(
-                "clip_grad_norm_ms", (time.perf_counter() - t_clip_start) * 1000.0
-            )
-
-            t_step_start = time.perf_counter()
             self.optimizer.step()
-            self._add_timer(
-                "optimizer_step_ms", (time.perf_counter() - t_step_start) * 1000.0
-            )
-
-            t_zero_start = time.perf_counter()
             self.optimizer.zero_grad(set_to_none=True)
-            self._add_timer(
-                "zero_grad_ms", (time.perf_counter() - t_zero_start) * 1000.0
-            )
 
-            t_event_wait_start = time.perf_counter()
             while data_record is not None:
                 if event.query():
                     data_record_l.add_data_record(data_record)
                     data_record = None
                 else:
                     break
-            self._add_timer(
-                "event_query_wait_ms",
-                (time.perf_counter() - t_event_wait_start) * 1000.0,
-            )
-            self._add_timer(
-                "train_batch_total_ms", (time.perf_counter() - t_batch_start) * 1000.0
-            )
-            self._record_cuda_memory(prefix="train_")
-        self._print_timer_summary(tag="train")
-        self._print_memory_summary(tag="train")
         data_record_l.merge()
         return data_record_l
 
@@ -697,44 +550,18 @@ class ModelClass:
         """
         self.eval()
         self.optimizer.zero_grad(set_to_none=True)
-        self._reset_timers()
-        self._reset_memory_stats()
         data_record_l = DataRecordList(len(self.database_eval))
 
         for batch in self.database_eval.data_gpu:
-            if self.device.type == "cuda":
-                torch.cuda.reset_peak_memory_stats(self.device)
-            t_batch_start = time.perf_counter()
-            t_process_batch_start = time.perf_counter()
             batch = self.database_eval.process_batch(batch, device=self.local_rank)
-            self._add_timer(
-                "eval_process_batch_ms",
-                (time.perf_counter() - t_process_batch_start) * 1000.0,
-            )
-            t_loss_start = time.perf_counter()
             _, data_record, event = self.loss(batch, if_train=False)
-            self._add_timer(
-                "eval_loss_forward_total_ms",
-                (time.perf_counter() - t_loss_start) * 1000.0,
-            )
 
-            t_event_wait_start = time.perf_counter()
             while data_record is not None:
                 if event.query():
                     data_record_l.add_data_record(data_record)
                     data_record = None
                 else:
                     break
-            self._add_timer(
-                "eval_event_query_wait_ms",
-                (time.perf_counter() - t_event_wait_start) * 1000.0,
-            )
-            self._add_timer(
-                "eval_batch_total_ms", (time.perf_counter() - t_batch_start) * 1000.0
-            )
-            self._record_cuda_memory(prefix="eval_")
-        self._print_timer_summary(tag="eval")
-        self._print_memory_summary(tag="eval")
         data_record_l.merge()
         return data_record_l
 
