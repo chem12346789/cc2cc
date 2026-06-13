@@ -158,7 +158,7 @@ class ModelClass:
             )
         elif self.args.scheduler == "constant":
             self.scheduler = optim.lr_scheduler.ConstantLR(self.optimizer)
-        elif self.args.scheduler == "cosine_warn":
+        elif self.args.scheduler == "cosine_warm":
             self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
                 self.optimizer,
                 T_0=self.args.eval_step * 32,
