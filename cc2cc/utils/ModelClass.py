@@ -371,20 +371,6 @@ class ModelClass:
             self.dir_checkpoint / f"{epoch}.pth",
         )
 
-    def _forward(self, input_, weight):
-        """
-        Run the model and return:
-            model_output: direct output from the model
-            weighted_output: weighted output used for energy/loss terms
-        """
-        if self.model.before_weight:
-            model_output = self.model(torch.einsum("p...,pi->p...", input_, weight))
-            weighted_output = model_output
-        else:
-            model_output = self.model(input_)
-            weighted_output = model_output * weight
-        return model_output, weighted_output
-
     def train(self):
         """
         Set the model to train mode.
@@ -411,10 +397,14 @@ class ModelClass:
         loss_multiplier_grad = batch["loss_multiplier_grad"]
         loss_multiplier_atomic = batch["loss_multiplier_atomic"]
 
+        if self.model.before_weight:
+            input_ = torch.einsum("p...,pi->p...", input_, weight)
         if if_train:
             input_.requires_grad = True
 
-        model_output, output = self._forward(input_, weight)
+        output = self.model(input_)
+        if not self.model.before_weight:
+            output = output * weight
 
         if not if_train:
             output = output.detach()
@@ -450,16 +440,11 @@ class ModelClass:
                 loss_abs_record = torch.zeros_like(loss_record)
 
             if self.args.if_grad:
-                if self.model.before_weight:
-                    grad_output = torch.ones_like(model_output)
-                else:
-                    grad_output = weight
                 grad_cc_train = batch["grad_cc_train"]
                 grad2force = batch["grad2force"]
                 middle_ = torch.autograd.grad(
-                    outputs=model_output,
+                    outputs=torch.sum(output),
                     inputs=input_,
-                    grad_outputs=grad_output,
                     create_graph=True,
                 )[0]
                 force = torch.einsum("piC,piCx->x", middle_, grad2force)
@@ -494,8 +479,14 @@ class ModelClass:
                 )
                 atomic_input_ = atomic_batch["input"]
                 atomic_weight = atomic_batch["weight"]
-                _, atomic_weighted_output = self._forward(atomic_input_, atomic_weight)
-                atomic_output = torch.sum(atomic_weighted_output)
+                if self.model.before_weight:
+                    atomic_input_ = torch.einsum(
+                        "p...,pi->p...", atomic_input_, atomic_weight
+                    )
+                atomic_output = self.model(atomic_input_)
+                if not self.model.before_weight:
+                    atomic_output = atomic_output * atomic_weight
+                atomic_output = torch.sum(atomic_output)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
             tot_loss += loss_multiplier_atomic * self.loss_ene_atomic(
@@ -611,7 +602,11 @@ class ModelClass:
             weights_.reshape((-1, 1)), dtype=self.dtype, device=self.device
         )
         input_mat.requires_grad = True
-        _, exc_cube = self._forward(input_mat, weights_mat)
+        if self.model.before_weight:
+            input_mat = torch.einsum("p...,pi->p...", input_mat, weights_mat)
+        exc_cube = self.model(input_mat)
+        if not self.model.before_weight:
+            exc_cube = exc_cube * weights_mat
         exc_cube += torch.einsum("i,ij->ij", self.get_b3lyp_ene(input_mat), weights_mat)
         middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
         exc_cube = exc_cube.detach().cpu().numpy().squeeze(-1)
