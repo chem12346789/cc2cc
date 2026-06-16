@@ -397,11 +397,11 @@ class ModelClass:
         loss_multiplier_grad = batch["loss_multiplier_grad"]
         loss_multiplier_atomic = batch["loss_multiplier_atomic"]
 
-        if self.model.before_weight:
-            input_ = torch.einsum("p...,pi->p...", input_, weight)
         if if_train:
             input_.requires_grad = True
 
+        if self.model.before_weight:
+            input_ = torch.einsum("p...,pi->p...", input_, weight)
         output = self.model(input_)
         if not self.model.before_weight:
             output = output * weight
