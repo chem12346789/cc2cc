@@ -155,20 +155,23 @@ After the training, the neural network can predict the energy of the molecule gi
 	\begin{tikzpicture}[auto, node distance=1.5cm]
 		% We start by placing the blocks
 		\node [block1] (input-1) {};
-		\node [block1, right=of input-1, xshift=-1cm] (input) {};
+		\node [block1, right=of input-1, xshift=-1.5cm] (input) {};
 		\node [block, right=of input] (e3nn) {E3nn};
-		\node [block, right=of e3nn] (transformer) {Transformer};
+		\node [block, right=of e3nn, xshift=-1cm] (transformer) {Transformer};
 		\node [block, right=of transformer] (flatten) {Flatten};
 		\node [block, right=of flatten] (linear) {MLP};
-		\node [block, right=of linear, xshift=0.2cm] (output) {ADD};
+		\node [block, right=of linear] (cat) {CAT};
+		\node [block, right=of cat, xshift=-0.2cm] (output) {ADD};
 		\node [block1, right=of output] (output_final) {};
-		\node [block1, below=of input.center, yshift=0.5cm] (input1) {};
-		\node [block, below=of flatten.center, xshift=-2cm, yshift=0.5cm] (flatten1) {Slice};
+		\node [block, below=of flatten.center, xshift=-2cm, yshift=0.5cm] (Slice) {Slice};
+		\node [block1, below=of flatten.center, yshift=0.5cm] (Slice2) {};
+		\node [block1, below=of flatten.center, yshift=-0.5cm] (Slice3) {};
 		\node [block, below=of linear.center, xshift=-1cm, yshift=0.5cm] (linear1) {MLP};
-		\node [block1, below=of output.center, yshift=0.5cm] (output1) {};
-		\node [block1, above=of input.center, yshift=-0.5cm] (input2) {};
+		\node [block1, below=of cat.center, yshift=0.5cm] (output1) {};
+		\node [block1, below=of cat.center, yshift=-0.5cm] (output3) {};
+		\node [block1, below=of input.center, yshift=0.5cm] (input1) {};
 		\node [block1, above=of e3nn.center, yshift=-0.5cm] (e3nn2) {};
-		\node [block, right=of e3nn2.center, xshift=2cm] (mixture1) {Linear};
+		\node [block, right=of e3nn2.center, xshift=1cm] (mixture1) {Linear};
 		\node [block, right=of mixture1.center, xshift=2cm] (mixture2) {Softmax};
 		\node [block1, above=of output.center, yshift=-0.5cm] (output2) {};
 		% connecting the blocks
@@ -177,14 +180,17 @@ After the training, the neural network can predict the energy of the molecule gi
 		\draw [->] (e3nn) -- (transformer);
 		\draw [->] (transformer) -- node {$(N, 27, 4)$} (flatten);
 		\draw [->] (flatten) -- node {$(N, 108)$} (linear);
-		\draw [->] (linear) -- node[xshift=-0.125cm] {$(N, 1)$} (output);
+		\draw [->] (linear) -- node[xshift=-0.125cm] {$(N, 1)$} (cat);
+		\draw [->] (cat) -- node {$(N, 6)$} (output);
 		\draw [->] (output) -- node {$(N, 1)$} (output_final);
-		\draw [->, rounded corners] ([xshift=1.25cm] input.center) -- ([xshift=1.25cm] input1.center) -- (flatten1);
-		\draw [->] (flatten1) -- node {$(N, 4)$} (linear1);
-		\draw [->, rounded corners] (linear1) -- node[xshift=0.05cm] {$(N, 1)$} ([xshift=-0.75cm] output1.center) -- ([xshift=-0.75cm] output.center);
-		\draw [->, rounded corners] ([xshift=1.25cm] e3nn.center) -- ([xshift=1.25cm] e3nn2.center) -- (mixture1);
+		\draw [->, rounded corners] ([xshift=1.25cm] input.center) -- ([xshift=1.25cm] input1.center) -- (Slice);
+		\draw [->] (Slice) -- node {$(N, 4)$} (linear1);
+		\draw [->, rounded corners] (linear1) -- node[xshift=0.05cm] {$(N, 1)$} ([xshift=-0.75cm] output1.center) -- ([xshift=-0.75cm] cat.center);
+		\draw [-] (Slice2.center) -- (Slice3.center);
+		\draw [->, rounded corners] (Slice3.center) -- node[xshift=0.05cm] {$(N, 4)$} ([xshift=-0.75cm] output3.center) -- ([xshift=-0.75cm] cat.center);
+		\draw [->, rounded corners] ([xshift=0.75cm] e3nn.center) -- ([xshift=0.75cm] e3nn2.center) -- (mixture1);
 		\draw [->, rounded corners] (mixture1) -- node {$(N, 2)$} (mixture2);
-		\draw [->, rounded corners] (mixture2) -- node {$(N, 2)$}  (output2.center) -- (output);
+		\draw [->, rounded corners] (mixture2) -- node {$(N, 6)$}  (output2.center) -- (output);
 	\end{tikzpicture}
 	\caption{
 		% 
@@ -256,10 +262,11 @@ The loss function is defined as
 	\label{eq:loss_self_scaled}
 	L_{e} =
 	 & N_{\rm{atom}} \frac{\Big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) + \epsilon \big| \Big)^{2}}
-	 + N_{\rm{atom}} \frac{\Big(\bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{E}^{\rm{AE}}(\brm{r}_{i}) + \epsilon \big| \Big)^{2}} \nl
+	+ N_{\rm{atom}} \frac{\Big(\bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{E}^{\rm{AE}}(\brm{r}_{i}) + \epsilon \big| \Big)^{2}} \nl
 	 & + \frac{N_{\rm{atom}}}{N_{\rm{grids}}} \frac{\Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) + \epsilon \big| \Big)^{2}}
-	 + N_{\rm{atom}} \frac{\Big(\int \d \brm{r}_{i} \Big| \bar{F} - F \Big| \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{F} + \epsilon\big| \Big)^{2}} .
+	+ N_{\rm{atom}} \frac{\Big(\int \d \brm{r}_{i} \Big| \bar{F} - F \Big| \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{F} + \epsilon\big| \Big)^{2}} .
 \end{align}
+\twocolumngrid
 where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, respectively.
 %
 The $\lambda_{\rm{RE}}$, $\lambda_{\rm{ABS}}$, and $\lambda_{\rm{AE}}$ are the weights of the three terms in the loss function.
