@@ -37,7 +37,7 @@ def diff_rho(mol, dm1_compare1, dm1_compare2, grids):
 
 
 def diff_I_value(mol, dm1_compare1, dm1_compare2, grids):
-    """
+    r"""
     Calculate the difference between two density.
     I = \frac{\int |rho1 - rho2|^2 \d r}{\int |rho1|^2 \d r + \int |rho2|^2 \d r}
     """
