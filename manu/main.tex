@@ -263,7 +263,8 @@ The loss function is defined as
 	L_{e} =
 	 & N_{\rm{atom}} \frac{\Big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) + \epsilon \big| \Big)^{2}}
 	+ N_{\rm{atom}} \frac{\Big(\bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{E}^{\rm{AE}}(\brm{r}_{i}) + \epsilon \big| \Big)^{2}} \nl
-	 & + \frac{N_{\rm{atom}}}{N_{\rm{grids}}} \frac{\Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) + \epsilon \big| \Big)^{2}}
+	 & + \frac{N_{\rm{atom}}}{N_{\rm{grids}}} \Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2
+	%  & + \frac{N_{\rm{atom}}}{N_{\rm{grids}}} \frac{\Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) + \epsilon \big| \Big)^{2}}
 	+ N_{\rm{atom}} \frac{\Big(\int \d \brm{r}_{i} \Big| \bar{F} - F \Big| \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{F} + \epsilon\big| \Big)^{2}} .
 \end{align}
 \twocolumngrid
