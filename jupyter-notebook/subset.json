@@ -162,6 +162,93 @@
             "BUT14DIOL"
         ]
     },
+    "gmtkn-diet30-def2": {
+        "sub1": [
+            "W4_11",
+            "G21EA",
+            "DIPCS10",
+            "SIE4x4",
+            "FH51",
+            "DC13"
+        ],
+        "sub2": [
+            "MB16_43",
+            "BSR36",
+            "CDIE20"
+        ],
+        "sub3": [
+            "BH76",
+            "BHPERI",
+            "BHROT27",
+            "PX13",
+            "WCPT18"
+        ],
+        "sub4": [
+            "S66",
+            "HEAVY28",
+            "PNICO23",
+            "HAL59"
+        ],
+        "sub5": [
+            "ACONF",
+            "Amino20x4",
+            "MCONF",
+            "BUT14DIOL"
+        ]
+    },
+    "gmtkn-diet100-def2": {
+        "sub1": [
+            "W4_11",
+            "G21EA",
+            "G21IP",
+            "SIE4x4",
+            "ALKBDE10",
+            "YBDE18",
+            "RC21",
+            "G2RC",
+            "BH76RC",
+            "FH51",
+            "DC13"
+        ],
+        "sub2": [
+            "MB16_43",
+            "RSE43",
+            "BSR36",
+            "CDIE20",
+            "ISO34",
+            "ISOL24",
+            "PArel"
+        ],
+        "sub3": [
+            "BH76",
+            "BHPERI",
+            "INV24",
+            "BHROT27"
+        ],
+        "sub4": [
+            "RG18",
+            "ADIM6",
+            "S66",
+            "HEAVY28",
+            "WATER27",
+            "CARBHB12",
+            "PNICO23",
+            "HAL59",
+            "AHB21",
+            "CHB6",
+            "IL16"
+        ],
+        "sub5": [
+            "ICONF",
+            "ACONF",
+            "Amino20x4",
+            "PCONF21",
+            "MCONF",
+            "SCONF",
+            "UPU23",
+            "BUT14DIOL"
+        ]
+    },
     "full_subset_dict": {
         "sub1": [
             "W4_11",

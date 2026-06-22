@@ -38,8 +38,10 @@ class Collect_info:
                 "wtmad_1_df",
                 "wtmad_2_df",
             ]
-        else:
+        elif self.data_set == "dft-fitset-def2":
             self.data_frame_name_list = ["subset_mapd_df", "subset_mpd_df"]
+        elif self.data_set in ["gmtkn-diet30-def2", "gmtkn-diet100-def2"]:
+            self.data_frame_name_list = ["subset_wtmad_2_df", "wtmad_2_df"]
         self.data_frame_dict = {}
 
         dir_str = os.environ.get("VALIDATE_DIR", "validate_hkqai")
@@ -127,9 +129,14 @@ class Collect_info:
                 print("D3BJ correction already added.")
             return
 
-        data_test = pd.read_csv(
-            f"validate_hkqai_done/ccdft_def2-QZVP(D)__{self.data_set}.csv"
-        )
+        if self.data_set in ["gmtkn-diet30-def2", "gmtkn-diet100-def2"]:
+            data_test = pd.read_csv(
+                f"validate_hkqai_done/ccdft_def2-QZVP(D)__gmtkn-def2.csv"
+            )
+        else:
+            data_test = pd.read_csv(
+                f"validate_hkqai_done/ccdft_def2-QZVP(D)__{self.data_set}.csv"
+            )
         data_test_name = np.array(data_test["name"])
 
         while "name" not in self.data.columns:
@@ -163,6 +170,7 @@ class Collect_info:
         molecules_to_reactions = []
         reactions_to_subset = []
         total_counts_subset = []
+        weight_list = []
 
         for i_subset, subset_name in enumerate(self.name_subset_list):
             if subset_name == "BH76RC":
@@ -176,6 +184,10 @@ class Collect_info:
 
             reaction_dict = data_set_json[f"reaction-{subset_name}"]
             total_counts_subset.append(len(reaction_dict))
+            # first reaction in the subset, get the weight if exist, since all reactions in the subset should have the same weight
+            first_reaction = next(iter(reaction_dict.values()))
+            if "weight" in first_reaction:
+                weight_list.append(first_reaction["weight"])
 
             for i_reaction in reaction_dict.values():
                 systems_list = i_reaction["systems"]
@@ -222,6 +234,7 @@ class Collect_info:
         reactions_to_subset = np.array(reactions_to_subset)
         completed_counts_subset = np.sum(reactions_to_subset, axis=0)
         total_counts_subset = np.array(total_counts_subset)
+        weight_list = np.array(weight_list)
 
         if self.model_load == "":
             # this mean we use the dft data
@@ -376,7 +389,7 @@ class Collect_info:
                 self.data_frame_dict["wtmad_2_df"].loc["summary", dft_type] = np.sum(
                     self.data_frame_dict["wtmad_2_df"].loc[self.name_set_list, dft_type]
                 )
-            else:
+            elif self.data_set == "dft-fitset-def2":
                 self.data_frame_dict["subset_mpd_df"].loc[
                     self.name_subset_list, dft_type
                 ] = 100 * np.einsum(
@@ -394,6 +407,27 @@ class Collect_info:
                     reactions_to_subset,
                     inverse_mae,
                     divide(1, completed_counts_subset),
+                )
+            elif self.data_set in ["gmtkn-diet30-def2", "gmtkn-diet100-def2"]:
+                print(total_counts_subset, weight_list, inverse_mae)
+                wtmad_2_subset = (
+                    1
+                    / np.sum(total_counts_subset)
+                    * np.einsum(
+                        "i,i,i->i",
+                        total_counts_subset,
+                        weight_list,
+                        mean_reaction_energy,
+                    )
+                )
+                self.data_frame_dict["subset_wtmad_2_df"].loc[
+                    self.name_subset_list, dft_type
+                ] = wtmad_2_subset
+                self.data_frame_dict["wtmad_2_df"].loc[self.name_set_list, dft_type] = (
+                    np.einsum("i,ij->j", wtmad_2_subset, subset2set)
+                )
+                self.data_frame_dict["wtmad_2_df"].loc["summary", dft_type] = np.sum(
+                    self.data_frame_dict["wtmad_2_df"].loc[self.name_set_list, dft_type]
                 )
 
         if self.data_set == "gmtkn-def2":
@@ -451,7 +485,11 @@ class Collect_info:
         self.data.to_csv(self.data_path, index=False)
 
     def load_csv(self):
+        if not self.data_path.exists():
+            print(f"CSV file {self.data_path} does not exist. No data loaded.")
+            return False
         self.data = pd.read_csv(self.data_path)
+        return True
 
 
 def parse_time(time_str):
@@ -509,6 +547,12 @@ if __name__ == "__main__":
         "--data_set",
         type=str,
         default="gmtkn-def2",
+        choices=[
+            "gmtkn-def2",
+            "dft-fitset-def2",
+            "gmtkn-diet30-def2",
+            "gmtkn-diet100-def2",
+        ],
         help="Dataset identifier for processing.",
     )
     parser.add_argument(
@@ -530,7 +574,11 @@ if __name__ == "__main__":
     while not collector.if_done:
         collector.reset()
         if args.sota:
-            collector.load_csv()
+            if not collector.load_csv():
+                print("No data loaded. Collecting new data.")
+                collector.aggregate_data()
+                collector.add_d3bj_correction()
+                collector.save_csv()
         else:
             collector.aggregate_data()
             collector.add_d3bj_correction()
