@@ -308,7 +308,8 @@ def log_paths(args: argparse.Namespace, script_path: Path, script_text: str) -> 
     log_dir = Path(args.log_dir.strip() or ".").expanduser()
     log_dir.mkdir(parents=True, exist_ok=True)
     log_dir_s = str(log_dir) if args.log_dir.strip().startswith("~") else (args.log_dir.strip() or ".")
-    base = f"{log_dir_s.rstrip('/')}/{prefix}-a%a" if log_dir_s != "." else f"{prefix}-a%a"
+    stem = f"{prefix}-%x-a%a"
+    base = f"{log_dir_s.rstrip('/')}/{stem}" if log_dir_s != "." else stem
     print(f"[INFO] Log prefix={prefix}")
     if args.debug:
         print(f"[DEBUG] Parsed --load for log prefix: {load}")
