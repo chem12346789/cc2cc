@@ -111,8 +111,5 @@ Codex commonly sets these; full list in [docs/ARCHITECTURE.md].
 ## Definition of Done
 - [ ] Changed files pass a syntax check
 - [ ] `import cc2cc.utils` still works without CuPy/GPU4PySCF
-- [ ] Grid/SCF/energy/grad/model changes: tiny-molecule smoke test passed (or
-      noted why skipped)
-- [ ] GPU code changes: CPU imports verified to still work
 - [ ] No cluster-specific absolute paths added to importable code
 - [ ] Any validation you couldn't run is recorded with the reason

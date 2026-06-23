@@ -1,17 +1,11 @@
-"""
-Generate list of model.
-"""
-
 import torch
 
 from cc2cc.utils.env_var import EDGE_SIZE
-from cc2cc.utils.model.model_utils import Transformer, DenseNet, E3nn
+from cc2cc.utils.model.model_utils import DenseNet, E3nn, Transformer
 
 
 class Model(torch.nn.Module):
-    """
-    Transformer module.
-    """
+    """Transformer/e3nn mixed model."""
 
     def __init__(self):
         super().__init__()
@@ -23,19 +17,17 @@ class Model(torch.nn.Module):
         self.before_weight = False
         self.lmax = 2
         self.out_l = 0
+        self.flat_size = self.input_level * self.cube_size
 
-        self.conv1 = E3nn(
-            self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
+        e3nn_args = (
+            self.cube_type,
+            self.cube_size,
+            self.input_level,
+            self.lmax,
+            self.out_l,
         )
-        self.conv2 = E3nn(
-            self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
-        )
-        self.conv3 = E3nn(
-            self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
-        )
-        self.conv4 = E3nn(
-            self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
-        )
+        for i in range(1, self.input_level + 1):
+            setattr(self, f"conv{i}", E3nn(*e3nn_args))
 
         self.predictor = Transformer(
             d_model=self.cube_size,
@@ -48,7 +40,7 @@ class Model(torch.nn.Module):
         )
 
         self.densenet = DenseNet(
-            d_model=self.input_level * self.cube_size,
+            d_model=self.flat_size,
             mlp=108,
             depth=5,
             dense_bias=False,
@@ -66,42 +58,27 @@ class Model(torch.nn.Module):
             dense_actv="gelu",
         )
 
-        self.mixing_weight = torch.nn.Linear(self.input_level * self.cube_size, 6)
-        self.weight_softmax = torch.nn.Softmax(dim=-1)
+        self.mixing_weight = torch.nn.Linear(self.flat_size, self.input_level + 2)
 
     def forward(self, x):
-        """
-        Standard forward function, required for all nn.Module classes
-        """
         x_center = x[:, :, self.cube_middle]
-
         x_in = x.permute(0, 2, 1).contiguous()
-        out1 = torch.vmap(self.conv1)(x_in)
-        out2 = torch.vmap(self.conv2)(x_in)
-        out3 = torch.vmap(self.conv3)(x_in)
-        out4 = torch.vmap(self.conv4)(x_in)
-        x_cube = torch.cat([out1, out2, out3, out4], dim=-2)
 
-        # do mixing x and x_center using Mixture of experts mechanism
-        weight_out = self.mixing_weight(
-            x_cube.reshape(-1, self.input_level * self.cube_size)
+        x_cube = torch.cat(
+            tuple(
+                torch.vmap(getattr(self, f"conv{i}"))(x_in)
+                for i in range(1, self.input_level + 1)
+            ),
+            dim=-2,
         )
-        weight_out = self.weight_softmax(weight_out)
-
-        x_cube = self.predictor(x_cube)
-        x_cube = x_cube.reshape(-1, self.input_level * self.cube_size)
-        x_cube = self.densenet(x_cube)
-
-        # # Extract the central values for each channel
-        x_center = x_center.reshape(-1, self.input_level)
-        x_center = self.densenet_center(x_center)
-
-        mixed_output = (
-            weight_out[:, [0]] * x_cube
-            + weight_out[:, [1]] * x_center
-            + weight_out[:, [2]] * x[:, [0], self.cube_middle]
-            + weight_out[:, [3]] * x[:, [1], self.cube_middle]
-            + weight_out[:, [4]] * x[:, [2], self.cube_middle]
-            + weight_out[:, [5]] * x[:, [3], self.cube_middle]
+        weight_out = torch.softmax(
+            self.mixing_weight(x_cube.reshape(-1, self.flat_size)), dim=-1
         )
-        return mixed_output
+
+        x_cube = self.densenet(self.predictor(x_cube).reshape(-1, self.flat_size))
+
+        center_values = x_center.reshape(-1, self.input_level)
+        x_center = self.densenet_center(center_values)
+
+        expert_outputs = torch.cat((x_cube, x_center, center_values), dim=-1)
+        return (weight_out * expert_outputs).sum(dim=-1, keepdim=True)
