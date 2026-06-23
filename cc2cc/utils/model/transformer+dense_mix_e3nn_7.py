@@ -19,7 +19,7 @@ class Model(torch.nn.Module):
         self.cube_type = "cube"
         self.cube_size = EDGE_SIZE**3
         self.cube_middle = (self.cube_size - 1) // 2
-        self.input_level = 4
+        self.input_level = 7
         self.before_weight = False
         self.lmax = 2
         self.out_l = 0
@@ -34,6 +34,15 @@ class Model(torch.nn.Module):
             self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
         )
         self.conv4 = E3nn(
+            self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
+        )
+        self.conv5 = E3nn(
+            self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
+        )
+        self.conv6 = E3nn(
+            self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
+        )
+        self.conv7 = E3nn(
             self.cube_type, self.cube_size, self.input_level, self.lmax, self.out_l
         )
 
@@ -66,7 +75,7 @@ class Model(torch.nn.Module):
             dense_actv="gelu",
         )
 
-        self.mixing_weight = torch.nn.Linear(self.input_level * self.cube_size, 2)
+        self.mixing_weight = torch.nn.Linear(self.input_level * self.cube_size, 9)
         self.weight_softmax = torch.nn.Softmax(dim=-1)
 
     def forward(self, x):
@@ -80,7 +89,10 @@ class Model(torch.nn.Module):
         out2 = torch.vmap(self.conv2)(x_in)
         out3 = torch.vmap(self.conv3)(x_in)
         out4 = torch.vmap(self.conv4)(x_in)
-        x_cube = torch.cat([out1, out2, out3, out4], dim=-2)
+        out5 = torch.vmap(self.conv5)(x_in)
+        out6 = torch.vmap(self.conv6)(x_in)
+        out7 = torch.vmap(self.conv7)(x_in)
+        x_cube = torch.cat([out1, out2, out3, out4, out5, out6, out7], dim=-2)
 
         # do mixing x and x_center using Mixture of experts mechanism
         weight_out = self.mixing_weight(
@@ -96,5 +108,15 @@ class Model(torch.nn.Module):
         x_center = x_center.reshape(-1, self.input_level)
         x_center = self.densenet_center(x_center)
 
-        mixed_output = weight_out[:, [0]] * x_cube + weight_out[:, [1]] * x_center
+        mixed_output = (
+            weight_out[:, [0]] * x_cube
+            + weight_out[:, [1]] * x_center
+            + weight_out[:, [2]] * x[:, [0], self.cube_middle]
+            + weight_out[:, [3]] * x[:, [1], self.cube_middle]
+            + weight_out[:, [4]] * x[:, [2], self.cube_middle]
+            + weight_out[:, [5]] * x[:, [3], self.cube_middle]
+            + weight_out[:, [6]] * x[:, [4], self.cube_middle]
+            + weight_out[:, [7]] * x[:, [5], self.cube_middle]
+            + weight_out[:, [8]] * x[:, [6], self.cube_middle]
+        )
         return mixed_output
