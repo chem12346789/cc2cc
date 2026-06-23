@@ -12,8 +12,6 @@ checkpoints
 validate
 /gen_data_script/
 /test_script/*
-# include test_script/submit_direct_array_per_gpu.py
-!/test_script/submit_direct_array_per_gpu.py
 /train_script/
 /log_backup
 /tmp_mol
@@ -28,7 +26,7 @@ data*.ipynb
 *.zip
 *map
 submit*
-!/test_script/submit_direct_array_per_gpu.py
+!/submit_direct_array_per_gpu.py
 out
 *.egg-info/
 *.npz
