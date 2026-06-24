@@ -1,55 +1,40 @@
-"""
-Generate list of model.
-"""
-
-from pathlib import Path
 import os
 
 import numpy as np
 import pandas as pd
-
 import torch
-import torch.optim as optim
-
-from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
+import torch.optim as optim
+from torch.nn.parallel import DistributedDataParallel
 
-from cc2cc.utils.env_var import MAIN_PATH, CHECKPOINTS_PATH, CUBE_MIDDLE
-from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.DataBase import DataBase
+from cc2cc.utils.env_var import CHECKPOINTS_PATH, CUBE_MIDDLE, MAIN_PATH
+from cc2cc.utils.mol import AU2KCALMOL
 
-CUBE9_INDEX = np.array(
-    [
-        [0, 0, 0],
-        [0, 0, 2],
-        [0, 2, 0],
-        [0, 2, 2],
-        [1, 1, 1],
-        [2, 0, 0],
-        [2, 0, 2],
-        [2, 2, 0],
-        [2, 2, 2],
-    ],
-    dtype=np.int64,
-)
-
-CUBE5_INDEX = np.array(
-    [
-        [0, 0, 0],
-        [0, 2, 2],
-        [1, 1, 1],
-        [2, 2, 0],
-        [2, 0, 2],
-    ],
-    dtype=np.int64,
-)
+CUBE_INDEX = {
+    "cube5": np.array(
+        [(0, 0, 0), (0, 2, 2), (1, 1, 1), (2, 2, 0), (2, 0, 2)],
+        dtype=np.int64,
+    ),
+    "cube9": np.array(
+        [
+            (0, 0, 0),
+            (0, 0, 2),
+            (0, 2, 0),
+            (0, 2, 2),
+            (1, 1, 1),
+            (2, 0, 0),
+            (2, 0, 2),
+            (2, 2, 0),
+            (2, 2, 2),
+        ],
+        dtype=np.int64,
+    ),
+}
+B3LYP_WEIGHTS = (0.08, 0.19, 0.72, 0.81)
 
 
 class DataRecordList:
-    """
-    DataRecordList is a list of DataRecord, which is used to record the training and evaluation results.
-    """
-
     def __init__(self, len_batch):
         self.data_dict = {
             "loss_ene": np.zeros(len_batch),
@@ -62,42 +47,29 @@ class DataRecordList:
         self.iter = 0
 
     def add_data_record(self, data_record):
-        for key in self.data_dict.keys():
-            if key in data_record:
-                if key == "name":
-                    self.data_dict[key][self.iter] = data_record[key]
-                else:
-                    self.data_dict[key][self.iter] = (
-                        AU2KCALMOL * data_record[key].item()
-                    )
-            else:
+        for key, values in self.data_dict.items():
+            if key not in data_record:
                 raise ValueError(f"Key {key} not found in data_record.")
+            value = data_record[key]
+            values[self.iter] = value if key == "name" else AU2KCALMOL * value.item()
         self.iter += 1
 
     def save(self, path):
-        """Save the data_dict to a csv file."""
-        df = pd.DataFrame(self.data_dict)
-        df.to_csv(path, index=False)
+        pd.DataFrame(self.data_dict).to_csv(path, index=False)
 
     def merge(self):
-        """merge the the named data"""
-        df = pd.DataFrame(self.data_dict)
-        df_grouped = df.groupby("name").mean().reset_index()
-        self.data_dict = df_grouped.to_dict(orient="list")
+        self.data_dict = (
+            pd.DataFrame(self.data_dict)
+            .groupby("name")
+            .mean()
+            .reset_index()
+            .to_dict(orient="list")
+        )
         self.iter = len(self.data_dict["name"])
 
 
 class ModelClass:
-    """
-    Model_Class
-    """
-
     def __init__(self, args):
-        """
-        input:
-        output:
-            model_dict: dictionary of models
-        """
         self.args = args
         self.start_step = 0
         self.dir_checkpoint = None
@@ -105,6 +77,8 @@ class ModelClass:
         self.optimizer_state_dict = None
 
         # for distributed training
+        self.local_rank = 0
+        self.verbose = True
         if self.args.distributed:
             self.local_rank = int(os.environ["LOCAL_RANK"])
             torch.cuda.set_device(self.local_rank)
@@ -115,40 +89,32 @@ class ModelClass:
                 device_id=torch.device("cuda", self.local_rank),
             )
             self.verbose = dist.get_rank() == 0
-        else:
-            self.local_rank = 0
-            self.verbose = True
 
     def init_model(self, if_validate=False, init_train=False):
-        """
-        Initialize the model.
-        """
         self.load_model()
 
-        if (MAIN_PATH / f"cc2cc/utils/model/{self.args.model}.py").exists():
-            model = getattr(
-                __import__(f"cc2cc.utils.model.{self.args.model}", fromlist=["Model"]),
-                "Model",
-            )
-        else:
+        if not (MAIN_PATH / f"cc2cc/utils/model/{self.args.model}.py").exists():
             raise ValueError("Unknown model")
+        model = getattr(
+            __import__(f"cc2cc.utils.model.{self.args.model}", fromlist=["Model"]),
+            "Model",
+        )
 
         self.model: torch.nn.Module = model().to(self.args.device)
         if self.args.precision == "float64":
             self.model.double()
 
-        if self.args.optimizer == "AdamW":
-            self.optimizer = optim.AdamW(
-                self.model.parameters(),
-                lr=self.args.lr,
-                weight_decay=self.args.weight_decay,
-            )
-        elif self.args.optimizer == "Adafactor":
-            self.optimizer = optim.Adafactor(
-                self.model.parameters(),
-                lr=self.args.lr,
-                weight_decay=self.args.weight_decay,
-            )
+        optimizer_cls = {
+            "AdamW": optim.AdamW,
+            "Adafactor": getattr(optim, "Adafactor", None),
+        }.get(self.args.optimizer)
+        if optimizer_cls is None:
+            raise ValueError(f"Unknown optimizer {self.args.optimizer}")
+        self.optimizer = optimizer_cls(
+            self.model.parameters(),
+            lr=self.args.lr,
+            weight_decay=self.args.weight_decay,
+        )
 
         if self.args.scheduler == "cosine":
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
@@ -168,14 +134,11 @@ class ModelClass:
         else:
             raise ValueError(f"Unknown scheduler {self.args.scheduler}")
 
-        self.device = next(self.model.parameters()).device
-        self.dtype = next(self.model.parameters()).dtype
-        self.cube_type = self.model.cube_type
-        self.cube_size = self.model.cube_size
-        self.input_level = self.model.input_level
-        self.print(f"cube type: {self.cube_type}")
-        self.print(f"cube size: {self.cube_size}")
-        self.print(f"input level: {self.input_level}")
+        param = next(self.model.parameters())
+        self.device, self.dtype = param.device, param.dtype
+        for name in ("cube_type", "cube_size", "input_level"):
+            setattr(self, name, getattr(self.model, name))
+            self.print(f"{name}: {getattr(self, name)}")
 
         if self.args.if_resume:
             self.print("Resuming training from checkpoint.")
@@ -192,11 +155,6 @@ class ModelClass:
         if self.optimizer_state_dict is not None:
             self.optimizer.load_state_dict(self.optimizer_state_dict)
 
-        # if (not if_validate) and (not self.args.if_grad):
-        #     # model.compile does not support Double backward which is used in grad.
-        #     self.model.compile(dynamic=True, mode="max-autotune-no-cudagraphs")
-        #     self.print("Model compiled with torch.compile!")
-
         if self.args.distributed:
             self.print(f"Using DistributedDataParallel on rank {self.local_rank}")
             self.model = DistributedDataParallel(
@@ -207,22 +165,14 @@ class ModelClass:
             self.init_train()
 
     def print(self, msg):
-        """
-        Print message only on the main process.
-        """
         if self.verbose:
             print(msg, flush=True)
 
     def load_model(self):
-        """
-        Load the model from the checkpoint.
-        """
-        if self.args.load is None or self.args.load == "":
+        if not self.args.load:
             self.print("No checkpoint specified, starting from scratch.")
             return
-        load_checkpoint = Path(
-            CHECKPOINTS_PATH / f"checkpoint_{self.args.load}/"
-        ).resolve()
+        load_checkpoint = (CHECKPOINTS_PATH / f"checkpoint_{self.args.load}").resolve()
         load_path = load_checkpoint / f"{self.args.load_epoch}.pth"
         self.print(f"Checking path {load_path}")
         if load_path.exists():
@@ -231,23 +181,19 @@ class ModelClass:
                 load_path, map_location=self.args.device, weights_only=True
             )
             state_dict = checkpoint["state_dict"]
-            if "module" in list(state_dict.keys())[0]:
+            if "module" in next(iter(state_dict)):
                 # For backward compatibility with old checkpoints
                 state_dict = {
                     k.replace("module.", ""): v for k, v in state_dict.items()
                 }
             self.state_dict = state_dict
             self.args.model = checkpoint["model"]
-            if "optimizer" in checkpoint:
-                self.optimizer_state_dict = checkpoint["optimizer"]
+            self.optimizer_state_dict = checkpoint.get("optimizer")
             self.print(f"Model loaded from {load_path} with model {self.args.model}")
         else:
             self.print("Model not found, starting from scratch.")
 
     def init_train(self):
-        """
-        Initialize the optimizer, scheduler, loss function and checkpoint_dir.
-        """
         loss_dict = {
             "L1Loss": torch.nn.L1Loss,
             "MSELoss": torch.nn.MSELoss,
@@ -255,16 +201,10 @@ class ModelClass:
         loss_class = loss_dict.get(self.args.loss_ene)
         if loss_class is None:
             raise ValueError(f"Unknown loss function {self.args.loss_ene}")
-        self.loss_ene = loss_class(reduction="sum").cuda(self.local_rank)
-        self.loss_ene_atomic = loss_class(reduction="sum").cuda(self.local_rank)
-        self.loss_ene_abs = loss_class(reduction="sum").cuda(self.local_rank)
-        self.loss_grad = loss_class(reduction="sum").cuda(self.local_rank)
+        for name in ("loss_ene", "loss_ene_atomic", "loss_ene_abs", "loss_grad"):
+            setattr(self, name, loss_class(reduction="sum").cuda(self.local_rank))
 
     def init_database(self, train_str_dict, eval_str_dict):
-        """
-        Initialize the database.
-        """
-
         def process_input(x):
             if self.cube_type == "center_4":
                 return x[:, : self.input_level, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
@@ -272,21 +212,14 @@ class ModelClass:
                 return x[:, : self.input_level, :, :, :].reshape(
                     x.shape[0], self.input_level, self.cube_size
                 )
-            if self.cube_type == "cube9":
+            if self.cube_type in CUBE_INDEX:
+                idx = CUBE_INDEX[self.cube_type]
                 return x[
                     :,
                     : self.input_level,
-                    CUBE9_INDEX[:, 0],
-                    CUBE9_INDEX[:, 1],
-                    CUBE9_INDEX[:, 2],
-                ]
-            if self.cube_type == "cube5":
-                return x[
-                    :,
-                    : self.input_level,
-                    CUBE5_INDEX[:, 0],
-                    CUBE5_INDEX[:, 1],
-                    CUBE5_INDEX[:, 2],
+                    idx[:, 0],
+                    idx[:, 1],
+                    idx[:, 2],
                 ]
             raise ValueError(f"Unknown cube type: {self.cube_type}")
 
@@ -304,33 +237,22 @@ class ModelClass:
                     self.cube_size,
                     x.shape[-1],
                 )
-            elif self.cube_type == "cube9":
+            elif self.cube_type in CUBE_INDEX:
+                idx = CUBE_INDEX[self.cube_type]
                 x = x[
                     :,
                     : self.input_level,
                     :,
-                    CUBE9_INDEX[:, 0],
-                    CUBE9_INDEX[:, 1],
-                    CUBE9_INDEX[:, 2],
-                    :,
-                ]
-            elif self.cube_type == "cube5":
-                x = x[
-                    :,
-                    : self.input_level,
-                    :,
-                    CUBE5_INDEX[:, 0],
-                    CUBE5_INDEX[:, 1],
-                    CUBE5_INDEX[:, 2],
+                    idx[:, 0],
+                    idx[:, 1],
+                    idx[:, 2],
                     :,
                 ]
             else:
                 raise ValueError(f"Unknown cube type: {self.cube_type}")
-            # flatten the last two dimensions to get piCX
             x = np.transpose(x, (2, 1, 3, 0, 4))
             shape_x = x.shape
-            x = x.reshape(shape_x[0], shape_x[1], shape_x[2], -1)
-            return x
+            return x.reshape(shape_x[0], shape_x[1], shape_x[2], -1)
 
         self.database_train = DataBase(
             train_str_dict,
@@ -355,9 +277,6 @@ class ModelClass:
         self.print(f"Evaluating on {len(self.database_eval)} systems.")
 
     def save_model(self, epoch):
-        """
-        Save the model to the checkpoint.
-        """
         if not self.dir_checkpoint.exists():
             self.print(f"Directory {self.dir_checkpoint} not found. Created!")
             (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
@@ -372,22 +291,18 @@ class ModelClass:
         )
 
     def train(self):
-        """
-        Set the model to train mode.
-        """
         self.model.train(True)
 
     def eval(self):
-        """
-        Set the model to evaluation mode.
-        """
         self.model.eval()
 
+    def model_output(self, input_, weight):
+        if self.model.before_weight:
+            input_ = torch.einsum("p...,pi->p...", input_, weight)
+        output = self.model(input_)
+        return input_, output if self.model.before_weight else output * weight
+
     def loss(self, batch, if_train=True):
-        """
-        Calculate the loss.
-        ae if for atomic energy.
-        """
         input_ = batch["input"]
         weight = batch["weight"]
         sum_target = batch["energy_target"]
@@ -400,27 +315,25 @@ class ModelClass:
         if if_train:
             input_.requires_grad = True
 
-        if self.model.before_weight:
-            input_ = torch.einsum("p...,pi->p...", input_, weight)
-        output = self.model(input_)
-        if not self.model.before_weight:
-            output = output * weight
-
+        input_, output = self.model_output(input_, weight)
         if not if_train:
             output = output.detach()
 
+        sum_output = torch.sum(output)
         tot_loss = loss_multiplier * self.loss_ene(
-            data_weight * sum_target, data_weight * torch.sum(output)
+            data_weight * sum_target, data_weight * sum_output
         )
-        loss_record = torch.abs((sum_target - torch.sum(output)))
+        loss_record = torch.abs(sum_target - sum_output)
+        zero_record = torch.zeros_like(loss_record)
 
         if if_train:
             if self.args.if_abs:
                 target = batch["output"] * weight
-                loss_abs_record = torch.sum(torch.abs(target - output))
+                abs_error = torch.abs(target - output)
+                loss_abs_record = torch.sum(abs_error)
                 if self.args.topk_abs > 0:
                     topk_indices = torch.topk(
-                        torch.abs(target - output).sum(dim=1), self.args.topk_abs
+                        abs_error.sum(dim=1), self.args.topk_abs
                     ).indices
                     tot_loss += (
                         loss_multiplier_abs
@@ -437,7 +350,7 @@ class ModelClass:
                         / np.sqrt(target.shape[0])
                     )
             else:
-                loss_abs_record = torch.zeros_like(loss_record)
+                loss_abs_record = zero_record
 
             if self.args.if_grad:
                 grad_cc_train = batch["grad_cc_train"]
@@ -454,20 +367,18 @@ class ModelClass:
                 )
                 loss_grad_record = torch.sum(torch.abs(grad_cc_train - force))
             else:
-                loss_grad_record = torch.zeros_like(loss_record)
+                loss_grad_record = zero_record
         else:
-            loss_abs_record = torch.zeros_like(loss_record)
-            loss_grad_record = torch.zeros_like(loss_record)
+            loss_abs_record = zero_record
+            loss_grad_record = zero_record
 
         if self.args.if_atomic:
             ae_target = batch["ae_target"]
-            ae_output = torch.sum(output)
+            ae_output = sum_output
 
-            for i_system in range(len(batch["atomic_systems"])):
-                system_atom = batch["atomic_systems"][i_system]
-                if system_atom in self.database_train.atomic_name_dict:
-                    name_atom = self.database_train.atomic_name_dict[system_atom]
-                else:
+            for i_system, system_atom in enumerate(batch["atomic_systems"]):
+                name_atom = self.database_train.atomic_name_dict.get(system_atom)
+                if name_atom is None:
                     self.print(
                         f"Warning: {system_atom} not found in atomic_name_dict, "
                         "skipping atomic energy calculation."
@@ -477,15 +388,9 @@ class ModelClass:
                 atomic_batch = self.database_train.process_batch(
                     atomic_batch, device=self.local_rank
                 )
-                atomic_input_ = atomic_batch["input"]
-                atomic_weight = atomic_batch["weight"]
-                if self.model.before_weight:
-                    atomic_input_ = torch.einsum(
-                        "p...,pi->p...", atomic_input_, atomic_weight
-                    )
-                atomic_output = self.model(atomic_input_)
-                if not self.model.before_weight:
-                    atomic_output = atomic_output * atomic_weight
+                _, atomic_output = self.model_output(
+                    atomic_batch["input"], atomic_batch["weight"]
+                )
                 atomic_output = torch.sum(atomic_output)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
@@ -494,7 +399,7 @@ class ModelClass:
             )
             loss_atomic_record = torch.abs(ae_target - ae_output)
         else:
-            loss_atomic_record = torch.zeros_like(loss_record)
+            loss_atomic_record = zero_record
 
         event = torch.cuda.Event()
         event.record()
@@ -510,13 +415,9 @@ class ModelClass:
         return tot_loss, data_record, event
 
     def train_model(self):
-        """
-        Train the model, one epoch.
-        """
         self.train()
         self.optimizer.zero_grad(set_to_none=True)
         data_record_l = DataRecordList(len(self.database_train))
-        data_record = None
 
         for batch in self.database_train.data_gpu:
             batch = self.database_train.process_batch(batch, device=self.local_rank)
@@ -526,19 +427,12 @@ class ModelClass:
             self.optimizer.step()
             self.optimizer.zero_grad(set_to_none=True)
 
-            while data_record is not None:
-                if event.query():
-                    data_record_l.add_data_record(data_record)
-                    data_record = None
-                else:
-                    break
+            if event.query():
+                data_record_l.add_data_record(data_record)
         data_record_l.merge()
         return data_record_l
 
     def eval_model(self):
-        """
-        Evaluate the model.
-        """
         self.eval()
         self.optimizer.zero_grad(set_to_none=True)
         data_record_l = DataRecordList(len(self.database_eval))
@@ -547,66 +441,44 @@ class ModelClass:
             batch = self.database_eval.process_batch(batch, device=self.local_rank)
             _, data_record, event = self.loss(batch, if_train=False)
 
-            while data_record is not None:
-                if event.query():
-                    data_record_l.add_data_record(data_record)
-                    data_record = None
-                else:
-                    break
+            if event.query():
+                data_record_l.add_data_record(data_record)
         data_record_l.merge()
         return data_record_l
 
+    @staticmethod
+    def b3lyp_weights(like):
+        if torch.is_tensor(like):
+            return like.new_tensor(B3LYP_WEIGHTS)
+        return np.asarray(B3LYP_WEIGHTS, dtype=like.dtype)
+
     def get_b3lyp_ene(self, rho_cube):
         if self.cube_type == "center_4":
-            return (
-                rho_cube[:, 0] * 0.08
-                + rho_cube[:, 1] * 0.19
-                + rho_cube[:, 2] * 0.72
-                + rho_cube[:, 3] * 0.81
-            )
-        if self.cube_type in ("cube", "cube5"):
-            return (
-                rho_cube[:, 0, self.model.cube_middle] * 0.08
-                + rho_cube[:, 1, self.model.cube_middle] * 0.19
-                + rho_cube[:, 2, self.model.cube_middle] * 0.72
-                + rho_cube[:, 3, self.model.cube_middle] * 0.81
-            )
-        raise ValueError(f"Unknown cube type: {self.cube_type}")
+            rho = rho_cube[:, :4]
+        elif self.cube_type in ("cube", "cube5"):
+            rho = rho_cube[:, :4, self.model.cube_middle]
+        else:
+            raise ValueError(f"Unknown cube type: {self.cube_type}")
+        return (rho * self.b3lyp_weights(rho)).sum(-1)
 
     def modified_b3lyp_potential(self, middle_cube):
-        if self.cube_type == "center_4":
-            middle_cube[:, 0] += 0.08
-            middle_cube[:, 1] += 0.19
-            middle_cube[:, 2] += 0.72
-            middle_cube[:, 3] += 0.81
-        elif self.cube_type in ("cube", "cube5"):
-            middle_cube[:, 0, self.model.cube_middle] += 0.08
-            middle_cube[:, 1, self.model.cube_middle] += 0.19
-            middle_cube[:, 2, self.model.cube_middle] += 0.72
-            middle_cube[:, 3, self.model.cube_middle] += 0.81
+        if self.cube_type in ("cube", "cube5"):
+            middle_cube[:, :4, self.model.cube_middle] += self.b3lyp_weights(
+                middle_cube
+            )
+        elif self.cube_type == "center_4":
+            middle_cube[:, :4] += self.b3lyp_weights(middle_cube)
         else:
             raise ValueError(f"Unknown cube type: {self.cube_type}")
         return middle_cube
 
     def eval_xc_eff(self, rho_cube, weights_):
-        """
-        Get the exc and vxc from the model, for restricted Kohn-Sham (RKS) calculations.
-        Args:
-            rho_cube: Electron density on the cube grid.
-        Returns:
-            exc: Exchange-correlation energy.
-            vxc: Exchange-correlation potential.
-        """
-        input_mat = torch.tensor(rho_cube, dtype=self.dtype, device=self.device)
-        weights_mat = torch.tensor(
+        input_mat = torch.as_tensor(rho_cube, dtype=self.dtype, device=self.device)
+        weights_mat = torch.as_tensor(
             weights_.reshape((-1, 1)), dtype=self.dtype, device=self.device
         )
         input_mat.requires_grad = True
-        if self.model.before_weight:
-            input_mat = torch.einsum("p...,pi->p...", input_mat, weights_mat)
-        exc_cube = self.model(input_mat)
-        if not self.model.before_weight:
-            exc_cube = exc_cube * weights_mat
+        input_mat, exc_cube = self.model_output(input_mat, weights_mat)
         exc_cube += torch.einsum("i,ij->ij", self.get_b3lyp_ene(input_mat), weights_mat)
         middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
         exc_cube = exc_cube.detach().cpu().numpy().squeeze(-1)

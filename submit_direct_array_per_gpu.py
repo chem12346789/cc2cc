@@ -375,6 +375,7 @@ def main() -> int:
     task_ids = array_ids(array_spec)
     limit = max(1, array_limit(array_spec) or args.array_concurrency)
     exclude_spec = sbatch_field(script_text, ["-x", "--exclude"]) or ""
+    load_name = safe_name(load_model_name(script_text) or "no-load")
     mol_names = molecule_names(script_text)
 
     print(f"[INFO] Script={script_path.name}; partition={partition}; array={array_spec}; tasks={len(task_ids)}; limit={limit}")
@@ -412,6 +413,7 @@ def main() -> int:
     if not slots:
         print("[WARN] No eligible GPUs found. Nothing submitted.")
         return 0
+    print(f"[INFO] Available eligible GPUs={len(slots)}")
 
     valid: list[tuple[str, int]] = []
     for node, gpu in slots:
@@ -496,12 +498,14 @@ def main() -> int:
     print(f"[INFO] Submit order={'small est_time first' if time_path else 'original array order'}")
 
     submitted = 0
+    submitted_jobs: list[tuple[int, str, str]] = []
     prev_by_bucket: dict[int, str] = {}
     fake_base = 900_000_000
     for i, (tid, bi, node, gpu, load) in enumerate(plan, 1):
         dep = f"afterany:{prev_by_bucket[bi]}" if bi in prev_by_bucket else None
         metric = f"est_time={estimates[tid]:.2f}, bucket_est_load={load:.2f}" if time_path else f"bucket_task_count={load:.0f}"
-        job_name = mol_names[tid] if 0 <= tid < len(mol_names) else f"task-{tid}"
+        mol_name = mol_names[tid] if 0 <= tid < len(mol_names) else f"task-{tid}"
+        job_name = safe_name(f"{load_name}-{mol_name}")
         if args.debug:
             print(f"[DEBUG] Submit {i}/{len(plan)}: task={tid}, job={job_name}, bucket={bi}, node={node}, gpu={gpu}, dep={dep or 'none'}, {metric}")
         exclude = [n for n in submit_pool if n != node]
@@ -511,7 +515,7 @@ def main() -> int:
         if args.dry_run:
             job_id = str(fake_base + submitted + 1)
             if args.debug:
-                print(f"         [DRY-RUN] fake_job_id={job_id}")
+                print(f"[JOBID] task={tid} job={job_name} jobid={job_id} dry_run=1")
         else:
             try:
                 out = run(cmd, debug=args.debug)
@@ -525,12 +529,16 @@ def main() -> int:
                 out = run(retry, debug=args.debug)
             job_id = parse_job_id(out)
             if args.debug:
+                print(f"[JOBID] task={tid} job={job_name} jobid={job_id}")
                 print(f"         job_id={job_id} raw={out}")
+        submitted_jobs.append((tid, job_name, job_id))
         prev_by_bucket[bi] = job_id
         submitted += 1
         if not args.debug and (submitted % 10 == 0 or submitted == len(plan)):
             print(f"[INFO] Submitted {submitted}/{len(plan)}")
 
+    if submitted_jobs:
+        print("[JOBID-SUMMARY] " + " ".join(f"{tid}:{jobid}" for tid, _job, jobid in submitted_jobs))
     print(f"[DONE] submissions={submitted}, tasks={len(task_ids)}, slots={len(slots)}, mode=individual")
     return 0
 
