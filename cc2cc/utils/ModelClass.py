@@ -32,18 +32,26 @@ CUBE_INDEX = {
     ),
 }
 B3LYP_WEIGHTS = (0.08, 0.19, 0.72, 0.81)
+TORCH_LIST = [
+    "loss_ene",
+    "loss_ene_abs",
+    "loss_ene_atomic",
+    "loss_grad_record",
+    "loss_tot",
+    "loss_tot_ene",
+    "loss_tot_abs",
+    "loss_tot_grad",
+    "loss_tot_atomic",
+]
 
 
 class DataRecordList:
     def __init__(self, len_batch):
         self.data_dict = {
-            "loss_ene": np.zeros(len_batch),
-            "loss_ene_abs": np.zeros(len_batch),
-            "loss_ene_atomic": np.zeros(len_batch),
-            "loss_grad_record": np.zeros(len_batch),
-            "loss_tot": np.zeros(len_batch),
             "name": ["" for _ in range(len_batch)],
         }
+        for key in TORCH_LIST:
+            self.data_dict[key] = np.zeros(len_batch)
         self.iter = 0
 
     def add_data_record(self, data_record):
@@ -201,7 +209,12 @@ class ModelClass:
         loss_class = loss_dict.get(self.args.loss_ene)
         if loss_class is None:
             raise ValueError(f"Unknown loss function {self.args.loss_ene}")
-        for name in ("loss_ene", "loss_ene_atomic", "loss_ene_abs", "loss_grad"):
+        for name in (
+            "ene_loss_fun",
+            "atomic_loss_fun",
+            "abs_loss_fun",
+            "grad_loss_fun",
+        ):
             setattr(self, name, loss_class(reduction="sum").cuda(self.local_rank))
 
     def init_database(self, train_str_dict, eval_str_dict):
@@ -311,6 +324,7 @@ class ModelClass:
         loss_multiplier_abs = batch["loss_multiplier_abs"]
         loss_multiplier_grad = batch["loss_multiplier_grad"]
         loss_multiplier_atomic = batch["loss_multiplier_atomic"]
+        data_record = {"name": batch["name"]}
 
         if if_train:
             input_.requires_grad = True
@@ -320,37 +334,37 @@ class ModelClass:
             output = output.detach()
 
         sum_output = torch.sum(output)
-        tot_loss = loss_multiplier * self.loss_ene(
+        tot_loss = loss_multiplier * self.ene_loss_fun(
             data_weight * sum_target, data_weight * sum_output
         )
-        loss_record = torch.abs(sum_target - sum_output)
-        zero_record = torch.zeros_like(loss_record)
+        data_record["loss_ene"] = torch.abs(sum_target - sum_output).detach().cpu()
+        data_record["loss_tot_ene"] = tot_loss.detach().cpu()
 
         if if_train:
             if self.args.if_abs:
                 target = batch["output"] * weight
                 abs_error = torch.abs(target - output)
-                loss_abs_record = torch.sum(abs_error)
                 if self.args.topk_abs > 0:
                     topk_indices = torch.topk(
                         abs_error.sum(dim=1), self.args.topk_abs
                     ).indices
-                    tot_loss += (
+                    loss_ene_abs = (
                         loss_multiplier_abs
-                        * self.loss_ene_abs(
+                        * self.abs_loss_fun(
                             data_weight * target[topk_indices],
                             data_weight * output[topk_indices],
                         )
                         / np.sqrt(self.args.topk_abs)
                     )
                 else:
-                    tot_loss += (
+                    loss_ene_abs = (
                         loss_multiplier_abs
-                        * self.loss_ene_abs(data_weight * target, data_weight * output)
+                        * self.abs_loss_fun(data_weight * target, data_weight * output)
                         / np.sqrt(target.shape[0])
                     )
-            else:
-                loss_abs_record = zero_record
+                tot_loss += loss_ene_abs
+                data_record["loss_ene_abs"] = torch.sum(abs_error).detach().cpu()
+                data_record["loss_tot_abs"] = loss_ene_abs.detach().cpu()
 
             if self.args.if_grad:
                 grad_cc_train = batch["grad_cc_train"]
@@ -362,15 +376,14 @@ class ModelClass:
                 )[0]
                 force = torch.einsum("piC,piCx->x", middle_, grad2force)
 
-                tot_loss += loss_multiplier_grad * self.loss_grad(
+                loss_grad = loss_multiplier_grad * self.grad_loss_fun(
                     data_weight * grad_cc_train, data_weight * force
                 )
-                loss_grad_record = torch.sum(torch.abs(grad_cc_train - force))
-            else:
-                loss_grad_record = zero_record
-        else:
-            loss_abs_record = zero_record
-            loss_grad_record = zero_record
+                tot_loss += loss_grad
+                data_record["loss_grad_record"] = (
+                    torch.sum(torch.abs(grad_cc_train - force)).detach().cpu()
+                )
+                data_record["loss_tot_grad"] = loss_grad.detach().cpu()
 
         if self.args.if_atomic:
             ae_target = batch["ae_target"]
@@ -394,23 +407,22 @@ class ModelClass:
                 atomic_output = torch.sum(atomic_output)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
-            tot_loss += loss_multiplier_atomic * self.loss_ene_atomic(
+            loss_atomic = loss_multiplier_atomic * self.atomic_loss_fun(
                 data_weight * ae_target, data_weight * ae_output
             )
-            loss_atomic_record = torch.abs(ae_target - ae_output)
-        else:
-            loss_atomic_record = zero_record
+            tot_loss += loss_atomic
+            data_record["loss_tot_atomic"] = loss_atomic.detach().cpu()
+            data_record["loss_ene_atomic"] = (
+                torch.abs(ae_target - ae_output).detach().cpu()
+            )
+
+        data_record["loss_tot"] = tot_loss.detach().cpu()
+        for key in TORCH_LIST:
+            if key not in data_record:
+                data_record[key] = torch.tensor(0.0, device="cpu")
 
         event = torch.cuda.Event()
         event.record()
-        data_record = {
-            "loss_ene": loss_record.detach().to("cpu", non_blocking=True),
-            "loss_ene_abs": loss_abs_record.detach().to("cpu", non_blocking=True),
-            "loss_ene_atomic": loss_atomic_record.detach().to("cpu", non_blocking=True),
-            "loss_grad_record": loss_grad_record.detach().to("cpu", non_blocking=True),
-            "loss_tot": tot_loss.detach().to("cpu", non_blocking=True),
-            "name": batch["name"],
-        }
 
         return tot_loss, data_record, event
 

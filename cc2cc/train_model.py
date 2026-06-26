@@ -2,35 +2,113 @@
 
 import os
 import random
+
 import numpy as np
 import torch
 from torch import distributed as dist
 
 import wandb
 
-from cc2cc.utils import ModelClass
-from cc2cc.utils import print_computer_info
+from cc2cc.utils import ModelClass, print_computer_info
 from cc2cc.utils.timer import Timer
 
 
 class BestLoss:
     def __init__(self):
-        self.loss_dict = {
-            "tot_loss": np.inf,
-            "train_loss": np.inf,
-            "eval_loss": np.inf,
-        }
+        self.loss_dict = {key: np.inf for key in ("tot_loss", "train_loss", "eval_loss")}
 
     def update(self, now_loss):
-        if_improved = False
-        for key in self.loss_dict.keys():
-            if now_loss[key] < self.loss_dict[key]:
-                print(
-                    f"Best {key} improved: {self.loss_dict[key]:.2e} -> {now_loss[key]:.2e}"
-                )
+        improved = False
+        for key, best in self.loss_dict.items():
+            if now_loss[key] < best:
+                print(f"Best {key} improved: {best:.2e} -> {now_loss[key]:.2e}")
                 self.loss_dict[key] = now_loss[key]
-                if_improved = True
-        return if_improved
+                improved = True
+        return improved
+
+
+def _set_seed(seed):
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.enabled = False
+    print("Warning: Using deterministic mode, which may slow down training.")
+
+
+class _Logger:
+    __slots__ = ("run", "timer", "best_loss", "loss_dir", "checkpoint_stride")
+
+    def __init__(self, run, timer, best_loss, loss_dir, checkpoint_stride):
+        self.run = run
+        self.timer = timer
+        self.best_loss = best_loss
+        self.loss_dir = loss_dir
+        self.checkpoint_stride = checkpoint_stride
+
+    @classmethod
+    def setup(cls, modeldict, args):
+        if modeldict.local_rank != 0:
+            return None
+
+        print_computer_info(args.device)
+        experiment_dict = {
+            "n_train": len(modeldict.database_train),
+            "n_eval": len(modeldict.database_eval),
+            "jobid": os.environ.get("SLURM_JOB_ID"),
+            "pid": os.getpid(),
+            "checkpoint": modeldict.dir_checkpoint.stem,
+            **vars(args),
+        }
+        print(experiment_dict)
+
+        run = wandb.init(
+            project="DFT2CC",
+            resume="allow",
+            name="dft2cc",
+            config=experiment_dict,
+            allow_val_change=True,
+        )
+        wandb.define_metric("*", step_metric="global_step")
+        return cls(run, Timer(), BestLoss(), modeldict.dir_checkpoint / "loss", args.eval_step * 32)
+
+    def log(self, modeldict, train_record, eval_record, epoch):
+        stats = {
+            f"{prefix}_{key}": np.mean(val)
+            for prefix, record in (("train", train_record), ("eval", eval_record))
+            for key, val in record.data_dict.items()
+            if key.startswith("loss_")
+        }
+        train_loss = stats["train_loss_ene"]
+        eval_loss = stats["eval_loss_ene"]
+        tot_loss = np.mean(
+            np.concatenate([train_record.data_dict["loss_ene"], eval_record.data_dict["loss_ene"]])
+        )
+        lr = modeldict.optimizer.param_groups[0]["lr"]
+        metrics = {
+            "epoch": epoch,
+            "global_step": epoch,
+            "lr": lr,
+            "time_elapsed": self.timer.elapsed(),
+            **stats,
+        }
+        improved = self.best_loss.update(
+            {"train_loss": train_loss, "eval_loss": eval_loss, "tot_loss": tot_loss}
+        )
+        self.run.log(metrics)
+        if improved or (self.checkpoint_stride and epoch % self.checkpoint_stride == 0):
+            modeldict.save_model(epoch)
+            train_record.save(self.loss_dir / f"train-{epoch}.csv")
+            eval_record.save(self.loss_dir / f"eval-{epoch}.csv")
+        print(
+            f"Epoch: {epoch:>9} Loss: {train_loss:>9.2e} Eval: {eval_loss:>9.2e} "
+            f"lr: {lr:>9.2e} {self.timer.measure()}",
+            flush=True,
+        )
 
 
 def train_model(train_str_dict, eval_str_dict, args):
@@ -43,133 +121,41 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     # 0. Init the environment
     if args.seed is not None:
-        # Set the random seed for reproducibility
-        random.seed(args.seed)
-        os.environ["PYTHONHASHSEED"] = str(args.seed)
-        np.random.seed(args.seed)
-        torch.manual_seed(args.seed)
-        torch.cuda.manual_seed(args.seed)
-        torch.cuda.manual_seed_all(args.seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-        torch.backends.cudnn.enabled = False
-        print("Warning: Using deterministic mode, which may slow down training.")
-
-    # 1. Init the criterion and the model
+        _set_seed(args.seed)
 
     modeldict = ModelClass(args)
     modeldict.init_model(init_train=True)
     modeldict.init_database(train_str_dict, eval_str_dict)
 
-    if modeldict.args.distributed:
-        dist.barrier()
+    is_distributed = modeldict.args.distributed
+    barrier = dist.barrier if is_distributed else (lambda: None)
+    barrier()
 
-    if modeldict.local_rank == 0:
-        print_computer_info(args.device)
-
-        experiment_dict = {
-            "n_train": len(modeldict.database_train),
-            "n_eval": len(modeldict.database_eval),
-            "jobid": os.environ.get("SLURM_JOB_ID"),
-            "pid": os.getpid(),
-            "checkpoint": modeldict.dir_checkpoint.stem,
-        }
-        for key in vars(args):
-            experiment_dict[key] = getattr(args, key)
-        print(experiment_dict)
-
-        run = wandb.init(
-            project="DFT2CC",
-            resume="allow",
-            name="dft2cc",
-            config=experiment_dict,
-            allow_val_change=True,
-        )
-        wandb.define_metric("*", step_metric="global_step")
-
-        timer = Timer()
-        best_loss = BestLoss()
-
-    if modeldict.args.distributed:
-        dist.barrier()
+    logger = _Logger.setup(modeldict, args)
+    barrier()
 
     for epoch in range(args.epoch + 1):
         if modeldict.args.distributed:
             modeldict.database_train.sampler.set_epoch(epoch)
             modeldict.database_eval.sampler.set_epoch(epoch)
 
-        if epoch > modeldict.start_step:
-            train_record = modeldict.train_model()
-            if modeldict.args.distributed:
-                dist.barrier()
+        if epoch <= modeldict.start_step:
+            modeldict.scheduler.step()
+            barrier()
+            continue
 
-            if epoch % args.eval_step == 0:
-                eval_record = modeldict.eval_model()
-                if modeldict.args.distributed:
-                    dist.barrier()
+        train_record = modeldict.train_model()
+        barrier()
 
-                if modeldict.local_rank == 0:
-                    experiment_dict = {
-                        "epoch": epoch,
-                        "global_step": epoch,
-                        "lr": modeldict.optimizer.param_groups[0]["lr"],
-                        "time_elapsed": timer.elapsed(),
-                    }
+        if epoch % args.eval_step == 0:
+            eval_record = modeldict.eval_model()
+            barrier()
 
-                    if_improved = best_loss.update(
-                        {
-                            "train_loss": np.mean(train_record.data_dict["loss_ene"]),
-                            "eval_loss": np.mean(eval_record.data_dict["loss_ene"]),
-                            "tot_loss": np.mean(
-                                np.concatenate(
-                                    [
-                                        train_record.data_dict["loss_ene"],
-                                        eval_record.data_dict["loss_ene"],
-                                    ]
-                                )
-                            ),
-                        }
-                    )
-                    epoch_lr = experiment_dict["lr"]
+            if logger:
+                logger.log(modeldict, train_record, eval_record, epoch)
 
-                    experiment_dict.update(
-                        {
-                            f"train_{key}": np.mean(train_record.data_dict[key])
-                            for key in train_record.data_dict.keys()
-                            if key.startswith("loss_")
-                        }
-                    )
-                    experiment_dict.update(
-                        {
-                            f"eval_{key}": np.mean(eval_record.data_dict[key])
-                            for key in eval_record.data_dict.keys()
-                            if key.startswith("loss_")
-                        }
-                    )
-                    run.log(experiment_dict)
-
-                    if if_improved or (epoch % (args.eval_step * 32) == 0):
-                        modeldict.save_model(epoch)
-
-                        train_record.save(
-                            modeldict.dir_checkpoint / "loss" / f"train-{epoch}.csv"
-                        )
-                        eval_record.save(
-                            modeldict.dir_checkpoint / "loss" / f"eval-{epoch}.csv"
-                        )
-
-                    train_record_loss_ene = np.mean(train_record.data_dict["loss_ene"])
-                    eval_record_loss_ene = np.mean(eval_record.data_dict["loss_ene"])
-                    print(
-                        f"Epoch: {epoch:>9} "
-                        f"Loss: {train_record_loss_ene:>9.2e} "
-                        f"Eval: {eval_record_loss_ene:>9.2e} "
-                        f"lr: {epoch_lr:>9.2e} "
-                        f"{timer.measure()}",
-                        flush=True,
-                    )
         modeldict.scheduler.step()
+        barrier()
 
-        if modeldict.args.distributed:
-            dist.barrier()
-    torch.distributed.destroy_process_group()
+    if is_distributed:
+        dist.destroy_process_group()
