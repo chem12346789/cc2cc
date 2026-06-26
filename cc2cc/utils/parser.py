@@ -190,8 +190,8 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--model",
         type=str,
-        default="densenet",
-        help="Model for the training. Default is densenet.",
+        default="transformer+dense_mix_e3nn_4",
+        help="Model for training.",
     )
 
     parser.add_argument(
@@ -218,8 +218,8 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--activation_memory_budget",
         type=float,
-        default=1.0,
-        help="Activation memory budget in GB for training. Default is 1.",
+        default=None,
+        help="Deprecated placeholder for backward compatibility (currently unused).",
     )
 
     parser.add_argument(
@@ -279,6 +279,13 @@ def add_args(parser: argparse.ArgumentParser):
         type=int,
         default=None,
         help="Random seed for the training. Default is None (no seed). ",
+    )
+
+    parser.add_argument(
+        "--deterministic",
+        type=str2bool,
+        default=False,
+        help="Enable deterministic CUDA backend settings (slower but reproducible).",
     )
 
     parser.add_argument(
@@ -457,6 +464,13 @@ def add_args(parser: argparse.ArgumentParser):
             print("CUDA is available. This script is running on CPU. ")
     else:
         raise ValueError(f"Invalid device: {args.device}. Please use 'cuda' or 'cpu'.")
+
+    if args.activation_memory_budget is not None:
+        print(
+            "Warning: --activation_memory_budget is currently unused and kept only "
+            "for backward compatibility.",
+            flush=True,
+        )
 
     print("Arguments:", flush=True)
     for arg_ in vars(args):

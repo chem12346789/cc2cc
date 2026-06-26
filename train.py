@@ -1,131 +1,62 @@
 import argparse
+import json
+from pathlib import Path
 
 from cc2cc.utils import add_args
 from cc2cc.utils.parser import gen_name_args
 from cc2cc.train_model import train_model
 
-# train_str_list = [
-#     "W4_11-c",
-#     "W4_11-si",
-#     "W4_11-f",
-#     "W4_11-h",
-#     "W4_11-si2h6",
-#     "W4_11-c2h6",
-# ]
+_CONFIG_DIR = Path(__file__).resolve().parent / "configs"
+_DEFAULT_SPLIT_CANDIDATES = (
+    "dataset_split.json",
+    "mol1.json",
+    "dataset_split_mol1.json",
+    "test.json",
+)
 
-# eval_str_list = [
-#     # # #####################
-#     # # ######  5(<9)  ######
-#     # # #####################
-#     "molecule5-W4_11",
-# ]
 
-train_str_list = [
-    "molecule0-W4_11",
-    # "molecule_ADDON",
-    "AHB21-1A",
-    "AHB21-4A",
-    "ALK8-li+",
-    "ALK8-na+",
-    "ALKBDE10-ca",
-    "ALKBDE10-k",
-    "ALKBDE10-li",
-    "ALKBDE10-mg",
-    "ALKBDE10-na",
-    "CHB6-24A",
-    "DIPCS10-be_2+",
-    "DIPCS10-mg_2+",
-    "G21EA-EA_c-",
-    "G21EA-EA_o-",
-    "G21EA-EA_p-",
-    "G21EA-EA_s-",
-    "G21EA-EA_si-",
-    "G21IP-al+",
-    "G21IP-b+",
-    "G21IP-be+",
-    "G21IP-c+",
-    "G21IP-cl+",
-    "G21IP-f+",
-    "G21IP-mg+",
-    "G21IP-n+",
-    "G21IP-o+",
-    "G21IP-p+",
-    "G21IP-s+",
-    "G21IP-si+",
-    "HEAVYSB11-br",
-    "RG18-ar",
-    "RG18-kr",
-    "RG18-ne",
-    "SIE4x4-he",
-    "SIE4x4-he+",
-    # #######################
-    # #########   1  ########
-    # #######################
-    "molecule1-W4_11",
-    # #######################
-    # #########   2  ########
-    # #######################
-    "molecule2-W4_11",
-]
+def _default_split_path():
+    for name in _DEFAULT_SPLIT_CANDIDATES:
+        path = _CONFIG_DIR / name
+        if path.exists():
+            return path
+    return _CONFIG_DIR / _DEFAULT_SPLIT_CANDIDATES[0]
 
-eval_str_list = [
-    # # #####################
-    # # ######  5(<9)  ######
-    # # #####################
-    "molecule5-W4_11",
-    # ######## 0 H ##########
-    "ALK8-li4_c",
-    "G2RC-62",
-    "G2RC-67",
-    "HAL59-29_CF3Br-benB",
-    "HAL59-30_CF3I-benB",
-    "IL16-152B",
-    "IL16-214B",
-    "IL16-229B",
-    # ######## 1 H ##########
-    "HAL59-BrBr_FCCH",
-    "HAL59-FI_FCCH",
-    "PNICO23-22b",
-    # ######## 2 H ##########
-    "DC13-o3_c2h2_add",
-    "RSE43-P5",
-    "RSE43-P7",
-    "TAUT15-7a",
-    "TAUT15-7b",
-    "YBDE18-nf3-ch2",
-    "YBDE18-pf3-ch2",
-    # ######## 3 H ##########
-    "HAL59-NH3_F3CI",
-    "IL16-230B",
-    "RSE43-E5",
-    "RSE43-E7",
-    # #######################
-    # ######   6(<9)  #######
-    # #######################
-    # ########  0 H #########
-    "RG18-ne6",
-    # ########  1 H #########
-    "ALK8-li5_ch",
-    "IL16-144B",
-    "PArel-c2cl41",
-    "PArel-c2cl42",
-    "PArel-c2cl43",
-    # ########  2 H #########
-    "RSE43-P28",
-    # ########  3 H #########
-    "PArel-c2h2f41",
-    "PArel-c2h2f42",
-    "RSE43-E28",
-]
 
-train_str_exclude_list = []
-eval_str_exclude_list = []
+DEFAULT_SPLIT_PATH = _default_split_path()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Generate the inversed potential and energy."
     )
+    parser.add_argument(
+        "--split_config",
+        type=str,
+        default=str(DEFAULT_SPLIT_PATH),
+        help="Path to JSON file defining train/eval splits.",
+    )
     args = add_args(parser)
+
+    split_path = Path(args.split_config)
+    if not split_path.is_absolute():
+        split_path = (Path(__file__).resolve().parent / split_path).resolve()
+    if not split_path.exists():
+        raise FileNotFoundError(f"Split configuration not found: {split_path}")
+    with split_path.open("r", encoding="utf-8") as f:
+        split_config = json.load(f)
+
+    def _config_list(key):
+        value = split_config.get(key, [])
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            raise TypeError(f"'{key}' in {split_path} must be a list, got {type(value)}")
+        return value
+
+    train_str_list = _config_list("train")
+    eval_str_list = _config_list("eval")
+    train_str_exclude_list = _config_list("train_exclude")
+    eval_str_exclude_list = _config_list("eval_exclude")
 
     train_str_list = gen_name_args(train_str_list, args.dataset, args.name_mol_reverse)
     train_str_exclude_list = gen_name_args(
@@ -143,6 +74,15 @@ if __name__ == "__main__":
 
     # remove the same name in eval and eval_str_exclude_list
     eval_str_list = [mol for mol in eval_str_list if mol not in eval_str_exclude_list]
+
+    overlap = sorted(set(train_str_list) & set(eval_str_list))
+    if overlap:
+        preview = ", ".join(overlap[:8])
+        suffix = " ..." if len(overlap) > 8 else ""
+        raise ValueError(
+            f"Train/eval overlap detected in {split_path} (count={len(overlap)}): "
+            f"{preview}{suffix}"
+        )
 
     print(f"Train set size: {len(train_str_list)}")
     print(f"Train set: {train_str_list}")

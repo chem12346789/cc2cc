@@ -1,0 +1,15 @@
+{
+  "train": [
+    "W4_11-c",
+    "W4_11-si",
+    "W4_11-f",
+    "W4_11-h",
+    "W4_11-si2h6",
+    "W4_11-c2h6"
+  ],
+  "eval": [
+    "molecule5-W4_11"
+  ],
+  "train_exclude": [],
+  "eval_exclude": []
+}

@@ -421,10 +421,7 @@ class ModelClass:
             if key not in data_record:
                 data_record[key] = torch.tensor(0.0, device="cpu")
 
-        event = torch.cuda.Event()
-        event.record()
-
-        return tot_loss, data_record, event
+        return tot_loss, data_record
 
     def train_model(self):
         self.train()
@@ -433,14 +430,12 @@ class ModelClass:
 
         for batch in self.database_train.data_gpu:
             batch = self.database_train.process_batch(batch, device=self.local_rank)
-            tot_loss, data_record, event = self.loss(batch)
+            tot_loss, data_record = self.loss(batch)
             tot_loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
             self.optimizer.step()
             self.optimizer.zero_grad(set_to_none=True)
-
-            if event.query():
-                data_record_l.add_data_record(data_record)
+            data_record_l.add_data_record(data_record)
         data_record_l.merge()
         return data_record_l
 
@@ -451,10 +446,8 @@ class ModelClass:
 
         for batch in self.database_eval.data_gpu:
             batch = self.database_eval.process_batch(batch, device=self.local_rank)
-            _, data_record, event = self.loss(batch, if_train=False)
-
-            if event.query():
-                data_record_l.add_data_record(data_record)
+            _, data_record = self.loss(batch, if_train=False)
+            data_record_l.add_data_record(data_record)
         data_record_l.merge()
         return data_record_l
 

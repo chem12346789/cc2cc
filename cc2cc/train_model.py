@@ -32,8 +32,12 @@ def _set_seed(seed):
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+
+def _enable_deterministic_mode():
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.enabled = False
@@ -122,6 +126,8 @@ def train_model(train_str_dict, eval_str_dict, args):
     # 0. Init the environment
     if args.seed is not None:
         _set_seed(args.seed)
+    if args.deterministic:
+        _enable_deterministic_mode()
 
     modeldict = ModelClass(args)
     modeldict.init_model(init_train=True)
