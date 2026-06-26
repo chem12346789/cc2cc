@@ -276,8 +276,9 @@ class DataBase:
             del output_mat
 
             if self.args.if_relative_weight_abs:
-                loss_multiplier_abs /= self.loss_ene(
-                    np.abs(data_dict["output"] * data_dict["weight"])
+                loss_multiplier_abs /= (
+                    self.loss_ene(np.abs(data_dict["output"] * data_dict["weight"]))
+                    + EPS
                 )
                 self.print(
                     f"Adjusted loss_multiplier_abs: {loss_multiplier_abs:>6.3f}",
@@ -343,12 +344,8 @@ class DataBase:
         data_dict["data_weight"] = data_weight
 
         if self.args.if_relative_weight:
-            loss_multiplier /= self.loss_ene(energy_target)
-
-            if np.abs(ae_target) < 1e-10:
-                loss_multiplier_atomic = 0
-            else:
-                loss_multiplier_atomic /= self.loss_ene(ae_target)
+            loss_multiplier /= self.loss_ene(energy_target) + EPS
+            loss_multiplier_atomic /= self.loss_ene(ae_target) + EPS
 
         data_dict["loss_multiplier"] = loss_multiplier
         data_dict["loss_multiplier_abs"] = loss_multiplier_abs

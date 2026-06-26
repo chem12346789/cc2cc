@@ -155,7 +155,7 @@ if __name__ == "__main__":
                     ).run()
                     save_frames_list = myintegrator.frames[::20]
                     save_coords = np.array([frame.coord for frame in save_frames_list])
-                    np.savez_compressed(DATA_PATH / f"{name}.traj", coords=save_coords)
+                    np.savez(DATA_PATH / f"{name}.traj", coords=save_coords)
 
                 load_coords = np.load(DATA_PATH / f"{name}.traj.npz")["coords"]
                 traj_mole_pool = []

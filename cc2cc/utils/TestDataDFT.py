@@ -129,7 +129,7 @@ class TestDataDFT:
         print(f"Data for {name} loaded.")
         if if_update:
             print(f"Data for {name} saved to file.")
-            np.savez_compressed(path_to_data, **data_frame)
+            np.savez(path_to_data, **data_frame)
 
     def test_mol_rks(self, dm1_dft, xc_code_disp):
         """

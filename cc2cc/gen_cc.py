@@ -319,4 +319,4 @@ def cc(
             "weights": grids.weights,
         }
     )
-    np.savez_compressed(DATA_PATH / f"data_{name}.npz", **data_dict)
+    np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)
