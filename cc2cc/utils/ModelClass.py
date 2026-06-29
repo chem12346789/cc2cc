@@ -1,4 +1,5 @@
 import os
+from collections import deque
 
 import numpy as np
 import pandas as pd
@@ -318,6 +319,12 @@ class ModelClass:
     def loss(self, batch, if_train=True):
         input_ = batch["input"]
         weight = batch["weight"]
+        if_use_cuda_event = input_.is_cuda
+        tensor_to_numpy = lambda x: (
+            x.detach().to("cpu", non_blocking=if_use_cuda_event)
+            if x.is_cuda
+            else x.numpy()
+        )
         sum_target = batch["energy_target"]
         data_weight = batch["data_weight"]
         loss_multiplier = batch["loss_multiplier"]
@@ -337,8 +344,8 @@ class ModelClass:
         tot_loss = loss_multiplier * self.ene_loss_fun(
             data_weight * sum_target, data_weight * sum_output
         )
-        data_record["loss_ene"] = torch.abs(sum_target - sum_output).detach().cpu()
-        data_record["loss_tot_ene"] = tot_loss.detach().cpu()
+        data_record["loss_ene"] = tensor_to_numpy(torch.abs(sum_target - sum_output))
+        data_record["loss_tot_ene"] = tensor_to_numpy(tot_loss)
 
         if if_train:
             if self.args.if_abs:
@@ -363,8 +370,8 @@ class ModelClass:
                         / np.sqrt(target.shape[0])
                     )
                 tot_loss += loss_ene_abs
-                data_record["loss_ene_abs"] = torch.sum(abs_error).detach().cpu()
-                data_record["loss_tot_abs"] = loss_ene_abs.detach().cpu()
+                data_record["loss_ene_abs"] = tensor_to_numpy(torch.sum(abs_error))
+                data_record["loss_tot_abs"] = tensor_to_numpy(loss_ene_abs)
 
             if self.args.if_grad:
                 grad_cc_train = batch["grad_cc_train"]
@@ -380,10 +387,10 @@ class ModelClass:
                     data_weight * grad_cc_train, data_weight * force
                 )
                 tot_loss += loss_grad
-                data_record["loss_grad_record"] = (
-                    torch.sum(torch.abs(grad_cc_train - force)).detach().cpu()
+                data_record["loss_grad_record"] = tensor_to_numpy(
+                    torch.sum(torch.abs(grad_cc_train - force))
                 )
-                data_record["loss_tot_grad"] = loss_grad.detach().cpu()
+                data_record["loss_tot_grad"] = tensor_to_numpy(loss_grad)
 
         if self.args.if_atomic:
             ae_target = batch["ae_target"]
@@ -411,31 +418,48 @@ class ModelClass:
                 data_weight * ae_target, data_weight * ae_output
             )
             tot_loss += loss_atomic
-            data_record["loss_tot_atomic"] = loss_atomic.detach().cpu()
-            data_record["loss_ene_atomic"] = (
-                torch.abs(ae_target - ae_output).detach().cpu()
+            data_record["loss_tot_atomic"] = tensor_to_numpy(loss_atomic)
+            data_record["loss_ene_atomic"] = tensor_to_numpy(
+                torch.abs(ae_target - ae_output)
             )
 
-        data_record["loss_tot"] = tot_loss.detach().cpu()
+        data_record["loss_tot"] = tensor_to_numpy(tot_loss)
         for key in TORCH_LIST:
             if key not in data_record:
-                data_record[key] = torch.tensor(0.0, device="cpu")
+                data_record[key] = np.array(0.0)
 
-        return tot_loss, data_record
+        event = None
+        if if_use_cuda_event:
+            event = torch.cuda.Event()
+            event.record()
+        return tot_loss, data_record, event
 
     def train_model(self):
         self.train()
         self.optimizer.zero_grad(set_to_none=True)
         data_record_l = DataRecordList(len(self.database_train))
+        pending_records = deque()
 
         for batch in self.database_train.data_gpu:
             batch = self.database_train.process_batch(batch, device=self.local_rank)
-            tot_loss, data_record = self.loss(batch)
+            tot_loss, data_record, event = self.loss(batch)
             tot_loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
             self.optimizer.step()
             self.optimizer.zero_grad(set_to_none=True)
-            data_record_l.add_data_record(data_record)
+            if event is None:
+                data_record_l.add_data_record(data_record)
+                continue
+
+            pending_records.append((event, data_record))
+            while pending_records and pending_records[0][0].query():
+                _, ready_record = pending_records.popleft()
+                data_record_l.add_data_record(ready_record)
+
+        while pending_records:
+            event, ready_record = pending_records.popleft()
+            event.synchronize()
+            data_record_l.add_data_record(ready_record)
         data_record_l.merge()
         return data_record_l
 
@@ -443,11 +467,24 @@ class ModelClass:
         self.eval()
         self.optimizer.zero_grad(set_to_none=True)
         data_record_l = DataRecordList(len(self.database_eval))
+        pending_records = deque()
 
         for batch in self.database_eval.data_gpu:
             batch = self.database_eval.process_batch(batch, device=self.local_rank)
-            _, data_record = self.loss(batch, if_train=False)
-            data_record_l.add_data_record(data_record)
+            _, data_record, event = self.loss(batch, if_train=False)
+            if event is None:
+                data_record_l.add_data_record(data_record)
+                continue
+
+            pending_records.append((event, data_record))
+            while pending_records and pending_records[0][0].query():
+                _, ready_record = pending_records.popleft()
+                data_record_l.add_data_record(ready_record)
+
+        while pending_records:
+            event, ready_record = pending_records.popleft()
+            event.synchronize()
+            data_record_l.add_data_record(ready_record)
         data_record_l.merge()
         return data_record_l
 

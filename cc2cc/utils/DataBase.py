@@ -106,9 +106,9 @@ class DataBase:
             "L1Loss": lambda x: np.sum(np.abs(x)),
             "MSELoss": lambda x: np.sum(x**2),
         }
-        if args.normal_loss_ene not in loss_func_dict:
-            raise ValueError(f"Unknown loss function {args.normal_loss_ene}")
-        self.loss_ene = loss_func_dict[args.normal_loss_ene]
+        if args.loss_ene not in loss_func_dict:
+            raise ValueError(f"Unknown loss function {args.loss_ene}")
+        self.loss_ene = loss_func_dict[args.loss_ene]
 
         self.print = lambda msg: print(msg, flush=True) if self.verbose else None
 
