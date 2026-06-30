@@ -110,8 +110,6 @@ class DataBase:
             raise ValueError(f"Unknown loss function {args.loss_ene}")
         self.loss_ene = loss_func_dict[args.loss_ene]
 
-        self.print = lambda msg: print(msg, flush=True) if self.verbose else None
-
         name_list = []
         error_molecule = []
         mol_info_dict = {}
@@ -197,6 +195,10 @@ class DataBase:
             sampler=self.sampler,
         )
 
+    def print(self, *args, **kwargs):
+        if self.verbose:
+            print(*args, **kwargs)
+
     def __len__(self):
         return len(self.dataset.name_list)
 
@@ -279,7 +281,7 @@ class DataBase:
                 loss_multiplier_abs /= (
                     self.loss_ene(np.abs(data_dict["output"] * data_dict["weight"]))
                     + EPS
-                )
+                ) * np.sqrt(len(data_dict["output"]))
                 self.print(
                     f"Adjusted loss_multiplier_abs: {loss_multiplier_abs:>6.3f}",
                 )
@@ -287,7 +289,7 @@ class DataBase:
                 energy_target - np.sum(data_dict["output"] * data_dict["weight"])
             )
             if error_energy > MAX_ERROR_ENERGY * mol_info["natm"]:
-                print(
+                self.print(
                     f"Warning: Large error energy {error_energy:>9.6f} kcal/mol "
                     f"for {name:>40} set to 0 in absolute loss calculation.",
                 )
