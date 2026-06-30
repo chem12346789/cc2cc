@@ -1129,7 +1129,11 @@
         "BH76-RKT09",
         "BH76-NH3",
         "BH76-ch3",
-        "BH76-RKT21"
+        "BH76-RKT21",
+        "BH76-oh-",
+        "BH76-ch3f",
+        "BH76-ch3oh",
+        "BH76-f-"
     ],
     "reaction-BH76": {
         "5": {
@@ -1681,12 +1685,6 @@
             "weight": 0.19
         }
     },
-    "molecule_BH76RC": [
-        "BH76-oh-",
-        "BH76-ch3f",
-        "BH76-ch3oh",
-        "BH76-f-"
-    ],
     "reaction-BH76RC": {
         "15": {
             "systems": [

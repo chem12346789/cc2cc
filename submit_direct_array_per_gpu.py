@@ -498,7 +498,7 @@ def main() -> int:
     print(f"[INFO] Submit order={'small est_time first' if time_path else 'original array order'}")
 
     submitted = 0
-    submitted_jobs: list[tuple[int, str, str]] = []
+    submitted_jobs: list[tuple[int, int, str, str]] = []
     prev_by_bucket: dict[int, str] = {}
     fake_base = 900_000_000
     for i, (tid, bi, node, gpu, load) in enumerate(plan, 1):
@@ -531,14 +531,26 @@ def main() -> int:
             if args.debug:
                 print(f"[JOBID] task={tid} job={job_name} jobid={job_id}")
                 print(f"         job_id={job_id} raw={out}")
-        submitted_jobs.append((tid, job_name, job_id))
+        submitted_jobs.append((tid, bi, job_name, job_id))
         prev_by_bucket[bi] = job_id
         submitted += 1
         if not args.debug and (submitted % 10 == 0 or submitted == len(plan)):
             print(f"[INFO] Submitted {submitted}/{len(plan)}")
 
     if submitted_jobs:
-        print("[JOBID-SUMMARY] " + " ".join(f"{tid}:{jobid}" for tid, _job, jobid in submitted_jobs))
+        bucket_pids: dict[int, list[str]] = {}
+        bucket_task_ids: dict[int, list[str]] = {}
+        for tid, bi, _job, pid in submitted_jobs:
+            bucket_pids.setdefault(bi, []).append(pid)
+            bucket_task_ids.setdefault(bi, []).append(str(tid))
+        pid_summary = " ".join(
+            f"{bi}:{','.join(pids)}" for bi, pids in sorted(bucket_pids.items())
+        )
+        task_id_summary = " ".join(
+            f"{bi}:{','.join(ids)}" for bi, ids in sorted(bucket_task_ids.items())
+        )
+        print(f"[PID-SUMMARY] {pid_summary}")
+        print(f"[SLURM_ARRAY_TASK_ID] {task_id_summary}")
     print(f"[DONE] submissions={submitted}, tasks={len(task_ids)}, slots={len(slots)}, mode=individual")
     return 0
 

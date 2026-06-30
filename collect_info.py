@@ -181,6 +181,7 @@ class Collect_info:
                 i_subset_name = "S22x5"
             else:
                 i_subset_name = subset_name
+            print(subset_name, i_subset_name)
 
             reaction_dict = data_set_json[f"reaction-{subset_name}"]
             total_counts_subset.append(len(reaction_dict))
