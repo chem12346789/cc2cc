@@ -106,8 +106,6 @@ class DataBase:
             "L1Loss": lambda x: np.sum(np.abs(x)),
             "MSELoss": lambda x: np.sum(x**2),
         }
-        if args.loss_ene not in loss_func_dict:
-            raise ValueError(f"Unknown loss function {args.loss_ene}")
         self.loss_ene = loss_func_dict[args.loss_ene]
 
         name_list = []

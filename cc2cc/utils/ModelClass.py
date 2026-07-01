@@ -207,9 +207,7 @@ class ModelClass:
             "L1Loss": torch.nn.L1Loss,
             "MSELoss": torch.nn.MSELoss,
         }
-        loss_class = loss_dict.get(self.args.loss_ene)
-        if loss_class is None:
-            raise ValueError(f"Unknown loss function {self.args.loss_ene}")
+        loss_class = loss_dict[self.args.loss_ene]
         for name in (
             "ene_loss_fun",
             "atomic_loss_fun",
