@@ -279,8 +279,7 @@ class DataBase:
 
             if self.args.if_relative_weight_abs:
                 loss_multiplier_abs /= (
-                    self.loss_ene(np.abs(data_dict["output"] * data_dict["weight"]))
-                    + EPS
+                    self.loss_ene(data_dict["output"] * data_dict["weight"]) + EPS
                 ) * np.sqrt(len(data_dict["output"]))
                 self.print(
                     f"Adjusted loss_multiplier_abs: {loss_multiplier_abs:>6.3f}",
@@ -302,7 +301,7 @@ class DataBase:
                     filter_idx
                 ]
                 data_dict["grad_cc_train"] = grad_cc_train.reshape(-1)
-                loss_multiplier_grad /= self.loss_ene(np.abs(grad_cc_train)) + EPS
+                loss_multiplier_grad /= self.loss_ene(grad_cc_train) + EPS
             else:
                 data_dict["grad2force"] = 0
                 data_dict["grad_cc_train"] = 0
