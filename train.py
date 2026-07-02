@@ -2,7 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
-from cc2cc.utils import add_args
+from cc2cc.utils import add_args, print_computer_info
 from cc2cc.utils.parser import gen_name_args
 from cc2cc.train_model import train_model
 
@@ -36,6 +36,8 @@ if __name__ == "__main__":
         help="Path to JSON file defining train/eval splits.",
     )
     args = add_args(parser)
+
+    print_computer_info(args.device)
 
     split_path = Path(args.split_config)
     if not split_path.is_absolute():
