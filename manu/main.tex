@@ -137,9 +137,6 @@ This is the main idea of the density functional theory (DFT) \cite{parrDensityFu
 One of the challenging tasks of the DFT calculation is to find the unique functional between the exact exchange-correlation energy density $e_{\rm{xc}}$ and the electron density $\rho$.
 % 
 Numerous approximations have been proposed for this functional, including early local-density approximation functionals \cite{parrDensityFunctionalTheory1980}, hybrid functionals \cite{perdewAtomsMoleculesSolids1992-09-15}, and the rapidly growing class of machine-learning (ML) functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07}.
-% 
-
-
 
 \section{The NEURAL NETWORK}
 We use the transformer \cite{vaswaniAttentionAllYou2023-08-02} as the neural network to learn the functional between the electron density and the energy density of the molecule.
@@ -261,16 +258,21 @@ The loss function is defined as
 \begin{align}
 	\label{eq:loss_self_scaled}
 	L_{e} =
-	 & N_{\rm{atom}} \frac{\Big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) + \epsilon \big| \Big)^{2}}
-	+ N_{\rm{atom}} \frac{\Big(\bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{E}^{\rm{AE}}(\brm{r}_{i}) + \epsilon \big| \Big)^{2}} \nl
-	 & + \frac{N_{\rm{atom}}}{N_{\rm{grids}}} \Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2
-	%  & + \frac{N_{\rm{atom}}}{N_{\rm{grids}}} \frac{\Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) + \epsilon \big| \Big)^{2}}
-	+ N_{\rm{atom}} \frac{\Big(\int \d \brm{r}_{i} \Big| \bar{F} - F \Big| \Big)^2}{\Big( \int \d \brm{r}_{i} \big| \bar{F} + \epsilon\big| \Big)^{2}} .
+	 & N_{\rm{atom}} \frac{\big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \big)^2}{\big( \int \d \brm{r}_{i} \bar{e}(\brm{r}_{i}) \big)^{2} + \epsilon}
+	+ N_{\rm{atom}} \frac{\big(\bar{E}^{\rm{AE}} - E^{\rm{AE}} \big)^2}{\big( \bar{E}^{\rm{AE}} \big)^{2} + \epsilon} \nl
+	%  & + \frac{N_{\rm{atom}}}{N_{\rm{grids}}} \Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2
+	 & + \frac{N_{\rm{atom}}}{\sqrt{N_{\rm{grids}}}} \frac{\big(\int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \big| \big)^2}{\big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i})\big| \big)^{2} + \epsilon}
+	+ N_{\rm{atom}} \frac{\big(\bar{F} - F \big)^2}{\big(\bar{F}\big)^{2} + \epsilon} .
+	% L_{e} =
+	%  & \sqrt{N_{\rm{atom}}} \frac{\big| \int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \big|}{\big| \int \d \brm{r}_{i} \bar{e}(\brm{r}_{i}) \big| + \epsilon}
+	% + \sqrt{N_{\rm{atom}}} \frac{\big|\bar{E}^{\rm{AE}} - E^{\rm{AE}} \big|}{\big| \bar{E}^{\rm{AE}} \big| + \epsilon} \nl
+	%  & + \frac{\sqrt{N_{\rm{atom}}}}{N_{\rm{grids}}} \frac{ \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \big| }{ \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i})\big| + \epsilon}
+	% + \sqrt{N_{\rm{atom}}} \frac{\int \d \brm{r}_{i} \big| \bar{F} - F \big|}{\int \d \brm{r}_{i} \big| \bar{F}\big| + \epsilon} .
 \end{align}
 \twocolumngrid
 where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, respectively.
 %
-The $\lambda_{\rm{RE}}$, $\lambda_{\rm{ABS}}$, and $\lambda_{\rm{AE}}$ are the weights of the three terms in the loss function.
+The $\epsilon$ is a small number to avoid the division by zero and control the scale of the loss function, which is set to be $1 \times 10^{-5}$ in this article.
 %
 The first term is the relative error in the total energy, the second term is the absolute error in the total energy, and the third term is the error in the atomic energy.
 
@@ -283,11 +285,11 @@ The parameters of the AdamW optimizer are set to be $\beta_1 = 0.9$, $\beta_2 = 
 % 
 The weights in the loss function \eq{eq:loss} are set to be $\lambda_{\rm{ABS}} = 0.01$.
 %
-We use a batch size of $4$ and train the model for $10000$ epochs.
+We use a batch size of $1$ and train the model for $10000$ epochs, the training process is last for around $20$ days.
 %
-The training process is monitored using the validation set every $50$ epochs, and the model with the lowest validation loss is selected as the final model.
+The training process is monitored using the validation set every $5$ epochs, and the model with the lowest validation loss is selected as the final model.
 
-The training is performed on a single NVIDIA A100 GPU with 80GB memory with double precision training using PyTorch \cite{paszkePyTorchImperativeStyle2019-12-03} and the training takes around $96$ hours to complete. The version of PyTorch used is $2.8.0$, and CUDA version is $12.2$, the version of driver is $535.129.03$.
+The training is performed on a single NVIDIA A100 GPU with 80GB memory with double precision training using PyTorch \cite{paszkePyTorchImperativeStyle2019-12-03} and the training takes around $96$ hours to complete. The version of PyTorch used is $2.8.0+$cu$128$, and CUDA version is $12.8$, the version of driver is $535.247.01$.
 
 \subsection{Comparison with other machine learning functionals}
 The main difference between our method and other machine learning functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07} is that we use the energy density as the target of the neural network instead of the total energy.
@@ -321,7 +323,7 @@ The main difference between our method and other machine learning functionals \c
 			A$'$ & GMTKN55          & 23   & $5$                   & $\leq3$                  \\
 			B$'$ & GMTKN55          & 11   & $6$                   & $\leq3$                  \\
 			\colrule
-			\multicolumn{5}{l}{$^{1}$\footnotesize{Include all atoms, anions and cations, and 8 extra heavy atoms molecules, Se, Ge, As, Te, I, Bi, Pb, Sb.
+			\multicolumn{5}{l}{$^{1}$\footnotesize{Not include all atoms-species in the GMTKN55 dataset.
 			}}                                                                                \\
 		\end{tabular}
 	\end{ruledtabular}
@@ -384,7 +386,7 @@ The $\mu \nu$-th element of Fock matrix which contributed by the ML exchange-cor
 	= & \frac{\delta E'_{\rm{xc}}}{\delta P_{\mu \nu}} \nl
 	= & \int \d \brm{r} \frac{\delta e_{\rm{NN}}(\brm{r})}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r}) \nl
 	= & \int \d \brm{r} \frac{\delta {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r}) \nl
-	= & \int \d \brm{r} \frac{\partial {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)}{\partial \tilde{e}(\brm{r})} \frac{\delta \tilde{e}(\brm{r})}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r})
+	= & \int \d \brm{r} \frac{\partial {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)}{\partial \tilde{e}(\brm{r}_{\rm{cube}})} \frac{\delta \tilde{e}(\brm{r})}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r})
 \end{align}
 % 
 % \begin{align}
