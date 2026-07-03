@@ -1,81 +1,91 @@
 """Public utility API for cc2cc.
 
-``Grid`` is the CPU/PySCF grid class by default.  GPU grid classes are loaded
-lazily so importing ``cc2cc.utils`` does not require ``gpu4pyscf``/``cupy``.
+The module is fully lazy for CPU exports so ``import cc2cc.utils`` does not
+pull in heavy dependencies (e.g. torch) until attributes are actually used.
+GPU exports are lazy and optional.
 """
 
-from cc2cc.utils.parser import add_args
-from cc2cc.utils.mol import AU2DEBYE, AU2KCALMOL, gen_mole
-from cc2cc.utils.env_var import DATA_PATH, MAIN_PATH, print_computer_info
-from cc2cc.utils.TestDataDFT import TestDataDFT, diff_rho
-from cc2cc.utils.timer import Timer
-from cc2cc.utils.DataRecord import DataRecord
-from cc2cc.utils.ModelClass import ModelClass
-from cc2cc.utils.Grids import Grid, GridCPU
+from importlib import import_module
+from importlib.util import find_spec
+from typing import Any
 
-from cc2cc.utils.modelscf_rks import get_veff_modified_rks, get_veff_grad_modified_rks
-from cc2cc.utils.modelscf_uks import get_veff_modified_uks, get_veff_grad_modified_uks
+_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
+    "add_args": ("cc2cc.utils.parser", "add_args"),
+    "gen_mole": ("cc2cc.utils.mol", "gen_mole"),
+    "AU2KCALMOL": ("cc2cc.utils.mol", "AU2KCALMOL"),
+    "AU2DEBYE": ("cc2cc.utils.mol", "AU2DEBYE"),
+    "DATA_PATH": ("cc2cc.utils.env_var", "DATA_PATH"),
+    "MAIN_PATH": ("cc2cc.utils.env_var", "MAIN_PATH"),
+    "print_computer_info": ("cc2cc.utils.computer_info", "print_computer_info"),
+    "TestDataDFT": ("cc2cc.utils.TestDataDFT", "TestDataDFT"),
+    "diff_rho": ("cc2cc.utils.TestDataDFT", "diff_rho"),
+    "Timer": ("cc2cc.utils.timer", "Timer"),
+    "DataRecord": ("cc2cc.utils.DataRecord", "DataRecord"),
+    "ModelClass": ("cc2cc.utils.ModelClass", "ModelClass"),
+    "Grid": ("cc2cc.utils.Grids", "Grid"),
+    "GridCPU": ("cc2cc.utils.Grids", "GridCPU"),
+    "get_veff_modified_rks": (
+        "cc2cc.utils.modelscf_rks",
+        "get_veff_modified_rks",
+    ),
+    "get_veff_grad_modified_rks": (
+        "cc2cc.utils.modelscf_rks",
+        "get_veff_grad_modified_rks",
+    ),
+    "get_veff_modified_uks": (
+        "cc2cc.utils.modelscf_uks",
+        "get_veff_modified_uks",
+    ),
+    "get_veff_grad_modified_uks": (
+        "cc2cc.utils.modelscf_uks",
+        "get_veff_grad_modified_uks",
+    ),
+}
 
-_GPU_EXPORTS = {"GridGPU"}
+_GPU_EXPORTS: dict[str, tuple[str, str]] = {
+    "GridGPU": ("cc2cc.utils.GridsGPU", "GridGPU"),
+    "get_veff_modified_rks_gpu": (
+        "cc2cc.utils.modelscf_rks_gpu",
+        "get_veff_modified_rks_gpu",
+    ),
+    "get_veff_grad_modified_rks_gpu": (
+        "cc2cc.utils.modelscf_rks_gpu",
+        "get_veff_grad_modified_rks_gpu",
+    ),
+    "get_veff_modified_uks_gpu": (
+        "cc2cc.utils.modelscf_uks_gpu",
+        "get_veff_modified_uks_gpu",
+    ),
+    "get_veff_grad_modified_uks_gpu": (
+        "cc2cc.utils.modelscf_uks_gpu",
+        "get_veff_grad_modified_uks_gpu",
+    ),
+}
 
-__all__ = [
-    "add_args",
-    "gen_mole",
-    "get_veff_modified_rks",
-    "get_veff_modified_uks",
-    "get_veff_grad_modified_rks",
-    "get_veff_grad_modified_uks",
-    "print_computer_info",
-    "diff_rho",
-    "DataRecord",
-    "TestDataDFT",
-    "Timer",
-    "Grid",
-    "GridCPU",
-    "ModelClass",
-    "DATA_PATH",
-    "MAIN_PATH",
-    "AU2KCALMOL",
-    "AU2DEBYE",
-]
-
-
-def _is_cuda_available():
-    try:
-        import cupy
-
-        return True
-    except ImportError:
-        return False
+__all__ = list(_LAZY_EXPORTS)
 
 
-def __getattr__(name):
+def _load_symbol(name: str, table: dict[str, tuple[str, str]]) -> Any:
+    module_name, attr_name = table[name]
+    value = getattr(import_module(module_name), attr_name)
+    globals()[name] = value
+    return value
+
+
+def __getattr__(name: str) -> Any:
+    if name in _LAZY_EXPORTS:
+        return _load_symbol(name, _LAZY_EXPORTS)
     if name in _GPU_EXPORTS:
-        if _is_cuda_available():
-            from cc2cc.utils.GridsGPU import GridGPU
-            from cc2cc.utils.modelscf_rks_gpu import (
-                get_veff_modified_rks_gpu,
-                get_veff_grad_modified_rks_gpu,
+        if find_spec("cupy") is None:
+            raise ImportError(
+                f"GPU dependency cupy is not available. Cannot import {name}"
             )
-            from cc2cc.utils.modelscf_uks_gpu import (
-                get_veff_modified_uks_gpu,
-                get_veff_grad_modified_uks_gpu,
-            )
-
-            globals().update(GridGPU=GridGPU)
-            globals().update(get_veff_modified_rks_gpu=get_veff_modified_rks_gpu)
-            globals().update(
-                get_veff_grad_modified_rks_gpu=get_veff_grad_modified_rks_gpu
-            )
-            globals().update(get_veff_modified_uks_gpu=get_veff_modified_uks_gpu)
-            globals().update(
-                get_veff_grad_modified_uks_gpu=get_veff_grad_modified_uks_gpu
-            )
-            __all__.append("GridGPU")
-            __all__.append("get_veff_modified_rks_gpu")
-            __all__.append("get_veff_grad_modified_rks_gpu")
-            __all__.append("get_veff_modified_uks_gpu")
-            __all__.append("get_veff_grad_modified_uks_gpu")
-            return globals()[name]
-        raise ImportError(f"CUDA is not available. Cannot import {name}")
+        value = _load_symbol(name, _GPU_EXPORTS)
+        if name not in __all__:
+            __all__.append(name)
+        return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | set(_LAZY_EXPORTS) | set(_GPU_EXPORTS))

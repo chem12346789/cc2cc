@@ -21,12 +21,9 @@ AU2KCALMOL = 627.5094733748099
 AU2DEBYE = 2.541746472
 dataset = {}
 with importlib.resources.path("cc2cc", "utils") as resource_path:
-    for dataset_name_ in Path(os.fspath(resource_path)).rglob("*.json"):
-        with open(
-            Path(os.fspath(resource_path)) / f"{dataset_name_.stem}.json",
-            "r",
-            encoding="utf-8",
-        ) as f:
+    json_dir = Path(os.fspath(resource_path)) / "mol_dataset"
+    for dataset_name_ in json_dir.rglob("*.json"):
+        with open(json_dir / f"{dataset_name_.stem}.json", "r", encoding="utf-8") as f:
             dataset[dataset_name_.stem] = json.load(f)
 
 

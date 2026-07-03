@@ -7,11 +7,6 @@ More details.
 
 import argparse
 
-import numpy as np
-import torch
-
-from cc2cc.utils.mol import dataset
-
 
 def str2bool(v):
     """
@@ -33,6 +28,8 @@ def gen_name_args(
     """
     Function to generate name args
     """
+    from cc2cc.utils.mol import dataset
+
     dataset_dict = dataset[args_dataset]
 
     if name_args is None:
@@ -445,16 +442,6 @@ def add_args(parser: argparse.ArgumentParser):
 
     args.name_mol_input = args.name_mol.copy()
     args.name_mol = gen_name_args(args.name_mol, args.dataset, args.name_mol_reverse)
-
-    if args.device == "cuda":
-        if not torch.cuda.is_available():
-            print("CUDA is not available. Use CPU instead. ")
-            args.device = "cpu"
-    elif args.device == "cpu":
-        if torch.cuda.is_available():
-            print("CUDA is available. This script is running on CPU. ")
-    else:
-        raise ValueError(f"Invalid device: {args.device}. Please use 'cuda' or 'cpu'.")
 
     if args.activation_memory_budget is not None:
         print(

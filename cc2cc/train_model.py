@@ -9,13 +9,16 @@ from torch import distributed as dist
 
 import wandb
 
-from cc2cc.utils import ModelClass, print_computer_info
+from cc2cc.utils.ModelClass import ModelClass
+from cc2cc.utils.computer_info import print_computer_info
 from cc2cc.utils.timer import Timer
 
 
 class BestLoss:
     def __init__(self):
-        self.loss_dict = {key: np.inf for key in ("tot_loss", "train_loss", "eval_loss")}
+        self.loss_dict = {
+            key: np.inf for key in ("tot_loss", "train_loss", "eval_loss")
+        }
 
     def update(self, now_loss):
         improved = False
@@ -78,7 +81,13 @@ class _Logger:
             allow_val_change=True,
         )
         wandb.define_metric("*", step_metric="global_step")
-        return cls(run, Timer(), BestLoss(), modeldict.dir_checkpoint / "loss", args.eval_step * 32)
+        return cls(
+            run,
+            Timer(),
+            BestLoss(),
+            modeldict.dir_checkpoint / "loss",
+            args.eval_step * 32,
+        )
 
     def log(self, modeldict, train_record, eval_record, epoch):
         stats = {
@@ -90,7 +99,9 @@ class _Logger:
         train_loss = stats["train_loss_ene"]
         eval_loss = stats["eval_loss_ene"]
         tot_loss = np.mean(
-            np.concatenate([train_record.data_dict["loss_ene"], eval_record.data_dict["loss_ene"]])
+            np.concatenate(
+                [train_record.data_dict["loss_ene"], eval_record.data_dict["loss_ene"]]
+            )
         )
         lr = modeldict.optimizer.param_groups[0]["lr"]
         metrics = {
