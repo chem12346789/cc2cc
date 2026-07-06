@@ -6,7 +6,6 @@ Other parameter are from the argparse.
 import argparse
 import gc
 from pathlib import Path
-
 import torch
 
 try:
@@ -14,11 +13,17 @@ try:
 except Exception:  # pragma: no cover
     cp = None
 
-from cc2cc.utils import gen_mole, print_computer_info, add_args
-from cc2cc.utils import ModelClass, DataRecord
-from cc2cc.utils import MAIN_PATH
 from cc2cc.test_model_rks import test_model_rks
 from cc2cc.test_model_uks import test_model_uks
+from cc2cc.utils import (
+    MAIN_PATH,
+    DataRecord,
+    ModelClass,
+    TestDataDFT,
+    add_args,
+    gen_mole,
+    print_computer_info,
+)
 
 
 def _build_record_path(args) -> Path:
@@ -29,16 +34,59 @@ def _build_record_path(args) -> Path:
 
 
 def _should_skip(name: str, data_record, args) -> bool:
-    if not args.if_continue:
-        return False
-    return ("name" in data_record.df_dict) and (name in data_record.df_dict["name"])
+    return args.if_continue and name in data_record.df_dict.get("name", [])
 
 
-def _run_one(mol, name, modeldict, data_record, args):
-    if mol.spin == 0:
-        test_model_rks(mol, name, modeldict, data_record, args)
-    else:
-        test_model_uks(mol, name, modeldict, data_record, args)
+def _benchmark_dft(
+    mol,
+    name,
+    data_record,
+    benchmark_method,
+    benchmark_disp,
+) -> None:
+    record = {"name": name}
+    for xc_code, disp in zip(benchmark_method, benchmark_disp):
+        if disp in ("", "None", "none", "null", "Null"):
+            disp = None
+        test_data = TestDataDFT(
+            mol,
+            name,
+            xc_code=xc_code,
+            disp=disp,
+        )
+        xc_code_disp = xc_code if disp is None else f"{xc_code}-{disp}"
+        record.update(
+            {
+                f"{xc_code_disp}_ene": test_data.e_dft,
+                f"{xc_code_disp}_dipole_x": test_data.dft_dipole[0],
+                f"{xc_code_disp}_dipole_y": test_data.dft_dipole[1],
+                f"{xc_code_disp}_dipole_z": test_data.dft_dipole[2],
+            }
+        )
+    data_record.add_data(record)
+    data_record.save_csv()
+
+
+def _is_benchmark_mode(args) -> bool:
+    return any(flag in args.load.lower() for flag in ("test", "benchmark"))
+
+
+def _run_one(mol, name, modeldict, data_record, args, benchmark_mode: bool):
+    if benchmark_mode:
+        _benchmark_dft(
+            mol,
+            name,
+            data_record,
+            args.benchmark_method,
+            args.benchmark_disp,
+        )
+        return
+
+    if modeldict is None:
+        raise ValueError("ModelClass is required for model validation mode.")
+
+    runner = test_model_rks if mol.spin == 0 else test_model_uks
+    runner(mol, name, modeldict, data_record, args)
 
 
 def _release_memory(device) -> None:
@@ -56,22 +104,39 @@ def _release_memory(device) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate the inversed potential and energy."
+        description="Test the model or benchmark DFT calculations. Other parameters are from the argparse."
+    )
+    parser.add_argument(
+        "--benchmark_method",
+        type=str,
+        nargs="+",
+        default=["b3lyp"],
+        help="Benchmark method for DFT calculations. Default is b3lyp.",
+    )
+    parser.add_argument(
+        "--benchmark_disp",
+        type=str,
+        nargs="+",
+        default=None,
+        help="Dispersion correction for benchmark DFT calculations. Default is None.",
     )
     args = add_args(parser)
 
     print_computer_info(args.device)
 
-    modeldict = ModelClass(args)
-    if "test" not in args.load:
+    benchmark_mode = _is_benchmark_mode(args)
+    modeldict = None
+    if not benchmark_mode:
+        modeldict = ModelClass(args)
         modeldict.init_model(if_validate=True)
         modeldict.eval()
+    else:
+        print("Benchmark mode: skip model loading.", flush=True)
 
     data_record = DataRecord(
         _build_record_path(args),
         if_continue=args.if_continue,
     )
-    error_molecule = []
 
     for name_mol in args.name_mol:
         name = f"{name_mol}_{args.basis}"
@@ -93,14 +158,21 @@ def main():
                 print(f"SKIP: {name}")
                 continue
 
-            _run_one(mol, name, modeldict, data_record, args)
+            _run_one(
+                mol,
+                name,
+                modeldict,
+                data_record,
+                args,
+                benchmark_mode=benchmark_mode,
+            )
         finally:
             del mol
             _release_memory(args.device)
 
-    del modeldict
+    if modeldict is not None:
+        del modeldict
     _release_memory(args.device)
-    print(f"Error molecule: {error_molecule}", flush=True)
 
 
 if __name__ == "__main__":

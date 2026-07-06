@@ -1,15 +1,14 @@
 """Public utility API for cc2cc.
 
-The module is fully lazy for CPU exports so ``import cc2cc.utils`` does not
-pull in heavy dependencies (e.g. torch) until attributes are actually used.
-GPU exports are lazy and optional.
+Most CPU exports are loaded eagerly, while SCF helper functions and GPU exports
+remain lazy.
 """
 
 from importlib import import_module
 from importlib.util import find_spec
 from typing import Any
 
-_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
+NO_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "add_args": ("cc2cc.utils.parser", "add_args"),
     "gen_mole": ("cc2cc.utils.mol", "gen_mole"),
     "AU2KCALMOL": ("cc2cc.utils.mol", "AU2KCALMOL"),
@@ -24,6 +23,9 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "ModelClass": ("cc2cc.utils.ModelClass", "ModelClass"),
     "Grid": ("cc2cc.utils.Grids", "Grid"),
     "GridCPU": ("cc2cc.utils.Grids", "GridCPU"),
+}
+
+_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "get_veff_modified_rks": (
         "cc2cc.utils.modelscf_rks",
         "get_veff_modified_rks",
@@ -62,14 +64,17 @@ _GPU_EXPORTS: dict[str, tuple[str, str]] = {
     ),
 }
 
-__all__ = list(_LAZY_EXPORTS)
-
-
 def _load_symbol(name: str, table: dict[str, tuple[str, str]]) -> Any:
     module_name, attr_name = table[name]
     value = getattr(import_module(module_name), attr_name)
     globals()[name] = value
     return value
+
+
+for _name in NO_LAZY_EXPORTS:
+    _load_symbol(_name, NO_LAZY_EXPORTS)
+
+__all__ = list(NO_LAZY_EXPORTS) + list(_LAZY_EXPORTS)
 
 
 def __getattr__(name: str) -> Any:
@@ -88,4 +93,6 @@ def __getattr__(name: str) -> Any:
 
 
 def __dir__() -> list[str]:
-    return sorted(set(globals()) | set(_LAZY_EXPORTS) | set(_GPU_EXPORTS))
+    return sorted(
+        set(globals()) | set(NO_LAZY_EXPORTS) | set(_LAZY_EXPORTS) | set(_GPU_EXPORTS)
+    )

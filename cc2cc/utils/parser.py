@@ -186,6 +186,7 @@ def add_args(parser: argparse.ArgumentParser):
         "--device",
         type=str,
         default="cuda",
+        choices=["cuda", "cpu"],
         help="Device for the training. Default is cuda.",
     )
 
