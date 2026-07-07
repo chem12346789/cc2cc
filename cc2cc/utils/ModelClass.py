@@ -86,18 +86,22 @@ class ModelClass:
         self.optimizer_state_dict = None
 
         # for distributed training
-        self.local_rank = 0
         self.verbose = True
-        if self.args.distributed:
-            self.local_rank = int(os.environ["LOCAL_RANK"])
-            torch.cuda.set_device(self.local_rank)
-            dist.init_process_group(
-                backend="nccl",
-                rank=self.local_rank,
-                world_size=torch.cuda.device_count(),
-                device_id=torch.device("cuda", self.local_rank),
-            )
-            self.verbose = dist.get_rank() == 0
+        if args.device == "cuda":
+            if self.args.distributed:
+                self.local_rank = int(os.environ["LOCAL_RANK"])
+                torch.cuda.set_device(self.local_rank)
+                dist.init_process_group(
+                    backend="nccl",
+                    rank=self.local_rank,
+                    world_size=torch.cuda.device_count(),
+                    device_id=torch.device("cuda", self.local_rank),
+                )
+                self.verbose = dist.get_rank() == 0
+            else:
+                self.local_rank = 0
+        else:
+            self.local_rank = "cpu"
 
     def init_model(self, if_validate=False, init_train=False):
         self.load_model()
@@ -321,7 +325,7 @@ class ModelClass:
         tensor_to_numpy = lambda x: (
             x.detach().to("cpu", non_blocking=if_use_cuda_event)
             if x.is_cuda
-            else x.numpy()
+            else x.detach().numpy()
         )
         sum_target = batch["energy_target"]
         data_weight = batch["data_weight"]

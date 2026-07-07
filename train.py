@@ -7,23 +7,6 @@ from cc2cc.utils.parser import gen_name_args
 from cc2cc.train_model import train_model
 
 _CONFIG_DIR = Path(__file__).resolve().parent / "configs"
-_DEFAULT_SPLIT_CANDIDATES = (
-    "dataset_split.json",
-    "mol1.json",
-    "dataset_split_mol1.json",
-    "test.json",
-)
-
-
-def _default_split_path():
-    for name in _DEFAULT_SPLIT_CANDIDATES:
-        path = _CONFIG_DIR / name
-        if path.exists():
-            return path
-    return _CONFIG_DIR / _DEFAULT_SPLIT_CANDIDATES[0]
-
-
-DEFAULT_SPLIT_PATH = _default_split_path()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -32,7 +15,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--split_config",
         type=str,
-        default=str(DEFAULT_SPLIT_PATH),
+        default="mini.json",
         help="Path to JSON file defining train/eval splits.",
     )
     args = add_args(parser)
@@ -41,7 +24,7 @@ if __name__ == "__main__":
 
     split_path = Path(args.split_config)
     if not split_path.is_absolute():
-        split_path = (Path(__file__).resolve().parent / split_path).resolve()
+        split_path = (_CONFIG_DIR / split_path).resolve()
     if not split_path.exists():
         raise FileNotFoundError(f"Split configuration not found: {split_path}")
     with split_path.open("r", encoding="utf-8") as f:
@@ -52,7 +35,9 @@ if __name__ == "__main__":
         if value is None:
             return []
         if not isinstance(value, list):
-            raise TypeError(f"'{key}' in {split_path} must be a list, got {type(value)}")
+            raise TypeError(
+                f"'{key}' in {split_path} must be a list, got {type(value)}"
+            )
         return value
 
     train_str_list = _config_list("train")

@@ -59,7 +59,7 @@ class _Logger:
 
     @classmethod
     def setup(cls, modeldict, args):
-        if modeldict.local_rank != 0:
+        if modeldict.local_rank != 0 and modeldict.args.distributed:
             return None
 
         print_computer_info(args.device)
