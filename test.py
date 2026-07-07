@@ -4,17 +4,8 @@ Other parameter are from the argparse.
 """
 
 import argparse
-import gc
 from pathlib import Path
-import torch
 
-try:
-    import cupy as cp
-except Exception:  # pragma: no cover
-    cp = None
-
-from cc2cc.test_model_rks import test_model_rks
-from cc2cc.test_model_uks import test_model_uks
 from cc2cc.utils import (
     MAIN_PATH,
     DataRecord,
@@ -85,21 +76,11 @@ def _run_one(mol, name, modeldict, data_record, args, benchmark_mode: bool):
     if modeldict is None:
         raise ValueError("ModelClass is required for model validation mode.")
 
+    from cc2cc.test_model_rks import test_model_rks
+    from cc2cc.test_model_uks import test_model_uks
+
     runner = test_model_rks if mol.spin == 0 else test_model_uks
     runner(mol, name, modeldict, data_record, args)
-
-
-def _release_memory(device) -> None:
-    gc.collect()
-    if "cuda" in str(device).lower() and torch.cuda.is_available():
-        if cp is not None:
-            try:
-                cp.get_default_memory_pool().free_all_blocks()
-                cp.get_default_pinned_memory_pool().free_all_blocks()
-            except Exception:
-                pass
-        torch.cuda.empty_cache()
-        torch.cuda.ipc_collect()
 
 
 def main():
@@ -168,11 +149,9 @@ def main():
             )
         finally:
             del mol
-            _release_memory(args.device)
 
     if modeldict is not None:
         del modeldict
-    _release_memory(args.device)
 
 
 if __name__ == "__main__":

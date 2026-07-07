@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
-from timeit import default_timer as timer
 import warnings
+from timeit import default_timer as timer
 from typing import Any
 
 import numpy as np
@@ -89,17 +87,14 @@ class TestDataDFT:
         print(f"Testing DFT {xc_code_disp} for {name}")
         path_to_data = DATA_TEST_PATH / f"{name}_cc.npz"
 
-        if (path_to_data).exists():
+        if path_to_data.exists():
             print(f"Data for {name} loaded from file.")
             data_frame = dict(np.load(path_to_data, allow_pickle=True).items())
         else:
             data_frame = {"mol_corr": mol.atom_coords()}
 
-        if_update = False
         dm1_dft = data_frame.get("dm1_dft")
-        if f"e_dft-{xc_code_disp}" not in data_frame:
-            data_frame.update(self._run_ks(dm1_dft, xc_code_disp))
-            if_update = True
+        if_update = f"e_dft-{xc_code_disp}" not in data_frame
 
         mol_corr = data_frame["mol_corr"]
         if np.linalg.norm(mol.atom_coords() - mol_corr, ord=1) > 1e-6:
@@ -108,10 +103,20 @@ class TestDataDFT:
                 f"Coordinates of {name} are different from the saved data. "
                 "Please check the coordinates or regenerate the data."
             )
-            data_frame.update(self._run_ks(dm1_dft, xc_code_disp))
-            if_update = True
+            if_update = False
 
-        self.dm1_dft = data_frame["dm1_dft"]
+        if if_update:
+            data_frame["mol_corr"] = mol.atom_coords()
+            data_update = self._test_mol_ks(dm1_dft, xc_code_disp)
+            data_frame.update(data_update)
+
+        if f"dm1_dft-{xc_code_disp}" not in data_frame:
+            print(
+                f"dm1_dft-{xc_code_disp} not found in data. Use b3lyp dm1_dft as a fallback for {name}."
+            )
+            self.dm1_dft = data_frame["dm1_dft"]
+        else:
+            self.dm1_dft = data_frame[f"dm1_dft-{xc_code_disp}"]
         self.grad_dft = data_frame[f"grad_dft-{xc_code_disp}"]
         self.e_dft = data_frame[f"e_dft-{xc_code_disp}"]
         self.dft_dipole = data_frame[f"dft_dipole-{xc_code_disp}"]
@@ -121,22 +126,22 @@ class TestDataDFT:
             print(f"Data for {name} saved to file.")
             np.savez(path_to_data, **data_frame)
 
-    def _run_ks(self, dm1_dft: np.ndarray | None, xc_code_disp: str) -> dict[str, Any]:
-        if self.mol.spin == 0:
-            return self.test_mol_rks(dm1_dft, xc_code_disp)
-        return self.test_mol_uks(dm1_dft, xc_code_disp)
-
     def _test_mol_ks(
         self,
         dm1_dft: np.ndarray | None,
         xc_code_disp: str,
-        is_uks: bool,
     ) -> dict[str, Any]:
+        is_uks = self.mol.spin != 0
         ks_class = pyscf.scf.UKS if is_uks else pyscf.scf.RKS
         method_name = "UKS" if is_uks else "RKS"
         time_start = timer()
         mdft = ks_class(self.mol).density_fit()
-        mdft.xc = xc_code_disp
+        if xc_code_disp.lower() == "dm21":
+            raise ValueError(
+                "DM21 is not supported in this function. Use a different xc_code."
+            )
+        else:
+            mdft.xc = xc_code_disp
         mdft.verbose = 4
         mdft.grids.level = 4
         mdft.level_shift = 0.1
@@ -157,17 +162,8 @@ class TestDataDFT:
             ),
             f"time_dft-{xc_code_disp}": time_dft,
             f"grad_dft-{xc_code_disp}": mdft.Gradients().kernel(),
+            f"dm1_dft-{xc_code_disp}": dm1_dft,
         }
         if xc_code_disp == "b3lyp":
             data["dm1_dft"] = dm1_dft
         return data
-
-    def test_mol_rks(
-        self, dm1_dft: np.ndarray | None, xc_code_disp: str
-    ) -> dict[str, Any]:
-        return self._test_mol_ks(dm1_dft, xc_code_disp, is_uks=False)
-
-    def test_mol_uks(
-        self, dm1_dft: np.ndarray | None, xc_code_disp: str
-    ) -> dict[str, Any]:
-        return self._test_mol_ks(dm1_dft, xc_code_disp, is_uks=True)

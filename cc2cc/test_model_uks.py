@@ -1,8 +1,14 @@
 """Test the model. Unrestricted Khon-Sham (with spin)."""
 
+import timeit
+import gc
 import numpy as np
-from timeit import default_timer as timer
 import torch
+
+try:
+    import cupy as cp
+except Exception:  # pragma: no cover
+    cp = None
 
 import pyscf
 import pyscf.dft
@@ -10,6 +16,19 @@ import pyscf.dft
 import cc2cc.utils as utils
 
 pyscf.lib.logger.TIMER_LEVEL = 4
+
+
+def _release_memory(device) -> None:
+    gc.collect()
+    if "cuda" in str(device).lower() and torch.cuda.is_available():
+        if cp is not None:
+            try:
+                cp.get_default_memory_pool().free_all_blocks()
+                cp.get_default_pinned_memory_pool().free_all_blocks()
+            except Exception:
+                pass
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
 
 
 def test_model_uks(
@@ -94,9 +113,9 @@ def test_model_uks(
     # 3.0 Collect data
 
     if torch.cuda.is_available():
-        import cupy as cp
-
+        _release_memory(args.device)
         dm1_scf = cp.asnumpy(dm1_scf)
+
     scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
 
     dict_ = {

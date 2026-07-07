@@ -3,6 +3,7 @@
 Most CPU exports are loaded eagerly, while SCF helper functions and GPU exports
 remain lazy.
 """
+from __future__ import annotations
 
 from importlib import import_module
 from importlib.util import find_spec

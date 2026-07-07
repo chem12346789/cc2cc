@@ -2,8 +2,6 @@
 
 import copy
 import json
-import os
-import importlib.resources
 from pathlib import Path
 import re
 
@@ -20,11 +18,10 @@ from cc2cc.utils.addon_basis import addon_basis
 AU2KCALMOL = 627.5094733748099
 AU2DEBYE = 2.541746472
 dataset = {}
-with importlib.resources.path("cc2cc", "utils") as resource_path:
-    json_dir = Path(os.fspath(resource_path)) / "mol_dataset"
-    for dataset_name_ in json_dir.rglob("*.json"):
-        with open(json_dir / f"{dataset_name_.stem}.json", "r", encoding="utf-8") as f:
-            dataset[dataset_name_.stem] = json.load(f)
+json_dir = Path(__file__).resolve().parent / "mol_dataset"
+for dataset_name_ in json_dir.glob("*.json"):
+    with dataset_name_.open("r", encoding="utf-8") as f:
+        dataset[dataset_name_.stem] = json.load(f)
 
 
 def get_ecp(name, elements):
