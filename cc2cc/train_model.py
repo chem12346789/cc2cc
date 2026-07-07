@@ -48,14 +48,91 @@ def _enable_deterministic_mode():
 
 
 class _Logger:
-    __slots__ = ("run", "timer", "best_loss", "loss_dir", "checkpoint_stride")
+    __slots__ = (
+        "run",
+        "timer",
+        "best_loss",
+        "loss_dir",
+        "checkpoint_stride",
+        "wandb_kwargs",
+    )
 
-    def __init__(self, run, timer, best_loss, loss_dir, checkpoint_stride):
+    def __init__(
+        self, run, timer, best_loss, loss_dir, checkpoint_stride, wandb_kwargs
+    ):
         self.run = run
         self.timer = timer
         self.best_loss = best_loss
         self.loss_dir = loss_dir
         self.checkpoint_stride = checkpoint_stride
+        self.wandb_kwargs = dict(wandb_kwargs)
+
+    @staticmethod
+    def _finish_wandb_run(run):
+        if run is None:
+            return
+        try:
+            run.finish(quiet=True)
+        except Exception:
+            pass
+
+    @classmethod
+    def _open_wandb_run(cls, wandb_kwargs, *, mode=None, run_id=None):
+        kwargs = dict(wandb_kwargs)
+        if mode is not None:
+            kwargs["mode"] = mode
+        if run_id:
+            kwargs["id"] = run_id
+            kwargs["resume"] = "allow"
+        run = wandb.init(**kwargs)
+        wandb.define_metric("*", step_metric="global_step")
+        return run
+
+    @classmethod
+    def _init_wandb_run(cls, wandb_kwargs):
+        try:
+            return cls._open_wandb_run(wandb_kwargs)
+        except Exception as exc:
+            print(
+                f"Warning: wandb online init failed ({exc}). "
+                "Falling back to offline mode.",
+                flush=True,
+            )
+            try:
+                return cls._open_wandb_run(wandb_kwargs, mode="offline")
+            except Exception as offline_exc:
+                print(
+                    f"Warning: wandb offline init failed ({offline_exc}). "
+                    "Disable wandb logging.",
+                    flush=True,
+                )
+                return None
+
+    def _switch_to_offline_mode(self, metrics):
+        prev_run_id = getattr(self.run, "id", None) if self.run is not None else None
+        self._finish_wandb_run(self.run)
+        self.run = None
+
+        last_exc = None
+        retry_ids = ([prev_run_id] if prev_run_id else []) + [None]
+        for run_id in retry_ids:
+            try:
+                self.run = self._open_wandb_run(
+                    self.wandb_kwargs, mode="offline", run_id=run_id
+                )
+                self.run.log(metrics)
+                print("Warning: switched wandb to offline mode.", flush=True)
+                return
+            except Exception as exc:
+                last_exc = exc
+                self._finish_wandb_run(self.run)
+                self.run = None
+
+        print(
+            f"Warning: wandb offline switch failed ({last_exc}). "
+            "Disable wandb logging for remaining epochs.",
+            flush=True,
+        )
 
     @classmethod
     def setup(cls, modeldict, args):
@@ -73,20 +150,21 @@ class _Logger:
         }
         print(experiment_dict)
 
-        run = wandb.init(
-            project="DFT2CC",
-            resume="allow",
-            name="dft2cc",
-            config=experiment_dict,
-            allow_val_change=True,
-        )
-        wandb.define_metric("*", step_metric="global_step")
+        wandb_kwargs = {
+            "project": "DFT2CC",
+            "resume": "allow",
+            "name": "dft2cc",
+            "config": experiment_dict,
+            "allow_val_change": True,
+        }
+        run = cls._init_wandb_run(wandb_kwargs)
         return cls(
             run,
             Timer(),
             BestLoss(),
             modeldict.dir_checkpoint / "loss",
             args.eval_step * 32,
+            wandb_kwargs,
         )
 
     def log(self, modeldict, train_record, eval_record, epoch):
@@ -114,7 +192,16 @@ class _Logger:
         improved = self.best_loss.update(
             {"train_loss": train_loss, "eval_loss": eval_loss, "tot_loss": tot_loss}
         )
-        self.run.log(metrics)
+        if self.run is not None:
+            try:
+                self.run.log(metrics)
+            except Exception as exc:
+                print(
+                    f"Warning: wandb.log failed ({exc}). "
+                    "Try switching to offline mode.",
+                    flush=True,
+                )
+                self._switch_to_offline_mode(metrics)
         if improved or (self.checkpoint_stride and epoch % self.checkpoint_stride == 0):
             modeldict.save_model(epoch)
             train_record.save(self.loss_dir / f"train-{epoch}.csv")
