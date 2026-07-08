@@ -11,8 +11,10 @@ import re
 
 import pyscf
 import numpy as np
+import gpu4pyscf
 
-import density_functional_approximation_dm21 as dm21
+# from skala.pyscf import SkalaKS
+from skala.gpu4pyscf import SkalaKS
 
 dataset = {}
 json_dir = Path(__file__).resolve().parent / "cc2cc/utils/mol_dataset"
@@ -65,19 +67,21 @@ def main():
                 else:
                     basis = basis.replace("(", "").replace(")", "")
 
+            print(f"Using basis set: {basis}")
+            print(f"and molecule: {molecule}")
             mol = pyscf.M(
-                atom=molecule,
+                atom=list(molecule),
                 basis=basis,
                 ecp=basis,
                 spin=dataset[args.dataset]["spin"][name_mol],
                 charge=dataset[args.dataset]["charge"][name_mol],
             )
 
-            mf = pyscf.dft.RKS(mol)
-            mf._numint = dm21.NeuralNumInt(dm21.Functional.DM21)
+            mf = SkalaKS(mol, xc="skala-1.1")
+            # mf = pyscf.dft.RKS(mol).to_gpu().density_fit()
             mf.conv_tol = 1e-7
             mf.conv_tol_grad = 1e-3
-            mf.verbose = 4
+            mf.verbose = 9
             mf.kernel()
 
         finally:

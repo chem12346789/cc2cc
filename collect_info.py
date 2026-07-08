@@ -116,9 +116,7 @@ class Collect_info:
                 f"*{self.basis}_{self.model_load}_{self.data_set}_"
                 f"molecule_{name_subset}.csv"
             )
-            print(
-                f"Find {pattern} in validate directory..."
-            )
+            print(f"Find {pattern} in validate directory...")
             data_path_list = list(Path("validate").glob(pattern))
             if len(data_path_list) != 1:
                 if self.verbose > 3:
@@ -149,9 +147,11 @@ class Collect_info:
     def _format_status(done, total):
         return np.array(
             [
-                f"{int(done_i)}/{int(total_i)}"
-                if int(done_i) < int(total_i)
-                else "DONE"
+                (
+                    f"{int(done_i)}/{int(total_i)}"
+                    if int(done_i) < int(total_i)
+                    else "DONE"
+                )
                 for done_i, total_i in zip(done, total)
             ],
             dtype=object,
@@ -162,9 +162,9 @@ class Collect_info:
             self.name_subset_list, dft_type
         ] = wtmad_2_subset
         set_wtmad_2 = np.einsum("i,ij->j", wtmad_2_subset, subset2set)
-        self.data_frame_dict["wtmad_2_df"].loc[self.name_set_list, dft_type] = (
-            set_wtmad_2
-        )
+        self.data_frame_dict["wtmad_2_df"].loc[
+            self.name_set_list, dft_type
+        ] = set_wtmad_2
         self.data_frame_dict["wtmad_2_df"].loc["summary", dft_type] = np.sum(
             set_wtmad_2
         )
@@ -212,7 +212,7 @@ class Collect_info:
             self.data["name"].str.split(f"_{self.basis}", regex=False).str[0].to_numpy()
         )
         with open(
-            f"/home/chenzihao/workspace/cc2cc_test5/cc2cc/utils/{self.data_set}.json"
+            f"/home/chenzihao/workspace/cc2cc_test5/cc2cc/utils/mol_dataset/{self.data_set}.json"
         ) as f:
             data_set_json = json.load(f)
 

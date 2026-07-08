@@ -103,6 +103,8 @@ def test_model_rks(
     else:
         grad_mdft = None
 
+    time_ai = timeit.default_timer() - time_ai_start
+
     # 3.0 Collect data
 
     if torch.cuda.is_available():
@@ -110,7 +112,6 @@ def test_model_rks(
         dm1_scf = cp.asnumpy(dm1_scf)
 
     scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")
-    time_ai = timeit.default_timer() - time_ai_start
 
     dict_ = {
         "name": name,

@@ -42,7 +42,7 @@ def test_model_uks(
     Test the model. Unrestricted Khon-Sham (with spin).
     """
     # 2.0 Prepare
-    time_ai_start = timer()
+    time_ai_start = timeit.default_timer()
     if torch.cuda.is_available():
         mdft = pyscf.dft.UKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
@@ -108,7 +108,7 @@ def test_model_uks(
     else:
         grad_mdft = None
 
-    time_ai = timer() - time_ai_start
+    time_ai = timeit.default_timer() - time_ai_start
 
     # 3.0 Collect data
 

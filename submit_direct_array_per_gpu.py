@@ -544,7 +544,7 @@ def main() -> int:
             bucket_pids.setdefault(bi, []).append(pid)
             bucket_task_ids.setdefault(bi, []).append(str(tid))
         pid_summary = " ".join(
-            f"{bi}:{','.join(pids)}" for bi, pids in sorted(bucket_pids.items())
+            f"{' '.join(pids)}" for bi, pids in sorted(bucket_pids.items())
         )
         task_id_summary = " ".join(
             f"{bi}:{','.join(ids)}" for bi, ids in sorted(bucket_task_ids.items())
