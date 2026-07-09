@@ -220,6 +220,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--if_compile",
+        type=str2bool,
+        default=False,
+        help="Enable torch.compile for the model. Default is False.",
+    )
+
+    parser.add_argument(
         "--lr",
         type=float,
         default=1e-4,

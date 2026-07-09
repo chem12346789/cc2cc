@@ -1,5 +1,6 @@
 import os
 from collections import deque
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -168,6 +169,8 @@ class ModelClass:
         if self.optimizer_state_dict is not None:
             self.optimizer.load_state_dict(self.optimizer_state_dict)
 
+        self._maybe_compile_model()
+
         if self.args.distributed:
             self.print(f"Using DistributedDataParallel on rank {self.local_rank}")
             self.model = DistributedDataParallel(
@@ -176,6 +179,17 @@ class ModelClass:
 
         if init_train:
             self.init_train()
+
+    def _maybe_compile_model(self):
+        if not getattr(self.args, "if_compile", False):
+            return
+
+        try:
+            compiled_model = torch.compile(self.model)
+            self.model = cast(torch.nn.Module, compiled_model)
+            self.print("Model compiled with torch.compile().")
+        except Exception as exc:  # pragma: no cover - fallback path
+            self.print(f"torch.compile failed ({exc}). Using eager mode.")
 
     def print(self, msg):
         if self.verbose:
