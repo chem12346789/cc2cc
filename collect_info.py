@@ -112,10 +112,16 @@ class Collect_info:
 
     def aggregate_data(self):
         for name_subset in self.name_subset_list:
-            pattern = (
-                f"*{self.basis}_{self.model_load}_{self.data_set}_"
-                f"molecule_{name_subset}.csv"
-            )
+            if "gmtkn-diet" in args.data_set.lower():
+                pattern = (
+                    f"*{self.basis}_{self.model_load}_gmtkn-def2_"
+                    f"molecule_{name_subset}.csv"
+                )
+            else:
+                pattern = (
+                    f"*{self.basis}_{self.model_load}_{self.data_set}_"
+                    f"molecule_{name_subset}.csv"
+                )
             print(f"Find {pattern} in validate directory...")
             data_path_list = list(Path("validate").glob(pattern))
             if len(data_path_list) != 1:
