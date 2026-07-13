@@ -32,7 +32,7 @@ def test_model_uks(
     if torch.cuda.is_available():
         mdft = pyscf.dft.UKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
-        utils.get_veff_modified_uks_gpu(mdft, modeldict)
+        utils.get_veff_modified_uks_gpu(mdft, modeldict, args.max_memory_gpu)
         mol.stdout = mdft.stdout
         mdft.with_df.use_gpu_memory = False
     else:
@@ -49,7 +49,7 @@ def test_model_uks(
         cube_size=modeldict.cube_size,
     )
 
-    mdft.verbose = 9
+    mdft.verbose = 4
     mdft.mol.verbose = 4
     mdft.conv_tol = 1e-7
     mdft.conv_tol_grad = 1e-3

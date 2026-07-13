@@ -5,6 +5,16 @@ Other parameter are from the argparse.
 
 import argparse
 from pathlib import Path
+import gc
+
+try:
+    import cupy as cp
+except Exception:  # pragma: no cover
+    cp = None
+try:
+    import torch
+except Exception:  # pragma: no cover
+    torch = None
 
 from cc2cc.utils import (
     MAIN_PATH,
@@ -15,6 +25,20 @@ from cc2cc.utils import (
     gen_mole,
     print_computer_info,
 )
+
+
+def _release_memory(device) -> None:
+    gc.collect()
+    if str(device).lower() not in ("cpu", "none"):
+        if cp is not None:
+            try:
+                cp.get_default_memory_pool().free_all_blocks()
+                cp.get_default_pinned_memory_pool().free_all_blocks()
+            except Exception:
+                pass
+        if torch is not None:
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
 
 
 def _build_record_path(args) -> Path:
@@ -152,9 +176,11 @@ def main():
             )
         finally:
             del mol
+            _release_memory(args.device)
 
     if modeldict is not None:
         del modeldict
+        _release_memory(args.device)
 
 
 if __name__ == "__main__":

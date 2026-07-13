@@ -22,7 +22,7 @@ def _hermi_sum(vmat):
     return vmat + vmat.transpose(0, 2, 1)
 
 
-def get_veff_modified_uks_gpu(ks, modeldict: ModelClass):
+def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
     """
     Get the method of "Get the effective potential for the UKS method".
     """
@@ -152,7 +152,7 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass):
                 ks_.grids,
                 ks_.xc,
                 dm,
-                max_memory=4000,
+                max_memory=max_memory_gpu,
                 hermi=hermi,
             )
             logger.debug(ks_, "nelec by numeric integration = %s", n)

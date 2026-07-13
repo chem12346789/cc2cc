@@ -19,7 +19,7 @@ from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.GridsGPU import GridGPU as Grid, iterate_grid_segments
 
 
-def get_veff_modified_rks_gpu(ks, modeldict):
+def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
     """
     Get the method of "Get the effective potential for the RKS method".
     """
@@ -134,7 +134,7 @@ def get_veff_modified_rks_gpu(ks, modeldict):
                 ks_.grids,
                 ks_.xc,
                 dm,
-                max_memory=4000,
+                max_memory=max_memory_gpu,
                 hermi=hermi,
             )
             logger.debug(ks_, "nelec by numeric integration = %s", n)

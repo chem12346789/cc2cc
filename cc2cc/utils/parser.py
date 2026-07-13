@@ -446,6 +446,13 @@ def add_args(parser: argparse.ArgumentParser):
         help="Weather to use rotation. Default is False.",
     )
 
+    parser.add_argument(
+        "--max_memory_gpu",
+        type=int,
+        default=4000,
+        help="Maximum memory for GPU calculation in MB. Default is 4000.",
+    )
+
     args = parser.parse_args()
 
     args.name_mol_input = args.name_mol.copy()
