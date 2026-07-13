@@ -18,19 +18,6 @@ import cc2cc.utils as utils
 pyscf.lib.logger.TIMER_LEVEL = 4
 
 
-def _release_memory(device) -> None:
-    gc.collect()
-    if "cuda" in str(device).lower() and torch.cuda.is_available():
-        if cp is not None:
-            try:
-                cp.get_default_memory_pool().free_all_blocks()
-                cp.get_default_pinned_memory_pool().free_all_blocks()
-            except Exception:
-                pass
-        torch.cuda.empty_cache()
-        torch.cuda.ipc_collect()
-
-
 def test_model_rks(
     mol,
     name,
@@ -49,7 +36,7 @@ def test_model_rks(
         Grid = utils.GridGPU
         utils.get_veff_modified_rks_gpu(mdft, modeldict)
         mol.stdout = mdft.stdout
-        mdft.use_gpu_memory = False
+        mdft.with_df.use_gpu_memory = False
     else:
         print("Use CPU for DFT calculation.")
         Grid = utils.GridCPU
@@ -65,7 +52,7 @@ def test_model_rks(
         cube_size=modeldict.cube_size,
     )
 
-    mdft.verbose = 4
+    mdft.verbose = 9
     mdft.mol.verbose = 4
     mdft.conv_tol = 1e-7
     mdft.conv_tol_grad = 1e-3
@@ -108,7 +95,6 @@ def test_model_rks(
     # 3.0 Collect data
 
     if torch.cuda.is_available():
-        _release_memory(args.device)
         dm1_scf = cp.asnumpy(dm1_scf)
 
     scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")

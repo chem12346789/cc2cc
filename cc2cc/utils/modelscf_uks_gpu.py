@@ -152,7 +152,7 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass):
                 ks_.grids,
                 ks_.xc,
                 dm,
-                max_memory=ks_.max_memory,
+                max_memory=4000,
                 hermi=hermi,
             )
             logger.debug(ks_, "nelec by numeric integration = %s", n)
