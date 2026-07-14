@@ -34,7 +34,7 @@ def test_model_uks(
         Grid = utils.GridGPU
         utils.get_veff_modified_uks_gpu(mdft, modeldict, args.max_memory_gpu)
         mol.stdout = mdft.stdout
-        mdft.with_df.use_gpu_memory = False
+        # mdft.with_df.use_gpu_memory = False
     else:
         mdft = pyscf.dft.UKS(mol).density_fit()
         Grid = utils.GridCPU
@@ -89,7 +89,10 @@ def test_model_uks(
         g = mdft.Gradients()
         g.xc = "b3lyp"
         g.grids = mdft.grids
-        utils.get_veff_grad_modified_uks(g, modeldict)
+        if torch.cuda.is_available():
+            utils.get_veff_grad_modified_uks_gpu(g, modeldict)
+        else:
+            utils.get_veff_grad_modified_uks(g, modeldict)
         grad_mdft = g.kernel()
     else:
         grad_mdft = None
