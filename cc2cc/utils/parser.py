@@ -167,7 +167,7 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--loss_ene",
+        "--loss_type",
         type=str,
         choices=["MSELoss", "L1Loss"],
         default="MSELoss",

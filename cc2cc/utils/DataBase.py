@@ -14,7 +14,7 @@ from cc2cc.utils.mol import gen_mole
 from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import AU2KCALMOL
 
-EPS = 1e-5
+EPS = 1e-3
 MAX_ERROR_ENERGY = 0.01  # kcal/mol per atom, if the error energy is larger than this value, we set the absolute loss multiplier to 0 to avoid the numerical instability in training.
 
 
@@ -106,7 +106,7 @@ class DataBase:
             "L1Loss": lambda x: np.sum(np.abs(x)),
             "MSELoss": lambda x: np.sum(x**2),
         }
-        self.loss_ene = loss_func_dict[args.loss_ene]
+        self.loss_ene = loss_func_dict[args.loss_type]
 
         name_list = []
         error_molecule = []
@@ -275,22 +275,23 @@ class DataBase:
             data_dict["output"] = output_mat.reshape((-1, 1))[filter_idx]
             del output_mat
 
-            if self.args.if_relative_weight_abs:
-                loss_multiplier_abs /= (
-                    self.loss_ene(data_dict["output"] * data_dict["weight"]) + EPS
-                ) * np.sqrt(len(data_dict["output"]))
-                self.print(
-                    f"Adjusted loss_multiplier_abs: {loss_multiplier_abs:>6.3f}",
+            if self.args.if_abs:
+                if self.args.if_relative_weight_abs:
+                    loss_multiplier_abs /= (
+                        self.loss_ene(data_dict["output"] * data_dict["weight"]) + EPS
+                    ) * np.sqrt(len(data_dict["output"]))
+                    self.print(
+                        f"Adjusted loss_multiplier_abs: {loss_multiplier_abs:>6.3f}",
+                    )
+                error_energy = AU2KCALMOL * abs(
+                    energy_target - np.sum(data_dict["output"] * data_dict["weight"])
                 )
-            error_energy = AU2KCALMOL * abs(
-                energy_target - np.sum(data_dict["output"] * data_dict["weight"])
-            )
-            if error_energy > MAX_ERROR_ENERGY * mol_info["natm"]:
-                self.print(
-                    f"Warning: Large error energy {error_energy:>9.6f} kcal/mol "
-                    f"for {name:>40} set to 0 in absolute loss calculation.",
-                )
-                loss_multiplier_abs = 0
+                if error_energy > MAX_ERROR_ENERGY * mol_info["natm"]:
+                    self.print(
+                        f"Warning: Large error energy {error_energy:>9.6f} kcal/mol "
+                        f"for {name:>40} set to 0 in absolute loss calculation.",
+                    )
+                    loss_multiplier_abs = 0
 
             if self.args.if_grad:
                 grad2force = data["grad2force"]

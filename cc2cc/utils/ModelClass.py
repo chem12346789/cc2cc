@@ -225,7 +225,7 @@ class ModelClass:
             "L1Loss": torch.nn.L1Loss,
             "MSELoss": torch.nn.MSELoss,
         }
-        loss_class = loss_dict[self.args.loss_ene]
+        loss_class = loss_dict[self.args.loss_type]
         for name in (
             "ene_loss_fun",
             "atomic_loss_fun",
