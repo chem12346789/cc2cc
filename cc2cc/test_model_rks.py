@@ -1,7 +1,6 @@
 """Test the model. Restrict Khon-Sham (no spin)."""
 
 import timeit
-import gc
 import numpy as np
 import torch
 
