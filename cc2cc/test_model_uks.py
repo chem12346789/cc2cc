@@ -34,7 +34,6 @@ def test_model_uks(
         Grid = utils.GridGPU
         utils.get_veff_modified_uks_gpu(mdft, modeldict, args.max_memory_gpu)
         mol.stdout = mdft.stdout
-        # mdft.with_df.use_gpu_memory = False
     else:
         mdft = pyscf.dft.UKS(mol).density_fit()
         Grid = utils.GridCPU
