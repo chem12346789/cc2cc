@@ -264,6 +264,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--cosine_T_mult",
+        type=int,
+        default=1,
+        help="Multiplicative factor for the period of the cosine scheduler. Default is 1.",
+    )
+
+    parser.add_argument(
         "--max_norm",
         type=float,
         default=1.0,

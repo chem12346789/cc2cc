@@ -133,7 +133,7 @@ class ModelClass:
         if self.args.scheduler == "cosine":
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
-                T_max=self.args.eval_step * 32 * self.args.cosine_T,
+                T_max=self.args.eval_step * self.args.cosine_T,
                 eta_min=self.args.cosine_eta_min,
             )
         elif self.args.scheduler == "constant":
@@ -141,8 +141,8 @@ class ModelClass:
         elif self.args.scheduler == "cosine_warm":
             self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
                 self.optimizer,
-                T_0=self.args.eval_step * 32,
-                T_mult=2,
+                T_0=self.args.eval_step * self.args.cosine_T,
+                T_mult=self.args.cosine_T_mult,
                 eta_min=self.args.cosine_eta_min,
             )
         else:
