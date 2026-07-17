@@ -35,7 +35,6 @@ def test_model_rks(
         Grid = utils.GridGPU
         utils.get_veff_modified_rks_gpu(mdft, modeldict, args.max_memory_gpu)
         mol.stdout = mdft.stdout
-        # mdft.with_df.use_gpu_memory = False
     else:
         print("Use CPU for DFT calculation.")
         Grid = utils.GridCPU

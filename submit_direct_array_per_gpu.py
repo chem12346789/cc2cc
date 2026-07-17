@@ -318,11 +318,12 @@ def log_paths(args: argparse.Namespace, script_path: Path, script_text: str) -> 
     return f"{base}.out", f"{base}.err"
 
 
-def sbatch_cmd(partition: str, gpu_idx: int, arr: str, script: Path, dep: str | None, logs: tuple[str | None, str | None], exclude: list[str], job_name: str | None = None) -> list[str]:
+def sbatch_cmd(partition: str, arr: str, script: Path, dep: str | None, logs: tuple[str | None, str | None], exclude: list[str], job_name: str | None = None, gpu_idx: int | None = None) -> list[str]:
     cmd = [
-        "sbatch", "--parsable", "--partition", partition,
-        "--export", f"ALL,FORCE_CUDA_VISIBLE_DEVICES={gpu_idx}", "--array", arr,
+        "sbatch", "--parsable", "--partition", partition, "--array", arr,
     ]
+    if gpu_idx is not None:
+        cmd += ["--export", f"ALL,FORCE_CUDA_VISIBLE_DEVICES={gpu_idx}"]
     if job_name:
         cmd += ["--job-name", job_name]
     out, err = logs
@@ -356,6 +357,7 @@ def build_parser() -> argparse.ArgumentParser:
     add("--no-log-override", action="store_true")
     add("--debug", action="store_true")
     add("--dry-run", action="store_true")
+    add("--cpu-only", action="store_true", help="Submit to CPU partition/nodes: skip GPU probing and do not pass --exclude")
     return ap
 
 
@@ -398,38 +400,57 @@ def main() -> int:
         print(f"[DEBUG] Probe node preview: {preview(probe_nodes)}")
         print(f"[DEBUG] Exclude-pinning node pool preview: {preview(submit_pool)}")
 
-    print(f"[INFO] Probing GPUs: min_free={args.min_free_memory} GB, workers={args.probe_workers}")
-    slots: list[tuple[str, int]] = []
-    with cf.ThreadPoolExecutor(max_workers=max(1, args.probe_workers)) as ex:
-        futs = [ex.submit(probe_node, n, partition, args.min_free_memory, args.max_gpu_power, args.probe_timeout_sec, args.debug) for n in probe_nodes]
-        for done, fut in enumerate(cf.as_completed(futs), 1):
-            node, gpus = fut.result()
-            if gpus:
-                if args.debug:
-                    print(f"[DEBUG] {node}: eligible GPU(s) = {gpus}")
-                slots += [(node, g) for g in gpus]
-            if args.debug and (done % 20 == 0 or done == len(futs)):
-                print(f"[INFO] Probe progress: {done}/{len(futs)}")
-    if not slots:
-        print("[WARN] No eligible GPUs found. Nothing submitted.")
-        return 0
-    print(f"[INFO] Available eligible GPUs={len(slots)}")
+    slots: list[tuple[str, int | None]] = []
+    if args.cpu_only:
+        cpu_nodes: list[str] = []
+        for node in probe_nodes:
+            try:
+                names = hostnames(node, args.debug)
+                if names:
+                    cpu_nodes.append(names[0])
+            except Exception:
+                pass
+        cpu_nodes = list(dict.fromkeys(cpu_nodes))
+        if not cpu_nodes:
+            print("[WARN] No usable CPU nodes found. Nothing submitted.")
+            return 0
+        slots = [(n, None) for n in cpu_nodes[: min(len(cpu_nodes), limit)]]
+        print(f"[INFO] CPU-only mode: using CPU slots={len(slots)}")
+        if args.debug:
+            print(f"[DEBUG] CPU slot list: {preview(n for n, _ in slots)}")
+    else:
+        print(f"[INFO] Probing GPUs: min_free={args.min_free_memory} GB, workers={args.probe_workers}")
+        gpu_slots: list[tuple[str, int]] = []
+        with cf.ThreadPoolExecutor(max_workers=max(1, args.probe_workers)) as ex:
+            futs = [ex.submit(probe_node, n, partition, args.min_free_memory, args.max_gpu_power, args.probe_timeout_sec, args.debug) for n in probe_nodes]
+            for done, fut in enumerate(cf.as_completed(futs), 1):
+                node, gpus = fut.result()
+                if gpus:
+                    if args.debug:
+                        print(f"[DEBUG] {node}: eligible GPU(s) = {gpus}")
+                    gpu_slots += [(node, g) for g in gpus]
+                if args.debug and (done % 20 == 0 or done == len(futs)):
+                    print(f"[INFO] Probe progress: {done}/{len(futs)}")
+        if not gpu_slots:
+            print("[WARN] No eligible GPUs found. Nothing submitted.")
+            return 0
+        print(f"[INFO] Available eligible GPUs={len(gpu_slots)}")
 
-    valid: list[tuple[str, int]] = []
-    for node, gpu in slots:
-        try:
-            names = hostnames(node, args.debug)
-            if names:
-                valid.append((names[0], gpu))
-        except Exception:
-            pass
-    slots = valid[: min(len(valid), limit)]
-    if not slots:
-        print("[WARN] No valid eligible GPUs found. Nothing submitted.")
-        return 0
-    print(f"[INFO] Using GPU slots={len(slots)}")
-    if args.debug:
-        print(f"[DEBUG] Slot list: {preview(f'{n}:gpu{g}' for n, g in slots)}")
+        valid: list[tuple[str, int]] = []
+        for node, gpu in gpu_slots:
+            try:
+                names = hostnames(node, args.debug)
+                if names:
+                    valid.append((names[0], gpu))
+            except Exception:
+                pass
+        slots = [(n, g) for n, g in valid[: min(len(valid), limit)]]
+        if not slots:
+            print("[WARN] No valid eligible GPUs found. Nothing submitted.")
+            return 0
+        print(f"[INFO] Using GPU slots={len(slots)}")
+        if args.debug:
+            print(f"[DEBUG] Slot list: {preview(f'{n}:gpu{g}' for n, g in slots)}")
 
     estimates: dict[int, float] = {}
     time_path: Path | None = None
@@ -507,9 +528,10 @@ def main() -> int:
         mol_name = mol_names[tid] if 0 <= tid < len(mol_names) else f"task-{tid}"
         job_name = safe_name(f"{load_name}-{mol_name}")
         if args.debug:
-            print(f"[DEBUG] Submit {i}/{len(plan)}: task={tid}, job={job_name}, bucket={bi}, node={node}, gpu={gpu}, dep={dep or 'none'}, {metric}")
-        exclude = [n for n in submit_pool if n != node]
-        cmd = sbatch_cmd(partition, gpu, str(tid), script_path, dep, logs, exclude, job_name=job_name)
+            gpu_tag = "cpu" if gpu is None else f"gpu={gpu}"
+            print(f"[DEBUG] Submit {i}/{len(plan)}: task={tid}, job={job_name}, bucket={bi}, node={node}, {gpu_tag}, dep={dep or 'none'}, {metric}")
+        exclude = [] if args.cpu_only else [n for n in submit_pool if n != node]
+        cmd = sbatch_cmd(partition, str(tid), script_path, dep, logs, exclude, job_name=job_name, gpu_idx=gpu)
         if args.debug:
             print("[SUBMIT]", " ".join(map(shlex.quote, cmd)))
         if args.dry_run:
