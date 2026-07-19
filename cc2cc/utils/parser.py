@@ -271,6 +271,13 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--training_repetition",
+        type=int,
+        default=1,
+        help="Number of times to repeat training on each batch. Default is 1.",
+    )
+
+    parser.add_argument(
         "--max_norm",
         type=float,
         default=1.0,

@@ -453,24 +453,29 @@ class ModelClass:
     def train_model(self):
         self.train()
         self.optimizer.zero_grad(set_to_none=True)
-        data_record_l = DataRecordList(len(self.database_train))
+        data_record_l = DataRecordList(
+            len(self.database_train) * self.args.training_repetition
+        )
         pending_records = deque()
 
         for batch in self.database_train.data_gpu:
             batch = self.database_train.process_batch(batch, device=self.local_rank)
-            tot_loss, data_record, event = self.loss(batch)
-            tot_loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
-            self.optimizer.step()
-            self.optimizer.zero_grad(set_to_none=True)
-            if event is None:
-                data_record_l.add_data_record(data_record)
-                continue
+            for _ in range(self.args.training_repetition):
+                tot_loss, data_record, event = self.loss(batch)
+                tot_loss.backward()
+                torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters(), self.args.max_norm
+                )
+                self.optimizer.step()
+                self.optimizer.zero_grad(set_to_none=True)
+                if event is None:
+                    data_record_l.add_data_record(data_record)
+                    continue
 
-            pending_records.append((event, data_record))
-            while pending_records and pending_records[0][0].query():
-                _, ready_record = pending_records.popleft()
-                data_record_l.add_data_record(ready_record)
+                pending_records.append((event, data_record))
+                while pending_records and pending_records[0][0].query():
+                    _, ready_record = pending_records.popleft()
+                    data_record_l.add_data_record(ready_record)
 
         while pending_records:
             event, ready_record = pending_records.popleft()

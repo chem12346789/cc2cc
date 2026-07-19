@@ -1,0 +1,12 @@
+{
+  "train": [
+    "molecule0-W4_11",
+    "molecule0-Surplus"
+  ],
+  "eval": [
+    "molecule5-W4_11",
+    "molecule5-Surplus"
+  ],
+  "train_exclude": [],
+  "eval_exclude": []
+}
