@@ -3,6 +3,7 @@
 Most CPU exports are loaded eagerly, while SCF helper functions and GPU exports
 remain lazy.
 """
+
 from __future__ import annotations
 
 from importlib import import_module
@@ -11,6 +12,8 @@ from typing import Any
 
 NO_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "add_args": ("cc2cc.utils.parser", "add_args"),
+    "config_list": ("cc2cc.utils.parser", "config_list"),
+    "process_config": ("cc2cc.utils.parser", "process_config"),
     "gen_mole": ("cc2cc.utils.mol", "gen_mole"),
     "AU2KCALMOL": ("cc2cc.utils.mol", "AU2KCALMOL"),
     "AU2DEBYE": ("cc2cc.utils.mol", "AU2DEBYE"),
@@ -64,6 +67,7 @@ _GPU_EXPORTS: dict[str, tuple[str, str]] = {
         "get_veff_grad_modified_uks_gpu",
     ),
 }
+
 
 def _load_symbol(name: str, table: dict[str, tuple[str, str]]) -> Any:
     module_name, attr_name = table[name]

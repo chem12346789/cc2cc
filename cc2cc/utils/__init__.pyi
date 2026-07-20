@@ -34,6 +34,8 @@ from cc2cc.utils.mol import AU2DEBYE as AU2DEBYE
 from cc2cc.utils.mol import AU2KCALMOL as AU2KCALMOL
 from cc2cc.utils.mol import gen_mole as gen_mole
 from cc2cc.utils.parser import add_args as add_args
+from cc2cc.utils.parser import config_list as config_list
+from cc2cc.utils.parser import process_config as process_config
 from cc2cc.utils.timer import Timer as Timer
 
 NO_LAZY_EXPORTS: dict[str, tuple[str, str]]

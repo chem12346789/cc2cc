@@ -1,5 +1,7 @@
 import torch
 
+ESPILON = 1e-8
+
 from cc2cc.utils.env_var import EDGE_SIZE
 from cc2cc.utils.model.model_utils import DenseNet, E3nn, Transformer
 
@@ -37,7 +39,6 @@ class Model(torch.nn.Module):
             ffn_bias=False,
             mlp_ratio=1,
             atte_actv="gelu",
-            atte_normal="rms",
         )
 
         self.densenet = DenseNet(
@@ -62,6 +63,8 @@ class Model(torch.nn.Module):
         self.mixing_weight = torch.nn.Linear(self.flat_size, self.input_level + 2)
 
     def forward(self, x):
+        x_normal = torch.sum(torch.abs(x), dim=-1, keepdim=True) + ESPILON
+        x = x / x_normal
         x_center = x[:, :, self.cube_middle]
         x_in = x.permute(0, 2, 1).contiguous()
 
@@ -82,4 +85,5 @@ class Model(torch.nn.Module):
         x_center = self.densenet_center(center_values)
 
         expert_outputs = torch.cat((x_cube, x_center, center_values), dim=-1)
-        return (weight_out * expert_outputs).sum(dim=-1, keepdim=True)
+        output = (weight_out * expert_outputs).sum(dim=-1, keepdim=True)
+        return output * x_normal

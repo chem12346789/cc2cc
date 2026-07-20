@@ -1,6 +1,5 @@
 """ """
 
-import os
 import argparse
 import copy
 
@@ -9,7 +8,13 @@ import numpy as np
 import pyscf
 import pyscf.md
 
-from cc2cc.utils import gen_mole, print_computer_info, add_args
+from cc2cc.utils import (
+    gen_mole,
+    print_computer_info,
+    add_args,
+    config_list,
+    process_config,
+)
 from cc2cc.utils.rotate import rotate
 from cc2cc.utils import Grid, DATA_PATH
 from cc2cc.utils.parser import gen_name_args
@@ -87,10 +92,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Generate the inversed potential and energy."
     )
+    parser.add_argument(
+        "--gen_config",
+        type=str,
+        default="mini.json",
+        help="Path to JSON file defining train/eval splits.",
+    )
     args = add_args(parser)
 
     print_computer_info(args.device)
 
+    gen_config = process_config(args.gen_config)
+    train_str_list = config_list(gen_config, "train")
+    eval_str_list = config_list(gen_config, "eval")
     train_str_list = gen_name_args(train_str_list, args.dataset, args.name_mol_reverse)
     eval_str_list = gen_name_args(eval_str_list, args.dataset, args.name_mol_reverse)
 

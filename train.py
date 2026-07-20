@@ -1,12 +1,8 @@
 import argparse
-import json
-from pathlib import Path
 
-from cc2cc.utils import add_args, print_computer_info
+from cc2cc.utils import add_args, print_computer_info, config_list, process_config
 from cc2cc.utils.parser import gen_name_args
 from cc2cc.train_model import train_model
-
-_CONFIG_DIR = Path(__file__).resolve().parent / "configs"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -22,28 +18,11 @@ if __name__ == "__main__":
 
     print_computer_info(args.device)
 
-    split_path = Path(args.split_config)
-    if not split_path.is_absolute():
-        split_path = (_CONFIG_DIR / split_path).resolve()
-    if not split_path.exists():
-        raise FileNotFoundError(f"Split configuration not found: {split_path}")
-    with split_path.open("r", encoding="utf-8") as f:
-        split_config = json.load(f)
-
-    def _config_list(key):
-        value = split_config.get(key, [])
-        if value is None:
-            return []
-        if not isinstance(value, list):
-            raise TypeError(
-                f"'{key}' in {split_path} must be a list, got {type(value)}"
-            )
-        return value
-
-    train_str_list = _config_list("train")
-    eval_str_list = _config_list("eval")
-    train_str_exclude_list = _config_list("train_exclude")
-    eval_str_exclude_list = _config_list("eval_exclude")
+    split_config = process_config(args.split_config)
+    train_str_list = config_list(split_config, "train")
+    eval_str_list = config_list(split_config, "eval")
+    train_str_exclude_list = config_list(split_config, "train_exclude")
+    eval_str_exclude_list = config_list(split_config, "eval_exclude")
 
     train_str_list = gen_name_args(train_str_list, args.dataset, args.name_mol_reverse)
     train_str_exclude_list = gen_name_args(
@@ -67,7 +46,7 @@ if __name__ == "__main__":
         preview = ", ".join(overlap[:8])
         suffix = " ..." if len(overlap) > 8 else ""
         raise ValueError(
-            f"Train/eval overlap detected in {split_path} (count={len(overlap)}): "
+            f"Train/eval overlap detected in {args.split_config} (count={len(overlap)}): "
             f"{preview}{suffix}"
         )
 
