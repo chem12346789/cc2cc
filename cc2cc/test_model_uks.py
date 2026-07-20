@@ -29,12 +29,14 @@ def test_model_uks(
     """
     # 2.0 Prepare
     time_ai_start = timeit.default_timer()
-    if torch.cuda.is_available():
+    if torch.cuda.is_available() and mol.nao < 2000:
+        print("Use GPU for DFT calculation.")
         mdft = pyscf.dft.UKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
         utils.get_veff_modified_uks_gpu(mdft, modeldict, args.max_memory_gpu)
         mol.stdout = mdft.stdout
     else:
+        print("Use CPU for DFT calculation.")
         mdft = pyscf.dft.UKS(mol).density_fit()
         Grid = utils.GridCPU
         utils.get_veff_modified_uks(mdft, modeldict)
