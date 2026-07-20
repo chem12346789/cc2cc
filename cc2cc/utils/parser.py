@@ -9,7 +9,7 @@ import argparse
 import json
 from pathlib import Path
 
-_CONFIG_DIR = Path(__file__).resolve().parent / "configs"
+_CONFIG_DIR = Path(__file__).resolve().parents[2] / "configs"
 
 
 def config_list(config, key):
