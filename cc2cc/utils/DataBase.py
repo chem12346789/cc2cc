@@ -14,7 +14,7 @@ from cc2cc.utils.mol import gen_mole
 from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import AU2KCALMOL
 
-EPS = 1e-3
+EPS = 1e-2
 MAX_ERROR_ENERGY = 0.01  # kcal/mol per atom, if the error energy is larger than this value, we set the absolute loss multiplier to 0 to avoid the numerical instability in training.
 
 
@@ -105,7 +105,7 @@ class DataBase:
 
         loss_func_dict = {
             "L1Loss": lambda x: np.sum(np.abs(x)),
-            "MSELoss": lambda x: np.sum(x**2),
+            "MSELoss": lambda x: np.sum(np.abs(x)),
         }
         self.loss_ene = loss_func_dict[args.loss_type]
 
@@ -280,7 +280,7 @@ class DataBase:
                 if self.args.if_relative_weight_abs:
                     loss_multiplier_abs /= (
                         self.loss_ene(data_dict["output"] * data_dict["weight"]) + EPS
-                    ) * np.sqrt(len(data_dict["output"]))
+                    )
                     self.print(
                         f"Adjusted loss_multiplier_abs: {loss_multiplier_abs:>6.3f}",
                     )
@@ -347,6 +347,11 @@ class DataBase:
         if self.args.if_relative_weight:
             loss_multiplier /= self.loss_ene(energy_target) + EPS
             loss_multiplier_atomic /= self.loss_ene(ae_target) + EPS
+        if abs(ae_target) < 1e-10:
+            self.print(
+                f"Warning: ae_target is too small {ae_target:>6.3f} for {name:>40}, set to 0.0 to turn it off in the atomic loss calculation.",
+            )
+            loss_multiplier_atomic = 0
 
         data_dict["loss_multiplier"] = loss_multiplier
         data_dict["loss_multiplier_abs"] = loss_multiplier_abs

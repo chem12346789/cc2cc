@@ -408,7 +408,7 @@ class ModelClass:
                 )
                 data_record["loss_tot_grad"] = tensor_to_numpy(loss_grad)
 
-        if self.args.if_atomic:
+        if self.args.if_atomic and loss_multiplier_atomic != 0:
             ae_target = batch["ae_target"]
             ae_output = sum_output
 
@@ -453,29 +453,24 @@ class ModelClass:
     def train_model(self):
         self.train()
         self.optimizer.zero_grad(set_to_none=True)
-        data_record_l = DataRecordList(
-            len(self.database_train) * self.args.training_repetition
-        )
+        data_record_l = DataRecordList(len(self.database_train))
         pending_records = deque()
 
         for batch in self.database_train.data_gpu:
             batch = self.database_train.process_batch(batch, device=self.local_rank)
-            for _ in range(self.args.training_repetition):
-                tot_loss, data_record, event = self.loss(batch)
-                tot_loss.backward()
-                torch.nn.utils.clip_grad_norm_(
-                    self.model.parameters(), self.args.max_norm
-                )
-                self.optimizer.step()
-                self.optimizer.zero_grad(set_to_none=True)
-                if event is None:
-                    data_record_l.add_data_record(data_record)
-                    continue
+            tot_loss, data_record, event = self.loss(batch)
+            tot_loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
+            self.optimizer.step()
+            self.optimizer.zero_grad(set_to_none=True)
+            if event is None:
+                data_record_l.add_data_record(data_record)
+                continue
 
-                pending_records.append((event, data_record))
-                while pending_records and pending_records[0][0].query():
-                    _, ready_record = pending_records.popleft()
-                    data_record_l.add_data_record(ready_record)
+            pending_records.append((event, data_record))
+            while pending_records and pending_records[0][0].query():
+                _, ready_record = pending_records.popleft()
+                data_record_l.add_data_record(ready_record)
 
         while pending_records:
             event, ready_record = pending_records.popleft()
