@@ -1,7 +1,7 @@
 import torch
 
 from cc2cc.utils.env_var import EDGE_SIZE
-from cc2cc.utils.model.model_utils import DenseNet, E3nn, Transformer
+from cc2cc.utils.model.model_utils import DenseNet, Transformer, E3nn
 
 
 class Model(torch.nn.Module):
@@ -62,8 +62,8 @@ class Model(torch.nn.Module):
 
     def forward(self, x):
         x_center = x[:, :, self.cube_middle]
-        x_in = x.permute(0, 2, 1).contiguous()
 
+        x_in = x.permute(0, 2, 1).contiguous()
         x_cube = torch.cat(
             tuple(
                 torch.vmap(getattr(self, f"conv{i}"))(x_in)
@@ -71,6 +71,7 @@ class Model(torch.nn.Module):
             ),
             dim=-2,
         )
+
         weight_out = torch.softmax(
             self.mixing_weight(x_cube.reshape(-1, self.flat_size)), dim=-1
         )

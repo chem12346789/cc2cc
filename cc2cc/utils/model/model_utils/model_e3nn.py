@@ -1,9 +1,5 @@
 import torch
 from e3nn import o3
-from e3nn.nn import FullyConnectedNet
-from e3nn.o3 import Irreps
-from e3nn import o3, nn
-from e3nn.math import soft_one_hot_linspace
 
 from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 
@@ -56,12 +52,14 @@ class E3nn(torch.nn.Module):
                         self.edge_vec[i, j, k, 2] = (k - CUBE_MIDDLE) * EDGE_LEN
         else:
             raise NotImplementedError("Only cube type is implemented.")
+        self.edge_vec = self.edge_vec.reshape(EDGE_SIZE**3, 3)
+
         if torch.cuda.is_available():
             center_vec = torch.zeros(1, 3, device="cuda", dtype=torch.float64)
         else:
             center_vec = torch.zeros(1, 3, device="cpu", dtype=torch.float64)
         self.register_buffer("center_vec", center_vec, persistent=False)
-        self.edge_vec = self.edge_vec.reshape(EDGE_SIZE**3, 3)
+        self.center_vec = self.center_vec.reshape(1, 3)
 
         irreps_input = o3.Irreps(f"{self.input_level}x0e")
         hidden_irreps = o3.Irreps(
@@ -71,7 +69,10 @@ class E3nn(torch.nn.Module):
 
         irreps_sh = o3.Irreps.spherical_harmonics(lmax=self.lmax)
         self.sh = o3.spherical_harmonics(
-            irreps_sh, self.edge_vec, normalize=True, normalization="component"
+            irreps_sh,
+            self.edge_vec,
+            normalize=False,
+            normalization="norm",
         )
         self.tp = o3.FullyConnectedTensorProduct(
             irreps_input,
@@ -85,8 +86,8 @@ class E3nn(torch.nn.Module):
         self.sh_center = o3.spherical_harmonics(
             irreps_sh_center,
             self.center_vec,
-            normalize=True,
-            normalization="component",
+            normalize=False,
+            normalization="norm",
         )
         self.tp_center = o3.FullyConnectedTensorProduct(
             hidden_irreps,
@@ -113,27 +114,6 @@ class E3nn(torch.nn.Module):
                 new_weight.uniform_(-a, a)
                 weight[:] = new_weight
 
-        # kaiming_uniform_ initialization for the tensor product weights
-        # with torch.no_grad():
-        #     for weight in self.tp.weight_views():
-        #         mul_1, mul_2, mul_out = weight.shape
-        #         # formula from torch.nn.init.kaiming_uniform_
-        #         a = (6 / mul_1) ** 0.5
-        #         new_weight = torch.empty_like(weight)
-        #         new_weight.uniform_(-a, a)
-        #         weight[:] = new_weight
-        #     for weight in self.tp_center.weight_views():
-        #         mul_1, mul_2, mul_out = weight.shape
-        #         # formula from torch.nn.init.kaiming_uniform_
-        #         a = (6 / mul_1) ** 0.5
-        #         new_weight = torch.empty_like(weight)
-        #         new_weight.uniform_(-a, a)
-        #         weight[:] = new_weight
-
-        # # uniform_ initialization for the tensor product weights
-        # with torch.no_grad():
-        #     self.tp.weight.uniform_(-1, 1)
-
     def forward(self, f_in):
         # f_in shape: [CUBE_SIZE**3, 4]
         f_hidden = self.tp(f_in, self.sh)
@@ -141,5 +121,5 @@ class E3nn(torch.nn.Module):
         f_hidden = f_hidden.sum(dim=0)
         # f_hidden shape: [(lmax+1)**2]
         f_out = self.tp_center(f_hidden, self.sh_center)
-        # f_out shape: [27]
+        # f_out shape: [CUBE_SIZE**3, 1]
         return f_out
