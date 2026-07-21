@@ -11,7 +11,6 @@ from numba import njit
 import pyscf
 from pyscf import __config__
 from pyscf.dft import gen_grid, numint, radi
-from pyscf.lib import logger
 from pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 
 from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE

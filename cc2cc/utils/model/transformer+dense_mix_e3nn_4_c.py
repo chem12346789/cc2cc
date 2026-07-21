@@ -1,9 +1,7 @@
 import torch
 
-ESPILON = 1e-8
-
 from cc2cc.utils.env_var import EDGE_SIZE
-from cc2cc.utils.model.model_utils import DenseNet, E3nn, Transformer
+from cc2cc.utils.model.model_utils import DenseNet, Transformer, E3nn
 
 
 class Model(torch.nn.Module):
@@ -17,7 +15,7 @@ class Model(torch.nn.Module):
         self.cube_middle = (self.cube_size - 1) // 2
         self.input_level = 4
         self.before_weight = False
-        self.lmax = 2
+        self.lmax = 3
         self.out_l = 0
         self.flat_size = self.input_level * self.cube_size
 
@@ -63,11 +61,9 @@ class Model(torch.nn.Module):
         self.mixing_weight = torch.nn.Linear(self.flat_size, self.input_level + 2)
 
     def forward(self, x):
-        x_normal = torch.sum(torch.abs(x), dim=(-2, -1)) + ESPILON
-        x = torch.einsum("b...,b->b...", x, 1 / x_normal)
         x_center = x[:, :, self.cube_middle]
-        x_in = x.permute(0, 2, 1).contiguous()
 
+        x_in = x.permute(0, 2, 1).contiguous()
         x_cube = torch.cat(
             tuple(
                 torch.vmap(getattr(self, f"conv{i}"))(x_in)
@@ -75,6 +71,7 @@ class Model(torch.nn.Module):
             ),
             dim=-2,
         )
+
         weight_out = torch.softmax(
             self.mixing_weight(x_cube.reshape(-1, self.flat_size)), dim=-1
         )
@@ -85,5 +82,4 @@ class Model(torch.nn.Module):
         x_center = self.densenet_center(center_values)
 
         expert_outputs = torch.cat((x_cube, x_center, center_values), dim=-1)
-        output = (weight_out * expert_outputs).sum(dim=-1, keepdim=True)
-        return torch.einsum("b...,b->b...", output, x_normal)
+        return (weight_out * expert_outputs).sum(dim=-1, keepdim=True)

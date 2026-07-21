@@ -1,6 +1,7 @@
 from cc2cc.utils.model.model_utils.model_transformer import Transformer
 from cc2cc.utils.model.model_utils.model_dense import DenseNet
 from cc2cc.utils.model.model_utils.model_e3nn import E3nn
+from cc2cc.utils.model.model_utils.model_e3nn_correct import E3nn as E3nnC
 
 NO_LAZY_EXPORTS: dict[str, tuple[str, str]]
 _LAZY_EXPORTS: dict[str, tuple[str, str]]
