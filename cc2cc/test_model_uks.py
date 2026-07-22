@@ -65,24 +65,14 @@ def test_model_uks(
         if_retry = True
         mdft.kernel()
 
-    if mdft.converged is False and if_retry:
-        print("UKS not converged. Add dynamic level shift.")
-        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=1.0)
-        mdft.kernel()
-    if mdft.converged is False and if_retry:
-        print("UKS not converged. Add dynamic level shift.")
-        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=2.0)
-        mdft.kernel()
-    if mdft.converged is False and if_retry:
-        print("UKS not converged. Add dynamic level shift.")
-        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=4.0)
-        mdft.kernel()
-    if mdft.converged is False and if_retry:
-        print("UKS not converged. Add dynamic level shift.")
-        pyscf.scf.addons.dynamic_level_shift_(mdft, factor=8.0)
-        mdft.kernel()
+    for factor in [1.0, 2.0, 4.0, 8.0]:
+        if mdft.converged is False and if_retry:
+            print(f"UKS not converged. Add dynamic level shift with factor {factor}.")
+            mdft.level_shift = factor
+            mdft.kernel()
     if mdft.converged is False:
         print("Error: UKS not converged!!! Just use the current result.")
+
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
 

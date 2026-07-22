@@ -67,8 +67,8 @@ def test_model_rks(
 
     for factor in [1.0, 2.0, 4.0, 8.0]:
         if mdft.converged is False and if_retry:
-            print(f"RKS not converged. Add dynamic level shift with factor {factor}.")
-            pyscf.scf.addons.dynamic_level_shift_(mdft, factor=factor)
+            print(f"RKS not converged. Add level shift with factor {factor}.")
+            mdft.level_shift = factor
             mdft.kernel()
     if mdft.converged is False:
         print("Error: RKS not converged!!! Just use the current result.")
