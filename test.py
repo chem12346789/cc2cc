@@ -166,6 +166,7 @@ def main():
                 print(f"SKIP: {name}")
                 continue
 
+            print(f"RUN: {name}", flush=True)
             _run_one(
                 mol,
                 name,
