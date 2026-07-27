@@ -35,13 +35,6 @@ class BasicDataset(Dataset):
             if num_data_used != 0:
                 self.data[name] = data_dict
                 self.name_list.append(name)
-            # # this is no more needed since we have the auto weighting in the loss function.
-            # # Add more copies of the atomic data to balance the dataset.
-            # # This is useful when we need to have more data for single-atom systems.
-            # if num_data_used == 1:
-            #     append_number = max(20 // int(data_dict["data_weight"]) - 1, 0)
-            #     self.name_list.extend([name] * append_number)
-            #     total_number_of_atom += num_data_used * append_number
         print(
             f"Total number of data: {len(self.name_list)}, total number of atoms: {total_number_of_atom}"
         )
