@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-"""Submit Slurm array tasks on free GPU slots with runtime-balanced scheduling.
-
-- Reads partition/array settings from a target sbatch script.
-- Probes GPU memory via tiny sbatch jobs.
-- Splits tasks across selected GPU slots, using task runtime estimates when present.
-- Submits tasks individually, shortest estimated jobs first, with per-slot dependency chains.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -19,7 +11,6 @@ import sys
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable
 
 ROOT = Path(__file__).resolve().parent
 TEST_SCRIPT_DIR = ROOT / "test_script"
@@ -31,16 +22,12 @@ def run(cmd: list[str], timeout_sec: int | None = None, debug: bool = False) -> 
     if debug:
         print("[DEBUG] RUN:", " ".join(map(shlex.quote, cmd)))
     p = subprocess.run(cmd, text=True, capture_output=True, timeout=timeout_sec)
-    if debug:
-        if p.stdout.strip():
-            print(f"[DEBUG] STDOUT:\n{p.stdout.strip()}")
-        if p.stderr.strip():
-            print(f"[DEBUG] STDERR:\n{p.stderr.strip()}")
+    if debug and p.stdout.strip():
+        print(f"[DEBUG] STDOUT:\n{p.stdout.strip()}")
+    if debug and p.stderr.strip():
+        print(f"[DEBUG] STDERR:\n{p.stderr.strip()}")
     if p.returncode:
-        raise RuntimeError(
-            f"Command failed ({p.returncode}): {' '.join(map(shlex.quote, cmd))}\n"
-            f"STDOUT:\n{p.stdout}\nSTDERR:\n{p.stderr}"
-        )
+        raise RuntimeError(f"Command failed ({p.returncode}): {' '.join(map(shlex.quote, cmd))}\nSTDOUT:\n{p.stdout}\nSTDERR:\n{p.stderr}")
     return p.stdout.strip()
 
 
@@ -48,9 +35,9 @@ def norm_node(token: str) -> str:
     return token.strip().rstrip(",").replace("*", "").replace("~", "").replace("+", "").split()[0]
 
 
-def preview(items: Iterable[object], n: int = 20) -> str:
+def preview(items, n: int = 20) -> str:
     vals = [str(x) for x in items]
-    return ",".join(vals[:n]) + (f",...(+{len(vals) - n})" if len(vals) > n else "")
+    return ",".join(vals[:n]) + (f",...(+{len(vals)-n})" if len(vals) > n else "")
 
 
 def safe_name(text: str) -> str:
@@ -61,14 +48,14 @@ def resolve_path(s: str) -> Path:
     p = Path(s).expanduser()
     if p.is_absolute():
         return p
-    for base in (TEST_SCRIPT_DIR, ROOT, Path.cwd()):
-        q = (base / p).resolve()
+    for b in (TEST_SCRIPT_DIR, ROOT, Path.cwd()):
+        q = (b / p).resolve()
         if q.exists():
             return q
     return (ROOT / p).resolve()
 
 
-def sbatch_field(text: str, keys: Iterable[str]) -> str | None:
+def sbatch_field(text: str, keys: list[str]) -> str | None:
     for raw in text.splitlines():
         line = raw.strip()
         if not line.startswith("#SBATCH"):
@@ -107,20 +94,20 @@ def array_limit(spec: str) -> int | None:
     return int(m[1]) if m and int(m[1]) > 0 else None
 
 
-def fmt_ids(ids: Iterable[int], keep_order: bool = False) -> str:
+def fmt_ids(ids: list[int], keep_order: bool = False) -> str:
     vals = list(dict.fromkeys(ids)) if keep_order else sorted(set(ids))
     if not vals:
         raise ValueError("Empty task list")
-    ranges: list[str] = []
-    start = prev = vals[0]
+    out: list[str] = []
+    a = b = vals[0]
     for x in vals[1:]:
-        if x == prev + 1:
-            prev = x
+        if x == b + 1:
+            b = x
         else:
-            ranges.append(str(start) if start == prev else f"{start}-{prev}")
-            start = prev = x
-    ranges.append(str(start) if start == prev else f"{start}-{prev}")
-    return ",".join(ranges)
+            out.append(str(a) if a == b else f"{a}-{b}")
+            a = b = x
+    out.append(str(a) if a == b else f"{a}-{b}")
+    return ",".join(out)
 
 
 def hostnames(expr: str, debug: bool = False) -> list[str]:
@@ -138,7 +125,7 @@ def partition_nodes(partition: str, states: set[str] | None, debug: bool = False
         state = state.strip().lower().rstrip("*~+#")
         if states is not None and state not in states:
             continue
-        nodes.extend(hostnames(norm_node(node), debug=debug))
+        nodes += hostnames(norm_node(node), debug)
     nodes = list(dict.fromkeys(nodes))
     if not nodes:
         raise RuntimeError(f"No nodes found in partition {partition!r}")
@@ -154,12 +141,12 @@ def load_model_name(script_text: str) -> str | None:
             toks = shlex.split(line, comments=True)
         except ValueError:
             toks = line.split()
-        values = [t.split("=", 1)[1] for t in toks if t.startswith("load_model_args=")] or [line]
-        for value in values:
+        vals = [t.split("=", 1)[1] for t in toks if t.startswith("load_model_args=")] or [line]
+        for v in vals:
             try:
-                vtoks = shlex.split(value, comments=True)
+                vtoks = shlex.split(v, comments=True)
             except ValueError:
-                vtoks = value.split()
+                vtoks = v.split()
             for i, tok in enumerate(vtoks):
                 if tok == "--load" and i + 1 < len(vtoks):
                     return vtoks[i + 1]
@@ -176,12 +163,10 @@ def molecule_names(script_text: str) -> list[str]:
         vals = shlex.split(m.group(1), comments=True)
     except ValueError:
         vals = m.group(1).split()
-    out: list[str] = []
+    out = []
     for v in vals:
-        name = v.strip().strip("\"'")
-        if name.startswith("molecule_"):
-            name = name[len("molecule_") :]
-        out.append(safe_name(name))
+        n = v.strip().strip("\"'")
+        out.append(safe_name(n[len("molecule_") :] if n.startswith("molecule_") else n))
     return out
 
 
@@ -191,8 +176,7 @@ def load_times(path: Path, offset: int = 0) -> dict[int, float]:
         line = raw.split("#", 1)[0].strip()
         if not line:
             continue
-        nums: list[float] = []
-        bad = False
+        nums, bad = [], False
         for tok in filter(None, re.split(r"[\s,]+", line)):
             try:
                 nums.append(float(tok))
@@ -211,31 +195,30 @@ def load_times(path: Path, offset: int = 0) -> dict[int, float]:
         return tid, val
 
     if len(rows) > 1 and all(len(r) == 2 and float(r[0]).is_integer() for r in rows):
-        return dict(check(int(tid), runtime) for tid, runtime in rows)
+        return dict(check(int(t), rt) for t, rt in rows)
     return dict(check(offset + i, v) for i, v in enumerate(x for row in rows for x in row))
 
 
-def split_round_robin(ids: list[int], n: int) -> tuple[list[list[int]], list[float]]:
-    buckets = [[] for _ in range(n)]
+def split_round_robin(ids: list[int], n: int):
+    b = [[] for _ in range(n)]
     for i, tid in enumerate(ids):
-        buckets[i % n].append(tid)
-    return buckets, [float(len(b)) for b in buckets]
+        b[i % n].append(tid)
+    return b, [float(len(x)) for x in b]
 
 
-def split_by_time(ids: list[int], est: dict[int, float], n: int) -> tuple[list[list[int]], list[float]]:
+def split_by_time(ids: list[int], est: dict[int, float], n: int):
     missing = [tid for tid in ids if tid not in est]
     if missing:
         raise ValueError(f"Missing runtime estimate(s): {preview(missing)}")
-    buckets = [[] for _ in range(n)]
-    loads = [0.0] * n
+    b, load = [[] for _ in range(n)], [0.0] * n
     for tid in sorted(ids, key=lambda x: (est[x], x), reverse=True):
-        i = min(range(n), key=lambda j: (loads[j], len(buckets[j]), j))
-        buckets[i].append(tid)
-        loads[i] += est[tid]
+        i = min(range(n), key=lambda j: (load[j], len(b[j]), j))
+        b[i].append(tid)
+        load[i] += est[tid]
     order = {tid: i for i, tid in enumerate(ids)}
-    for b in buckets:
-        b.sort(key=lambda tid: (est[tid], order[tid]))
-    return buckets, loads
+    for x in b:
+        x.sort(key=lambda tid: (est[tid], order[tid]))
+    return b, load
 
 
 def clean_tmp(debug: bool = False) -> None:
@@ -249,26 +232,19 @@ def clean_tmp(debug: bool = False) -> None:
             pass
 
 
-def probe_node(node: str, partition: str, min_free_gb: float, max_power: float | None, timeout: int, debug: bool) -> tuple[str, list[int]]:
+def probe_node(node: str, partition: str, min_free_gb: float, max_power: float | None, timeout: int, debug: bool):
     tag = uuid.uuid4().hex[:10]
     out_file = TMP_DIR / f"gpu_probe_{node}_{tag}.out"
     err_file = TMP_DIR / f"gpu_probe_{node}_{tag}.err"
     cmd = [
-        "timeout", f"{timeout}s", "sbatch", "--parsable", "--wait", "--partition", partition,
-        "--nodelist", node, "--nodes", "1", "--ntasks", "1", "--time", "00:00:30",
-        "--job-name", "probe-gpu-mem", "--output", str(out_file), "--error", str(err_file),
-        "--wrap", "nvidia-smi --query-gpu=memory.free,power.draw,index --format=csv,noheader,nounits",
+        "timeout", f"{timeout}s", "sbatch", "--parsable", "--wait", "--partition", partition, "--nodelist", node,
+        "--nodes", "1", "--ntasks", "1", "--time", "00:00:30", "--job-name", "probe-gpu-mem", "--output",
+        str(out_file), "--error", str(err_file), "--wrap", "nvidia-smi --query-gpu=memory.free,power.draw,index --format=csv,noheader,nounits",
     ]
     try:
         run(cmd, timeout_sec=timeout + 3, debug=debug)
         text = out_file.read_text().strip() if out_file.exists() else ""
-        if debug and text:
-            print(f"[DEBUG] PROBE STDOUT ({node}):\n{text}")
-        if debug and err_file.exists() and err_file.read_text().strip():
-            print(f"[DEBUG] PROBE STDERR ({node}):\n{err_file.read_text().strip()}")
-    except Exception as e:
-        if debug:
-            print(f"[DEBUG] Probe failed on {node}: {e}")
+    except Exception:
         text = ""
     finally:
         for p in (out_file, err_file):
@@ -276,17 +252,13 @@ def probe_node(node: str, partition: str, min_free_gb: float, max_power: float |
                 p.unlink()
             except Exception:
                 pass
-
-    min_mib = int(min_free_gb * 1024)
-    gpus: list[int] = []
+    min_mib, gpus = int(min_free_gb * 1024), []
     for line in text.splitlines():
         try:
             free_s, power_s, idx_s = [x.strip() for x in line.split(",")[:3]]
-            free_mib = int(free_s.split()[0])
-            gpu_idx = int(idx_s.split()[0])
             power_ok = max_power is None or float(power_s.split()[0]) <= max_power
-            if free_mib >= min_mib and power_ok:
-                gpus.append(gpu_idx)
+            if int(free_s.split()[0]) >= min_mib and power_ok:
+                gpus.append(int(idx_s.split()[0]))
         except Exception:
             pass
     return node, sorted(set(gpus))
@@ -299,29 +271,19 @@ def parse_job_id(s: str) -> str:
     return m[1]
 
 
-def log_paths(args: argparse.Namespace, script_path: Path, script_text: str) -> tuple[str | None, str | None]:
+def log_paths(args: argparse.Namespace, script_path: Path, script_text: str):
     if args.no_log_override:
-        print("[INFO] Log override disabled; using #SBATCH -o/-e from target script.")
         return None, None
-    load = load_model_name(script_text) or "no-load"
-    prefix = safe_name(args.log_prefix or f"{script_path.stem}-{load}-{datetime.now():%Y%m%d-%H%M%S}")
-    log_dir = Path(args.log_dir.strip() or ".").expanduser()
+    load = safe_name(load_model_name(script_text) or "no-load")
+    log_dir = (Path("log") / safe_name(script_path.stem) / load).expanduser()
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_dir_s = str(log_dir) if args.log_dir.strip().startswith("~") else (args.log_dir.strip() or ".")
-    stem = f"{prefix}-%x-a%a"
-    base = f"{log_dir_s.rstrip('/')}/{stem}" if log_dir_s != "." else stem
-    print(f"[INFO] Log prefix={prefix}")
-    if args.debug:
-        print(f"[DEBUG] Parsed --load for log prefix: {load}")
-        print(f"[DEBUG] sbatch stdout override: {base}.out")
-        print(f"[DEBUG] sbatch stderr override: {base}.err")
+    base = str(log_dir / "%x-a%a")
+    print(f"[INFO] Log path={base}")
     return f"{base}.out", f"{base}.err"
 
 
-def sbatch_cmd(partition: str, arr: str, script: Path, dep: str | None, logs: tuple[str | None, str | None], exclude: list[str], job_name: str | None = None, gpu_idx: int | None = None) -> list[str]:
-    cmd = [
-        "sbatch", "--parsable", "--partition", partition, "--array", arr,
-    ]
+def sbatch_cmd(partition: str, arr: str, script: Path, dep: str | None, logs, exclude: list[str], job_name: str | None = None, gpu_idx: int | None = None):
+    cmd = ["sbatch", "--parsable", "--partition", partition, "--array", arr]
     if gpu_idx is not None:
         cmd += ["--export", f"ALL,FORCE_CUDA_VISIBLE_DEVICES={gpu_idx}"]
     if job_name:
@@ -333,247 +295,134 @@ def sbatch_cmd(partition: str, arr: str, script: Path, dep: str | None, logs: tu
         cmd.append(f"--dependency={dep}")
     if exclude:
         cmd += ["--exclude", ",".join(exclude)]
-    cmd.append(str(script))
-    return cmd
+    return cmd + [str(script)]
 
 
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser()
     add = ap.add_argument
-    add("--script", default="test_direct.bash", help="Slurm bash script path; relative paths prefer test_script/")
-    add("--partition", default=None, help="Override partition")
-    add("--array", default=None, help="Override array spec")
-    add("--min-free-memory", type=float, default=15.0, help="GPU free memory threshold in GB")
-    add("--max-gpu-power", type=float, default=None, help="Max GPU power draw in W")
+    add("--script", default="test_direct.bash")
+    add("--partition", default=None)
+    add("--array", default=None)
+    add("--min-free-memory", type=float, default=15.0)
+    add("--max-gpu-power", type=float, default=None)
     add("--array-concurrency", type=int, default=1)
-    add("--time-array", default=None, help="Runtime estimate file; auto-uses test_script/task_times_0_54.csv when present")
+    add("--time-array", default=None)
     add("--time-array-offset", type=int, default=0)
-    add("--no-time-balance", action="store_true", help="Use round-robin splitting")
+    add("--no-time-balance", action="store_true")
     add("--probe-timeout-sec", type=int, default=60)
     add("--probe-workers", type=int, default=16)
-    add("--max-nodes", type=int, default=0, help="0 means no limit")
+    add("--max-nodes", type=int, default=0)
     add("--log-dir", default="log")
-    add("--log-prefix", default=None, help="Default: <script-stem>-<load-model>-<YYYYMMDD-HHMMSS>")
     add("--no-log-override", action="store_true")
     add("--debug", action="store_true")
     add("--dry-run", action="store_true")
-    add("--cpu-only", action="store_true", help="Submit to CPU partition/nodes: skip GPU probing and do not pass --exclude")
+    add("--cpu-only", action="store_true")
     return ap
 
 
 def main() -> int:
-    args = build_parser().parse_args()
-    script_path = resolve_path(args.script)
-    if not script_path.exists():
-        raise FileNotFoundError(script_path)
-    script_text = script_path.read_text()
-    logs = log_paths(args, script_path, script_text)
-    clean_tmp(args.debug)
+    a = build_parser().parse_args()
+    script = resolve_path(a.script)
+    if not script.exists():
+        raise FileNotFoundError(script)
+    text = script.read_text()
+    clean_tmp(a.debug)
+    logs = log_paths(a, script, text)
 
-    partition = args.partition or sbatch_field(script_text, ["-p", "--partition"])
-    array_spec = args.array or sbatch_field(script_text, ["-a", "--array"])
-    if not partition or not array_spec:
+    part = a.partition or sbatch_field(text, ["-p", "--partition"])
+    arr = a.array or sbatch_field(text, ["-a", "--array"])
+    if not part or not arr:
         raise RuntimeError("Partition/array not found in script; use --partition/--array")
-    task_ids = array_ids(array_spec)
-    limit = max(1, array_limit(array_spec) or args.array_concurrency)
-    exclude_spec = sbatch_field(script_text, ["-x", "--exclude"]) or ""
-    load_name = safe_name(load_model_name(script_text) or "no-load")
-    mol_names = molecule_names(script_text)
+    ids = array_ids(arr)
+    limit = max(1, array_limit(arr) or a.array_concurrency)
+    excl = set(hostnames(sbatch_field(text, ["-x", "--exclude"]) or "", a.debug))
+    load_name, mol_names = safe_name(load_model_name(text) or "no-load"), molecule_names(text)
 
-    print(f"[INFO] Script={script_path.name}; partition={partition}; array={array_spec}; tasks={len(task_ids)}; limit={limit}")
-    if args.debug:
-        print(f"[DEBUG] Task IDs: {fmt_ids(task_ids)}")
-        if mol_names:
-            print(f"[DEBUG] Parsed molecule job names: {preview(mol_names)}")
-
-    probe_nodes = partition_nodes(partition, USABLE_STATES, args.debug)
-    submit_pool = partition_nodes(partition, None, args.debug)
-    excluded = set(hostnames(exclude_spec, args.debug)) if exclude_spec else set()
-    if excluded:
-        probe_nodes = [n for n in probe_nodes if n not in excluded]
-        submit_pool = list(dict.fromkeys([*submit_pool, *excluded]))
-        print(f"[INFO] Script --exclude nodes added/removed: {len(excluded)}")
-    if args.max_nodes > 0:
-        probe_nodes = probe_nodes[: args.max_nodes]
-    print(f"[INFO] Probe nodes={len(probe_nodes)}; exclude-pinning node pool={len(submit_pool)}")
-    if args.debug:
-        print(f"[DEBUG] Probe node preview: {preview(probe_nodes)}")
-        print(f"[DEBUG] Exclude-pinning node pool preview: {preview(submit_pool)}")
+    probe_nodes = partition_nodes(part, USABLE_STATES, a.debug)
+    submit_pool = partition_nodes(part, None, a.debug)
+    if excl:
+        probe_nodes = [n for n in probe_nodes if n not in excl]
+        submit_pool = list(dict.fromkeys([*submit_pool, *excl]))
+    if a.max_nodes > 0:
+        probe_nodes = probe_nodes[: a.max_nodes]
 
     slots: list[tuple[str, int | None]] = []
-    if args.cpu_only:
-        cpu_nodes: list[str] = []
-        for node in probe_nodes:
-            try:
-                names = hostnames(node, args.debug)
-                if names:
-                    cpu_nodes.append(names[0])
-            except Exception:
-                pass
-        cpu_nodes = list(dict.fromkeys(cpu_nodes))
-        if not cpu_nodes:
-            print("[WARN] No usable CPU nodes found. Nothing submitted.")
-            return 0
-        slots = [(n, None) for n in cpu_nodes[: min(len(cpu_nodes), limit)]]
-        print(f"[INFO] CPU-only mode: using CPU slots={len(slots)}")
-        if args.debug:
-            print(f"[DEBUG] CPU slot list: {preview(n for n, _ in slots)}")
+    if a.cpu_only:
+        cpus = list(dict.fromkeys(hostnames(n, a.debug)[0] for n in probe_nodes if hostnames(n, a.debug)))
+        slots = [(n, None) for n in cpus[: min(len(cpus), limit)]]
     else:
-        print(f"[INFO] Probing GPUs: min_free={args.min_free_memory} GB, workers={args.probe_workers}")
-        gpu_slots: list[tuple[str, int]] = []
-        with cf.ThreadPoolExecutor(max_workers=max(1, args.probe_workers)) as ex:
-            futs = [ex.submit(probe_node, n, partition, args.min_free_memory, args.max_gpu_power, args.probe_timeout_sec, args.debug) for n in probe_nodes]
-            for done, fut in enumerate(cf.as_completed(futs), 1):
-                node, gpus = fut.result()
-                if gpus:
-                    if args.debug:
-                        print(f"[DEBUG] {node}: eligible GPU(s) = {gpus}")
-                    gpu_slots += [(node, g) for g in gpus]
-                if args.debug and (done % 20 == 0 or done == len(futs)):
-                    print(f"[INFO] Probe progress: {done}/{len(futs)}")
-        if not gpu_slots:
-            print("[WARN] No eligible GPUs found. Nothing submitted.")
-            return 0
-        print(f"[INFO] Available eligible GPUs={len(gpu_slots)}")
+        with cf.ThreadPoolExecutor(max_workers=max(1, a.probe_workers)) as ex:
+            futs = [ex.submit(probe_node, n, part, a.min_free_memory, a.max_gpu_power, a.probe_timeout_sec, a.debug) for n in probe_nodes]
+            gpu_slots = [(n, g) for n, gpus in (f.result() for f in cf.as_completed(futs)) for g in gpus]
+        valid = [(hostnames(n, a.debug)[0], g) for n, g in gpu_slots if hostnames(n, a.debug)]
+        slots = valid[: min(len(valid), limit)]
+    if not slots:
+        print("[WARN] No usable slots found. Nothing submitted.")
+        return 0
 
-        valid: list[tuple[str, int]] = []
-        for node, gpu in gpu_slots:
-            try:
-                names = hostnames(node, args.debug)
-                if names:
-                    valid.append((names[0], gpu))
-            except Exception:
-                pass
-        slots = [(n, g) for n, g in valid[: min(len(valid), limit)]]
-        if not slots:
-            print("[WARN] No valid eligible GPUs found. Nothing submitted.")
-            return 0
-        print(f"[INFO] Using GPU slots={len(slots)}")
-        if args.debug:
-            print(f"[DEBUG] Slot list: {preview(f'{n}:gpu{g}' for n, g in slots)}")
-
-    estimates: dict[int, float] = {}
-    time_path: Path | None = None
-    explicit_time = args.time_array is not None
-    if not args.no_time_balance:
-        if args.time_array is None:
+    est, time_path = {}, None
+    explicit_time = a.time_array is not None
+    if not a.no_time_balance:
+        if a.time_array is None:
             auto = TEST_SCRIPT_DIR / "task_times_0_54.csv"
             time_path = auto if auto.exists() else None
-        elif args.time_array.strip().lower() not in {"", "none", "off", "false", "0"}:
-            time_path = resolve_path(args.time_array)
+        elif a.time_array.strip().lower() not in {"", "none", "off", "false", "0"}:
+            time_path = resolve_path(a.time_array)
     if time_path:
-        if not time_path.exists():
-            if explicit_time:
-                raise FileNotFoundError(time_path)
-            time_path = None
-        else:
-            estimates = load_times(time_path, args.time_array_offset)
-            missing = [tid for tid in task_ids if tid not in estimates]
-            if missing and explicit_time:
-                raise RuntimeError(f"Runtime estimate file {time_path} missing task ID(s): {preview(missing)}")
-            if missing:
-                print("[WARN] Auto runtime estimates incomplete; using round-robin.")
-                time_path = None
-                estimates = {}
+        if not time_path.exists() and explicit_time:
+            raise FileNotFoundError(time_path)
+        if time_path.exists():
+            est = load_times(time_path, a.time_array_offset)
+            miss = [tid for tid in ids if tid not in est]
+            if miss and explicit_time:
+                raise RuntimeError(f"Runtime estimate file {time_path} missing task ID(s): {preview(miss)}")
+            if miss:
+                est, time_path = {}, None
     if time_path:
-        skip = [tid for tid in task_ids if estimates[tid] == 0]
-        if skip:
-            print(f"[INFO] Skipping est_time==0 task ID(s): {fmt_ids(skip)}")
-            task_ids = [tid for tid in task_ids if estimates[tid] != 0]
-            if not task_ids:
-                print("[WARN] All selected tasks have est_time == 0. Nothing submitted.")
-                return 0
-        vals = [estimates[tid] for tid in task_ids]
-        slow = sorted(task_ids, key=lambda tid: (estimates[tid], tid), reverse=True)[:10]
-        print(f"[INFO] Time file={time_path}; total={sum(vals):.2f}, min/max={min(vals):.2f}/{max(vals):.2f}, avg={sum(vals)/len(vals):.2f}")
-        if args.debug:
-            print("[DEBUG] Slowest:", " ".join(f"{tid}:{estimates[tid]:.2f}" for tid in slow))
-        buckets, loads = split_by_time(task_ids, estimates, len(slots))
-        nonempty = [load for load, b in zip(loads, buckets) if b]
-        print(f"[INFO] Balanced load min/max={min(nonempty):.2f}/{max(nonempty):.2f}")
-    else:
-        buckets, loads = split_round_robin(task_ids, len(slots))
-        print("[INFO] Using round-robin task splitting.")
-
-    assignment: dict[int, tuple[int, str, int, float]] = {}
-    for bi, ((node, gpu), ids, load) in enumerate(zip(slots, buckets, loads), 1):
+        ids = [tid for tid in ids if est[tid] != 0]
         if not ids:
-            continue
-        label = "est_load" if time_path else "task_count"
-        if args.debug:
-            print(f"[DEBUG] bucket {bi}: node={node}, gpu={gpu}, tasks={len(ids)}, {label}={load:.2f}, ids={fmt_ids(ids, True)}")
-            if time_path:
-                print("[DEBUG] bucket", bi, "task:time", " ".join(f"{tid}:{estimates[tid]:.2f}" for tid in ids))
-        for tid in ids:
-            assignment[tid] = (bi, node, gpu, load)
-    missing_assign = [tid for tid in task_ids if tid not in assignment]
-    if missing_assign:
-        raise RuntimeError(f"Internal missing assignment(s): {preview(missing_assign)}")
+            print("[WARN] All selected tasks have est_time == 0. Nothing submitted.")
+            return 0
+        buckets, loads = split_by_time(ids, est, len(slots))
+    else:
+        buckets, loads = split_round_robin(ids, len(slots))
 
-    order = {tid: i for i, tid in enumerate(task_ids)}
-    plan = [(tid, *assignment[tid]) for tid in task_ids]
+    assign = {tid: (i + 1, slots[i][0], slots[i][1], loads[i]) for i, b in enumerate(buckets) for tid in b}
+    order = {tid: i for i, tid in enumerate(ids)}
+    plan = [(tid, *assign[tid]) for tid in ids]
     if time_path:
-        plan.sort(key=lambda x: (estimates[x[0]], order[x[0]]))
-    bucket_summary = " ".join(f"{i}:{len(b)}/{loads[i-1]:.2f}" for i, b in enumerate(buckets, 1) if b)
-    print(f"[INFO] Buckets tasks/load: {bucket_summary}")
-    print(f"[INFO] Submit order={'small est_time first' if time_path else 'original array order'}")
+        plan.sort(key=lambda x: (est[x[0]], order[x[0]]))
 
-    submitted = 0
-    submitted_jobs: list[tuple[int, int, str, str]] = []
-    prev_by_bucket: dict[int, str] = {}
-    fake_base = 900_000_000
-    for i, (tid, bi, node, gpu, load) in enumerate(plan, 1):
-        dep = f"afterany:{prev_by_bucket[bi]}" if bi in prev_by_bucket else None
-        metric = f"est_time={estimates[tid]:.2f}, bucket_est_load={load:.2f}" if time_path else f"bucket_task_count={load:.0f}"
-        mol_name = mol_names[tid] if 0 <= tid < len(mol_names) else f"task-{tid}"
-        job_name = safe_name(f"{load_name}-{mol_name}")
-        if args.debug:
-            gpu_tag = "cpu" if gpu is None else f"gpu={gpu}"
-            print(f"[DEBUG] Submit {i}/{len(plan)}: task={tid}, job={job_name}, bucket={bi}, node={node}, {gpu_tag}, dep={dep or 'none'}, {metric}")
-        exclude = [] if args.cpu_only else [n for n in submit_pool if n != node]
-        cmd = sbatch_cmd(partition, str(tid), script_path, dep, logs, exclude, job_name=job_name, gpu_idx=gpu)
-        if args.debug:
-            print("[SUBMIT]", " ".join(map(shlex.quote, cmd)))
-        if args.dry_run:
-            job_id = str(fake_base + submitted + 1)
-            if args.debug:
-                print(f"[JOBID] task={tid} job={job_name} jobid={job_id} dry_run=1")
+    prev, submitted, fake = {}, 0, 900_000_000
+    jobs: list[tuple[int, int, str]] = []
+    for tid, bi, node, gpu, load in plan:
+        dep = f"afterany:{prev[bi]}" if bi in prev else None
+        mn = mol_names[tid] if 0 <= tid < len(mol_names) else f"task-{tid}"
+        name = safe_name(f"{load_name}-{mn}")
+        exclude = [] if a.cpu_only else [n for n in submit_pool if n != node]
+        cmd = sbatch_cmd(part, str(tid), script, dep, logs, exclude, job_name=name, gpu_idx=gpu)
+        if a.dry_run:
+            job_id = str(fake + submitted + 1)
         else:
             try:
-                out = run(cmd, debug=args.debug)
+                job_id = parse_job_id(run(cmd, debug=a.debug))
             except Exception as e:
                 if "Invalid node name specified" not in str(e):
                     raise
-                print(f"[WARN] Invalid node/exclude list, retry task {tid} without node filter")
-                retry = sbatch_cmd(partition, gpu, str(tid), script_path, dep, logs, [], job_name=job_name)
-                if args.debug:
-                    print("[SUBMIT-RETRY]", " ".join(map(shlex.quote, retry)))
-                out = run(retry, debug=args.debug)
-            job_id = parse_job_id(out)
-            if args.debug:
-                print(f"[JOBID] task={tid} job={job_name} jobid={job_id}")
-                print(f"         job_id={job_id} raw={out}")
-        submitted_jobs.append((tid, bi, job_name, job_id))
-        prev_by_bucket[bi] = job_id
+                job_id = parse_job_id(run(sbatch_cmd(part, str(tid), script, dep, logs, [], job_name=name, gpu_idx=gpu), debug=a.debug))
+        prev[bi] = job_id
+        jobs.append((tid, bi, job_id))
         submitted += 1
-        if not args.debug and (submitted % 10 == 0 or submitted == len(plan)):
-            print(f"[INFO] Submitted {submitted}/{len(plan)}")
 
-    if submitted_jobs:
-        bucket_pids: dict[int, list[str]] = {}
-        bucket_task_ids: dict[int, list[str]] = {}
-        for tid, bi, _job, pid in submitted_jobs:
-            bucket_pids.setdefault(bi, []).append(pid)
-            bucket_task_ids.setdefault(bi, []).append(str(tid))
-        pid_summary = " ".join(
-            f"{' '.join(pids)}" for bi, pids in sorted(bucket_pids.items())
-        )
-        task_id_summary = " ".join(
-            f"{bi}:{','.join(ids)}" for bi, ids in sorted(bucket_task_ids.items())
-        )
-        print(f"[PID-SUMMARY] {pid_summary}")
-        print(f"[SLURM_ARRAY_TASK_ID] {task_id_summary}")
-    print(f"[DONE] submissions={submitted}, tasks={len(task_ids)}, slots={len(slots)}, mode=individual")
+    if jobs:
+        pids, tids = {}, {}
+        for tid, bi, pid in jobs:
+            pids.setdefault(bi, []).append(pid)
+            tids.setdefault(bi, []).append(str(tid))
+        print("[PID-SUMMARY]", " ".join(" ".join(v) for _, v in sorted(pids.items())))
+        print("[SLURM_ARRAY_TASK_ID]", " ".join(f"{k}:{','.join(v)}" for k, v in sorted(tids.items())))
+    print(f"[DONE] submissions={submitted}, tasks={len(ids)}, slots={len(slots)}, mode=individual")
     return 0
 
 

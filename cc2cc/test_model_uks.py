@@ -29,7 +29,7 @@ def test_model_uks(
     """
     # 2.0 Prepare
     time_ai_start = timeit.default_timer()
-    if torch.cuda.is_available() and mol.nao < 2000:
+    if torch.cuda.is_available():
         print("Use GPU for DFT calculation.")
         mdft = pyscf.dft.UKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
