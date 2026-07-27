@@ -48,7 +48,13 @@ def _build_record_path(args) -> Path:
         base = f"ccdft_{args.basis}_{args.load}_{args.dataset}"
     if len(args.name_mol_input) == 1:
         base = f"{base}_{args.name_mol_input[0]}"
-    return MAIN_PATH / f"validate/{base}.csv"
+    return (
+        MAIN_PATH
+        / "validate"
+        / f"{args.basis}_{args.load}"
+        / f"{args.load_epoch}"
+        / f"{base}.csv"
+    )
 
 
 def _should_skip(name: str, data_record, args) -> bool:
