@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
-import argparse, concurrent.futures as cf, json, re, shlex, subprocess, sys, time, uuid
+
+from __future__ import annotations
+
+import argparse
+import concurrent.futures as futures
+import json
+import re
+import shlex
+import subprocess
+import sys
+import time
+import uuid
 from pathlib import Path
+from typing import Iterable
 
 ROOT = Path(__file__).resolve().parent
 TEST_SCRIPT_DIR = ROOT / "test_script"
@@ -8,24 +20,30 @@ TMP_DIR = TEST_SCRIPT_DIR / "tmp"
 USABLE_STATES = {"idle", "mix", "mixed"}
 
 
-def run(command, timeout_sec=None, debug=False):
+def run_cmd(command: list[str], *, debug: bool = False, timeout_sec: int | None = None) -> str:
     if debug:
         print("[DEBUG] RUN:", " ".join(map(shlex.quote, command)))
     result = subprocess.run(
-        command, text=True, capture_output=True, timeout=timeout_sec
+        command,
+        text=True,
+        capture_output=True,
+        timeout=timeout_sec,
+        check=False,
     )
     if debug and result.stdout.strip():
         print(f"[DEBUG] STDOUT:\n{result.stdout.strip()}")
     if debug and result.stderr.strip():
         print(f"[DEBUG] STDERR:\n{result.stderr.strip()}")
-    if result.returncode:
+    if result.returncode != 0:
+        joined = " ".join(map(shlex.quote, command))
         raise RuntimeError(
-            f"Command failed ({result.returncode}): {' '.join(map(shlex.quote, command))}\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+            f"Command failed ({result.returncode}): {joined}\n"
+            f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
         )
     return result.stdout.strip()
 
 
-def norm_node(node_text):
+def normalize_node(node_text: str) -> str:
     return (
         node_text.strip()
         .rstrip(",")
@@ -36,221 +54,189 @@ def norm_node(node_text):
     )
 
 
-def safe_name(name_text):
-    return re.sub(r"[^A-Za-z0-9._-]+", "-", name_text.strip()).strip(".-") or "run"
+def safe_name(text: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", text.strip()).strip(".-") or "run"
 
 
-def resolve_path(path_str):
-    candidate_path = Path(path_str).expanduser()
-    if candidate_path.is_absolute():
-        return candidate_path
-    for base_dir in (TEST_SCRIPT_DIR, ROOT, Path.cwd()):
-        resolved_path = (base_dir / candidate_path).resolve()
-        if resolved_path.exists():
-            return resolved_path
-    return (ROOT / candidate_path).resolve()
+def resolve_path(path_str: str) -> Path:
+    candidate = Path(path_str).expanduser()
+    if candidate.is_absolute():
+        return candidate
+    for base in (TEST_SCRIPT_DIR, ROOT, Path.cwd()):
+        resolved = (base / candidate).resolve()
+        if resolved.exists():
+            return resolved
+    return (ROOT / candidate).resolve()
 
 
-def sbatch_field(text, field_keys):
-    for raw_line in text.splitlines():
-        stripped_line = raw_line.strip()
-        if not stripped_line.startswith("#SBATCH"):
-            continue
-        directive_body = stripped_line[len("#SBATCH") :].strip()
-        for directive_key in field_keys:
-            if directive_body.startswith(directive_key + "="):
-                return directive_body.split("=", 1)[1].strip()
-            if directive_body.startswith(directive_key + " "):
-                return directive_body.split(None, 1)[1].strip()
-
-
-def array_ids(array_spec):
-    base_spec = array_spec.strip().split("%", 1)[0]
-    if base_spec.startswith("[") and base_spec.endswith("]"):
-        base_spec = base_spec[1:-1]
-    task_id_set = set()
-    for token in filter(None, (segment.strip() for segment in base_spec.split(","))):
-        range_match = re.fullmatch(r"(-?\d+)\s*-\s*(-?\d+)(?::(\d+))?", token)
-        if range_match:
-            start_id = int(range_match[1])
-            end_id = int(range_match[2])
-            step = int(range_match[3] or 1)
-            if step <= 0:
-                raise ValueError(f"Invalid array step in {token!r}")
-            task_id_set.update(
-                range(
-                    start_id,
-                    end_id + (1 if start_id <= end_id else -1),
-                    step if start_id <= end_id else -step,
-                )
-            )
-        elif re.fullmatch(r"-?\d+", token):
-            task_id_set.add(int(token))
-        else:
-            raise ValueError(f"Unsupported array token: {token}")
-    if not task_id_set:
-        raise ValueError(f"No task IDs parsed from array spec: {base_spec}")
-    return sorted(task_id_set)
-
-
-def array_limit(array_spec):
-    limit_match = re.search(r"%\s*(\d+)\s*$", array_spec.strip())
-    return int(limit_match[1]) if limit_match and int(limit_match[1]) > 0 else None
-
-
-def hostnames(expr, debug=False):
-    try:
-        rows = run(["scontrol", "show", "hostnames", expr], debug=debug).splitlines()
-        return [norm_node(x) for x in rows if x.strip()]
-    except Exception:
-        return [norm_node(x) for x in expr.split(",") if norm_node(x)]
-
-
-def partition_nodes(partition, states=None, debug=False):
-    rows = run(
-        ["sinfo", "-h", "-N", "-p", partition, "-o", "%n|%t"], debug=debug
-    ).splitlines()
-    nodes = []
-    for row in filter(None, (x.strip() for x in rows)):
-        node, _, state = row.partition("|")
-        st = state.strip().lower().rstrip("*~+#")
-        if states is None or st in states:
-            nodes += hostnames(norm_node(node), debug)
-    out = list(dict.fromkeys(nodes))
-    if not out:
-        raise RuntimeError(f"No nodes found in partition {partition!r}")
-    return out
-
-
-def load_model_filter(text, key):
-    for raw_line in text.splitlines():
+def read_sbatch_field(script_text: str, field_keys: Iterable[str]) -> str | None:
+    for raw_line in script_text.splitlines():
         line = raw_line.strip()
-        if (
-            not line
-            or line.startswith("#")
-            or "load_model_args" not in line
-            or "--load" not in line
-        ):
+        if not line.startswith("#SBATCH"):
             continue
-        try:
-            toks = shlex.split(line, comments=True)
-        except ValueError:
-            toks = line.split()
-        value_candidates = [
-            token.split("=", 1)[1]
-            for token in toks
-            if token.startswith("load_model_args=")
-        ] or [line]
-        for candidate_value in value_candidates:
-            try:
-                value_tokens = shlex.split(candidate_value, comments=True)
-            except ValueError:
-                value_tokens = candidate_value.split()
-            for index, token in enumerate(value_tokens):
-                if token == f"--{key}" and index + 1 < len(value_tokens):
-                    return value_tokens[index + 1]
-                if token.startswith(f"--{key}="):
-                    return token.split("=", 1)[1]
+        body = line[len("#SBATCH") :].strip()
+        for key in field_keys:
+            if body.startswith(f"{key}="):
+                return body.split("=", 1)[1].strip()
+            if body.startswith(f"{key} "):
+                return body.split(None, 1)[1].strip()
+    return None
 
 
-def molecule_names(text):
-    molecule_list_match = re.search(r"name_mol_input_list\s*=\s*\((.*?)\)", text, re.S)
-    if not molecule_list_match:
+def parse_array_ids(array_spec: str) -> list[int]:
+    body = array_spec.strip().split("%", 1)[0]
+    if body.startswith("[") and body.endswith("]"):
+        body = body[1:-1]
+
+    ids: set[int] = set()
+    for token in (segment.strip() for segment in body.split(",") if segment.strip()):
+        match = re.fullmatch(r"(-?\d+)\s*-\s*(-?\d+)(?::(\d+))?", token)
+        if match:
+            start = int(match[1])
+            end = int(match[2])
+            step = int(match[3] or 1)
+            if step <= 0:
+                raise ValueError(f"Invalid array step in token: {token}")
+            direction = 1 if start <= end else -1
+            ids.update(range(start, end + direction, step * direction))
+            continue
+        if re.fullmatch(r"-?\d+", token):
+            ids.add(int(token))
+            continue
+        raise ValueError(f"Unsupported array token: {token}")
+
+    if not ids:
+        raise ValueError(f"No task IDs parsed from array spec: {array_spec}")
+    return sorted(ids)
+
+
+def parse_array_limit(array_spec: str) -> int | None:
+    match = re.search(r"%\s*(\d+)\s*$", array_spec.strip())
+    if not match:
+        return None
+    limit = int(match[1])
+    return limit if limit > 0 else None
+
+
+def expand_hostnames(expression: str, *, debug: bool = False) -> list[str]:
+    if not expression:
         return []
     try:
-        molecule_values = shlex.split(molecule_list_match.group(1), comments=True)
-    except ValueError:
-        molecule_values = molecule_list_match.group(1).split()
-    molecule_names_list = []
-    for molecule_value in molecule_values:
-        normalized_name = molecule_value.strip().strip("\"'")
-        molecule_names_list.append(
-            safe_name(
-                normalized_name[len("molecule_") :]
-                if normalized_name.startswith("molecule_")
-                else normalized_name
-            )
-        )
-    return molecule_names_list
+        rows = run_cmd(["scontrol", "show", "hostnames", expression], debug=debug)
+        return [normalize_node(row) for row in rows.splitlines() if row.strip()]
+    except RuntimeError:
+        return [normalize_node(token) for token in expression.split(",") if token.strip()]
 
 
-def split_by_time(task_ids, estimated_runtime_by_task, bucket_count):
-    missing = [
-        task_id for task_id in task_ids if task_id not in estimated_runtime_by_task
-    ]
+def get_partition_nodes(partition: str, *, states: set[str] | None, debug: bool = False) -> list[str]:
+    rows = run_cmd(["sinfo", "-h", "-N", "-p", partition, "-o", "%n|%t"], debug=debug)
+    nodes: list[str] = []
+    for row in (line.strip() for line in rows.splitlines() if line.strip()):
+        node, _, state = row.partition("|")
+        normalized_state = state.strip().lower().rstrip("*~+#")
+        if states is None or normalized_state in states:
+            nodes.extend(expand_hostnames(normalize_node(node), debug=debug))
+    unique_nodes = list(dict.fromkeys(nodes))
+    if not unique_nodes:
+        raise RuntimeError(f"No nodes found in partition {partition!r}")
+    return unique_nodes
+
+
+def extract_load_model_arg(script_text: str, key: str) -> str | None:
+    for raw_line in script_text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "load_model_args" not in line or "--load" not in line:
+            continue
+        tokens = shlex.split(line, comments=True)
+        value_candidates = [
+            token.split("=", 1)[1]
+            for token in tokens
+            if token.startswith("load_model_args=")
+        ]
+        if not value_candidates:
+            value_candidates = [line]
+        for value in value_candidates:
+            value_tokens = shlex.split(value, comments=True)
+            for idx, token in enumerate(value_tokens):
+                if token == f"--{key}" and idx + 1 < len(value_tokens):
+                    return value_tokens[idx + 1]
+                if token.startswith(f"--{key}="):
+                    return token.split("=", 1)[1]
+    return None
+
+
+def parse_molecule_names(script_text: str) -> list[str]:
+    match = re.search(r"name_mol_input_list\s*=\s*\((.*?)\)", script_text, re.S)
+    if not match:
+        return []
+    names: list[str] = []
+    for value in shlex.split(match.group(1), comments=True):
+        item = value.strip().strip("\"'")
+        if item.startswith("molecule_"):
+            item = item[len("molecule_") :]
+        names.append(safe_name(item))
+    return names
+
+
+def split_by_time(task_ids: list[int], runtime_by_task: dict[int, float], bucket_count: int) -> list[list[int]]:
+    missing = [task_id for task_id in task_ids if task_id not in runtime_by_task]
     if missing:
-        raise ValueError(
-            f"Missing runtime estimate(s): {','.join(map(str, missing[:20]))}"
-        )
-    task_buckets, bucket_loads = [[] for _ in range(bucket_count)], [0.0] * bucket_count
-    for task_id in sorted(
-        task_ids,
-        key=lambda current_id: (estimated_runtime_by_task[current_id], current_id),
-        reverse=True,
-    ):
-        target_bucket_index = min(
-            range(bucket_count),
-            key=lambda idx: (bucket_loads[idx], len(task_buckets[idx]), idx),
-        )
-        task_buckets[target_bucket_index].append(task_id)
-        bucket_loads[target_bucket_index] += estimated_runtime_by_task[task_id]
-    original_order_index = {task_id: index for index, task_id in enumerate(task_ids)}
-    for bucket in task_buckets:
-        bucket.sort(
-            key=lambda task_id: (
-                estimated_runtime_by_task[task_id],
-                original_order_index[task_id],
-            )
-        )
-    return task_buckets, bucket_loads
+        preview = ",".join(map(str, missing[:20]))
+        raise ValueError(f"Missing runtime estimate(s): {preview}")
+
+    buckets: list[list[int]] = [[] for _ in range(bucket_count)]
+    loads = [0.0] * bucket_count
+    for task_id in sorted(task_ids, key=lambda tid: (runtime_by_task[tid], tid), reverse=True):
+        target = min(range(bucket_count), key=lambda idx: (loads[idx], len(buckets[idx]), idx))
+        buckets[target].append(task_id)
+        loads[target] += runtime_by_task[task_id]
+
+    order = {task_id: i for i, task_id in enumerate(task_ids)}
+    for bucket in buckets:
+        bucket.sort(key=lambda task_id: (runtime_by_task[task_id], order[task_id]))
+    return buckets
 
 
-def clean_tmp(debug=False):
+def clean_tmp(*, debug: bool = False) -> None:
     TMP_DIR.mkdir(parents=True, exist_ok=True)
-    for temp_file in TMP_DIR.glob("gpu_probe_*"):
+    for path in TMP_DIR.glob("gpu_probe_*"):
         try:
-            temp_file.unlink()
+            path.unlink()
             if debug:
-                print(f"[DEBUG] removed old tmp: {temp_file}")
-        except Exception:
-            pass
+                print(f"[DEBUG] removed old tmp: {path}")
+        except OSError:
+            continue
 
 
-def wait_probe_done(job_id, timeout_sec):
+def make_log_paths(script_path: Path, script_text: str) -> tuple[str, str]:
+    load = safe_name(extract_load_model_arg(script_text, "load") or "no-load")
+    epoch = safe_name(extract_load_model_arg(script_text, "load_epoch") or "no-epoch")
+    log_dir = Path("log") / safe_name(script_path.stem) / load / epoch
+    log_dir.mkdir(parents=True, exist_ok=True)
+    base = str(log_dir / "%x-a%a")
+    print(f"[INFO] Log path={base}")
+    return f"{base}.out", f"{base}.err"
+
+
+def wait_probe_done(job_id: str, timeout_sec: int) -> bool:
     deadline = time.monotonic() + max(1, timeout_sec)
     while time.monotonic() < deadline:
-        result = subprocess.run(
-            ["squeue", "-h", "-j", str(job_id), "-o", "%T"],
-            text=True,
-            capture_output=True,
-        )
+        result = subprocess.run(["squeue", "-h", "-j", job_id, "-o", "%T"], text=True, capture_output=True, check=False)
         if result.returncode != 0 or not result.stdout.strip():
             return True
         time.sleep(1)
     return False
 
 
-def probe_node(
-    node,
-    part,
-    min_free_gb,
-    max_power,
-    timeout,
-    debug,
-    nodes,
-    ntasks_per_node,
-    cpus_per_task,
-):
+def probe_node_gpus(node: str, partition: str, min_free_gb: float, max_power: float | None, timeout: int, debug: bool, nodes: str | None, ntasks_per_node: str | None, cpus_per_task: str | None) -> tuple[str, list[int]]:
     tag = uuid.uuid4().hex[:10]
-    out_file, err_file = (
-        TMP_DIR / f"gpu_probe_{node}_{tag}.out",
-        TMP_DIR / f"gpu_probe_{node}_{tag}.err",
-    )
+    out_file = TMP_DIR / f"gpu_probe_{node}_{tag}.out"
+    err_file = TMP_DIR / f"gpu_probe_{node}_{tag}.err"
     cmd = [
         "sbatch",
         "--parsable",
         "--partition",
-        part,
+        partition,
         "--nodelist",
         node,
         "--time",
@@ -265,297 +251,219 @@ def probe_node(
         "nvidia-smi --query-gpu=memory.free,power.draw,index --format=csv,noheader,nounits",
     ]
     cmd += ["--nodes", nodes] if nodes else ["--nodes", "1"]
-    cmd += (
-        ["--ntasks-per-node", ntasks_per_node] if ntasks_per_node else ["--ntasks", "1"]
-    )
+    cmd += ["--ntasks-per-node", ntasks_per_node] if ntasks_per_node else ["--ntasks", "1"]
     if cpus_per_task:
         cmd += ["--cpus-per-task", cpus_per_task]
-    probe_job_id = None
+
+    TMP_DIR.mkdir(parents=True, exist_ok=True)
+    text = ""
+    job_id: str | None = None
     try:
-        probe_job_id = parse_job_id(run(cmd, debug=debug))
-        finished_in_time = wait_probe_done(probe_job_id, timeout)
-        text = (
-            out_file.read_text().strip()
-            if finished_in_time and out_file.exists()
-            else ""
-        )
-    except Exception:
+        job_id = parse_job_id(run_cmd(cmd, debug=debug))
+        if wait_probe_done(job_id, timeout) and out_file.exists():
+            text = out_file.read_text().strip()
+    except RuntimeError:
         text = ""
     finally:
-        if probe_job_id is not None:
+        if job_id is not None:
+            subprocess.run(["scancel", job_id], text=True, capture_output=True, check=False)
+        for path in (out_file, err_file):
             try:
-                run(["scancel", str(probe_job_id)], debug=debug)
-            except Exception:
+                path.unlink()
+            except FileNotFoundError:
                 pass
-        for temp_file in (out_file, err_file):
-            try:
-                temp_file.unlink()
-            except Exception:
-                pass
-    min_memory_mib, usable_gpu_indices = int(min_free_gb * 1024), []
+
+    min_mib = int(min_free_gb * 1024)
+    usable: list[int] = []
     for line in text.splitlines():
-        try:
-            free_s, power_s, idx_s = [x.strip() for x in line.split(",")[:3]]
-            if int(free_s.split()[0]) >= min_memory_mib and (
-                max_power is None or float(power_s.split()[0]) <= max_power
-            ):
-                usable_gpu_indices.append(int(idx_s.split()[0]))
-        except Exception:
-            pass
-    return node, sorted(set(usable_gpu_indices))
+        parts = [part.strip() for part in line.split(",")[:3]]
+        if len(parts) < 3:
+            continue
+        free_mib = int(parts[0].split()[0])
+        power = float(parts[1].split()[0])
+        gpu_index = int(parts[2].split()[0])
+        if free_mib >= min_mib and (max_power is None or power <= max_power):
+            usable.append(gpu_index)
+    return node, sorted(set(usable))
 
 
-def parse_job_id(s):
-    job_id_match = re.search(r"\b(\d+)\b", s)
-    if not job_id_match:
-        raise RuntimeError(f"Could not parse sbatch job id from: {s!r}")
-    return job_id_match[1]
+def parse_job_id(text: str) -> str:
+    match = re.search(r"\b(\d+)\b", text)
+    if not match:
+        raise RuntimeError(f"Could not parse sbatch job id from: {text!r}")
+    return match[1]
 
 
-def log_paths(args, script_path, text):
-    if args.no_log_override:
-        return None, None
-    load = safe_name(load_model_filter(text, "load") or "no-load")
-    epoch = safe_name(load_model_filter(text, "load_epoch") or "no-epoch")
-    log_dir = (Path("log") / safe_name(script_path.stem) / load / epoch).expanduser()
-    log_dir.mkdir(parents=True, exist_ok=True)
-    base = str(log_dir / "%x-a%a")
-    print(f"[INFO] Log path={base}")
-    return f"{base}.out", f"{base}.err"
-
-
-def sbatch_cmd(
-    partition,
-    task_id,
-    script_path,
-    dependency,
-    log_paths_pair,
-    excluded_nodes,
-    job_name=None,
-    gpu_index=None,
-    cpus_per_task=None,
-):
-    command = [
-        "sbatch",
-        "--parsable",
-        "--partition",
-        partition,
-        "--array",
-        str(task_id),
-    ]
-    if cpus_per_task:
-        command += ["--cpus-per-task", str(cpus_per_task)]
+def build_submit_command(
+    partition: str,
+    task_id: int,
+    cpus_per_task: int | str,
+    gpu_index: int | None,
+    job_name: str,
+    dependency: str | None,
+    exclude: list[str],
+    output_log_path: str | None,
+    error_log_path: str | None,
+    script_path: Path,
+) -> list[str]:
+    command = ["sbatch", "--parsable", "--partition", partition, "--array", str(task_id)]
+    command += ["--cpus-per-task", str(cpus_per_task)]
     if gpu_index is not None:
         command += ["--export", f"ALL,FORCE_CUDA_VISIBLE_DEVICES={gpu_index}"]
-    if job_name:
-        command += ["--job-name", job_name]
-    output_log_path, error_log_path = log_paths_pair
+    command += ["--job-name", job_name]
     if output_log_path and error_log_path:
         command += ["--output", output_log_path, "--error", error_log_path]
     if dependency:
-        command.append(f"--dependency={dependency}")
-    if excluded_nodes:
-        command += ["--exclude", ",".join(excluded_nodes)]
+        command += [f"--dependency={dependency}"]
+    if exclude:
+        command += ["--exclude", ",".join(exclude)]
     return command + [str(script_path)]
 
 
-def build_parser():
-    ap = argparse.ArgumentParser()
-    add = ap.add_argument
-    add("--script", default="test_direct.bash")
-    add("--time-array", required=True)
-    add("--array-concurrency", type=int, default=1)
-    add("--min-free-memory", type=float, default=15.0)
-    add("--max-gpu-power", type=float, default=None)
-    add("--probe-timeout-sec", type=int, default=10)
-    add("--probe-workers", type=int, default=16)
-    add("--max-nodes", type=int, default=0)
-    add("--no-log-override", action="store_true")
-    add("--debug", action="store_true")
-    add("--cpu-only", action="store_true")
-    return ap
-
-
-def choose_slots(
-    args,
-    part,
-    probe_nodes,
-    script_nodes,
-    script_ntasks_per_node,
-    script_cpus_per_task,
-    limit,
-):
-    if args.cpu_only:
-        out = []
-        for n in probe_nodes:
-            hs = hostnames(n, args.debug)
-            if hs:
-                out.append((hs[0], None))
-            if len(out) >= limit:
-                break
-        return out
-    with cf.ThreadPoolExecutor(max_workers=max(1, args.probe_workers)) as ex:
-        futs = [
-            ex.submit(
-                probe_node,
-                n,
-                part,
-                args.min_free_memory,
-                args.max_gpu_power,
-                args.probe_timeout_sec,
-                args.debug,
-                script_nodes,
-                script_ntasks_per_node,
-                script_cpus_per_task,
-            )
-            for n in probe_nodes
-        ]
-        out = []
-        for n, gpus in (f.result() for f in cf.as_completed(futs)):
-            hs = hostnames(n, args.debug)
-            if not hs:
-                continue
-            out.extend((hs[0], g) for g in gpus)
-            if len(out) >= limit:
-                return out[:limit]
-    return out[:limit]
-
-
-def submit_one(args, part, tid, script, dep, logs, exclude, name, gpu, cpus):
+def submit_with_optional_exclude_retry(command: list[str], exclude: list[str], debug: bool) -> str:
     try:
-        return parse_job_id(
-            run(
-                sbatch_cmd(part, tid, script, dep, logs, exclude, name, gpu, cpus),
-                debug=args.debug,
-            )
-        )
-    except Exception as e:
-        if "Invalid node name specified" not in str(e):
+        return parse_job_id(run_cmd(command, debug=debug))
+    except RuntimeError as err:
+        if "Invalid node name specified" not in str(err) or not exclude:
             raise
-        return parse_job_id(
-            run(
-                sbatch_cmd(part, tid, script, dep, logs, [], name, gpu, cpus),
-                debug=args.debug,
-            )
-        )
+    retry_command: list[str] = []
+    skip_next = False
+    for token in command:
+        if skip_next:
+            skip_next = False
+            continue
+        if token == "--exclude":
+            skip_next = True
+            continue
+        retry_command.append(token)
+    return parse_job_id(run_cmd(retry_command, debug=debug))
 
 
-def main():
-    args = build_parser().parse_args()
-    script = resolve_path(args.script)
-    if not script.exists():
-        raise FileNotFoundError(script)
-    text = script.read_text()
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--script", default="test_direct.bash")
+    parser.add_argument("--time-array", required=True)
+    parser.add_argument("--array-concurrency", type=int, default=1)
+    parser.add_argument("--min-free-memory", type=float, default=15.0)
+    parser.add_argument("--max-gpu-power", type=float, default=None)
+    parser.add_argument("--probe-timeout-sec", type=int, default=10)
+    parser.add_argument("--probe-workers", type=int, default=16)
+    parser.add_argument("--max-nodes", type=int, default=0)
+    parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--cpu-only", action="store_true")
+    args = parser.parse_args()
 
-    clean_tmp(args.debug)
-    log_path_pair = log_paths(args, script, text)
-    partition, array_spec = sbatch_field(text, ["-p", "--partition"]), sbatch_field(
-        text, ["-a", "--array"]
-    )
+    script_path = resolve_path(args.script)
+    if not script_path.exists():
+        raise FileNotFoundError(script_path)
+    script_text = script_path.read_text()
+    clean_tmp(debug=args.debug)
+
+    partition = read_sbatch_field(script_text, ["-p", "--partition"])
+    array_spec = read_sbatch_field(script_text, ["-a", "--array"])
     if not partition or not array_spec:
         raise RuntimeError("Partition/array not found in script")
 
-    task_ids = array_ids(array_spec)
-    slot_limit = max(1, array_limit(array_spec) or args.array_concurrency)
-    excluded_nodes = set(
-        hostnames(sbatch_field(text, ["-x", "--exclude"]) or "", args.debug)
-    )
-    load_name, mol_names = safe_name(
-        load_model_filter(text, "load") or "no-load"
-    ), molecule_names(text)
-    script_nodes = sbatch_field(text, ["-N", "--nodes"])
-    script_ntasks_per_node = sbatch_field(text, ["--ntasks-per-node"])
-    script_cpus_per_task = sbatch_field(text, ["-c", "--cpus-per-task"])
+    task_ids = parse_array_ids(array_spec)
+    slot_limit = max(1, parse_array_limit(array_spec) or args.array_concurrency)
+    output_log_path, error_log_path = make_log_paths(script_path, script_text)
+    excluded_nodes = set(expand_hostnames(read_sbatch_field(script_text, ["-x", "--exclude"]) or "", debug=args.debug))
 
-    probe_nodes, submission_pool = partition_nodes(
-        partition, USABLE_STATES, args.debug
-    ), partition_nodes(partition, None, args.debug)
+    probe_nodes = get_partition_nodes(partition, states=USABLE_STATES, debug=args.debug)
+    submission_pool = get_partition_nodes(partition, states=None, debug=args.debug)
     if excluded_nodes:
-        probe_nodes = [
-            node_name for node_name in probe_nodes if node_name not in excluded_nodes
-        ]
+        probe_nodes = [node for node in probe_nodes if node not in excluded_nodes]
         submission_pool = list(dict.fromkeys([*submission_pool, *excluded_nodes]))
     if args.max_nodes > 0:
         probe_nodes = probe_nodes[: args.max_nodes]
 
-    slots = choose_slots(
-        args,
-        partition,
-        probe_nodes,
-        script_nodes,
-        script_ntasks_per_node,
-        script_cpus_per_task,
-        slot_limit,
-    )
+    script_nodes = read_sbatch_field(script_text, ["-N", "--nodes"])
+    script_ntasks_per_node = read_sbatch_field(script_text, ["--ntasks-per-node"])
+    script_cpus_per_task = read_sbatch_field(script_text, ["-c", "--cpus-per-task"])
+
+    if args.cpu_only:
+        slots = [(expand_hostnames(node, debug=args.debug)[0], None) for node in probe_nodes[:slot_limit]]
+    else:
+        with futures.ThreadPoolExecutor(max_workers=max(1, args.probe_workers)) as pool:
+            tasks = [
+                pool.submit(
+                    probe_node_gpus,
+                    node,
+                    partition,
+                    args.min_free_memory,
+                    args.max_gpu_power,
+                    args.probe_timeout_sec,
+                    args.debug,
+                    script_nodes,
+                    script_ntasks_per_node,
+                    script_cpus_per_task,
+                )
+                for node in probe_nodes
+            ]
+            slots: list[tuple[str, int | None]] = []
+            for future in futures.as_completed(tasks):
+                node, gpu_ids = future.result()
+                hosts = expand_hostnames(node, debug=args.debug)
+                if not hosts:
+                    continue
+                slots.extend((hosts[0], gpu_id) for gpu_id in gpu_ids)
+                if len(slots) >= slot_limit:
+                    break
+            slots = slots[:slot_limit]
+
     if not slots:
         print("[WARN] No usable slots found. Nothing submitted.")
         return 0
 
-    with resolve_path(args.time_array).open() as f:
-        cfg = json.load(f)
-    estimated_runtime_by_task, cpus_per_task_by_task = {
-        task_id: float(runtime) for task_id, runtime in zip(task_ids, cfg["time_array"])
-    }, cfg["cpus_per_task"]
-    task_buckets, bucket_loads = split_by_time(
-        task_ids, estimated_runtime_by_task, len(slots)
-    )
-    assignment_by_task = {
-        task_id: (
-            bucket_index + 1,
-            slots[bucket_index][0],
-            slots[bucket_index][1],
-            bucket_loads[bucket_index],
-        )
-        for bucket_index, bucket_tasks in enumerate(task_buckets)
-        for task_id in bucket_tasks
+    with resolve_path(args.time_array).open() as file:
+        cfg = json.load(file)
+
+    runtime_by_task = {task_id: float(runtime) for task_id, runtime in zip(task_ids, cfg["time_array"])}
+    cpus_per_task_by_task = cfg["cpus_per_task"]
+    task_buckets = split_by_time(task_ids, runtime_by_task, len(slots))
+    assignment = {
+        task_id: (bucket_idx + 1, slots[bucket_idx][0], slots[bucket_idx][1])
+        for bucket_idx, bucket in enumerate(task_buckets)
+        for task_id in bucket
     }
 
-    previous_job_by_bucket, submitted_jobs = {}, []
+    model_name = safe_name(extract_load_model_arg(script_text, "load") or "no-load")
+    molecule_names = parse_molecule_names(script_text)
+
+    prev_job_by_bucket: dict[int, str] = {}
+    submitted: list[tuple[int, int, str]] = []
     for task_id in task_ids:
-        bucket_index, node_name, gpu_index, bucket_load = assignment_by_task[task_id]
-        dependency = (
-            f"afterany:{previous_job_by_bucket[bucket_index]}"
-            if bucket_index in previous_job_by_bucket
-            else None
-        )
-        molecule_name = (
-            mol_names[task_id] if 0 <= task_id < len(mol_names) else f"task-{task_id}"
-        )
-        exclude = (
-            []
-            if args.cpu_only
-            else [node for node in submission_pool if node != node_name]
-        )
-        submitted_job_id = submit_one(
-            args,
+        if runtime_by_task[task_id] == 0:
+            continue
+        bucket, node_name, gpu_index = assignment[task_id]
+        dependency = f"afterany:{prev_job_by_bucket[bucket]}" if bucket in prev_job_by_bucket else None
+        molecule_name = molecule_names[task_id] if 0 <= task_id < len(molecule_names) else f"task-{task_id}"
+        exclude = [] if args.cpu_only else [node for node in submission_pool if node != node_name]
+        command = build_submit_command(
             partition,
             task_id,
-            script,
-            dependency,
-            log_path_pair,
-            exclude,
-            safe_name(f"{load_name}-{molecule_name}"),
-            gpu_index,
             cpus_per_task_by_task[task_id],
+            gpu_index,
+            safe_name(f"{model_name}-{molecule_name}"),
+            dependency,
+            exclude,
+            output_log_path,
+            error_log_path,
+            script_path,
         )
-        previous_job_by_bucket[bucket_index] = submitted_job_id
-        submitted_jobs.append((task_id, bucket_index, submitted_job_id))
+        job_id = submit_with_optional_exclude_retry(command, exclude, args.debug)
+        prev_job_by_bucket[bucket] = job_id
+        submitted.append((task_id, bucket, job_id))
 
-    job_ids_by_bucket, task_ids_by_bucket = {}, {}
-    for task_id, bucket_index, job_id in submitted_jobs:
-        job_ids_by_bucket.setdefault(bucket_index, []).append(job_id)
-        task_ids_by_bucket.setdefault(bucket_index, []).append(str(task_id))
-    print(
-        "[PID-SUMMARY]",
-        " ".join(" ".join(v) for _, v in sorted(job_ids_by_bucket.items())),
-    )
-    print(
-        "[SLURM_ARRAY_TASK_ID]",
-        " ".join(f"{k}:{','.join(v)}" for k, v in sorted(task_ids_by_bucket.items())),
-    )
-    print(
-        f"[DONE] submissions={len(submitted_jobs)}, tasks={len(task_ids)}, slots={len(slots)}, mode=individual"
-    )
+    by_bucket_jobs: dict[int, list[str]] = {}
+    by_bucket_tasks: dict[int, list[str]] = {}
+    for task_id, bucket, job_id in submitted:
+        by_bucket_jobs.setdefault(bucket, []).append(job_id)
+        by_bucket_tasks.setdefault(bucket, []).append(str(task_id))
+
+    print("[PID-SUMMARY]", " ".join(" ".join(ids) for _, ids in sorted(by_bucket_jobs.items())))
+    print("[SLURM_ARRAY_TASK_ID]", " ".join(f"{bucket}:{','.join(ids)}" for bucket, ids in sorted(by_bucket_tasks.items())))
+    print(f"[DONE] submissions={len(submitted)}, tasks={len(task_ids)}, slots={len(slots)}")
     return 0
 
 
@@ -564,6 +472,3 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except KeyboardInterrupt:
         raise SystemExit(130)
-    except Exception as e:
-        print(f"[ERROR] {e}", file=sys.stderr)
-        raise SystemExit(1)
