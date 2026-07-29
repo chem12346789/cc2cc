@@ -16,6 +16,7 @@ from cc2cc.utils.mol import AU2KCALMOL
 
 EPS = 1e-2
 MAX_ERROR_ENERGY = 0.01  # kcal/mol per atom, if the error energy is larger than this value, we set the absolute loss multiplier to 0 to avoid the numerical instability in training.
+MAX_GRAD_BATCH_SIZE = 169000  # if the number of gradients is larger than this value, we split the batch into smaller batches to avoid the memory overflow in training.
 
 
 class BasicDataset(Dataset):
@@ -287,7 +288,7 @@ class DataBase:
                     )
                     loss_multiplier_abs = 0
 
-            if self.args.if_grad:
+            if self.args.if_grad and len(data_dict["input"]) < MAX_GRAD_BATCH_SIZE:
                 grad2force = data["grad2force"]
                 grad_cc_train = data["grad_cc_train"]
                 data_dict["grad2force"] = self.process_grad2force(grad2force)[
@@ -304,9 +305,9 @@ class DataBase:
         atomic_stoichiometry = list(element_counts.values())
         num_data_used = mol_info["natm"]
         if num_data_used == 1:
-            data_weight = self.args.atomic_weighting
+            data_weight = self.loss_ene(self.args.atomic_weighting)
         else:
-            data_weight = np.sqrt(num_data_used)
+            data_weight = self.loss_ene(num_data_used)
 
         ae_target = 0.0
         if self.args.if_atomic:

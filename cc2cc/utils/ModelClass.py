@@ -392,21 +392,22 @@ class ModelClass:
             if self.args.if_grad:
                 grad_cc_train = batch["grad_cc_train"]
                 grad2force = batch["grad2force"]
-                middle_ = torch.autograd.grad(
-                    outputs=torch.sum(output),
-                    inputs=input_,
-                    create_graph=True,
-                )[0]
-                force = torch.einsum("piC,piCx->x", middle_, grad2force)
+                if len(grad_cc_train.shape) != 0:
+                    middle_ = torch.autograd.grad(
+                        outputs=torch.sum(output),
+                        inputs=input_,
+                        create_graph=True,
+                    )[0]
+                    force = torch.einsum("piC,piCx->x", middle_, grad2force)
 
-                loss_grad = loss_multiplier_grad * self.grad_loss_fun(
-                    data_weight * grad_cc_train, data_weight * force
-                )
-                tot_loss += loss_grad
-                data_record["loss_grad_record"] = tensor_to_numpy(
-                    torch.sum(torch.abs(grad_cc_train - force))
-                )
-                data_record["loss_tot_grad"] = tensor_to_numpy(loss_grad)
+                    loss_grad = loss_multiplier_grad * self.grad_loss_fun(
+                        data_weight * grad_cc_train, data_weight * force
+                    )
+                    tot_loss += loss_grad
+                    data_record["loss_grad_record"] = tensor_to_numpy(
+                        torch.sum(torch.abs(grad_cc_train - force))
+                    )
+                    data_record["loss_tot_grad"] = tensor_to_numpy(loss_grad)
 
         if self.args.if_atomic and loss_multiplier_atomic != 0:
             ae_target = batch["ae_target"]
