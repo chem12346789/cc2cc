@@ -8,9 +8,9 @@ import json
 import re
 import shlex
 import subprocess
-import sys
 import time
 import uuid
+from contextlib import suppress
 from pathlib import Path
 from typing import Iterable
 
@@ -44,14 +44,7 @@ def run_cmd(command: list[str], *, debug: bool = False, timeout_sec: int | None 
 
 
 def normalize_node(node_text: str) -> str:
-    return (
-        node_text.strip()
-        .rstrip(",")
-        .replace("*", "")
-        .replace("~", "")
-        .replace("+", "")
-        .split()[0]
-    )
+    return node_text.strip().rstrip(",").replace("*", "").replace("~", "").replace("+", "").split()[0]
 
 
 def safe_name(text: str) -> str:
@@ -111,11 +104,9 @@ def parse_array_ids(array_spec: str) -> list[int]:
 
 
 def parse_array_limit(array_spec: str) -> int | None:
-    match = re.search(r"%\s*(\d+)\s*$", array_spec.strip())
-    if not match:
+    if not (match := re.search(r"%\s*(\d+)\s*$", array_spec.strip())):
         return None
-    limit = int(match[1])
-    return limit if limit > 0 else None
+    return limit if (limit := int(match[1])) > 0 else None
 
 
 def expand_hostnames(expression: str, *, debug: bool = False) -> list[str]:
@@ -133,8 +124,7 @@ def get_partition_nodes(partition: str, *, states: set[str] | None, debug: bool 
     nodes: list[str] = []
     for row in (line.strip() for line in rows.splitlines() if line.strip()):
         node, _, state = row.partition("|")
-        normalized_state = state.strip().lower().rstrip("*~+#")
-        if states is None or normalized_state in states:
+        if states is None or state.strip().lower().rstrip("*~+#") in states:
             nodes.extend(expand_hostnames(normalize_node(node), debug=debug))
     unique_nodes = list(dict.fromkeys(nodes))
     if not unique_nodes:
@@ -148,14 +138,11 @@ def extract_load_model_arg(script_text: str, key: str) -> str | None:
         if not line or line.startswith("#") or "load_model_args" not in line or "--load" not in line:
             continue
         tokens = shlex.split(line, comments=True)
-        value_candidates = [
+        for value in [
             token.split("=", 1)[1]
             for token in tokens
             if token.startswith("load_model_args=")
-        ]
-        if not value_candidates:
-            value_candidates = [line]
-        for value in value_candidates:
+        ] or [line]:
             value_tokens = shlex.split(value, comments=True)
             for idx, token in enumerate(value_tokens):
                 if token == f"--{key}" and idx + 1 < len(value_tokens):
@@ -166,8 +153,7 @@ def extract_load_model_arg(script_text: str, key: str) -> str | None:
 
 
 def parse_molecule_names(script_text: str) -> list[str]:
-    match = re.search(r"name_mol_input_list\s*=\s*\((.*?)\)", script_text, re.S)
-    if not match:
+    if not (match := re.search(r"name_mol_input_list\s*=\s*\((.*?)\)", script_text, re.S)):
         return []
     names: list[str] = []
     for value in shlex.split(match.group(1), comments=True):
@@ -200,12 +186,10 @@ def split_by_time(task_ids: list[int], runtime_by_task: dict[int, float], bucket
 def clean_tmp(*, debug: bool = False) -> None:
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     for path in TMP_DIR.glob("gpu_probe_*"):
-        try:
+        with suppress(OSError):
             path.unlink()
             if debug:
                 print(f"[DEBUG] removed old tmp: {path}")
-        except OSError:
-            continue
 
 
 def make_log_paths(script_path: Path, script_text: str) -> tuple[str, str]:
@@ -327,13 +311,10 @@ def submit_with_optional_exclude_retry(command: list[str], exclude: list[str], d
         if "Invalid node name specified" not in str(err) or not exclude:
             raise
     retry_command: list[str] = []
-    skip_next = False
-    for token in command:
-        if skip_next:
-            skip_next = False
-            continue
+    command_iter = iter(command)
+    for token in command_iter:
         if token == "--exclude":
-            skip_next = True
+            next(command_iter, None)
             continue
         retry_command.append(token)
     return parse_job_id(run_cmd(retry_command, debug=debug))
