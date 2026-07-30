@@ -98,10 +98,15 @@ class DataBase:
         )
 
         loss_func_dict = {
-            "L1Loss": lambda x: np.sum(np.abs(x)),
+            "L1Loss": lambda _: 1,
             "MSELoss": lambda x: np.sum(np.abs(x)),
         }
+        loss_func_inversed_dict = {
+            "L1Loss": lambda _: 1,
+            "MSELoss": lambda x: np.sum(np.sqrt(x)),
+        }
         self.loss_ene = loss_func_dict[args.loss_type]
+        self.loss_ene_inversed = loss_func_inversed_dict[args.loss_type]
 
         name_list = []
         error_molecule = []
@@ -275,9 +280,6 @@ class DataBase:
                     loss_multiplier_abs /= (
                         self.loss_ene(data_dict["output"] * data_dict["weight"]) + EPS
                     )
-                    self.print(
-                        f"Adjusted loss_multiplier_abs: {loss_multiplier_abs:>6.3f}",
-                    )
                 error_energy = AU2KCALMOL * abs(
                     energy_target - np.sum(data_dict["output"] * data_dict["weight"])
                 )
@@ -305,9 +307,10 @@ class DataBase:
         atomic_stoichiometry = list(element_counts.values())
         num_data_used = mol_info["natm"]
         if num_data_used == 1:
-            data_weight = self.loss_ene(self.args.atomic_weighting)
+            data_weight = self.loss_ene_inversed(self.args.atomic_weighting)
         else:
-            data_weight = self.loss_ene(num_data_used)
+            data_weight = self.loss_ene_inversed(num_data_used)
+        self.print(f"data_weight: {data_weight:>6.3f}")
 
         ae_target = 0.0
         if self.args.if_atomic:
@@ -358,10 +361,7 @@ class DataBase:
 
         for key in self.gpu_key:
             if isinstance(data_dict[key], np.ndarray):
-                if len(data_dict[key].shape) > 0:
-                    self.print(
-                        f"key: {key}, shape: {data_dict[key].shape}",
-                    )
+                self.print(f"key: {key}, shape: {data_dict[key].shape}")
             data_dict[key] = torch.as_tensor(data_dict[key], dtype=self.dtype)
 
         return num_data_used, data_dict

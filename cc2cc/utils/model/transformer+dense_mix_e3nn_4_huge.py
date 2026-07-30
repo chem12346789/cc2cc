@@ -38,7 +38,7 @@ class Model(torch.nn.Module):
             mlp_ratio=1,
             atte_actv="gelu",
         )
-        self.number_of_experts = 4
+        self.number_of_experts = 3
 
         for i in range(1, self.number_of_experts + 1):
             setattr(
@@ -77,7 +77,9 @@ class Model(torch.nn.Module):
             dense_actv="gelu",
         )
 
-        self.mixing_weight = torch.nn.Linear(self.flat_size, self.input_level + 3)
+        self.mixing_weight = torch.nn.Linear(
+            self.flat_size, self.input_level + self.number_of_experts + 1
+        )
 
     def forward(self, x):
         x_center = x[:, :, self.cube_middle]
