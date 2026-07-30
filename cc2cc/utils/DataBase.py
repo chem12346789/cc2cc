@@ -250,8 +250,8 @@ class DataBase:
         # if the input_mat is too large, we filter the columns with small values to avoid the numrical instability in training. We keep the columns with the sum of absolute values larger than 1e-15.
         # if you want to keep all the data, you can set the threshold to 0.
         # if you want to save more memory, you can set the threshold to a larger value.
-        if data_dict["input"].shape[0] > 1e6:
-            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-15
+        if self.if_eval:
+            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-10
         else:
             filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-15
         data_dict["input"] = data_dict["input"][filter_idx]
