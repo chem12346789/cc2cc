@@ -1,10 +1,11 @@
 {
   "train": [
     "W4_11-c",
-    "W4_11-h"
+    "W4_11-h",
+    "W4_11-ch"
   ],
   "eval": [
-    "W4_11-ch"
+    "W4_11-ch4"
   ],
   "train_exclude": [],
   "eval_exclude": []

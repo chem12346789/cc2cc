@@ -181,7 +181,7 @@ class ModelClass:
             self.init_train()
 
     def _maybe_compile_model(self):
-        if not getattr(self.args, "if_compile", False):
+        if self.args.if_grad:
             return
 
         try:
@@ -208,11 +208,6 @@ class ModelClass:
                 load_path, map_location=self.args.device, weights_only=True
             )
             state_dict = checkpoint["state_dict"]
-            if "module" in next(iter(state_dict)):
-                # For backward compatibility with old checkpoints
-                state_dict = {
-                    k.replace("module.", ""): v for k, v in state_dict.items()
-                }
             self.state_dict = state_dict
             self.args.model = checkpoint["model"]
             self.optimizer_state_dict = checkpoint.get("optimizer")
@@ -226,13 +221,7 @@ class ModelClass:
             "MSELoss": torch.nn.MSELoss,
         }
         loss_class = loss_dict[self.args.loss_type]
-        for name in (
-            "ene_loss_fun",
-            "atomic_loss_fun",
-            "abs_loss_fun",
-            "grad_loss_fun",
-        ):
-            setattr(self, name, loss_class(reduction="sum").cuda(self.local_rank))
+        self.loss_fun = loss_class(reduction="sum").cuda(self.local_rank)
 
     def init_database(self, train_str_dict, eval_str_dict):
         def process_input(x):
@@ -342,7 +331,6 @@ class ModelClass:
             else x.detach().numpy()
         )
         sum_target = batch["energy_target"]
-        data_weight = batch["data_weight"]
         loss_multiplier = batch["loss_multiplier"]
         loss_multiplier_abs = batch["loss_multiplier_abs"]
         loss_multiplier_grad = batch["loss_multiplier_grad"]
@@ -357,9 +345,7 @@ class ModelClass:
             output = output.detach()
 
         sum_output = torch.sum(output)
-        tot_loss = loss_multiplier * self.ene_loss_fun(
-            data_weight * sum_target, data_weight * sum_output
-        )
+        tot_loss = loss_multiplier * self.loss_fun(sum_target, sum_output)
         data_record["loss_ene"] = tensor_to_numpy(torch.abs(sum_target - sum_output))
         data_record["loss_tot_ene"] = tensor_to_numpy(tot_loss)
 
@@ -367,25 +353,8 @@ class ModelClass:
             if self.args.if_abs:
                 target = batch["output"] * weight
                 abs_error = torch.abs(target - output)
-                if self.args.topk_abs > 0:
-                    topk_indices = torch.topk(
-                        abs_error.sum(dim=1), self.args.topk_abs
-                    ).indices
-                    loss_ene_abs = (
-                        loss_multiplier_abs
-                        * self.abs_loss_fun(
-                            data_weight * target[topk_indices],
-                            data_weight * output[topk_indices],
-                        )
-                        / np.sqrt(self.args.topk_abs)
-                    )
-                else:
-                    loss_ene_abs = (
-                        loss_multiplier_abs
-                        * self.abs_loss_fun(data_weight * target, data_weight * output)
-                        / np.sqrt(target.shape[0])
-                    )
-                tot_loss += loss_ene_abs
+                loss_ene_abs = loss_multiplier_abs * self.loss_fun(target, output)
+                tot_loss = tot_loss + loss_ene_abs
                 data_record["loss_ene_abs"] = tensor_to_numpy(torch.sum(abs_error))
                 data_record["loss_tot_abs"] = tensor_to_numpy(loss_ene_abs)
 
@@ -400,10 +369,10 @@ class ModelClass:
                     )[0]
                     force = torch.einsum("piC,piCx->x", middle_, grad2force)
 
-                    loss_grad = loss_multiplier_grad * self.grad_loss_fun(
-                        data_weight * grad_cc_train, data_weight * force
+                    loss_grad = loss_multiplier_grad * self.loss_fun(
+                        grad_cc_train, force
                     )
-                    tot_loss += loss_grad
+                    tot_loss = tot_loss + loss_grad
                     data_record["loss_grad_record"] = tensor_to_numpy(
                         torch.sum(torch.abs(grad_cc_train - force))
                     )
@@ -411,7 +380,7 @@ class ModelClass:
 
         if self.args.if_atomic and loss_multiplier_atomic != 0:
             ae_target = batch["ae_target"]
-            ae_output = sum_output
+            ae_output = sum_output.clone()
 
             for i_system, system_atom in enumerate(batch["atomic_systems"]):
                 name_atom = self.database_train.atomic_name_dict.get(system_atom)
@@ -431,10 +400,8 @@ class ModelClass:
                 atomic_output = torch.sum(atomic_output)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
-            loss_atomic = loss_multiplier_atomic * self.atomic_loss_fun(
-                data_weight * ae_target, data_weight * ae_output
-            )
-            tot_loss += loss_atomic
+            loss_atomic = loss_multiplier_atomic * self.loss_fun(ae_target, ae_output)
+            tot_loss = tot_loss + loss_atomic
             data_record["loss_tot_atomic"] = tensor_to_numpy(loss_atomic)
             data_record["loss_ene_atomic"] = tensor_to_numpy(
                 torch.abs(ae_target - ae_output)

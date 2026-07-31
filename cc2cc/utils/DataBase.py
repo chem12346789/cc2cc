@@ -36,6 +36,14 @@ class BasicDataset(Dataset):
             if num_data_used != 0:
                 self.data[name] = data_dict
                 self.name_list.append(name)
+
+            # Add more copies of the atomic data to balance the dataset.
+            # This is useful when we need to have more data for single-atom systems.
+            if num_data_used == 1:
+                append_number = max(40 // int(data_dict["data_weight"]) - 1, 0)
+                self.name_list.extend([name] * append_number)
+                total_number_of_atom += num_data_used * append_number
+
         print(
             f"Total number of data: {len(self.name_list)}, total number of atoms: {total_number_of_atom}"
         )
@@ -307,9 +315,9 @@ class DataBase:
         atomic_stoichiometry = list(element_counts.values())
         num_data_used = mol_info["natm"]
         if num_data_used == 1:
-            data_weight = self.loss_ene_inversed(self.args.atomic_weighting)
+            data_weight = self.args.atomic_weighting
         else:
-            data_weight = self.loss_ene_inversed(num_data_used)
+            data_weight = num_data_used
         self.print(f"data_weight: {data_weight:>6.3f}")
 
         ae_target = 0.0
@@ -350,10 +358,10 @@ class DataBase:
             )
             loss_multiplier_atomic = 0
 
-        data_dict["loss_multiplier"] = loss_multiplier
-        data_dict["loss_multiplier_abs"] = loss_multiplier_abs
-        data_dict["loss_multiplier_grad"] = loss_multiplier_grad
-        data_dict["loss_multiplier_atomic"] = loss_multiplier_atomic
+        data_dict["loss_multiplier"] = data_weight * loss_multiplier
+        data_dict["loss_multiplier_abs"] = data_weight * loss_multiplier_abs
+        data_dict["loss_multiplier_grad"] = data_weight * loss_multiplier_grad
+        data_dict["loss_multiplier_atomic"] = data_weight * loss_multiplier_atomic
 
         self.print(
             f"Adjusted loss_multiplier: {loss_multiplier:>6.3f}, grad {loss_multiplier_grad:>6.3f}, atomic {loss_multiplier_atomic:>6.3f}, abs {loss_multiplier_abs:>6.3f}",

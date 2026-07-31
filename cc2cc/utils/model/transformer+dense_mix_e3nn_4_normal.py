@@ -82,8 +82,10 @@ class Model(torch.nn.Module):
         self.mixing_weight = torch.nn.Linear(self.flat_size, self.input_level + 3)
 
     def forward(self, x):
-        x_normal = torch.sqrt(torch.sum(x**2, dim=(-2, -1)) + EPSILON)
-        x = torch.einsum("b...,b->b...", x, 1 / x_normal)
+        x_normal = torch.sqrt(
+            torch.sum(x[:, :, self.cube_middle] ** 2, dim=(-1)) + EPSILON
+        )
+        x = torch.einsum("biC,b->biC", x, 1 / x_normal)
 
         x_center = x[:, :, self.cube_middle]
 

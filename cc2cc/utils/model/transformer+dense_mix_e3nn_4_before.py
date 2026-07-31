@@ -7,8 +7,6 @@ import torch
 from cc2cc.utils.env_var import EDGE_SIZE
 from cc2cc.utils.model.model_utils import Transformer, DenseNet, E3nn
 
-HARTREE_TO_KCAL_MOL = 627
-
 
 class Model(torch.nn.Module):
     """
@@ -75,9 +73,6 @@ class Model(torch.nn.Module):
         """
         Standard forward function, required for all nn.Module classes
         """
-        x = (
-            x * HARTREE_TO_KCAL_MOL
-        )  # scale the input to make it more stable for training
         x_center = x[:, :, self.cube_middle]
 
         x_in = x.permute(0, 2, 1).contiguous()
@@ -109,4 +104,4 @@ class Model(torch.nn.Module):
             + weight_out[:, [4]] * x[:, [2], self.cube_middle]
             + weight_out[:, [5]] * x[:, [3], self.cube_middle]
         )
-        return mixed_output / HARTREE_TO_KCAL_MOL
+        return mixed_output
