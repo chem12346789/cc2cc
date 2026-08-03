@@ -45,6 +45,7 @@ TORCH_LIST = [
     "loss_tot_grad",
     "loss_tot_atomic",
 ]
+DEBUG = 0
 
 
 class DataRecordList:
@@ -337,6 +338,9 @@ class ModelClass:
         loss_multiplier_atomic = batch["loss_multiplier_atomic"]
         data_record = {"name": batch["name"]}
 
+        if DEBUG:
+            print(f"{batch['name']}")
+
         if if_train:
             input_.requires_grad = True
 
@@ -384,6 +388,10 @@ class ModelClass:
 
             for i_system, system_atom in enumerate(batch["atomic_systems"]):
                 name_atom = self.database_train.atomic_name_dict.get(system_atom)
+                if DEBUG:
+                    print(
+                        f"atom {system_atom} and stoichiometry {batch['atomic_stoichiometry'][i_system]}"
+                    )
                 if name_atom is None:
                     self.print(
                         f"Warning: {system_atom} not found in atomic_name_dict, "

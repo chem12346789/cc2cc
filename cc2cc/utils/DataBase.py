@@ -39,6 +39,7 @@ class BasicDataset(Dataset):
 
             # Add more copies of the atomic data to balance the dataset.
             # This is useful when we need to have more data for single-atom systems.
+            # if num_data_used == 1 and mol_info_dict[name]["charge"] == 0:
             if num_data_used == 1:
                 append_number = max(40 // int(data_dict["data_weight"]) - 1, 0)
                 self.name_list.extend([name] * append_number)

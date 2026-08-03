@@ -1,13 +1,10 @@
 {
   "train": [
     "molecule0-W4_11",
-    "molecule1-W4_11",
-    "W4_11-c2",
-    "W4_11-bn"
+    "molecule0-Surplus"
   ],
   "eval": [
-    "molecule5-W4_11",
-    "molecule5-Surplus"
+    "molecule5-W4_11"
   ],
   "train_exclude": [],
   "eval_exclude": []
