@@ -134,7 +134,7 @@ class ModelClass:
         if self.args.scheduler == "cosine":
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
-                T_max=self.args.eval_step * self.args.cosine_T,
+                T_max=self.args.cosine_T,
                 eta_min=self.args.cosine_eta_min,
             )
         elif self.args.scheduler == "constant":
@@ -142,7 +142,7 @@ class ModelClass:
         elif self.args.scheduler == "cosine_warm":
             self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
                 self.optimizer,
-                T_0=self.args.eval_step * self.args.cosine_T,
+                T_0=self.args.cosine_T,
                 T_mult=self.args.cosine_T_mult,
                 eta_min=self.args.cosine_eta_min,
             )
@@ -164,13 +164,13 @@ class ModelClass:
         ).resolve()
         self.print(f"Checkpoint directory: {self.dir_checkpoint}")
 
+        self._maybe_compile_model()
+
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=True)
 
         if self.optimizer_state_dict is not None:
             self.optimizer.load_state_dict(self.optimizer_state_dict)
-
-        self._maybe_compile_model()
 
         if self.args.distributed:
             self.print(f"Using DistributedDataParallel on rank {self.local_rank}")
@@ -322,7 +322,7 @@ class ModelClass:
         output = self.model(input_)
         return input_, output if self.model.before_weight else output * weight
 
-    def loss(self, batch, if_train=True):
+    def loss(self, batch, if_train=True, if_grad=True):
         input_ = batch["input"]
         weight = batch["weight"]
         if_use_cuda_event = input_.is_cuda
@@ -362,7 +362,7 @@ class ModelClass:
                 data_record["loss_ene_abs"] = tensor_to_numpy(torch.sum(abs_error))
                 data_record["loss_tot_abs"] = tensor_to_numpy(loss_ene_abs)
 
-            if self.args.if_grad:
+            if self.args.if_grad and if_grad:
                 grad_cc_train = batch["grad_cc_train"]
                 grad2force = batch["grad2force"]
                 if len(grad_cc_train.shape) != 0:
@@ -426,7 +426,7 @@ class ModelClass:
             event.record()
         return tot_loss, data_record, event
 
-    def train_model(self):
+    def train_model(self, if_grad=True):
         self.train()
         self.optimizer.zero_grad(set_to_none=True)
         data_record_l = DataRecordList(len(self.database_train))
@@ -434,7 +434,7 @@ class ModelClass:
 
         for batch in self.database_train.data_gpu:
             batch = self.database_train.process_batch(batch, device=self.local_rank)
-            tot_loss, data_record, event = self.loss(batch)
+            tot_loss, data_record, event = self.loss(batch, if_grad)
             tot_loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
             self.optimizer.step()
