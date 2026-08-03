@@ -45,6 +45,8 @@ TORCH_LIST = [
     "loss_tot_grad",
     "loss_tot_atomic",
 ]
+
+STATE_DICT_PREFIXES = ("_orig_mod.",)
 DEBUG = 0
 
 
@@ -164,13 +166,13 @@ class ModelClass:
         ).resolve()
         self.print(f"Checkpoint directory: {self.dir_checkpoint}")
 
-        self._maybe_compile_model()
-
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=True)
 
         if self.optimizer_state_dict is not None:
             self.optimizer.load_state_dict(self.optimizer_state_dict)
+
+        self._maybe_compile_model()
 
         if self.args.distributed:
             self.print(f"Using DistributedDataParallel on rank {self.local_rank}")
@@ -192,6 +194,23 @@ class ModelClass:
         except Exception as exc:  # pragma: no cover - fallback path
             self.print(f"torch.compile failed ({exc}). Using eager mode.")
 
+    def _normalize_state_dict(self, state_dict: dict[str, torch.Tensor]):
+        normalized_state_dict = {}
+        for key, value in state_dict.items():
+            normalized_key = key
+            prefix_removed = True
+            while prefix_removed:
+                prefix_removed = False
+                for prefix in STATE_DICT_PREFIXES:
+                    if normalized_key.startswith(prefix):
+                        normalized_key = normalized_key[len(prefix) :]
+                        prefix_removed = True
+            normalized_state_dict[normalized_key] = value
+        return normalized_state_dict
+
+    def _state_dict_for_save(self):
+        return self._normalize_state_dict(self.model.state_dict())
+
     def print(self, msg):
         if self.verbose:
             print(msg, flush=True)
@@ -208,7 +227,7 @@ class ModelClass:
             checkpoint = torch.load(
                 load_path, map_location=self.args.device, weights_only=True
             )
-            state_dict = checkpoint["state_dict"]
+            state_dict = self._normalize_state_dict(checkpoint["state_dict"])
             self.state_dict = state_dict
             self.args.model = checkpoint["model"]
             self.optimizer_state_dict = checkpoint.get("optimizer")
@@ -300,7 +319,7 @@ class ModelClass:
         if not self.dir_checkpoint.exists():
             self.print(f"Directory {self.dir_checkpoint} not found. Created!")
             (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
-        state_dict = self.model.state_dict()
+        state_dict = self._state_dict_for_save()
         torch.save(
             {
                 "state_dict": state_dict,
