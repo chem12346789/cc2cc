@@ -29,7 +29,7 @@ def test_model_rks(
     """
     # 2.0 Prepare
     time_ai_start = timeit.default_timer()
-    if torch.cuda.is_available() and mol.nao < 2000:
+    if torch.cuda.is_available() and (mol.nao < 2000) and (not args.if_grad):
         print("Use GPU for DFT calculation.")
         mdft = pyscf.dft.RKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
@@ -80,7 +80,7 @@ def test_model_rks(
         g = mdft.Gradients()
         g.xc = "b3lyp"
         g.grids = mdft.grids
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and (not args.if_grad):
             utils.get_veff_grad_modified_rks_gpu(g, modeldict)
         else:
             utils.get_veff_grad_modified_rks(g, modeldict)
