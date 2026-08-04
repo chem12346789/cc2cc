@@ -453,7 +453,7 @@ class ModelClass:
 
         for batch in self.database_train.data_gpu:
             batch = self.database_train.process_batch(batch, device=self.local_rank)
-            tot_loss, data_record, event = self.loss(batch, if_grad)
+            tot_loss, data_record, event = self.loss(batch, if_grad=if_grad)
             tot_loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
             self.optimizer.step()
