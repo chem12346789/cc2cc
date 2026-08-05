@@ -227,10 +227,10 @@ class DataBase:
         """
         Load the data.
         """
-        loss_multiplier = self.args.loss_multiplier
-        loss_multiplier_abs = self.args.loss_multiplier_abs
-        loss_multiplier_grad = self.args.loss_multiplier_grad
-        loss_multiplier_atomic = self.args.loss_multiplier_atomic
+        scale = self.args.scale
+        scale_abs = self.args.scale_abs
+        scale_grad = self.args.scale_grad
+        scale_atomic = self.args.scale_atomic
         self.print(f"\nLoading data {name:<40}")
         data = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
 
@@ -286,7 +286,7 @@ class DataBase:
 
             if self.args.if_abs:
                 if self.args.if_relative_weight_abs:
-                    loss_multiplier_abs /= (
+                    scale_abs /= (
                         self.loss_ene(data_dict["output"] * data_dict["weight"]) + EPS
                     )
                 error_energy = AU2KCALMOL * abs(
@@ -297,7 +297,7 @@ class DataBase:
                         f"Warning: Large error energy {error_energy:>9.6f} kcal/mol "
                         f"for {name:>40} set to 0 in absolute loss calculation.",
                     )
-                    loss_multiplier_abs = 0
+                    scale_abs = 0
 
             if self.args.if_grad and len(data_dict["input"]) < MAX_GRAD_BATCH_SIZE:
                 grad2force = data["grad2force"]
@@ -306,7 +306,7 @@ class DataBase:
                     filter_idx
                 ]
                 data_dict["grad_cc_train"] = grad_cc_train.reshape(-1)
-                loss_multiplier_grad /= self.loss_ene(grad_cc_train) + EPS
+                scale_grad /= self.loss_ene(grad_cc_train) + EPS
             else:
                 data_dict["grad2force"] = 0
                 data_dict["grad_cc_train"] = 0
@@ -351,21 +351,21 @@ class DataBase:
         data_dict["data_weight"] = data_weight
 
         if self.args.if_relative_weight:
-            loss_multiplier /= self.loss_ene(energy_target) + EPS
-            loss_multiplier_atomic /= self.loss_ene(ae_target) + EPS
+            scale /= self.loss_ene(energy_target) + EPS
+            scale_atomic /= self.loss_ene(ae_target) + EPS
         if abs(ae_target) < 1e-10:
             self.print(
-                f"Warning: ae_target is too small {ae_target:>6.3f} for {name:>40}, set to 0.0 to turn it off in the atomic loss calculation.",
+                f"Warning: ae_target is too small {ae_target:>6.3f} for {name:>40}, set to 0.0 to turn it off in the atomic loss calculation."
             )
-            loss_multiplier_atomic = 0
+            scale_atomic = 0
 
-        data_dict["loss_multiplier"] = data_weight * loss_multiplier
-        data_dict["loss_multiplier_abs"] = data_weight * loss_multiplier_abs
-        data_dict["loss_multiplier_grad"] = data_weight * loss_multiplier_grad
-        data_dict["loss_multiplier_atomic"] = data_weight * loss_multiplier_atomic
+        data_dict["scale"] = data_weight * scale
+        data_dict["scale_abs"] = data_weight * scale_abs
+        data_dict["scale_grad"] = data_weight * scale_grad
+        data_dict["scale_atomic"] = data_weight * scale_atomic
 
         self.print(
-            f"Adjusted loss_multiplier: {loss_multiplier:>6.3f}, grad {loss_multiplier_grad:>6.3f}, atomic {loss_multiplier_atomic:>6.3f}, abs {loss_multiplier_abs:>6.3f}",
+            f"Adjusted scale: {scale:>6.3f}, grad {scale_grad:>6.3f}, atomic {scale_atomic:>6.3f}, abs {scale_abs:>6.3f}",
         )
 
         for key in self.gpu_key:
