@@ -351,10 +351,10 @@ class ModelClass:
             else x.detach().numpy()
         )
         sum_target = batch["energy_target"]
-        loss_multiplier = batch["loss_multiplier"]
-        loss_multiplier_abs = batch["loss_multiplier_abs"]
-        loss_multiplier_grad = batch["loss_multiplier_grad"]
-        loss_multiplier_atomic = batch["loss_multiplier_atomic"]
+        scale = batch["scale"]
+        scale_abs = batch["scale_abs"]
+        scale_grad = batch["scale_grad"]
+        scale_atomic = batch["scale_atomic"]
         data_record = {"name": batch["name"]}
 
         if DEBUG:
@@ -368,7 +368,7 @@ class ModelClass:
             output = output.detach()
 
         sum_output = torch.sum(output)
-        tot_loss = loss_multiplier * self.loss_fun(sum_target, sum_output)
+        tot_loss = scale * self.loss_fun(sum_target, sum_output)
         data_record["loss_ene"] = tensor_to_numpy(torch.abs(sum_target - sum_output))
         data_record["loss_tot_ene"] = tensor_to_numpy(tot_loss)
 
@@ -376,7 +376,7 @@ class ModelClass:
             if self.args.if_abs:
                 target = batch["output"] * weight
                 abs_error = torch.abs(target - output)
-                loss_ene_abs = loss_multiplier_abs * self.loss_fun(target, output)
+                loss_ene_abs = scale_abs * self.loss_fun(target, output)
                 tot_loss = tot_loss + loss_ene_abs
                 data_record["loss_ene_abs"] = tensor_to_numpy(torch.sum(abs_error))
                 data_record["loss_tot_abs"] = tensor_to_numpy(loss_ene_abs)
@@ -392,19 +392,18 @@ class ModelClass:
                     )[0]
                     force = torch.einsum("piC,piCx->x", middle_, grad2force)
 
-                    loss_grad = loss_multiplier_grad * self.loss_fun(
-                        grad_cc_train, force
-                    )
+                    loss_grad = scale_grad * self.loss_fun(grad_cc_train, force)
                     tot_loss = tot_loss + loss_grad
                     data_record["loss_grad_record"] = tensor_to_numpy(
                         torch.sum(torch.abs(grad_cc_train - force))
                     )
                     data_record["loss_tot_grad"] = tensor_to_numpy(loss_grad)
 
-        if self.args.if_atomic and loss_multiplier_atomic != 0:
+        if self.args.if_atomic and scale_atomic != 0:
             ae_target = batch["ae_target"]
             ae_output = sum_output.clone()
 
+            if_finish = True
             for i_system, system_atom in enumerate(batch["atomic_systems"]):
                 name_atom = self.database_train.atomic_name_dict.get(system_atom)
                 if DEBUG:
@@ -416,6 +415,7 @@ class ModelClass:
                         f"Warning: {system_atom} not found in atomic_name_dict, "
                         "skipping atomic energy calculation."
                     )
+                    if_finish = False
                     break
                 atomic_batch = self.database_train.dataset.get_from_name(name_atom)
                 atomic_batch = self.database_train.process_batch(
@@ -427,12 +427,16 @@ class ModelClass:
                 atomic_output = torch.sum(atomic_output)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
-            loss_atomic = loss_multiplier_atomic * self.loss_fun(ae_target, ae_output)
-            tot_loss = tot_loss + loss_atomic
-            data_record["loss_tot_atomic"] = tensor_to_numpy(loss_atomic)
-            data_record["loss_ene_atomic"] = tensor_to_numpy(
-                torch.abs(ae_target - ae_output)
-            )
+            if if_finish:
+                loss_atomic = scale_atomic * self.loss_fun(ae_target, ae_output)
+                tot_loss = tot_loss + loss_atomic
+                data_record["loss_tot_atomic"] = tensor_to_numpy(loss_atomic)
+                data_record["loss_ene_atomic"] = tensor_to_numpy(
+                    torch.abs(ae_target - ae_output)
+                )
+            else:
+                data_record["loss_tot_atomic"] = np.array(0.0)
+                data_record["loss_ene_atomic"] = np.array(0.0)
 
         data_record["loss_tot"] = tensor_to_numpy(tot_loss)
         for key in TORCH_LIST:
