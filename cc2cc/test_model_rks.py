@@ -29,16 +29,16 @@ def test_model_rks(
     """
     # 2.0 Prepare
     time_ai_start = timeit.default_timer()
+    mdft = pyscf.dft.RKS(mol).density_fit()
+    mol.stdout = mdft.stdout
     if torch.cuda.is_available() and (mol.nao < 2000) and (not args.if_grad):
         print("Use GPU for DFT calculation.")
-        mdft = pyscf.dft.RKS(mol).to_gpu().density_fit()
+        mdft = mdft.to_gpu()
         Grid = utils.GridGPU
         utils.get_veff_modified_rks_gpu(mdft, modeldict, args.max_memory_gpu)
-        mol.stdout = mdft.stdout
     else:
         print("Use CPU for DFT calculation.")
         Grid = utils.GridCPU
-        mdft = pyscf.dft.RKS(mol).density_fit()
         utils.get_veff_modified_rks(mdft, modeldict)
 
     mdft.xc = "b3lyp"
@@ -84,7 +84,10 @@ def test_model_rks(
             utils.get_veff_grad_modified_rks_gpu(g, modeldict)
         else:
             utils.get_veff_grad_modified_rks(g, modeldict)
-        grad_mdft = g.kernel()
+        grad_mdft = np.array(g.kernel())
+        print(f"Gradient: {grad_mdft.shape}")
+        print(f"Net force check: {np.sum(grad_mdft, axis=0)}")
+        print(f"Net force check: {np.sum(grad_mdft, axis=1)}")
     else:
         grad_mdft = None
 
