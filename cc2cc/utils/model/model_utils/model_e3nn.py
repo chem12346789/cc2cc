@@ -121,5 +121,5 @@ class E3nn(torch.nn.Module):
         f_hidden = f_hidden.sum(dim=0)
         # f_hidden shape: [(lmax+1)**2]
         f_out = self.tp_center(f_hidden, self.sh_center)
-        # f_out shape: [CUBE_SIZE**3, 1]
+        # f_out shape: [1, CUBE_SIZE**3]
         return f_out

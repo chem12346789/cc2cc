@@ -9,7 +9,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "Transformer": ("cc2cc.utils.model.model_utils.model_transformer", "Transformer"),
     "DenseNet": ("cc2cc.utils.model.model_utils.model_dense", "DenseNet"),
     "E3nn": ("cc2cc.utils.model.model_utils.model_e3nn", "E3nn"),
-    "E3nnC": ("cc2cc.utils.model.model_utils.model_e3nn_correct", "E3nn"),
+    "E3nnRadis": ("cc2cc.utils.model.model_utils.model_e3nn_radis", "E3nnRadis"),
 }
 NO_LAZY_EXPORTS: dict[str, tuple[str, str]] = {}
 _GPU_EXPORTS: dict[str, tuple[str, str]] = {}

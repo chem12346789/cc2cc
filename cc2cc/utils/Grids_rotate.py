@@ -66,30 +66,137 @@ def rho_evaluator(
     return ni.eval_rho(mol, ao, dms, non0tab, xctype, hermi, with_lapl)
 
 
-def gen_cube_njit(coords, coor_cube):
+@njit(fastmath=True)
+def gen_cube_njit(rho_in_2, rho_in_1, coords, coor_cube):
     """Generate full cube coordinates around every grid point."""
-    coor_cube[:, :, :, :, :] = coords.reshape((len(coords), 1, 1, 1, 3))
-    for i in range(EDGE_SIZE):
-        for j in range(EDGE_SIZE):
-            for k in range(EDGE_SIZE):
-                coor_cube[:, i, j, k, :] += (
-                    (i - CUBE_MIDDLE) * EDGE_LEN,
-                    (j - CUBE_MIDDLE) * EDGE_LEN,
-                    (k - CUBE_MIDDLE) * EDGE_LEN,
-                )
+    for p in range(len(coords)):
+        norm_2d = rho_in_2[:, :, p]
+        eig_val, eig_vec = np.linalg.eigh(norm_2d)
+        eig_val_sort = np.argsort(eig_val)
+        eig_vec = eig_vec[:, eig_val_sort]
+        norm_1d = rho_in_1[:, p]
+        for i in range(3):
+            if (
+                eig_vec[0, i] * norm_1d[0]
+                + eig_vec[1, i] * norm_1d[1]
+                + eig_vec[2, i] * norm_1d[2]
+            ) < 0:
+                eig_vec[:, i] *= -1
+
+        p_coords = coords[p]
+        for i in range(EDGE_SIZE):
+            for j in range(EDGE_SIZE):
+                for k in range(EDGE_SIZE):
+                    coor_cube[p, i, j, k, :] = (
+                        p_coords
+                        + (i - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 0]
+                        + (j - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 1]
+                        + (k - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 2]
+                    )
 
 
 @njit(fastmath=True)
-def gen_cube5_njit(coords, coor_cube):
+def gen_cube5_njit(rho_in_2, rho_in_1, coords, coor_cube):
     """Generate the five-point cube representation around every grid point."""
-    coor_cube[:, :, :, :, :] = coords.reshape((len(coords), 1, 1, 1, 3))
-    for iter_, (i, j, k) in enumerate(
-        [(0, 0, 0), (0, 2, 2), (1, 1, 1), (2, 2, 0), (2, 0, 2)]
-    ):
-        coor_cube[:, iter_, :, :, :] += (
-            (i - CUBE_MIDDLE) * EDGE_LEN,
-            (j - CUBE_MIDDLE) * EDGE_LEN,
-            (k - CUBE_MIDDLE) * EDGE_LEN,
+    for p in range(len(coords)):
+        norm_2d = rho_in_2[:, :, p]
+        eig_val, eig_vec = np.linalg.eigh(norm_2d)
+        eig_val_sort = np.argsort(eig_val)
+        eig_vec = eig_vec[:, eig_val_sort]
+        norm_1d = rho_in_1[:, p]
+        for i in range(3):
+            if (
+                eig_vec[0, i] * norm_1d[0]
+                + eig_vec[1, i] * norm_1d[1]
+                + eig_vec[2, i] * norm_1d[2]
+            ) < 0:
+                eig_vec[:, i] *= -1
+
+        p_coords = coords[p]
+        for iter_, (i, j, k) in enumerate(
+            [(0, 0, 0), (0, 2, 2), (1, 1, 1), (2, 2, 0), (2, 0, 2)]
+        ):
+            coor_cube[p, iter_, :] = (
+                p_coords
+                + (i - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 0]
+                + (j - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 1]
+                + (k - CUBE_MIDDLE) * EDGE_LEN * eig_vec[:, 2]
+            )
+
+
+def eval_rho_cube(mol, ao, dm, rho_in_1, rho_in_2, screen_index, shls_slice, ao_loc):
+    if getattr(dm, "mo_coeff", None) is not None:
+        # TODO: test whether dm.mo_coeff matching dm
+        mo_coeff = dm.mo_coeff
+        mo_occ = dm.mo_occ
+    else:
+        mo_coeff = mo_occ = None
+    has_mo = mo_coeff is not None
+
+    if has_mo:
+        pos = mo_occ > OCCDROP
+        if np.any(pos):
+            cpos = np.einsum("ij,j->ij", mo_coeff[:, pos], np.sqrt(mo_occ[pos]))
+            c0 = numint._dot_ao_dm(mol, ao[0], cpos, screen_index, shls_slice, ao_loc)
+            c1 = numint._dot_ao_dm(mol, ao[1], cpos, screen_index, shls_slice, ao_loc)
+            c2 = numint._dot_ao_dm(mol, ao[2], cpos, screen_index, shls_slice, ao_loc)
+            c3 = numint._dot_ao_dm(mol, ao[3], cpos, screen_index, shls_slice, ao_loc)
+            rho_in_1[0, :] += 2 * numint._contract_rho(c1, c0)
+            rho_in_1[1, :] += 2 * numint._contract_rho(c2, c0)
+            rho_in_1[2, :] += 2 * numint._contract_rho(c3, c0)
+
+            c4 = numint._dot_ao_dm(mol, ao[4], cpos, screen_index, shls_slice, ao_loc)
+            c5 = numint._dot_ao_dm(mol, ao[5], cpos, screen_index, shls_slice, ao_loc)
+            c6 = numint._dot_ao_dm(mol, ao[6], cpos, screen_index, shls_slice, ao_loc)
+            c7 = numint._dot_ao_dm(mol, ao[7], cpos, screen_index, shls_slice, ao_loc)
+            c8 = numint._dot_ao_dm(mol, ao[8], cpos, screen_index, shls_slice, ao_loc)
+            c9 = numint._dot_ao_dm(mol, ao[9], cpos, screen_index, shls_slice, ao_loc)
+
+            rho_in_2[0, 0, :] += numint._contract_rho(c4, c0) + numint._contract_rho(
+                c1, c1
+            )
+            rho_in_2[0, 1, :] += numint._contract_rho(c5, c0) + numint._contract_rho(
+                c1, c2
+            )
+            rho_in_2[0, 2, :] += numint._contract_rho(c6, c0) + numint._contract_rho(
+                c1, c3
+            )
+            rho_in_2[1, 1, :] += numint._contract_rho(c7, c0) + numint._contract_rho(
+                c2, c2
+            )
+            rho_in_2[1, 2, :] += numint._contract_rho(c8, c0) + numint._contract_rho(
+                c2, c3
+            )
+            rho_in_2[2, 2, :] += numint._contract_rho(c9, c0) + numint._contract_rho(
+                c3, c3
+            )
+    else:
+        c0 = numint._dot_ao_dm(mol, ao[0], dm, screen_index, shls_slice, ao_loc)
+        rho_in_1[0, :] += 2 * numint._contract_rho(ao[1], c0)
+        rho_in_1[1, :] += 2 * numint._contract_rho(ao[2], c0)
+        rho_in_1[2, :] += 2 * numint._contract_rho(ao[3], c0)
+
+        c1 = numint._dot_ao_dm(mol, ao[1], dm, screen_index, shls_slice, ao_loc)
+        c2 = numint._dot_ao_dm(mol, ao[2], dm, screen_index, shls_slice, ao_loc)
+        c3 = numint._dot_ao_dm(mol, ao[3], dm, screen_index, shls_slice, ao_loc)
+
+        rho_in_2[0, 0, :] += numint._contract_rho(ao[4], c0) + numint._contract_rho(
+            ao[1], c1
+        )
+        rho_in_2[0, 1, :] += numint._contract_rho(ao[5], c0) + numint._contract_rho(
+            ao[1], c2
+        )
+        rho_in_2[0, 2, :] += numint._contract_rho(ao[6], c0) + numint._contract_rho(
+            ao[1], c3
+        )
+        rho_in_2[1, 1, :] += numint._contract_rho(ao[7], c0) + numint._contract_rho(
+            ao[2], c2
+        )
+        rho_in_2[1, 2, :] += numint._contract_rho(ao[8], c0) + numint._contract_rho(
+            ao[2], c3
+        )
+        rho_in_2[2, 2, :] += numint._contract_rho(ao[9], c0) + numint._contract_rho(
+            ao[3], c3
         )
 
 
@@ -129,14 +236,38 @@ class Grid(GridsCPU):
         screen_index=None,
     ):
         """Generate cube coordinates with PySCF AO/rho contractions."""
+        shls_slice = (0, mol.nbas)
+        ao_loc = mol.ao_loc_nr()
+
+        rho_in_1 = np.zeros((3, len(coords)))
+        rho_in_2 = np.zeros((3, 3, len(coords)))
+        ao = numint.eval_ao(mol, coords, deriv=2)
+
+        if mol.spin == 0:
+            eval_rho_cube(
+                mol, ao, dms, rho_in_1, rho_in_2, screen_index, shls_slice, ao_loc
+            )
+        else:
+            dma, dmb = numint._format_uks_dm(dms)
+            eval_rho_cube(
+                mol, ao, dma, rho_in_1, rho_in_2, screen_index, shls_slice, ao_loc
+            )
+            eval_rho_cube(
+                mol, ao, dmb, rho_in_1, rho_in_2, screen_index, shls_slice, ao_loc
+            )
+
+        rho_in_2[1, 0, :] = rho_in_2[0, 1, :]
+        rho_in_2[2, 0, :] = rho_in_2[0, 2, :]
+        rho_in_2[2, 1, :] = rho_in_2[1, 2, :]
+
         if self.cube_type == "center":
             coor_cube = coords.copy().reshape((len(coords), 1, 3))
         elif self.cube_type == "cube":
             coor_cube = np.zeros((len(coords), EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3))
-            gen_cube_njit(coords, coor_cube)
+            gen_cube_njit(rho_in_2, rho_in_1, coords, coor_cube)
         elif self.cube_type == "cube5":
             coor_cube = np.zeros((len(coords), 5, 3))
-            gen_cube5_njit(coords, coor_cube)
+            gen_cube5_njit(rho_in_2, rho_in_1, coords, coor_cube)
         else:
             raise ValueError("Unknown cube type.")
 
