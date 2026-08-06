@@ -60,31 +60,22 @@ def rho_evaluator(
 
 def gen_cube_cp(coords):
     """Generate full cube coordinates around every grid point on GPU."""
-    eig_vec = cp.array(
-        [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], dtype=coords.dtype
-    )
-
     idx = cp.arange(EDGE_SIZE, dtype=coords.dtype) - CUBE_MIDDLE
     ii, jj, kk = cp.meshgrid(idx, idx, idx, indexing="ij")
     offsets = cp.stack((ii.ravel(), jj.ravel(), kk.ravel()), axis=1) * EDGE_LEN
 
-    rot = cp.einsum("mj,nkj->nmk", offsets, eig_vec)
-    coor_flat = coords[:, cp.newaxis, :] + rot
+    coor_flat = coords[:, cp.newaxis, :] + offsets[cp.newaxis, :, :]
     return coor_flat.reshape((-1, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3))
 
 
 def gen_cube5_cp(coords):
     """Generate the five-point cube representation around every grid point on GPU."""
-    eig_vec = cp.array(
-        [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], dtype=coords.dtype
-    )
     points = cp.array(
         [(0, 0, 0), (0, 2, 2), (1, 1, 1), (2, 2, 0), (2, 0, 2)],
         dtype=coords.dtype,
     )
     offsets = (points - CUBE_MIDDLE) * EDGE_LEN
-    rot = cp.einsum("mj,nkj->nmk", offsets, eig_vec)
-    return coords[:, cp.newaxis, :] + rot
+    return coords[:, cp.newaxis, :] + offsets[cp.newaxis, :, :]
 
 
 def gen_cube_njit(coords, coor_cube):
