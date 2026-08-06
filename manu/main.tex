@@ -101,326 +101,269 @@ reprint,%
 \begin{document}
 
 
-\title{
-	A molecule
-}
-\author{XX}
+% \title{
+% 	A molecule
+% }
+% \author{XX}
 
-\date{\today}
+% \date{\today}
 
-\begin{abstract}
-	%%
-	{
-		TODO
-	}
-\end{abstract}
+% \begin{abstract}
+% 	%%
+% 	{
+% 		TODO
+% 	}
+% \end{abstract}
 
-\maketitle
+% \maketitle
 
-\section{Introduction}
-The well-known Kohn--Sham equation \cite{kohnSelfConsistentEquationsIncluding1965-11-15} is
-\begin{align}
-	\label{eq:KS}
-	\Big( - \frac{1}{2} \nabla^{2} + v_{\mathrm{ext}} + v_{\mathrm{H}} + v_{\rm{xc}}\Big) \phi_{i} = \epsilon_{i} \phi_{i}.
-\end{align}
-% 
-Where $\phi_{i}$ is the Kohn--Sham orbital, $\epsilon_{i}$ is the Kohn--Sham orbital energy, $v_{\mathrm{ext}}$ is the external potential (such as the electrostatic potential of nuclei), $v_{\mathrm{H}}$ is the electrostatic potential of the electron, and $v_{\rm{xc}}$ is the exchange-correlation potential.
-% 
-According to the Hohenberg-Kohn theorem \cite{hohenbergInhomogeneousElectronGas1964-11-09}, exchange-correlation energy density $e_{\rm{xc}}$ is the unique functional of the ground-state electron density, $\rho = n_{i} \vert \phi_{i} \vert^{2}$, where $n_{i}$ is the occupation number of the Kohn-Sham orbital.
-%
-Then, the Kohn-Sham equation is solved iteratively utilizing the so-called potential term $v_{\rm{xc}} = \delta E_{\rm{xc}} / \delta \rho$.
-% 
-So, once this unique functional is obtained, the properties of the molecules can be calculated accurately and efficiently.
-%
-This is the main idea of the density functional theory (DFT) \cite{parrDensityFunctionalTheory1980}.
+\input{nn_architecture_figure}
 
-One of the challenging tasks of the DFT calculation is to find the unique functional between the exact exchange-correlation energy density $e_{\rm{xc}}$ and the electron density $\rho$.
-% 
-Numerous approximations have been proposed for this functional, including early local-density approximation functionals \cite{parrDensityFunctionalTheory1980}, hybrid functionals \cite{perdewAtomsMoleculesSolids1992-09-15}, and the rapidly growing class of machine-learning (ML) functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07}.
-
-\section{The NEURAL NETWORK}
-We use the transformer \cite{vaswaniAttentionAllYou2023-08-02} as the neural network to learn the functional between the electron density and the energy density of the molecule.
-% 
-After the training, the neural network can predict the energy of the molecule given the electron density and then can be used to optimize the electron density iteratively using the self-consistent field (SCF) method.
-
-\subsection{The architecture of the neural network}
-\begin{figure*}
-	\tikzset{%
-		block/.style={rectangle, draw, fill=blue!20, text centered, rounded corners, minimum height=0.6cm},
-		block1/.style={rectangle, fill=white, text centered, rounded corners, minimum height=0.6cm},
-	}
-	\begin{tikzpicture}[auto, node distance=1.5cm]
-		% We start by placing the blocks
-		\node [block1] (input-1) {};
-		\node [block1, right=of input-1, xshift=-1.5cm] (input) {};
-		\node [block, right=of input] (e3nn) {E3nn};
-		\node [block, right=of e3nn, xshift=-1cm] (transformer) {Transformer};
-		\node [block, right=of transformer] (flatten) {Flatten};
-		\node [block, right=of flatten] (linear) {MLP};
-		\node [block, right=of linear] (cat) {CAT};
-		\node [block, right=of cat, xshift=-0.2cm] (output) {ADD};
-		\node [block1, right=of output] (output_final) {};
-		\node [block, below=of flatten.center, xshift=-2cm, yshift=0.5cm] (Slice) {Slice};
-		\node [block1, below=of flatten.center, yshift=0.5cm] (Slice2) {};
-		\node [block1, below=of flatten.center, yshift=-0.5cm] (Slice3) {};
-		\node [block, below=of linear.center, xshift=-1cm, yshift=0.5cm] (linear1) {MLP};
-		\node [block1, below=of cat.center, yshift=0.5cm] (output1) {};
-		\node [block1, below=of cat.center, yshift=-0.5cm] (output3) {};
-		\node [block1, below=of input.center, yshift=0.5cm] (input1) {};
-		\node [block1, above=of e3nn.center, yshift=-0.5cm] (e3nn2) {};
-		\node [block, right=of e3nn2.center, xshift=1cm] (mixture1) {Linear};
-		\node [block, right=of mixture1.center, xshift=2cm] (mixture2) {Softmax};
-		\node [block1, above=of output.center, yshift=-0.5cm] (output2) {};
-		% connecting the blocks
-		\draw [-] (input-1) -- node[xshift=0.625cm] {$(N, 27, 4)$} (input.center);
-		\draw [->] (input.center) -- (e3nn);
-		\draw [->] (e3nn) -- (transformer);
-		\draw [->] (transformer) -- node {$(N, 27, 4)$} (flatten);
-		\draw [->] (flatten) -- node {$(N, 108)$} (linear);
-		\draw [->] (linear) -- node[xshift=-0.125cm] {$(N, 1)$} (cat);
-		\draw [->] (cat) -- node {$(N, 6)$} (output);
-		\draw [->] (output) -- node {$(N, 1)$} (output_final);
-		\draw [->, rounded corners] ([xshift=1.25cm] input.center) -- ([xshift=1.25cm] input1.center) -- (Slice);
-		\draw [->] (Slice) -- node {$(N, 4)$} (linear1);
-		\draw [->, rounded corners] (linear1) -- node[xshift=0.05cm] {$(N, 1)$} ([xshift=-0.75cm] output1.center) -- ([xshift=-0.75cm] cat.center);
-		\draw [-] (Slice2.center) -- (Slice3.center);
-		\draw [->, rounded corners] (Slice3.center) -- node[xshift=0.05cm] {$(N, 4)$} ([xshift=-0.75cm] output3.center) -- ([xshift=-0.75cm] cat.center);
-		\draw [->, rounded corners] ([xshift=0.75cm] e3nn.center) -- ([xshift=0.75cm] e3nn2.center) -- (mixture1);
-		\draw [->, rounded corners] (mixture1) -- node {$(N, 2)$} (mixture2);
-		\draw [->, rounded corners] (mixture2) -- node {$(N, 6)$}  (output2.center) -- (output);
-	\end{tikzpicture}
-	\caption{
-		% 
-		The architecture of the neural network.
-		% 
-		The transformer we use here is only composed of multilayer of the scaled dot-product attention part of the original transformer \cite{vaswaniAttentionAllYou2023-08-02}.
-		%
-		The Extraction block extracts the energy density at the center (${\bm{e}(\brm{r}_i)}$) from the input.
-		% 
-		The MLP block is a multilayer perceptron with two hidden layers, before the MLP block the two inputs are concatenated.
-		%
-	}
-	\label{fig:arch}
-\end{figure*}
-
-The architecture of the neural network is shown in \Fig{fig:arch}.
-% 
-The total number of parameters in the neural network is around $1.2$ million.
-%
-The input of the neural network is a set of the energy density ${\tilde{\bm{e}}_{\rm{cube}}(\brm{r})}$ with the size of $(N, 27, 4)$, and the output is the energy density ${e(\brm{r})}$ with the size of $(N, 1)$.
-% 
-N is the number of the grid points in the normal dft procedure.
-%
-\begin{align}
-	\tilde{\bm{e}}(\brm{r}_{\rm{cube}}) =
-	 & \big\{ \tilde{e}(\mathbf{r}'_{c}) \text{ for } \mathbf{r}'_{c} \in \mathbf{r}_{\rm{cube}} \big\} \nl
-	 & = \big\{ \tilde{e}(\mathbf{r}), \tilde{e}(\mathbf{r}_{\rm{aux}}) \big\} .
-\end{align}
-The $\tilde{e}(\brm{r})$ is the energy density calculated by the 4 functionals (LDA, VWN3, B88 and LYP) from the original B3LYP functional \cite{perdewAtomsMoleculesSolids1992-09-15}.
-% 
-The $\mathbf{r}_{\rm{cube}}$ is a cube around the grid point $\mathbf{r}$ with the size of $3 \times 3 \times 3$ and the distance between two adjacent grid points is $d$.
-%
-This means that for each grid point $\mathbf{r}$, we consider a small region around it to capture the local environment and provide more features for the neural network.
-% 
-We refer to the grid points within the cube, excluding the central point, as auxiliary grid points. Details of their contributions to the energy density and potential are provided in the Appendix.
-% 
-The energy density at the grid point $\mathbf{r}$, denoted as $e(\brm{r})$, can be predicted by the neural network as
-% 
-\begin{align}
-	e_{\rm{NN}}(\brm{r})
-	= & {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big),
-\end{align}
-% 
-where ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)$ represents the neural network function parameterized by $\w$, taking $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$ as input.
-% 
-The total exchange-correlation energy is obtained by integrating the energy density over the entire grid.
-% 
-Then the exchange-correlation potential can be calculated by the functional derivative of the exchange-correlation energy with respect to the electron density, which is used in the Kohn-Sham equation \eq{eq:KS}.
-
-\subsection{Dataset and the loss function}
-The dataset we use to train the neural network is listed in the Appendix.
-%
-We use 128 molecules which consistent of less than 3 heavy atoms as the training set and 115 molecules contain 4-5 heavy atoms as the validation set.
-% 
-In this article, we use the CCSD(T)/Def2-QZVPPD \cite{bartlettCoupledclusterTheoryQuantum2007-02-22,weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} to calculate the electron density and the energy density of the molecules.
-%
-The electron density will be used as the calculation of the input of the neural network and the energy density will be used as the target of the neural network.
-
-The loss function is defined as
+% \section{Introduction}
+% The well-known Kohn--Sham equation \cite{kohnSelfConsistentEquationsIncluding1965-11-15} is
 % \begin{align}
-% 	\label{eq:loss}
-% 	L_{e} =
-% 	 & \lambda_{\rm{RE}} N_{\rm{atom}} \Big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \Big)^2 \nl
-% 	 & + \lambda_{\rm{ABS}} N_{\rm{atom}} \Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2 \nl
-% 	 & + \lambda_{\rm{AE}} N_{\rm{atom}} \Big(\bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2 .
+% 	\label{eq:KS}
+% 	\Big( - \frac{1}{2} \nabla^{2} + v_{\mathrm{ext}} + v_{\mathrm{H}} + v_{\rm{xc}}\Big) \phi_{i} = \epsilon_{i} \phi_{i}.
 % \end{align}
-\onecolumngrid
-\begin{align}
-	\label{eq:loss_self_scaled}
-	L_{e} =
-	 & N_{\rm{atom}} \frac{\big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \big)^2}{\big( \int \d \brm{r}_{i} \bar{e}(\brm{r}_{i}) \big)^{2} + \epsilon}
-	+ N_{\rm{atom}} \frac{\big(\bar{E}^{\rm{AE}} - E^{\rm{AE}} \big)^2}{\big( \bar{E}^{\rm{AE}} \big)^{2} + \epsilon} \nl
-	%  & + \frac{N_{\rm{atom}}}{N_{\rm{grids}}} \Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2
-	 & + \frac{N_{\rm{atom}}}{\sqrt{N_{\rm{grids}}}} \frac{\big(\int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \big| \big)^2}{\big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i})\big| \big)^{2} + \epsilon}
-	+ N_{\rm{atom}} \frac{\big(\bar{F} - F \big)^2}{\big(\bar{F}\big)^{2} + \epsilon} .
-	% L_{e} =
-	%  & \sqrt{N_{\rm{atom}}} \frac{\big| \int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \big|}{\big| \int \d \brm{r}_{i} \bar{e}(\brm{r}_{i}) \big| + \epsilon}
-	% + \sqrt{N_{\rm{atom}}} \frac{\big|\bar{E}^{\rm{AE}} - E^{\rm{AE}} \big|}{\big| \bar{E}^{\rm{AE}} \big| + \epsilon} \nl
-	%  & + \frac{\sqrt{N_{\rm{atom}}}}{N_{\rm{grids}}} \frac{ \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \big| }{ \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i})\big| + \epsilon}
-	% + \sqrt{N_{\rm{atom}}} \frac{\int \d \brm{r}_{i} \big| \bar{F} - F \big|}{\int \d \brm{r}_{i} \big| \bar{F}\big| + \epsilon} .
-\end{align}
-\twocolumngrid
-where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, respectively.
-%
-The $\epsilon$ is a small number to avoid the division by zero and control the scale of the loss function, which is set to be $1 \times 10^{-5}$ in this article.
-%
-The first term is the relative error in the total energy, the second term is the absolute error in the total energy, and the third term is the error in the atomic energy.
+% % 
+% Where $\phi_{i}$ is the Kohn--Sham orbital, $\epsilon_{i}$ is the Kohn--Sham orbital energy, $v_{\mathrm{ext}}$ is the external potential (such as the electrostatic potential of nuclei), $v_{\mathrm{H}}$ is the electrostatic potential of the electron, and $v_{\rm{xc}}$ is the exchange-correlation potential.
+% % 
+% According to the Hohenberg-Kohn theorem \cite{hohenbergInhomogeneousElectronGas1964-11-09}, exchange-correlation energy density $e_{\rm{xc}}$ is the unique functional of the ground-state electron density, $\rho = n_{i} \vert \phi_{i} \vert^{2}$, where $n_{i}$ is the occupation number of the Kohn-Sham orbital.
+% %
+% Then, the Kohn-Sham equation is solved iteratively utilizing the so-called potential term $v_{\rm{xc}} = \delta E_{\rm{xc}} / \delta \rho$.
+% % 
+% So, once this unique functional is obtained, the properties of the molecules can be calculated accurately and efficiently.
+% %
+% This is the main idea of the density functional theory (DFT) \cite{parrDensityFunctionalTheory1980}.
 
-\subsection{Training details}
-The neural network is trained using the AdamW optimizer \cite{loshchilovDecoupledWeightDecay2019-01-04} with the scheduler of cosine annealing with warm restarts \cite{loshchilovSGDRStochasticGradient2017-05-03}.
-%
-We set the initial learning rate to be $1 \times 10^{-4}$ and then gradually decrease it to $0$ using the cosine annealing scheduler, with a restart every $160$ epochs and a multiplication factor of $2$ for the initial learning rate after each restart.
-%
-The parameters of the AdamW optimizer are set to be $\beta_1 = 0.9$, $\beta_2 = 0.999$, and $\epsilon = 1 \times 10^{-8}$, and the weight decay is set to be $1 \times 10^{-12}$.
-% 
-The weights in the loss function \eq{eq:loss} are set to be $\lambda_{\rm{ABS}} = 0.01$.
-%
-We use a batch size of $1$ and train the model for $10000$ epochs, the training process is last for around $20$ days.
-%
-The training process is monitored using the validation set every $5$ epochs, and the model with the lowest validation loss is selected as the final model.
+% One of the challenging tasks of the DFT calculation is to find the unique functional between the exact exchange-correlation energy density $e_{\rm{xc}}$ and the electron density $\rho$.
+% % 
+% Numerous approximations have been proposed for this functional, including early local-density approximation functionals \cite{parrDensityFunctionalTheory1980}, hybrid functionals \cite{perdewAtomsMoleculesSolids1992-09-15}, and the rapidly growing class of machine-learning (ML) functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07}.
 
-The training is performed on a single NVIDIA A100 GPU with 80GB memory with double precision training using PyTorch \cite{paszkePyTorchImperativeStyle2019-12-03} and the training takes around $96$ hours to complete. The version of PyTorch used is $2.8.0+$cu$128$, and CUDA version is $12.8$, the version of driver is $535.247.01$.
+% \section{The NEURAL NETWORK}
+% We use the transformer \cite{vaswaniAttentionAllYou2023-08-02} as the neural network to learn the functional between the electron density and the energy density of the molecule.
+% % 
+% After the training, the neural network can predict the energy of the molecule given the electron density and then can be used to optimize the electron density iteratively using the self-consistent field (SCF) method.
 
-\subsection{Comparison with other machine learning functionals}
-The main difference between our method and other machine learning functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07} is that we use the energy density as the target of the neural network instead of the total energy.
 
-\section{Result}
+% The architecture of the neural network is shown in \Fig{fig:arch}.
+% % 
+% The total number of parameters in the neural network is around $1.2$ million.
+% %
+% The input of the neural network is a set of the energy density ${\tilde{\bm{e}}_{\rm{cube}}(\brm{r})}$ with the size of $(N, 27, 4)$, and the output is the energy density ${e(\brm{r})}$ with the size of $(N, 1)$.
+% % 
+% N is the number of the grid points in the normal dft procedure.
+% %
+% \begin{align}
+% 	\tilde{\bm{e}}(\brm{r}_{\rm{cube}}) =
+% 	 & \big\{ \tilde{e}(\mathbf{r}'_{c}) \text{ for } \mathbf{r}'_{c} \in \mathbf{r}_{\rm{cube}} \big\} \nl
+% 	 & = \big\{ \tilde{e}(\mathbf{r}), \tilde{e}(\mathbf{r}_{\rm{aux}}) \big\} .
+% \end{align}
+% The $\tilde{e}(\brm{r})$ is the energy density calculated by the 4 functionals (LDA, VWN3, B88 and LYP) from the original B3LYP functional \cite{perdewAtomsMoleculesSolids1992-09-15}.
+% % 
+% The $\mathbf{r}_{\rm{cube}}$ is a cube around the grid point $\mathbf{r}$ with the size of $3 \times 3 \times 3$ and the distance between two adjacent grid points is $d$.
+% %
+% This means that for each grid point $\mathbf{r}$, we consider a small region around it to capture the local environment and provide more features for the neural network.
+% % 
+% We refer to the grid points within the cube, excluding the central point, as auxiliary grid points. Details of their contributions to the energy density and potential are provided in the Appendix.
+% % 
+% The energy density at the grid point $\mathbf{r}$, denoted as $e(\brm{r})$, can be predicted by the neural network as
+% % 
+% \begin{align}
+% 	e_{\rm{NN}}(\brm{r})
+% 	= & {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big),
+% \end{align}
+% % 
+% where ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)$ represents the neural network function parameterized by $\w$, taking $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$ as input.
+% % 
+% The total exchange-correlation energy is obtained by integrating the energy density over the entire grid.
+% % 
+% Then the exchange-correlation potential can be calculated by the functional derivative of the exchange-correlation energy with respect to the electron density, which is used in the Kohn-Sham equation \eq{eq:KS}.
+
+% \subsection{Dataset and the loss function}
+% The dataset we use to train the neural network is listed in the Appendix.
+% %
+% We use 128 molecules which consistent of less than 3 heavy atoms as the training set and 115 molecules contain 4-5 heavy atoms as the validation set.
+% % 
+% In this article, we use the CCSD(T)/Def2-QZVPPD \cite{bartlettCoupledclusterTheoryQuantum2007-02-22,weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} to calculate the electron density and the energy density of the molecules.
+% %
+% The electron density will be used as the calculation of the input of the neural network and the energy density will be used as the target of the neural network.
+
+% The loss function is defined as
+% % \begin{align}
+% % 	\label{eq:loss}
+% % 	L_{e} =
+% % 	 & \lambda_{\rm{RE}} N_{\rm{atom}} \Big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \Big)^2 \nl
+% % 	 & + \lambda_{\rm{ABS}} N_{\rm{atom}} \Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2 \nl
+% % 	 & + \lambda_{\rm{AE}} N_{\rm{atom}} \Big(\bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2 .
+% % \end{align}
+% \onecolumngrid
+% \begin{align}
+% 	\label{eq:loss_self_scaled}
+% 	L_{e} =
+% 	 & N_{\rm{atom}} \frac{\big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \big)^2}{\big( \int \d \brm{r}_{i} \bar{e}(\brm{r}_{i}) \big)^{2} + \epsilon}
+% 	+ N_{\rm{atom}} \frac{\big(\bar{E}^{\rm{AE}} - E^{\rm{AE}} \big)^2}{\big( \bar{E}^{\rm{AE}} \big)^{2} + \epsilon} \nl
+% 	%  & + \frac{N_{\rm{atom}}}{N_{\rm{grids}}} \Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2
+% 	 & + \frac{N_{\rm{atom}}}{\sqrt{N_{\rm{grids}}}} \frac{\big(\int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \big| \big)^2}{\big( \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i})\big| \big)^{2} + \epsilon}
+% 	+ N_{\rm{atom}} \frac{\big(\bar{F} - F \big)^2}{\big(\bar{F}\big)^{2} + \epsilon} .
+% 	% L_{e} =
+% 	%  & \sqrt{N_{\rm{atom}}} \frac{\big| \int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \big|}{\big| \int \d \brm{r}_{i} \bar{e}(\brm{r}_{i}) \big| + \epsilon}
+% 	% + \sqrt{N_{\rm{atom}}} \frac{\big|\bar{E}^{\rm{AE}} - E^{\rm{AE}} \big|}{\big| \bar{E}^{\rm{AE}} \big| + \epsilon} \nl
+% 	%  & + \frac{\sqrt{N_{\rm{atom}}}}{N_{\rm{grids}}} \frac{ \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \big| }{ \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i})\big| + \epsilon}
+% 	% + \sqrt{N_{\rm{atom}}} \frac{\int \d \brm{r}_{i} \big| \bar{F} - F \big|}{\int \d \brm{r}_{i} \big| \bar{F}\big| + \epsilon} .
+% \end{align}
+% \twocolumngrid
+% where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, respectively.
+% %
+% The $\epsilon$ is a small number to avoid the division by zero and control the scale of the loss function, which is set to be $1 \times 10^{-5}$ in this article.
+% %
+% The first term is the relative error in the total energy, the second term is the absolute error in the total energy, and the third term is the error in the atomic energy.
+
+% \subsection{Training details}
+% The neural network is trained using the AdamW optimizer \cite{loshchilovDecoupledWeightDecay2019-01-04} with the scheduler of cosine annealing with warm restarts \cite{loshchilovSGDRStochasticGradient2017-05-03}.
+% %
+% We set the initial learning rate to be $1 \times 10^{-4}$ and then gradually decrease it to $0$ using the cosine annealing scheduler, with a restart every $160$ epochs and a multiplication factor of $2$ for the initial learning rate after each restart.
+% %
+% The parameters of the AdamW optimizer are set to be $\beta_1 = 0.9$, $\beta_2 = 0.999$, and $\epsilon = 1 \times 10^{-8}$, and the weight decay is set to be $1 \times 10^{-12}$.
+% % 
+% The weights in the loss function \eq{eq:loss} are set to be $\lambda_{\rm{ABS}} = 0.01$.
+% %
+% We use a batch size of $1$ and train the model for $10000$ epochs, the training process is last for around $20$ days.
+% %
+% The training process is monitored using the validation set every $5$ epochs, and the model with the lowest validation loss is selected as the final model.
+
+% The training is performed on a single NVIDIA A100 GPU with 80GB memory with double precision training using PyTorch \cite{paszkePyTorchImperativeStyle2019-12-03} and the training takes around $96$ hours to complete. The version of PyTorch used is $2.8.0+$cu$128$, and CUDA version is $12.8$, the version of driver is $535.247.01$.
+
+% \subsection{Comparison with other machine learning functionals}
+% The main difference between our method and other machine learning functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07} is that we use the energy density as the target of the neural network instead of the total energy.
+
+% \section{Result}
 
 \bibliography{ref}
 
-\clearpage
-\newpage
+% \clearpage
+% \newpage
 
-\appendix
+% \appendix
 
-\section{Training Details}
+% \section{Training Details}
 
-\subsection{Dataset}
+% \subsection{Dataset}
 
-\begin{table*}
-	\caption{
-		The training and validation dataset.
-		%
-		\label{tab:dataset}
-	}
-	\begin{ruledtabular}
-		\begin{tabular}{lcccc}
-			     & Original Dataset & Size & Number of heavy atoms & Number of hydrogen atoms \\
-			\colrule
-			A    & GMTKN55~$^{1}$   & 47   & $1$                   & $0$                      \\
-			B    & W4-11            & 22   & $1$                   & $\neq0$                  \\
-			C    & W4-11            & 59   & $2$                   & --                       \\
-			A$'$ & GMTKN55          & 23   & $5$                   & $\leq3$                  \\
-			B$'$ & GMTKN55          & 11   & $6$                   & $\leq3$                  \\
-			\colrule
-			\multicolumn{5}{l}{$^{1}$\footnotesize{Not include all atoms-species in the GMTKN55 dataset.
-			}}                                                                                \\
-		\end{tabular}
-	\end{ruledtabular}
-\end{table*}
+% \begin{table*}
+% 	\caption{
+% 		The training and validation dataset.
+% 		%
+% 		\label{tab:dataset}
+% 	}
+% 	\begin{ruledtabular}
+% 		\begin{tabular}{lcccc}
+% 			     & Original Dataset & Size & Number of heavy atoms & Number of hydrogen atoms \\
+% 			\colrule
+% 			A    & GMTKN55~$^{1}$   & 47   & $1$                   & $0$                      \\
+% 			B    & W4-11            & 22   & $1$                   & $\neq0$                  \\
+% 			C    & W4-11            & 59   & $2$                   & --                       \\
+% 			A$'$ & GMTKN55          & 23   & $5$                   & $\leq3$                  \\
+% 			B$'$ & GMTKN55          & 11   & $6$                   & $\leq3$                  \\
+% 			\colrule
+% 			\multicolumn{5}{l}{$^{1}$\footnotesize{Not include all atoms-species in the GMTKN55 dataset.
+% 			}}                                                                                \\
+% 		\end{tabular}
+% 	\end{ruledtabular}
+% \end{table*}
 
-The dataset we use are listed in \Tab{tab:dataset}, all the Datasets are obtained from the GMTKN55 datasets \cite{goerigkLookDensityFunctional2017}.
-% 
-We use the molecules in datasets A, B, and C as the training set and the molecules in datasets A$'$ and B$'$ as the validation set.
-% 
-Datasets A, B, and C are defined as follows: A comprises single-atom systems from GMTKN55 \cite{goerigkLookDensityFunctional2017}; B comprises molecules with one heavy (non-hydrogen) atom from W4-11; and C comprises molecules with two heavy atoms from W4-11.
-% 
-This lead to $136$ molecules in the training set and $34$ molecules in the validation set, while the number of molecules in GMTKN55 datasets is 2462 \cite{goerigkLookDensityFunctional2017}.
-% % TODO: ablation study on the dataset size.
-To improve training efficiency and balance the dataset across different atom species, we add 9 additional copies of dataset A.
+% The dataset we use are listed in \Tab{tab:dataset}, all the Datasets are obtained from the GMTKN55 datasets \cite{goerigkLookDensityFunctional2017}.
+% % 
+% We use the molecules in datasets A, B, and C as the training set and the molecules in datasets A$'$ and B$'$ as the validation set.
+% % 
+% Datasets A, B, and C are defined as follows: A comprises single-atom systems from GMTKN55 \cite{goerigkLookDensityFunctional2017}; B comprises molecules with one heavy (non-hydrogen) atom from W4-11; and C comprises molecules with two heavy atoms from W4-11.
+% % 
+% This lead to $136$ molecules in the training set and $34$ molecules in the validation set, while the number of molecules in GMTKN55 datasets is 2462 \cite{goerigkLookDensityFunctional2017}.
+% % % TODO: ablation study on the dataset size.
+% To improve training efficiency and balance the dataset across different atom species, we add 9 additional copies of dataset A.
 
-In this article, we use the electron density and energy density from CCSD(T)/Def2-QZVPPD (except the anions) and CCSD(T)/Ma-Def2-QZVPPD (the anions) \cite{bartlettCoupledclusterTheoryQuantum2007-02-22,weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} as the input and target of the molecules.
-%
-This leads to a significant label error, which is estimated to be 2.33 kcal/mol as the mean absolute error (MAE) for the W4-11 dataset.
+% In this article, we use the electron density and energy density from CCSD(T)/Def2-QZVPPD (except the anions) and CCSD(T)/Ma-Def2-QZVPPD (the anions) \cite{bartlettCoupledclusterTheoryQuantum2007-02-22,weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} as the input and target of the molecules.
+% %
+% This leads to a significant label error, which is estimated to be 2.33 kcal/mol as the mean absolute error (MAE) for the W4-11 dataset.
 
-We use the energy density calculated by the four functionals (LDA, VWN3, B88, and LYP) from the original B3LYP functional \cite{perdewAtomsMoleculesSolids1992-09-15} as the input features of the neural network, not the electron density and the derivatives of the electron density directly.
-% 
-\begin{align}
-	\tilde{e}(\brm{r}) =
-	 & \big( e_{\rm{LDA}}(\brm{r}), e_{\rm{VWN3}}(\brm{r}), e_{\rm{B88}}(\brm{r}), e_{\rm{LYP}}(\brm{r}) \big).
-\end{align}
-%
-This choice is motivated by the very wide dynamic range of the electron density, $\rho$, and its derivatives, which complicates learning and can destabilize both the optimization and the validation process.
-%
-By using the energy densities from established components (LDA, VWN3, B88, LYP) as input features, we provide numerically stable, physically informed representations of the local electronic environment.
-
-The network outputs the residual energy density, defined as $e(\brm{r}) = e_{\rm{xc}}^{\rm{CCSD(T)}}(\brm{r}) - e_{\rm{xc}}^{\rm{B3LYP}}(\brm{r})$, where the B3LYP term is computed from the input features and the CCSD(T) term serves as the target.
-% 
-The total exchange-correlation energy density is then reconstructed by adding the B3LYP energy density back to the predicted residual, $E_{\rm{xc}}^{\rm{pred}} = E'_{\rm{xc}} + E_{\rm{xc}}^{\rm{B3LYP}}$.
-
-\section{Auxiliary Grid Points}
-To provide additional features for the neural network, we consider a small cube surrounding each grid point $\mathbf{r}_{i} = (x_{i},y_{i},z_{i})$.
-% 
-This cube has dimensions of $3 \times 3 \times 3$, with $d$ representing the distance between two adjacent grid points.
-% 
-To make it clear, the auxiliary grid points $\mathbf{r}_{i;\rm{aux}}$ are defined as all grid points within this cube, excluding the central point $\mathbf{r}_{i}$ itself.
-\begin{align}
-	\mathbf{r}_{i;\rm{aux}} =
-	 & \big\{ \mathbf{r}'_{i} \in \mathbf{r}_{i;\rm{cube}} \text{ and } \mathbf{r}'_{i} \neq \mathbf{r}_{i} \big\}.
-\end{align}
-
-In the standard DFT procedure, each grid point is assigned a weight $w_{i}$, which is used to perform numerical integration.
-% 
-We set all the weights of the auxiliary grid points ($w_{i;\rm{aux}}$) to be zero. Thus, they do not contribute to the total energy and potential in the DFT procedure.
-% 
-\begin{align}
-	E'_{\rm{xc}} =
-	 & \int e_{\rm{NN}}(\mathbf{r}) \d \mathbf{r}.
-\end{align}
-Consequently, while the auxiliary grid points influence the potential through the functional derivative, they do not directly contribute to the total energy integration. This ensures the procedure remains consistent with the standard DFT framework.
-% 
-The $\mu \nu$-th element of Fock matrix which contributed by the ML exchange-correlation, ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)$,  is calculated as
-% 
-\begin{align}
-	F_{\mu \nu}^{\rm{ML}}
-	= & \frac{\delta E'_{\rm{xc}}}{\delta P_{\mu \nu}} \nl
-	= & \int \d \brm{r} \frac{\delta e_{\rm{NN}}(\brm{r})}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r}) \nl
-	= & \int \d \brm{r} \frac{\delta {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r}) \nl
-	= & \int \d \brm{r} \frac{\partial {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)}{\partial \tilde{e}(\brm{r}_{\rm{cube}})} \frac{\delta \tilde{e}(\brm{r})}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r})
-\end{align}
-% 
+% We use the energy density calculated by the four functionals (LDA, VWN3, B88, and LYP) from the original B3LYP functional \cite{perdewAtomsMoleculesSolids1992-09-15} as the input features of the neural network, not the electron density and the derivatives of the electron density directly.
+% % 
 % \begin{align}
-% 	v'_{\rm{xc}}(\brm{r})
-% 	 & = \frac{\delta E'_{\rm{xc}}}{\delta \rho(\brm{r})} \nl
-% 	 & = \int \frac{\delta e_{\rm{NN}}(\mathbf{r}_{\rm{cube}}) }{\delta \rho(\brm{r})} \d \mathbf{r}_{\rm{cube}}
+% 	\tilde{e}(\brm{r}) =
+% 	 & \big( e_{\rm{LDA}}(\brm{r}), e_{\rm{VWN3}}(\brm{r}), e_{\rm{B88}}(\brm{r}), e_{\rm{LYP}}(\brm{r}) \big).
+% \end{align}
+% %
+% This choice is motivated by the very wide dynamic range of the electron density, $\rho$, and its derivatives, which complicates learning and can destabilize both the optimization and the validation process.
+% %
+% By using the energy densities from established components (LDA, VWN3, B88, LYP) as input features, we provide numerically stable, physically informed representations of the local electronic environment.
+
+% The network outputs the residual energy density, defined as $e(\brm{r}) = e_{\rm{xc}}^{\rm{CCSD(T)}}(\brm{r}) - e_{\rm{xc}}^{\rm{B3LYP}}(\brm{r})$, where the B3LYP term is computed from the input features and the CCSD(T) term serves as the target.
+% % 
+% The total exchange-correlation energy density is then reconstructed by adding the B3LYP energy density back to the predicted residual, $E_{\rm{xc}}^{\rm{pred}} = E'_{\rm{xc}} + E_{\rm{xc}}^{\rm{B3LYP}}$.
+
+% \section{Auxiliary Grid Points}
+% To provide additional features for the neural network, we consider a small cube surrounding each grid point $\mathbf{r}_{i} = (x_{i},y_{i},z_{i})$.
+% % 
+% This cube has dimensions of $3 \times 3 \times 3$, with $d$ representing the distance between two adjacent grid points.
+% % 
+% To make it clear, the auxiliary grid points $\mathbf{r}_{i;\rm{aux}}$ are defined as all grid points within this cube, excluding the central point $\mathbf{r}_{i}$ itself.
+% \begin{align}
+% 	\mathbf{r}_{i;\rm{aux}} =
+% 	 & \big\{ \mathbf{r}'_{i} \in \mathbf{r}_{i;\rm{cube}} \text{ and } \mathbf{r}'_{i} \neq \mathbf{r}_{i} \big\}.
 % \end{align}
 
+% In the standard DFT procedure, each grid point is assigned a weight $w_{i}$, which is used to perform numerical integration.
+% % 
+% We set all the weights of the auxiliary grid points ($w_{i;\rm{aux}}$) to be zero. Thus, they do not contribute to the total energy and potential in the DFT procedure.
+% % 
+% \begin{align}
+% 	E'_{\rm{xc}} =
+% 	 & \int e_{\rm{NN}}(\mathbf{r}) \d \mathbf{r}.
+% \end{align}
+% Consequently, while the auxiliary grid points influence the potential through the functional derivative, they do not directly contribute to the total energy integration. This ensures the procedure remains consistent with the standard DFT framework.
+% % 
+% The $\mu \nu$-th element of Fock matrix which contributed by the ML exchange-correlation, ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)$,  is calculated as
+% % 
+% \begin{align}
+% 	F_{\mu \nu}^{\rm{ML}}
+% 	= & \frac{\delta E'_{\rm{xc}}}{\delta P_{\mu \nu}} \nl
+% 	= & \int \d \brm{r} \frac{\delta e_{\rm{NN}}(\brm{r})}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r}) \nl
+% 	= & \int \d \brm{r} \frac{\delta {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r}) \nl
+% 	= & \int \d \brm{r} \frac{\partial {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)}{\partial \tilde{e}(\brm{r}_{\rm{cube}})} \frac{\delta \tilde{e}(\brm{r})}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r})
+% \end{align}
+% % 
+% % \begin{align}
+% % 	v'_{\rm{xc}}(\brm{r})
+% % 	 & = \frac{\delta E'_{\rm{xc}}}{\delta \rho(\brm{r})} \nl
+% % 	 & = \int \frac{\delta e_{\rm{NN}}(\mathbf{r}_{\rm{cube}}) }{\delta \rho(\brm{r})} \d \mathbf{r}_{\rm{cube}}
+% % \end{align}
 
-To make the neural network can capture the rotational variance, we set the cube to be aligned with the main rotation axis of the secondary derivative matrix of the electron density at the grid point $\brm{r}_{i}$.
-%
-This secondary derivative matrix is defined as
-\begin{align}
-	H(\brm{r}_{i}) =
-	 & \begin{pmatrix}
-		   \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial x^{2}}        & \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial x \partial y} & \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial x \partial z} \\
-		   \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial y \partial x} & \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial y^{2}}        & \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial y \partial z} \\
-		   \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial z \partial x} & \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial z \partial y} & \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial z^{2}}
-	   \end{pmatrix}.
-\end{align}
-% 
-The eigenvectors $\mathbf{u}(\brm{r}_{i})$ of this matrix represent the main rotation axes, and we align the cube with these axes.
-% 
-\begin{align}
-	\mathbf{r}_{i;\rm{cube}} =
-	 & \big\{ \mathbf{r}_{i} + d (m \mathbf{u}_{1}(\brm{r}_{i}) + n \mathbf{u}_{2}(\brm{r}_{i}) + p \mathbf{u}_{3}(\brm{r}_{i})) \nl
-	 & \text{ for } m,n,p \in \{-1,0,1\} \big\}.
-\end{align}
-% 
-Although this alignment process adds some computational cost, it provides a consistent local reference frame for the input features, which may help the model learn more effectively.
+
+% To make the neural network can capture the rotational variance, we set the cube to be aligned with the main rotation axis of the secondary derivative matrix of the electron density at the grid point $\brm{r}_{i}$.
+% %
+% This secondary derivative matrix is defined as
+% \begin{align}
+% 	H(\brm{r}_{i}) =
+% 	 & \begin{pmatrix}
+% 		   \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial x^{2}}        & \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial x \partial y} & \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial x \partial z} \\
+% 		   \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial y \partial x} & \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial y^{2}}        & \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial y \partial z} \\
+% 		   \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial z \partial x} & \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial z \partial y} & \frac{\partial^{2} \rho(\brm{r}_{i})}{\partial z^{2}}
+% 	   \end{pmatrix}.
+% \end{align}
+% % 
+% The eigenvectors $\mathbf{u}(\brm{r}_{i})$ of this matrix represent the main rotation axes, and we align the cube with these axes.
+% % 
+% \begin{align}
+% 	\mathbf{r}_{i;\rm{cube}} =
+% 	 & \big\{ \mathbf{r}_{i} + d (m \mathbf{u}_{1}(\brm{r}_{i}) + n \mathbf{u}_{2}(\brm{r}_{i}) + p \mathbf{u}_{3}(\brm{r}_{i})) \nl
+% 	 & \text{ for } m,n,p \in \{-1,0,1\} \big\}.
+% \end{align}
+% % 
+% Although this alignment process adds some computational cost, it provides a consistent local reference frame for the input features, which may help the model learn more effectively.
 
 
-\section{Ablation Study}
-\subsection{Ablation study on the dataset size}
-In this subsection, we analyze the impact of dataset size on the performance of the neural network. We train the model with varying dataset sizes and evaluate its accuracy on the validation set. The results are summarized in Table~\ref{tab:dataset_size}.
+% \section{Ablation Study}
+% \subsection{Ablation study on the dataset size}
+% In this subsection, we analyze the impact of dataset size on the performance of the neural network. We train the model with varying dataset sizes and evaluate its accuracy on the validation set. The results are summarized in Table~\ref{tab:dataset_size}.
 
 \end{document}

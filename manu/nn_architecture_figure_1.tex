@@ -1,0 +1,71 @@
+% \subsection{The architecture of the neural network}
+\begin{figure*}
+    \tikzset{%
+        block/.style={rectangle, draw, fill=blue!20, text centered, rounded corners, minimum height=0.6cm},
+        block1/.style={rectangle, fill=none},
+    }
+    \begin{tikzpicture}[auto, node distance=1.5cm]
+        % We start by placing the blocks
+        \node [block1] (input-1) {};
+        \node [block1, right=of input-1, xshift=-1.5cm] (input) {};
+        \node [block, right=of input] (e3nn) {E3nn};
+        \node [block, right=of e3nn.center] (transformer) {Transformer};
+        \node [block, right=of transformer] (flatten) {Flatten};
+        \node [block, right=of flatten] (linear) {MLP};
+        \node [block, right=of linear] (cat) {CAT};
+        \node [block, right=of cat, xshift=-0.2cm] (output) {ADD};
+        \node [block1, right=of output] (output_final) {};
+        \draw [-] (input-1) -- node[xshift=0.625cm] {$(N, 27, 4)$} (input.center);
+        \draw [->] (input.center) -- (e3nn);
+        \draw [->] (e3nn) -- (transformer);
+        \draw [->] (transformer) -- node {$(N, 27, 4)$} (flatten);
+        \draw [->] (flatten) -- node {$(N, 108)$} (linear);
+        \draw [->] (linear) -- node {$(N, 1)$} (cat);
+        \draw [->] (cat) -- node {$(N, 7)$} (output);
+        \draw [->] (output) -- node {$(N, 1)$} (output_final);
+
+        \node [block1, above=of e3nn.center, yshift=-0.5cm] (E3-Tr_above) {};
+        \node [block, right=of E3-Tr_above.center, xshift=2.5cm] (linear) {Linear};
+        \node [block, right=of linear.center, xshift=2cm] (softmax) {Softmax};
+        \node [block1, above=of output.center, yshift=-0.5cm] (output_above) {};
+        \draw [->, rounded corners] ([xshift=0.75cm] e3nn.center) -- ([xshift=0.75cm] E3-Tr_above.center) -- (linear);
+        \draw [->, rounded corners] (softmax) -- node {$(N, 7)$}  (output_above.center) -- (output);
+        \draw [->] (linear) -- node {$(N, 7)$} (softmax);
+
+        \node [block1, below=of e3nn.center, yshift=0.5cm] (E3-Tr_below) {};
+        \node [block, right=of E3-Tr_below.center] (transformer1) {Transformer};
+        \node [block, right=of transformer1] (flatten1) {Flatten};
+        \node [block, right=of flatten1] (linear1) {MLP};
+        \node [block1, below=of cat.center, yshift=0.5cm] (linear1-output1) {};
+        \draw [->, rounded corners] ([xshift=0.75cm] e3nn.center) -- ([xshift=0.75cm] E3-Tr_below.center) -- (transformer1);
+        \draw [->, rounded corners] (transformer1) -- node {$(N, 27, 4)$} (flatten1);
+        \draw [->, rounded corners] (flatten1) -- node {$(N, 108)$} (linear1);
+        \draw [->, rounded corners] (linear1) -- node {$(N, 1)$} (linear1-output1.center) -- (cat);
+
+        \node [block1, below=of input.center, yshift=-0.5cm] (input1) {};
+        \node [block, right=of input1.center, xshift=2cm] (Slice) {Slice};
+        \node [block, right=of Slice.center, xshift=2cm] (linear2) {MLP};
+        \node [block1, below=of cat.center, yshift=-0.5cm] (MLP-output1) {};
+        \draw [->, rounded corners] ([xshift=1.25cm] input.center) -- ([xshift=1.25cm] input1.center) -- (Slice);
+        \draw [->] (Slice) -- node {$(N, 4)$} (linear2);
+        \draw [->, rounded corners] (linear2) -- node{$(N, 1)$} (MLP-output1.center) -- (cat);
+        
+        \node [block1, left=of linear2.center, xshift=0.5cm] (Slice-MLP) {};
+        \node [block1, below=of Slice-MLP.center, yshift=1cm] (Slice-MLP-below) {};
+        \node [block1, below=of MLP-output1.center, yshift=1cm] (MLP-output3) {};
+        \draw [-] (Slice-MLP.center) -- (Slice-MLP-below.center);
+        \draw [->, rounded corners] (Slice-MLP-below.center) -- node[xshift=0.5cm] {$(N, 4)$} (MLP-output3.center) -- (cat);
+    \end{tikzpicture}
+    % \caption{
+    %     % 
+    %     The architecture of the neural network.
+    %     % 
+    %     The transformer we use here is only composed of multilayer of the scaled dot-product attention part of the original transformer \cite{vaswaniAttentionAllYou2023-08-02}.
+    %     %
+    %     The Extraction block extracts the energy density at the center (${\bm{e}(\brm{r}_i)}$) from the input.
+    %     % 
+    %     The MLP block is a multilayer perceptron with two hidden layers, before the MLP block the two inputs are concatenated.
+    %     %
+    % }
+    \label{fig:arch}
+\end{figure*}

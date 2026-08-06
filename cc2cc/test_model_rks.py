@@ -85,9 +85,7 @@ def test_model_rks(
         else:
             utils.get_veff_grad_modified_rks(g, modeldict)
         grad_mdft = np.array(g.kernel())
-        print(f"Gradient: {grad_mdft.shape}")
         print(f"Net force check: {np.sum(grad_mdft, axis=0)}")
-        print(f"Net force check: {np.sum(grad_mdft, axis=1)}")
     else:
         grad_mdft = None
 
