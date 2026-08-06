@@ -362,15 +362,20 @@ class ModelClass:
 
         if if_train:
             input_.requires_grad = True
+        else:
+            input_ = input_.detach()
 
         input_, output = self.model_output(input_, weight)
         if not if_train:
             output = output.detach()
 
         sum_output = torch.sum(output)
-        tot_loss = scale * self.loss_fun(sum_target, sum_output)
+        if if_train:
+            tot_loss = scale * self.loss_fun(sum_target, sum_output)
+            data_record["loss_tot_ene"] = tensor_to_numpy(tot_loss)
+        else:
+            tot_loss = torch.tensor(0.0, device=self.device, dtype=self.dtype)
         data_record["loss_ene"] = tensor_to_numpy(torch.abs(sum_target - sum_output))
-        data_record["loss_tot_ene"] = tensor_to_numpy(tot_loss)
 
         if if_train:
             if self.args.if_abs:
@@ -428,9 +433,10 @@ class ModelClass:
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
             if if_finish:
-                loss_atomic = scale_atomic * self.loss_fun(ae_target, ae_output)
-                tot_loss = tot_loss + loss_atomic
-                data_record["loss_tot_atomic"] = tensor_to_numpy(loss_atomic)
+                if if_train:
+                    loss_atomic = scale_atomic * self.loss_fun(ae_target, ae_output)
+                    tot_loss = tot_loss + loss_atomic
+                    data_record["loss_tot_atomic"] = tensor_to_numpy(loss_atomic)
                 data_record["loss_ene_atomic"] = tensor_to_numpy(
                     torch.abs(ae_target - ae_output)
                 )

@@ -227,10 +227,10 @@ class DataBase:
         """
         Load the data.
         """
-        scale = self.args.scale
-        scale_abs = self.args.scale_abs
-        scale_grad = self.args.scale_grad
-        scale_atomic = self.args.scale_atomic
+        scale = self.args.loss_multiplier
+        scale_abs = self.args.loss_multiplier_abs
+        scale_grad = self.args.loss_multiplier_grad
+        scale_atomic = self.args.loss_multiplier_atomic
         self.print(f"\nLoading data {name:<40}")
         data = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
 
