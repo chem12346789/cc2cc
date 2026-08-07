@@ -82,14 +82,6 @@ class E3nnRadis(torch.nn.Module):
             torch.nn.Linear(16, self.tp.weight_numel, dtype=dtype),
         )
 
-        self.tp_invariant = o3.FullyConnectedTensorProduct(
-            hidden_irreps,
-            hidden_irreps,
-            irreps_output,
-            shared_weights=True,
-            internal_weights=True,
-        )
-
         scalar_dim = hidden_irreps[0].dim
         self.scalar_slices = []
         offset = 0
@@ -101,31 +93,17 @@ class E3nnRadis(torch.nn.Module):
             scalar_dim, cube_size, bias=False, dtype=dtype
         )
 
-        self._init_weights()
-
-    def _init_weights(self):
-        # xavier_uniform_ initialization for the tensor product weights
-        with torch.no_grad():
-            for weight in self.tp_invariant.weight_views():
-                mul_1, mul_2, mul_out = weight.shape
-                # formula from torch.nn.init.xavier_uniform_
-                a = (6 / (mul_1 * mul_2 + mul_out)) ** 0.5
-                weight.uniform_(-a, a)
-
     def forward(self, f_in):
         # f_in shape: [CUBE_SIZE**3, 4]
         weights = self.radial_net(self.edge_weight)  # (27, weight_numel)
         f_hidden = self.tp(f_in, self.sh, weights)
         f_pooled = f_hidden.sum(dim=-2)  # (..., dim_hidden)
-        # f_pooled shape: [CUBE_SIZE**3, dim_hidden]
-        f_inv = self.tp_invariant(f_pooled, f_pooled)  # (..., cube_size)
-        return f_inv.reshape(1, -1)
 
         f_scalar = torch.cat(
             [f_pooled[..., s:e] for s, e in self.scalar_slices], dim=-1
         )
         f_scalar_out = self.scalar_proj(f_scalar)
 
-        f_out = (f_inv + f_scalar_out).reshape(1, -1)
+        f_out = (f_scalar_out).reshape(1, -1)
         # shape: [1, CUBE_SIZE**3]
         return f_out
