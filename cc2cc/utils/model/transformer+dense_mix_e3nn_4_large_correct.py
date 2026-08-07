@@ -1,8 +1,10 @@
 import torch
 
 from cc2cc.utils.env_var import EDGE_SIZE
+
 # from cc2cc.utils.model.model_utils import DenseNet, Transformer, E3nn
-from cc2cc.utils.model.model_utils import DenseNet, Transformer, E3nnRadis as E3nn
+from cc2cc.utils.model.model_utils import DenseNet, Transformer, E3nnC as E3nn
+
 
 class Model(torch.nn.Module):
     """Transformer/e3nn mixed model."""
