@@ -177,6 +177,8 @@ We use a batch size of $1$ and train the model for $10000$ epochs, the training 
 %
 The training process is monitored using the validation set every $5$ epochs, and the model with the lowest validation loss is selected as the final model.
 
+The detail of the training dataset and validation dataset is listed in the Appendix.
+
 The training is performed on a single NVIDIA A100 GPU with 80GB memory with double precision training using PyTorch \cite{paszkePyTorchImperativeStyle2019-12-03} and the training takes around $96$ hours to complete. The version of PyTorch used is $2.8.0+$cu$128$, and CUDA version is $12.8$, the version of driver is $535.247.01$.
 
 \subsection{Comparison with other machine learning functionals}
@@ -285,8 +287,7 @@ The $\mu \nu$-th element of Fock matrix which contributed by the ML exchange-cor
 % 	 & = \int \frac{\delta e_{\rm{NN}}(\mathbf{r}_{\rm{cube}}) }{\delta \rho(\brm{r})} \d \mathbf{r}_{\rm{cube}}
 % \end{align}
 
-
-To make the neural network can capture the rotational variance, we set the cube to be aligned with the main rotation axis of the secondary derivative matrix of the electron density at the grid point $\brm{r}_{i}$.
+To make the neural network can capture more information about the local environment of the grid point $\brm{r}_{i}$ in the training set, we set the cube to be aligned with the main rotation axis of the secondary derivative matrix of the electron density at the grid point $\brm{r}_{i}$.
 %
 This secondary derivative matrix is defined as
 \begin{align}

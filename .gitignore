@@ -31,7 +31,6 @@ out
 *.egg-info/
 *.npz
 *.png
-*.pdf
 tmp_mol/*
 jupyter-notebook/new_dataset/sets
 jupyter-notebook/*.csv
@@ -53,6 +52,7 @@ PlotNeuralNet/
 *.fdb_latexmk
 *.blg
 *.bbl
+*.Mainnote.bib
 
 # ignore jupyter notebook checkpoints
 .ipynb_checkpoints
