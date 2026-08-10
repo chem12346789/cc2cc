@@ -64,6 +64,16 @@ class Model(torch.nn.Module):
         x_center = x[:, :, self.cube_middle]
 
         x_in = x.permute(0, 2, 1).contiguous()
+
+        # x_in = torch.cat(
+        #     (
+        #         torch.zeros_like(x_in[:, : self.cube_middle, :]),
+        #         x_in[:, [self.cube_middle], :],
+        #         torch.zeros_like(x_in[:, self.cube_middle + 1 :, :]),
+        #     ),
+        #     dim=-2,
+        # )
+
         x_cube = torch.cat(
             tuple(
                 torch.vmap(getattr(self, f"conv{i}"))(x_in)
