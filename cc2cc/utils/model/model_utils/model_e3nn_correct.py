@@ -33,27 +33,16 @@ class E3nn(torch.nn.Module):
         self.lmax = lmax
 
         if self.cube_type == "cube":
-            if torch.cuda.is_available():
-                edge_vec = torch.zeros(
-                    (EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3),
-                    device="cuda",
-                    dtype=torch.float64,
-                )
-            else:
-                edge_vec = torch.zeros(
-                    (EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3),
-                    device="cpu",
-                    dtype=torch.float64,
-                )
+            edge_vec = torch.zeros(
+                (EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3), dtype=torch.float64
+            )
             for i in range(EDGE_SIZE):
                 for j in range(EDGE_SIZE):
                     for k in range(EDGE_SIZE):
                         edge_vec[i, j, k, 0] = (i - CUBE_MIDDLE) * EDGE_LEN
                         edge_vec[i, j, k, 1] = (j - CUBE_MIDDLE) * EDGE_LEN
                         edge_vec[i, j, k, 2] = (k - CUBE_MIDDLE) * EDGE_LEN
-            self.register_buffer(
-                "edge_vec", edge_vec.reshape(EDGE_SIZE**3, 3), persistent=False
-            )
+            edge_vec = edge_vec.reshape(EDGE_SIZE**3, 3)
         else:
             raise NotImplementedError("Only cube type is implemented.")
 
@@ -94,6 +83,8 @@ class E3nn(torch.nn.Module):
             cube_size,
             bias=False,
         )
+
+        self.register_buffer("edge_vec", edge_vec, persistent=False)
 
     def forward(self, f_in):
         # f_in shape: [CUBE_SIZE**3, 4]

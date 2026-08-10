@@ -27,8 +27,7 @@ class Model(torch.nn.Module):
             "out_l": self.out_l,
         }
         for i in range(1, self.input_level + 1):
-            e3nn_args["lmax"] = i
-            setattr(self, f"conv{i}", E3nn(**e3nn_args))
+            setattr(self, f"conv{i}", E3nn(**{**e3nn_args, "lmax": i}))
 
         self.predictor1 = Transformer(
             d_model=self.cube_size,
