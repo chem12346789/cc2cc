@@ -453,6 +453,10 @@ class ModelClass:
         if if_use_cuda_event:
             event = torch.cuda.Event()
             event.record()
+
+        if DEBUG:
+            print(data_record)
+            print("end of loss\n")
         return tot_loss, data_record, event
 
     def train_model(self, if_grad=True):
