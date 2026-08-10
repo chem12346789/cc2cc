@@ -12,6 +12,7 @@ from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 
 # Input coordinates: 27 points in a cube from (-0.01, -0.01, -0.01) to (0.01, 0.01, 0.01)
 # Output coordinates: 1 point at (0, 0, 0)
+EPS = 1e-8
 
 
 class E3nn(torch.nn.Module):
@@ -86,7 +87,7 @@ class E3nn(torch.nn.Module):
             internal_weights=True,
         )
 
-        self.norm_layer = Norm(self.hidden_irreps)
+        self.norm_layer = Norm(self.hidden_irreps, squared=True)
 
         self.output_linear = torch.nn.Linear(
             (lmax + 2) * self.input_level,
@@ -101,6 +102,7 @@ class E3nn(torch.nn.Module):
         f_hidden = f_hidden.sum(dim=0, keepdim=True)
         # f_hidden shape: [(lmax+1)**2]
         f_norm = self.norm_layer(f_hidden)
+        f_norm = (f_norm + EPS).sqrt()
         f_out_0e = f_hidden[..., self.sl_0e]
         f_scalar = torch.cat([f_out_0e, f_norm], dim=-1)
         f_scalar = self.output_linear(f_scalar)
