@@ -33,7 +33,7 @@ reprint,%
 }
 
 \renewcommand{\d}{{\rm d}}
-\newcommand{\w}{\omega}
+\newcommand{\calw}{\mathcal{W}}
 \newcommand{\nl}{\nonumber \\}
 \newcommand{\eq}[1]{Eq.\,(\ref{#1})}
 \newcommand{\Fig}[1]{Fig.\,\ref{#1}}
@@ -116,10 +116,10 @@ The energy density at the grid point $\mathbf{r}$, denoted as $e(\brm{r})$, can 
 % 
 \begin{align}
   e_{\rm{NN}}(\brm{r})
-  = & {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big),
+  = & {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \calw \big),
 \end{align}
 % 
-where ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)$ represents the neural network function parameterized by $\w$, taking $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$ as input.
+where ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \calw \big)$ represents the neural network function parameterized by $\calw$, taking $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$ as input.
 % 
 The total exchange-correlation energy is obtained by integrating the energy density over the entire grid.
 % 
@@ -146,10 +146,10 @@ The loss function is defined as
 \begin{align}
   \label{eq:loss_self_scaled}
   L_{e} =
-   & N_{\rm{atom}} \frac{\big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \big)^2}{\big| \int \d \brm{r}_{i} \bar{e}(\brm{r}_{i}) \big| + \epsilon}
+   & N_{\rm{atom}} \frac{\big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \big)^2}{\Big| \int \d \brm{r}_{i} \bar{e}(\brm{r}_{i}) \Big| + \epsilon}
   + N_{\rm{atom}} \frac{\big(\bar{E}^{\rm{AE}} - E^{\rm{AE}} \big)^2}{\big| \bar{E}^{\rm{AE}} \big| + \epsilon} \nl
   %  & + \frac{N_{\rm{atom}}}{N_{\rm{grids}}} \Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2
-   & + N_{\rm{atom}} \frac{\big(\int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \big| \big)^2}{\big| \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i})\big| \big| + \epsilon}
+   & + N_{\rm{atom}} \frac{\big(\int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \big| \big)^2}{\Big| \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i})\big| \Big| + \epsilon}
   + N_{\rm{atom}} \frac{\big(\bar{F} - F \big)^2}{\big| \bar{F} \big| + \epsilon} .
   % L_{e} =
   %  & \sqrt{N_{\rm{atom}}} \frac{\big| \int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \big|}{\big| \int \d \brm{r}_{i} \bar{e}(\brm{r}_{i}) \big| + \epsilon}
@@ -267,18 +267,18 @@ We set all the weights of the auxiliary grid points ($w_{i;\rm{aux}}$) to be zer
 % 
 \begin{align}
   E'_{\rm{xc}} =
-   & \int e_{\rm{NN}}(\mathbf{r}) \d \mathbf{r}.
+   & \int e_{\rm{NN}}(\mathbf{r}) \d \mathbf{r} = \int \d {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \calw \big).
 \end{align}
 Consequently, while the auxiliary grid points influence the potential through the functional derivative, they do not directly contribute to the total energy integration. This ensures the procedure remains consistent with the standard DFT framework.
 % 
-The $\mu \nu$-th element of Fock matrix which contributed by the ML exchange-correlation, ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)$,  is calculated as
+The $\mu \nu$-th element of Fock matrix which contributed by the ML exchange-correlation, ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \calw \big)$,  is calculated as
 % 
 \begin{align}
   F_{\mu \nu}^{\rm{ML}}
   = & \frac{\delta E'_{\rm{xc}}}{\delta P_{\mu \nu}} \nl
-  = & \int \d \brm{r} \frac{\delta e_{\rm{NN}}(\brm{r})}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r}) \nl
-  = & \int \d \brm{r} \frac{\delta {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r}) \nl
-  = & \int \d \brm{r} \frac{\partial {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \w \big)}{\partial \tilde{e}(\brm{r}_{\rm{cube}})} \frac{\delta \tilde{e}(\brm{r})}{\delta \rho(\brm{r})} \chi_{\mu}(\brm{r}) \chi_{\nu}(\brm{r})
+  = & \int \d \brm{r} \sum_{\brm{r}' \in \brm{r}_{\rm{cube}}} \frac{\delta e_{\rm{NN}}(\brm{r}')} {\delta \rho(\brm{r}')} \chi_{\mu}(\brm{r}') \chi_{\nu}(\brm{r}') \nl
+  = & \int \d \brm{r} \sum_{\brm{r}' \in \brm{r}_{\rm{cube}}} \frac{\delta {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}'); \calw \big)}{\delta \rho(\brm{r}')} \chi_{\mu}(\brm{r}') \chi_{\nu}(\brm{r}') \nl
+  = & \int \d \brm{r} \sum_{\brm{r}' \in \brm{r}_{\rm{cube}}} \frac{\partial {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}'); \calw \big)}{\partial \tilde{e}(\brm{r}')} \frac{\delta \tilde{e}(\brm{r}')}{\delta \rho(\brm{r}')} \chi_{\mu}(\brm{r}') \chi_{\nu}(\brm{r}')
 \end{align}
 % 
 % \begin{align}
@@ -308,7 +308,8 @@ The eigenvectors $\mathbf{u}(\brm{r}_{i})$ of this matrix represent the main rot
 \end{align}
 % 
 Although this alignment process adds some computational cost, it provides a consistent local reference frame for the input features, which may help the model learn more effectively.
-
+% 
+While in the test set, we do not perform this alignment process, and the cube is aligned with the global coordinate system.
 
 \section{Ablation Study}
 \subsection{Ablation study on the dataset size}
