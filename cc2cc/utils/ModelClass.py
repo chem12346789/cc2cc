@@ -121,40 +121,12 @@ class ModelClass:
         if self.args.precision == "float64":
             self.model.double()
 
-        optimizer_cls = {
-            "AdamW": optim.AdamW,
-            "Adafactor": getattr(optim, "Adafactor", None),
-        }.get(self.args.optimizer)
-        if optimizer_cls is None:
-            raise ValueError(f"Unknown optimizer {self.args.optimizer}")
-        self.optimizer = optimizer_cls(
-            self.model.parameters(),
-            lr=self.args.lr,
-            weight_decay=self.args.weight_decay,
-        )
-
-        if self.args.scheduler == "cosine":
-            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer,
-                T_max=self.args.cosine_T,
-                eta_min=self.args.cosine_eta_min,
-            )
-        elif self.args.scheduler == "constant":
-            self.scheduler = optim.lr_scheduler.ConstantLR(self.optimizer)
-        elif self.args.scheduler == "cosine_warm":
-            self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                self.optimizer,
-                T_0=self.args.cosine_T,
-                T_mult=self.args.cosine_T_mult,
-                eta_min=self.args.cosine_eta_min,
-            )
-        else:
-            raise ValueError(f"Unknown scheduler {self.args.scheduler}")
-
         param = next(self.model.parameters())
         self.device, self.dtype = param.device, param.dtype
+        self.cube_type = self.model.cube_type
+        self.cube_size = self.model.cube_size
+        self.input_level = self.model.input_level
         for name in ("cube_type", "cube_size", "input_level"):
-            setattr(self, name, getattr(self.model, name))
             self.print(f"{name}: {getattr(self, name)}")
 
         if self.args.if_resume:
@@ -168,9 +140,6 @@ class ModelClass:
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=True)
-
-        if self.optimizer_state_dict is not None:
-            self.optimizer.load_state_dict(self.optimizer_state_dict)
 
         self._maybe_compile_model()
 
@@ -236,6 +205,38 @@ class ModelClass:
             self.print("Model not found, starting from scratch.")
 
     def init_train(self):
+        optimizer_cls = {
+            "AdamW": optim.AdamW,
+            "Adafactor": getattr(optim, "Adafactor", None),
+        }.get(self.args.optimizer)
+        if optimizer_cls is None:
+            raise ValueError(f"Unknown optimizer {self.args.optimizer}")
+        self.optimizer = optimizer_cls(
+            self.model.parameters(),
+            lr=self.args.lr,
+            weight_decay=self.args.weight_decay,
+        )
+        if self.optimizer_state_dict is not None:
+            self.optimizer.load_state_dict(self.optimizer_state_dict)
+
+        if self.args.scheduler == "cosine":
+            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
+                self.optimizer,
+                T_max=self.args.cosine_T,
+                eta_min=self.args.cosine_eta_min,
+            )
+        elif self.args.scheduler == "constant":
+            self.scheduler = optim.lr_scheduler.ConstantLR(self.optimizer)
+        elif self.args.scheduler == "cosine_warm":
+            self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                self.optimizer,
+                T_0=self.args.cosine_T,
+                T_mult=self.args.cosine_T_mult,
+                eta_min=self.args.cosine_eta_min,
+            )
+        else:
+            raise ValueError(f"Unknown scheduler {self.args.scheduler}")
+
         loss_dict = {
             "L1Loss": torch.nn.L1Loss,
             "MSELoss": torch.nn.MSELoss,
@@ -527,17 +528,6 @@ class ModelClass:
         else:
             raise ValueError(f"Unknown cube type: {self.cube_type}")
         return (rho * self.b3lyp_weights(rho)).sum(-1)
-
-    def modified_b3lyp_potential(self, middle_cube):
-        if self.cube_type in ("cube", "cube5"):
-            middle_cube[:, :4, self.model.cube_middle] += self.b3lyp_weights(
-                middle_cube
-            )
-        elif self.cube_type == "center_4":
-            middle_cube[:, :4] += self.b3lyp_weights(middle_cube)
-        else:
-            raise ValueError(f"Unknown cube type: {self.cube_type}")
-        return middle_cube
 
     def eval_xc_eff(self, rho_cube, weights_):
         input_mat = torch.as_tensor(rho_cube, dtype=self.dtype, device=self.device)
