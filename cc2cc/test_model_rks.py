@@ -65,13 +65,20 @@ def test_model_rks(
         if_retry = True
         mdft.kernel()
 
-    for factor in [1.0, 2.0, 4.0, 8.0]:
+    for factor in [1.0, 4.0]:
         if mdft.converged is False and if_retry:
             print(f"RKS not converged. Add level shift with factor {factor}.")
             mdft.level_shift = factor
             mdft.kernel()
     if mdft.converged is False:
-        print("Error: RKS not converged!!! Just use the current result.")
+        print(
+            "Error: RKS not converged!!! Just use the direct output without convergence."
+        )
+        mhf = pyscf.scf.RHF(mol).density_fit()
+        mhf.kernel()
+        mdft.max_cycle = -1
+        mdft.level_shift = 0.0
+        mdft.kernel(dm0=mhf.make_rdm1())
 
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot

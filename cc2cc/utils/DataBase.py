@@ -14,7 +14,7 @@ from cc2cc.utils.mol import gen_mole
 from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import AU2KCALMOL
 
-EPS = 1e-2
+EPS = 1e-4
 MAX_ERROR_ENERGY = 0.01  # kcal/mol per atom, if the error energy is larger than this value, we set the absolute loss multiplier to 0 to avoid the numerical instability in training.
 MAX_GRAD_BATCH_SIZE = 169000  # if the number of gradients is larger than this value, we split the batch into smaller batches to avoid the memory overflow in training.
 
