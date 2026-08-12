@@ -161,7 +161,8 @@ def train_model(train_str_dict, eval_str_dict, args):
             barrier()
             continue
 
-        train_record = modeldict.train_model(if_grad=epoch % args.eval_step == 0)
+        if_grad = epoch % args.eval_step == 0
+        train_record = modeldict.train_model(if_grad=if_grad)
         barrier()
 
         if epoch % args.eval_step == 0:
