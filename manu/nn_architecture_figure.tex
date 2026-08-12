@@ -49,23 +49,22 @@
         \draw [->, rounded corners] ([xshift=1.25cm] input.center) -- ([xshift=1.25cm] input1.center) -- (Slice);
         \draw [->] (Slice) -- node {$(N, 4)$} (linear2);
         \draw [->, rounded corners] (linear2) -- node{$(N, 1)$} (MLP-output1.center) -- (cat);
-        
+
         \node [block1, below=of input.center, yshift=-1.5cm] (input2) {};
         \node [block, right=of input2.center, xshift=5cm] (Slice2) {Slice};
         \node [block1, below=of cat.center, yshift=-1.5cm] (MLP-output2) {};
         \draw [->, rounded corners] ([xshift=1.25cm] input.center) -- ([xshift=1.25cm] input2.center) -- (Slice2);
         \draw [->, rounded corners] (Slice2) -- node{$(N, 4)$} (MLP-output2.center) -- (cat);
     \end{tikzpicture}
-    % \caption{
-    %     % 
-    %     The architecture of the neural network.
-    %     % 
-    %     The transformer we use here is only composed of multilayer of the scaled dot-product attention part of the original transformer \cite{vaswaniAttentionAllYou2023-08-02}.
-    %     %
-    %     The Extraction block extracts the energy density at the center (${\bm{e}(\brm{r}_i)}$) from the input.
-    %     % 
-    %     The MLP block is a multilayer perceptron with two hidden layers, before the MLP block the two inputs are concatenated.
-    %     %
-    % }
+    \caption{
+        % 
+        The architecture of the neural network.
+        %
+        We use the E3nn block \cite{TODO:e3nn} to extract the invariant features from the input, and the Slice block is used to extract the energy density at the center (${\bm{e}(\brm{r}_i)}$), which is already the invariant feature, from the input.
+        % 
+        The transformer we use here is only composed of multilayer of the scaled dot-product attention part of the original transformer \cite{vaswaniAttentionAllYou2023-08-02}.
+        %
+        Other information about the architecture of the neural network is described in the appendix.
+    }
     \label{fig:arch}
 \end{figure*}

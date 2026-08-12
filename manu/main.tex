@@ -39,7 +39,7 @@ reprint,%
 \newcommand{\Fig}[1]{Fig.\,\ref{#1}}
 \newcommand{\Tab}[1]{Table \ref{#1}}
 \newcommand{\brm}[1]{\bm{\mathrm{#1}}}
-
+\captionsetup{justification=raggedright,singlelinecheck=false}
 
 \usepackage{silence}
 
@@ -160,9 +160,9 @@ The loss function is defined as
 \twocolumngrid
 where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, respectively.
 %
-The $\epsilon$ is a small number to avoid the division by zero and control the scale of the loss function, which is set to be $1 \times 10^{-5}$ in this article.
+The $\epsilon$ is a small number to avoid the division by zero and control the scale of the loss function, which is set to be $1 \times 10^{-4}$ in this article.
 %
-The first term is the relative error in the total energy, the second term is the absolute error in the total energy, and the third term is the error in the atomic energy.
+The first term is the relative error in the total energy, the second term is the error in the atomic energy, the third term is the absolute error in the total energy, and the fourth term is the error in the force; See the Appendix for the definition of the atomic energy and force.
 
 \subsection{Training details}
 The neural network is trained using the AdamW optimizer \cite{loshchilovDecoupledWeightDecay2019-01-04} with the scheduler of cosine annealing with warm restarts \cite{loshchilovSGDRStochasticGradient2017-05-03}.
@@ -178,8 +178,12 @@ We use a batch size of $1$ and train the model for $10000$ epochs, the training 
 The training process is monitored using the validation set every $5$ epochs, and the model with the lowest validation loss is selected as the final model.
 
 The detail of the training dataset and validation dataset is listed in the Appendix.
+% 
+The training dataset consists of $69$ molecules (set A and set B) or $128$ molecules  (set A, set B and set C) with less than $3$ heavy atoms, while the validation dataset consists of $115$ molecules with $4-5$ heavy atoms.
+% 
+The validation loss is calculated using only the first two items in the loss function \eq{eq:loss_self_scaled}, which are the relative error in the total energy and the atomic energy error, to avoid the difficulty of calculating the absolute error and force in the total energy for large molecules.
 
-The training is performed on a single NVIDIA A100 GPU with 80GB memory with double precision training using PyTorch \cite{paszkePyTorchImperativeStyle2019-12-03} and the training takes around $96$ hours to complete. The version of PyTorch used is $2.8.0+$cu$128$, and CUDA version is $12.8$, the version of driver is $535.247.01$.
+The training is performed on a single NVIDIA A100 GPU with 80 GB memory with double precision training using PyTorch \cite{paszkePyTorchImperativeStyle2019-12-03} and the training takes around $10$ days to complete. The version of PyTorch used is $2.8.0+$cu$128$, and CUDA version is $12.8$, the version of driver is $535.247.01$.
 
 \subsection{Comparison with other machine learning functionals}
 The main difference between our method and other machine learning functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07} is that we use the energy density as the target of the neural network instead of the total energy.
