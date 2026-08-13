@@ -25,6 +25,7 @@ from cc2cc.utils import (
     gen_mole,
     print_computer_info,
 )
+from cc2cc.utils.parser import str2bool
 
 
 def _release_memory(device) -> None:
@@ -131,6 +132,12 @@ def main():
         nargs="+",
         default=None,
         help="Dispersion correction for benchmark DFT calculations. Default is None.",
+    )
+    parser.add_argument(
+        "--if_grad",
+        type=str2bool,
+        default=False,
+        help="Whether to calculate the force. Default is False.",
     )
     args = add_args(parser)
 
