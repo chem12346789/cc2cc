@@ -126,11 +126,11 @@ class _Logger:
         )
 
 
-def train_model(train_str_dict, eval_str_dict, args):
+def train_model(train_list, eval_list, args):
     """
     Train the model.
-    train_str_dict: list of training molecules
-    eval_str_dict: list of evaluation molecules
+    train_list: list of training molecules
+    eval_list: list of evaluation molecules
     Other parameter are from the argparse.
     """
 
@@ -141,7 +141,7 @@ def train_model(train_str_dict, eval_str_dict, args):
 
     modeldict = ModelClass(args)
     modeldict.init_model(init_train=True)
-    modeldict.init_database(train_str_dict, eval_str_dict)
+    modeldict.init_database(train_list, eval_list)
 
     is_distributed = modeldict.args.distributed
     barrier = dist.barrier if is_distributed else (lambda: None)
