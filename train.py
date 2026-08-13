@@ -152,6 +152,12 @@ if __name__ == "__main__":
         help="Whether to use relative weight for the absolute loss function. Default is False.",
     )
     parser.add_argument(
+        "--relative_weight_epsilon",
+        type=float,
+        default=1e-8,
+        help="Epsilon for the relative weight. Default is 1e-8.",
+    )
+    parser.add_argument(
         "--output_target",
         type=str,
         default="tol_delta_grids",
