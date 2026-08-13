@@ -158,7 +158,7 @@ The loss function is defined as
   % + \sqrt{N_{\rm{atom}}} \frac{\int \d \brm{r}_{i} \big| \bar{F} - F \big|}{\int \d \brm{r}_{i} \big| \bar{F}\big| + \epsilon} .
 \end{align}
 \twocolumngrid
-where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, respectively.
+Where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, respectively.
 %
 The $\epsilon$ is a small number to avoid the division by zero and control the scale of the loss function, which is set to be $1 \times 10^{-4}$ in this article.
 %
@@ -227,7 +227,7 @@ The dataset we use are listed in \Tab{tab:dataset}, all the Datasets are obtaine
 % 
 We use the molecules in datasets A, B, and C as the training set and the molecules in datasets A$'$ and B$'$ as the validation set.
 % 
-Datasets A, B, and C are defined as follows: A comprises single-atom systems from GMTKN55 \cite{goerigkLookDensityFunctional2017}; B comprises molecules with one heavy (non-hydrogen) atom from W4-11; and C comprises molecules with two heavy atoms from W4-11.
+Datasets A, B, and C are defined as follows: dataset A comprises single-atom systems from GMTKN55 \cite{goerigkLookDensityFunctional2017}; dataset B comprises molecules with one heavy (non-hydrogen) atom from W4-11; and dataset C comprises molecules with two heavy atoms from W4-11.
 % 
 This lead to $136$ molecules in the training set and $34$ molecules in the validation set, while the number of molecules in GMTKN55 datasets is 2462 \cite{goerigkLookDensityFunctional2017}.
 % % TODO: ablation study on the dataset size.
