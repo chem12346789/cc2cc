@@ -137,7 +137,6 @@ def train_model(train_str_dict, eval_str_dict, args):
     # 0. Init the environment
     if args.seed is not None:
         _set_seed(args.seed)
-    if args.deterministic:
         _enable_deterministic_mode()
 
     modeldict = ModelClass(args)
@@ -161,7 +160,7 @@ def train_model(train_str_dict, eval_str_dict, args):
             barrier()
             continue
 
-        if_grad = epoch % args.eval_step == 0
+        if_grad = epoch % args.grad_step == 0
         train_record = modeldict.train_model(if_grad=if_grad)
         barrier()
 

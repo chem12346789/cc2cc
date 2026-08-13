@@ -24,7 +24,7 @@ class BasicDataset(Dataset):
     Documentation for a class.
     """
 
-    def __init__(self, name_list, mol_info_dict, load_data):
+    def __init__(self, name_list, mol_info_dict, load_data, append_number):
         super().__init__()
         self.data = {}
         self.name_list = []
@@ -41,7 +41,6 @@ class BasicDataset(Dataset):
             # This is useful when we need to have more data for single-atom systems.
             # if num_data_used == 1 and mol_info_dict[name]["charge"] == 0:
             if num_data_used == 1:
-                append_number = max(40 // int(data_dict["data_weight"]) - 1, 0)
                 self.name_list.extend([name] * append_number)
                 total_number_of_atom += num_data_used * append_number
 
@@ -185,7 +184,9 @@ class DataBase:
         self.atomic_name_values = set(self.atomic_name_dict.values())
         self.print(name_list)
 
-        self.dataset = BasicDataset(name_list, mol_info_dict, self.load_data)
+        self.dataset = BasicDataset(
+            name_list, mol_info_dict, self.load_data, self.args.append_mol0
+        )
         if args.distributed:
             self.sampler = torch.utils.data.distributed.DistributedSampler(
                 self.dataset, shuffle=shuffle
@@ -316,7 +317,7 @@ class DataBase:
         atomic_stoichiometry = list(element_counts.values())
         num_data_used = mol_info["natm"]
         if num_data_used == 1:
-            data_weight = self.args.atomic_weighting
+            data_weight = self.args.mol0_weighting
         else:
             data_weight = num_data_used
         self.print(f"data_weight: {data_weight:>6.3f}")
