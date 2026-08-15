@@ -229,29 +229,27 @@ if __name__ == "__main__":
     print_computer_info(args.device)
 
     split_config = process_config(args.split_config)
-    train_str_list = config_list(split_config, "train")
-    eval_str_list = config_list(split_config, "eval")
-    train_str_exclude_list = config_list(split_config, "train_exclude")
-    eval_str_exclude_list = config_list(split_config, "eval_exclude")
+    train_list = config_list(split_config, "train")
+    eval_list = config_list(split_config, "eval")
+    train_exclude_list = config_list(split_config, "train_exclude")
+    eval_exclude_list = config_list(split_config, "eval_exclude")
 
-    train_str_list = gen_name_args(train_str_list, args.dataset, args.name_mol_reverse)
-    train_str_exclude_list = gen_name_args(
-        train_str_exclude_list, args.dataset, args.name_mol_reverse, if_exclude=True
+    train_list = gen_name_args(train_list, args.dataset, args.name_mol_reverse)
+    train_exclude_list = gen_name_args(
+        train_exclude_list, args.dataset, args.name_mol_reverse, if_exclude=True
     )
-    eval_str_list = gen_name_args(eval_str_list, args.dataset, args.name_mol_reverse)
-    eval_str_exclude_list = gen_name_args(
-        eval_str_exclude_list, args.dataset, args.name_mol_reverse, if_exclude=True
+    eval_list = gen_name_args(eval_list, args.dataset, args.name_mol_reverse)
+    eval_exclude_list = gen_name_args(
+        eval_exclude_list, args.dataset, args.name_mol_reverse, if_exclude=True
     )
 
     # remove the same name in train and train_str_exclude_list
-    train_str_list = [
-        mol for mol in train_str_list if mol not in train_str_exclude_list
-    ]
+    train_list = [mol for mol in train_list if mol not in train_exclude_list]
 
     # remove the same name in eval and eval_str_exclude_list
-    eval_str_list = [mol for mol in eval_str_list if mol not in eval_str_exclude_list]
+    eval_list = [mol for mol in eval_list if mol not in eval_exclude_list]
 
-    overlap = sorted(set(train_str_list) & set(eval_str_list))
+    overlap = sorted(set(train_list) & set(eval_list))
     if overlap:
         preview = ", ".join(overlap[:8])
         suffix = " ..." if len(overlap) > 8 else ""
@@ -260,8 +258,8 @@ if __name__ == "__main__":
             f"{preview}{suffix}"
         )
 
-    print(f"Train set size: {len(train_str_list)}")
-    print(f"Train set: {train_str_list}")
-    print(f"Eval set size: {len(eval_str_list)}")
-    print(f"Eval set: {eval_str_list}")
-    train_model(train_str_list, eval_str_list, args)
+    print(f"Train set size: {len(train_list)}")
+    print(f"Train set: {train_list}")
+    print(f"Eval set size: {len(eval_list)}")
+    print(f"Eval set: {eval_list}")
+    train_model(train_list, eval_list, args)
