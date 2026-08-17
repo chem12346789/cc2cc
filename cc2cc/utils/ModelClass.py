@@ -1,4 +1,7 @@
 import os
+import pickle
+import shutil
+import time
 from collections import deque
 from typing import cast
 
@@ -316,19 +319,52 @@ class ModelClass:
         self.print(f"Training on {len(self.database_train)} systems.")
         self.print(f"Evaluating on {len(self.database_eval)} systems.")
 
+    def _estimate_checkpoint_size(self, state_dict):
+        payload = {
+            "state_dict": state_dict,
+            "model": self.args.model,
+            "optimizer": self.optimizer.state_dict(),
+        }
+        return max(
+            len(pickle.dumps(payload, protocol=pickle.HIGHEST_PROTOCOL)), 1 << 20
+        )
+
     def save_model(self, epoch):
         if not self.dir_checkpoint.exists():
             self.print(f"Directory {self.dir_checkpoint} not found. Created!")
             (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
+
         state_dict = self._state_dict_for_save()
-        torch.save(
-            {
-                "state_dict": state_dict,
-                "model": self.args.model,
-                "optimizer": self.optimizer.state_dict(),
-            },
-            self.dir_checkpoint / f"{epoch}.pth",
-        )
+        checkpoint_path = self.dir_checkpoint / f"{epoch}.pth"
+        payload = {
+            "state_dict": state_dict,
+            "model": self.args.model,
+            "optimizer": self.optimizer.state_dict(),
+        }
+        required_bytes = self._estimate_checkpoint_size(state_dict)
+
+        while True:
+            free_bytes = shutil.disk_usage(self.dir_checkpoint).free
+            if free_bytes >= required_bytes:
+                try:
+                    torch.save(payload, checkpoint_path)
+                    return
+                except OSError as exc:
+                    msg = str(exc).lower()
+                    if "no space left" in msg or "file write failed" in msg:
+                        self.print(
+                            "Disk space became insufficient while writing checkpoint; "
+                            f"waiting for free disk before retrying {checkpoint_path}."
+                        )
+                        time.sleep(30)
+                        continue
+                    raise
+
+            self.print(
+                "Waiting for free disk space before saving checkpoint: "
+                f"{free_bytes} bytes free, {required_bytes} bytes required."
+            )
+            time.sleep(30 * 60)  # Wait for 30 minutes before checking again
 
     def train(self):
         self.model.train(True)
