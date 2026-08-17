@@ -130,12 +130,6 @@ def add_args(parser: argparse.ArgumentParser):
         help="Name of molecule. Default is None (all the dataset).",
     )
     parser.add_argument(
-        "--md_number",
-        type=int,
-        default=0,
-        help="MD frame number to generate the data. Default is 0.",
-    )
-    parser.add_argument(
         "--grid_level",
         type=int,
         default=4,
@@ -152,6 +146,12 @@ def add_args(parser: argparse.ArgumentParser):
         type=str,
         default="mol",
         help="Name of the dataset. Default is mol (training and testing).",
+    )
+    parser.add_argument(
+        "--distributed",
+        type=str2bool,
+        default=False,
+        help="Whether to use distributed training. Default is False.",
     )
     # model loading and saving
     parser.add_argument(
@@ -184,6 +184,12 @@ def add_args(parser: argparse.ArgumentParser):
         type=str2bool,
         default=False,
         help="Whether to reverse the order of the molecule names. Default is False.",
+    )
+    parser.add_argument(
+        "--md_number",
+        type=int,
+        default=0,
+        help="MD frame number to generate the data. Default is 0.",
     )
 
     args = parser.parse_args()

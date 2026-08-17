@@ -171,7 +171,7 @@ def main():
     modeldict = None
     if not benchmark_mode:
         modeldict = ModelClass(args)
-        modeldict.init_model(if_validate=True)
+        modeldict.init_model(init_train=False)
         modeldict.eval()
     else:
         print("Benchmark mode: skip model loading.", flush=True)

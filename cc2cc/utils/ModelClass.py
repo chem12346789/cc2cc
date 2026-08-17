@@ -110,7 +110,7 @@ class ModelClass:
         else:
             self.local_rank = "cpu"
 
-    def init_model(self, if_validate=False, init_train=False):
+    def init_model(self, init_train=False):
         self.load_model()
 
         if not (MAIN_PATH / f"cc2cc/utils/model/{self.args.model}.py").exists():
@@ -132,27 +132,27 @@ class ModelClass:
         for name in ("cube_type", "cube_size", "input_level"):
             self.print(f"{name}: {getattr(self, name)}")
 
-        if self.args.if_resume:
-            self.print("Resuming training from checkpoint.")
-            self.start_step = self.args.load_epoch
-
-        self.dir_checkpoint = (
-            CHECKPOINTS_PATH / f"checkpoint_{self.args.save_dir}"
-        ).resolve()
-        self.print(f"Checkpoint directory: {self.dir_checkpoint}")
-
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=True)
 
         self._maybe_compile_model()
 
-        if self.args.distributed:
-            self.print(f"Using DistributedDataParallel on rank {self.local_rank}")
-            self.model = DistributedDataParallel(
-                self.model, device_ids=[self.local_rank]
-            )
-
         if init_train:
+            if self.args.if_resume:
+                self.print("Resuming training from checkpoint.")
+                self.start_step = self.args.load_epoch
+
+            self.dir_checkpoint = (
+                CHECKPOINTS_PATH / f"checkpoint_{self.args.save_dir}"
+            ).resolve()
+            self.print(f"Checkpoint directory: {self.dir_checkpoint}")
+
+            if self.args.distributed:
+                self.print(f"Using DistributedDataParallel on rank {self.local_rank}")
+                self.model = DistributedDataParallel(
+                    self.model, device_ids=[self.local_rank]
+                )
+
             self.init_train()
 
     def _maybe_compile_model(self):
