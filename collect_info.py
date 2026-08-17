@@ -17,7 +17,7 @@ DATA_FRAME_NAMES = {
         "wtmad_1_df",
         "wtmad_2_df",
     ],
-    "dft-fitset-def2": ["subset_mapd_df", "subset_mpd_df"],
+    "dft-fitset-def2": ["subset_rmsd_df", "subset_mapd_df", "subset_mpd_df"],
     "gmtkn-diet30-def2": ["subset_wtmad_2_df", "wtmad_2_df"],
     "gmtkn-diet100-def2": ["subset_wtmad_2_df", "wtmad_2_df"],
 }
@@ -91,7 +91,9 @@ class Collect_info:
             print(f"{key}: {value}")
         print("")
 
-        with open("jupyter-notebook/subset.json") as f:
+        with open(
+            "/home/chenzihao/workspace/cc2cc_test5/cc2cc/utils/mol_dataset/subset.json"
+        ) as f:
             self.full_subset_dict = json.load(f)[self.data_set]
 
         for name_set, subset_list_ in self.full_subset_dict.items():
@@ -431,6 +433,17 @@ class Collect_info:
                     reactions_to_subset,
                     inverse_mae,
                     divide(1, completed_counts_subset),
+                )
+                self.data_frame_dict["subset_rmsd_df"].loc[
+                    self.name_subset_list, dft_type
+                ] = 100 * np.sqrt(
+                    np.einsum(
+                        "i,ij,j,j->j",
+                        delta**2,
+                        reactions_to_subset,
+                        inverse_mae,
+                        divide(1, completed_counts_subset),
+                    )
                 )
             elif self.data_set in DIET_DATASETS:
                 wtmad_2_subset = (
