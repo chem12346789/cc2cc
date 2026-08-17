@@ -106,145 +106,85 @@ def add_args(parser: argparse.ArgumentParser):
 
     More details.
     """
-    argument_specs = [
-        # Data generation
-        (
-            ("--name_mol", "-m"),
-            dict(
-                nargs="+",
-                type=str,
-                default=[],
-                help="Name of molecule. Default is None (all the dataset).",
-            ),
-        ),
-        (
-            ("--name_mol_reverse",),
-            dict(
-                type=str2bool,
-                default=False,
-                help="Whether to reverse the order of the molecule names. Default is False.",
-            ),
-        ),
-        (
-            ("--md_number",),
-            dict(
-                type=int,
-                default=0,
-                help="MD frame number to generate the data. Default is 0.",
-            ),
-        ),
-        (
-            ("--mp_number",),
-            dict(type=int, default=0, help="Number of training cycles. Default is 1."),
-        ),
-        (
-            ("--mp_total",),
-            dict(
-                type=int,
-                default=3,
-                help="Total number of training cycles. Default is 3.",
-            ),
-        ),
-        (
-            ("--if_eval",),
-            dict(
-                type=str2bool,
-                default=False,
-                help="Whether to use the evaluation mode in generating the data. Default is False.",
-            ),
-        ),
-        (
-            ("--grid_level",),
-            dict(type=int, default=4, help="Grid level for the calculation."),
-        ),
-        (
-            ("--basis",),
-            dict(type=str, default="cc-pVDZ", help="Basis set for the calculation."),
-        ),
-        (
-            ("--dataset",),
-            dict(
-                type=str,
-                default="mol",
-                help="Name of the dataset. Default is mol (training and testing).",
-            ),
-        ),
-        (
-            ("--check_convergence",),
-            dict(
-                type=str2bool,
-                default=True,
-                help="Whether to check the convergence of the wave function. Default is True.",
-            ),
-        ),
-        # Training
-        (
-            ("--model",),
-            dict(
-                type=str,
-                default="transformer+dense_mix_e3nn_4",
-                help="Model for training.",
-            ),
-        ),
-        (
-            ("--load",),
-            dict(
-                type=str,
-                default="",
-                help="Path to load the model. Default is empty.",
-            ),
-        ),
-        # Testing
-        (
-            ("--load_epoch",),
-            dict(
-                type=int, default=-1, help="Epoch for loading the model. Default is -1."
-            ),
-        ),
-        (
-            ("--if_continue",),
-            dict(
-                type=str2bool,
-                default=False,
-                help="Weather to continue the test or generate data. Default is False.",
-            ),
-        ),
-        (
-            ("--max_cycle",),
-            dict(
-                type=int,
-                default=250,
-                help="Maximum number of SCF cycles. Default is 250 and -1 for no iteration.",
-            ),
-        ),
-        (
-            ("--if_rotate",),
-            dict(
-                type=str2bool,
-                default=False,
-                help="Weather to use rotation. Default is False.",
-            ),
-        ),
-        (
-            ("--if_rotate_random",),
-            dict(
-                type=str2bool,
-                default=False,
-                help="Weather to use rotation. Default is False.",
-            ),
-        ),
-        (
-            ("--max_memory_gpu",),
-            dict(
-                type=int,
-                default=4000,
-                help="Maximum memory for GPU calculation in MB. Default is 4000.",
-            ),
-        ),
-    ]
 
-    for flags, kwargs in argument_specs:
-        parser.add_argument(*flags, **kwargs)
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cuda",
+        choices=["cuda", "cpu"],
+        help="Device for the training. Default is cuda.",
+    )
+    parser.add_argument(
+        "--precision",
+        type=str,
+        default="float64",
+        choices=["float32", "float64"],
+        help="Precision for the training. Default is float64.",
+    )
+    parser.add_argument(
+        "--name_mol",
+        "-m",
+        nargs="+",
+        type=str,
+        default=[],
+        help="Name of molecule. Default is None (all the dataset).",
+    )
+    parser.add_argument(
+        "--md_number",
+        type=int,
+        default=0,
+        help="MD frame number to generate the data. Default is 0.",
+    )
+    parser.add_argument(
+        "--grid_level",
+        type=int,
+        default=4,
+        help="Grid level for the calculation.",
+    )
+    parser.add_argument(
+        "--basis",
+        type=str,
+        default="cc-pVDZ",
+        help="Basis set for the calculation.",
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="mol",
+        help="Name of the dataset. Default is mol (training and testing).",
+    )
+    # model loading and saving
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="transformer+dense_mix_e3nn_4",
+        help="Model for training.",
+    )
+    parser.add_argument(
+        "--load",
+        type=str,
+        default="",
+        help="Path to load the model. Default is empty.",
+    )
+    parser.add_argument(
+        "--load_epoch",
+        type=int,
+        default=-1,
+        help="Epoch for loading the model. Default is -1.",
+    )
+    # behavior of the program
+    parser.add_argument(
+        "--if_continue",
+        type=str2bool,
+        default=False,
+        help="Whether to continue the test or generate data. Default is False.",
+    )
+    parser.add_argument(
+        "--name_mol_reverse",
+        type=str2bool,
+        default=False,
+        help="Whether to reverse the order of the molecule names. Default is False.",
+    )
 
     args = parser.parse_args()
 

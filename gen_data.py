@@ -17,7 +17,7 @@ from cc2cc.utils import (
 )
 from cc2cc.utils.rotate import rotate
 from cc2cc.utils import Grid, DATA_PATH
-from cc2cc.utils.parser import gen_name_args
+from cc2cc.utils.parser import gen_name_args, str2bool
 from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc
 
@@ -30,6 +30,30 @@ if __name__ == "__main__":
         type=str,
         default="gen_test.json",
         help="Path to JSON file defining train/eval splits.",
+    )
+    parser.add_argument(
+        "--if_eval",
+        type=str2bool,
+        default=False,
+        help="Whether to use the evaluation mode in generating the data. Default is False.",
+    )
+    parser.add_argument(
+        "--mp_number",
+        type=int,
+        default=0,
+        help="Number of the current training cycle. Default is 0.",
+    )
+    parser.add_argument(
+        "--mp_total",
+        type=int,
+        default=3,
+        help="Total number of training cycles. Default is 3.",
+    )
+    parser.add_argument(
+        "--check_convergence",
+        type=str2bool,
+        default=True,
+        help="Whether to check the convergence of the wave function. Default is True.",
     )
     args = add_args(parser)
 

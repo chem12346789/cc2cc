@@ -134,10 +134,34 @@ def main():
         help="Dispersion correction for benchmark DFT calculations. Default is None.",
     )
     parser.add_argument(
+        "--max_cycle",
+        type=int,
+        default=250,
+        help="Maximum number of SCF cycles. Default is 250 and -1 for no iteration.",
+    )
+    parser.add_argument(
         "--if_grad",
         type=str2bool,
         default=False,
         help="Whether to calculate the force. Default is False.",
+    )
+    parser.add_argument(
+        "--max_memory_gpu",
+        type=int,
+        default=4000,
+        help="Maximum memory for GPU calculation in MB. Default is 4000.",
+    )
+    parser.add_argument(
+        "--if_rotate",
+        type=str2bool,
+        default=False,
+        help="Whether to use rotation. Default is False.",
+    )
+    parser.add_argument(
+        "--if_rotate_random",
+        type=str2bool,
+        default=False,
+        help="Whether to use random rotation. Default is False.",
     )
     args = add_args(parser)
 

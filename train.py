@@ -52,13 +52,6 @@ if __name__ == "__main__":
         help="Loss function for the energy. Default is MSELoss. Other options are L1Loss.",
     )
     parser.add_argument(
-        "--device",
-        type=str,
-        default="cuda",
-        choices=["cuda", "cpu"],
-        help="Device for the training. Default is cuda.",
-    )
-    parser.add_argument(
         "--epoch",
         type=int,
         default=10000,
@@ -69,13 +62,6 @@ if __name__ == "__main__":
         default=False,
         type=str2bool,
         help="Whether to use distributed training. Default is False.",
-    )
-    parser.add_argument(
-        "--precision",
-        type=str,
-        default="float64",
-        choices=["float32", "float64"],
-        help="Precision for the training. Default is float64.",
     )
     parser.add_argument(
         "--lr",
