@@ -1,0 +1,319 @@
+{
+    "full_subset_dict_test": {
+        "test": [
+            "S22",
+            "S66"
+        ]
+    },
+    "dft-fitset-def2": {
+        "sub1": [
+            "S22x5-0.9",
+            "S22x5-1.0",
+            "S22x5-1.2",
+            "S22x5-1.5",
+            "S22x5-2.0"
+        ],
+        "sub2": [
+            "S66x8-HB-090",
+            "S66x8-HB-095",
+            "S66x8-HB-100",
+            "S66x8-HB-105",
+            "S66x8-HB-110",
+            "S66x8-HB-125",
+            "S66x8-HB-150",
+            "S66x8-HB-200",
+            "S66x8-pi-090",
+            "S66x8-pi-095",
+            "S66x8-pi-100",
+            "S66x8-pi-105",
+            "S66x8-pi-110",
+            "S66x8-pi-125",
+            "S66x8-pi-150",
+            "S66x8-pi-200",
+            "S66x8-london-090",
+            "S66x8-london-095",
+            "S66x8-london-100",
+            "S66x8-london-105",
+            "S66x8-london-110",
+            "S66x8-london-125",
+            "S66x8-london-150",
+            "S66x8-london-200",
+            "S66x8-mix-090",
+            "S66x8-mix-095",
+            "S66x8-mix-100",
+            "S66x8-mix-105",
+            "S66x8-mix-110",
+            "S66x8-mix-125",
+            "S66x8-mix-150",
+            "S66x8-mix-200"
+        ],
+        "sub3": [
+            "NCIBLIND10"
+        ]
+    },
+    "dft-fitset-def2-weight": {
+        "S22x5-A": 0.0,
+        "S22x5-B": 0.0,
+        "S22x5-0.9": 1.0,
+        "S22x5-1.0": 1.0,
+        "S22x5-1.2": 1.0,
+        "S22x5-1.5": 1.0,
+        "S22x5-2.0": 1.0,
+        "S66x8-A": 0.0,
+        "S66x8-B": 0.0,
+        "S66x8-HB-090": 1.0,
+        "S66x8-HB-095": 1.0,
+        "S66x8-HB-100": 1.0,
+        "S66x8-HB-105": 1.0,
+        "S66x8-HB-110": 1.0,
+        "S66x8-HB-125": 1.0,
+        "S66x8-HB-150": 1.0,
+        "S66x8-HB-200": 1.0,
+        "S66x8-pi-090": 1.0,
+        "S66x8-pi-095": 1.0,
+        "S66x8-pi-100": 1.0,
+        "S66x8-pi-105": 1.0,
+        "S66x8-pi-110": 1.0,
+        "S66x8-pi-125": 1.0,
+        "S66x8-pi-150": 1.0,
+        "S66x8-pi-200": 1.0,
+        "S66x8-london-090": 1.0,
+        "S66x8-london-095": 1.0,
+        "S66x8-london-100": 1.0,
+        "S66x8-london-105": 1.0,
+        "S66x8-london-110": 1.0,
+        "S66x8-london-125": 1.0,
+        "S66x8-london-150": 1.0,
+        "S66x8-london-200": 1.0,
+        "S66x8-mix-090": 1.0,
+        "S66x8-mix-095": 1.0,
+        "S66x8-mix-100": 1.0,
+        "S66x8-mix-105": 1.0,
+        "S66x8-mix-110": 1.0,
+        "S66x8-mix-125": 1.0,
+        "S66x8-mix-150": 1.0,
+        "S66x8-mix-200": 1.0,
+        "NCIBLIND10": 1.0
+    },
+    "gmtkn-def2": {
+        "sub1": [
+            "W4_11",
+            "G21EA",
+            "G21IP",
+            "DIPCS10",
+            "PA26",
+            "SIE4x4",
+            "ALKBDE10",
+            "YBDE18",
+            "AL2X6",
+            "HEAVYSB11",
+            "NBPRC",
+            "ALK8",
+            "RC21",
+            "G2RC",
+            "BH76RC",
+            "FH51",
+            "TAUT15",
+            "DC13"
+        ],
+        "sub2": [
+            "MB16_43",
+            "DARC",
+            "RSE43",
+            "BSR36",
+            "CDIE20",
+            "ISO34",
+            "ISOL24",
+            "C60ISO",
+            "PArel"
+        ],
+        "sub3": [
+            "BH76",
+            "BHPERI",
+            "BHDIV10",
+            "INV24",
+            "BHROT27",
+            "PX13",
+            "WCPT18"
+        ],
+        "sub4": [
+            "RG18",
+            "ADIM6",
+            "S22",
+            "S66",
+            "HEAVY28",
+            "WATER27",
+            "CARBHB12",
+            "PNICO23",
+            "HAL59",
+            "AHB21",
+            "CHB6",
+            "IL16"
+        ],
+        "sub5": [
+            "IDISP",
+            "ICONF",
+            "ACONF",
+            "Amino20x4",
+            "PCONF21",
+            "MCONF",
+            "SCONF",
+            "UPU23",
+            "BUT14DIOL"
+        ]
+    },
+    "gmtkn-diet30-def2": {
+        "sub1": [
+            "W4_11",
+            "G21EA",
+            "DIPCS10",
+            "SIE4x4",
+            "FH51",
+            "DC13"
+        ],
+        "sub2": [
+            "MB16_43",
+            "BSR36",
+            "CDIE20"
+        ],
+        "sub3": [
+            "BH76",
+            "BHPERI",
+            "BHROT27",
+            "PX13",
+            "WCPT18"
+        ],
+        "sub4": [
+            "S66",
+            "HEAVY28",
+            "PNICO23",
+            "HAL59"
+        ],
+        "sub5": [
+            "ACONF",
+            "Amino20x4",
+            "MCONF",
+            "BUT14DIOL"
+        ]
+    },
+    "gmtkn-diet100-def2": {
+        "sub1": [
+            "W4_11",
+            "G21EA",
+            "G21IP",
+            "SIE4x4",
+            "ALKBDE10",
+            "YBDE18",
+            "RC21",
+            "G2RC",
+            "BH76RC",
+            "FH51",
+            "DC13"
+        ],
+        "sub2": [
+            "MB16_43",
+            "RSE43",
+            "BSR36",
+            "CDIE20",
+            "ISO34",
+            "ISOL24",
+            "PArel"
+        ],
+        "sub3": [
+            "BH76",
+            "BHPERI",
+            "INV24",
+            "BHROT27"
+        ],
+        "sub4": [
+            "RG18",
+            "ADIM6",
+            "S66",
+            "HEAVY28",
+            "WATER27",
+            "CARBHB12",
+            "PNICO23",
+            "HAL59",
+            "AHB21",
+            "CHB6",
+            "IL16"
+        ],
+        "sub5": [
+            "ICONF",
+            "ACONF",
+            "Amino20x4",
+            "PCONF21",
+            "MCONF",
+            "SCONF",
+            "UPU23",
+            "BUT14DIOL"
+        ]
+    },
+    "full_subset_dict": {
+        "sub1": [
+            "W4_11",
+            "G21EA",
+            "G21IP",
+            "DIPCS10",
+            "PA26",
+            "SIE4x4",
+            "ALKBDE10",
+            "YBDE18",
+            "AL2X6",
+            "HEAVYSB11",
+            "NBPRC",
+            "ALK8",
+            "RC21",
+            "G2RC",
+            "BH76RC",
+            "FH51",
+            "TAUT15",
+            "DC13"
+        ],
+        "sub2": [
+            "MB16_43",
+            "DARC",
+            "RSE43",
+            "BSR36",
+            "CDIE20",
+            "ISO34",
+            "ISOL24",
+            "C60ISO",
+            "PArel"
+        ],
+        "sub3": [
+            "BH76",
+            "BHPERI",
+            "BHDIV10",
+            "INV24",
+            "BHROT27",
+            "PX13",
+            "WCPT18"
+        ],
+        "sub4": [
+            "RG18",
+            "ADIM6",
+            "S22",
+            "S66",
+            "HEAVY28",
+            "WATER27",
+            "CARBHB12",
+            "PNICO23",
+            "HAL59",
+            "AHB21",
+            "CHB6",
+            "IL16"
+        ],
+        "sub5": [
+            "IDISP",
+            "ICONF",
+            "ACONF",
+            "Amino20x4",
+            "PCONF21",
+            "MCONF",
+            "SCONF",
+            "UPU23",
+            "BUT14DIOL"
+        ]
+    }
+}

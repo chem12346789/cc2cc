@@ -21,7 +21,7 @@ DTYPE = torch.float64
 DEFAULT_DEVICE = "cuda"
 POSITIVE_PARAM_EPS = 0.0
 PARAM_NAMES = ("s6", "rs6", "s18", "rs18", "alp")
-SUBSET_JSON_PATH = Path("jupyter-notebook/subset.json")
+SUBSET_JSON_PATH = Path("cc2cc/utils/mol_dataset/subset.json")
 DATASET_JSON_DIR = Path("cc2cc/utils/mol_dataset")
 VALIDATE_DIR = Path("validate_hkqai_done")
 SCIPY_MINIMIZE_METHODS = {
@@ -619,45 +619,7 @@ def run_train(args: argparse.Namespace) -> None:
         name_subset_weight_dict,
     )
 
-    if args.optimizer == "adagrad":
-        optimizer = torch.optim.Adagrad(
-            model.parameters(), lr=args.lr, weight_decay=1e-12
-        )
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            optimizer, T_0=3200, T_mult=2, eta_min=1e-8
-        )
-
-        best = {}
-        if IF_PRINT:
-            print(
-                f"Epoch\t: Loss, Para={list(model.params.keys())}, Lr={optimizer.param_groups[0]['lr']:.2e}",
-                flush=True,
-            )
-
-        for epoch in range(args.epochs + 1):
-            optimizer.zero_grad(set_to_none=True)
-            loss = train_loss(
-                model,
-                input_batch,
-                reaction_tensors,
-                data_dft_ene_kcalmol,
-            )
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
-
-            if epoch % args.print_step == 0:
-                loss_value = float(loss.item())
-                params = model.current_params()
-                if IF_PRINT:
-                    print(
-                        f"Epoch {epoch}: Loss={loss_value:.6f}, Para={[f'{v:.2f}' for v in params.values()]}, "
-                        f"Lr={optimizer.param_groups[0]['lr']:.2e}",
-                        flush=True,
-                    )
-                if ("loss" not in best) or (loss_value < best["loss"]):
-                    best = {"epoch": epoch, "loss": loss_value, "parameters": params}
-    elif args.optimizer in SCIPY_MINIMIZE_METHODS:
+    if args.optimizer in SCIPY_MINIMIZE_METHODS:
         method, use_jac = SCIPY_MINIMIZE_METHODS[args.optimizer]
         optimizer_label = f"{args.optimizer.upper()} (SciPy minimize)"
         best = _train_with_scipy_minimize(
