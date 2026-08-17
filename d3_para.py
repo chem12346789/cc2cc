@@ -22,7 +22,7 @@ DEFAULT_DEVICE = "cuda"
 POSITIVE_PARAM_EPS = 0.0
 PARAM_NAMES = ("s6", "rs6", "s18", "rs18", "alp")
 SUBSET_JSON_PATH = Path("jupyter-notebook/subset.json")
-DATASET_JSON_DIR = Path("cc2cc/utils")
+DATASET_JSON_DIR = Path("cc2cc/utils/mol_dataset")
 VALIDATE_DIR = Path("validate_hkqai_done")
 SCIPY_MINIMIZE_METHODS = {
     "levenberg-marquardt": ("L-BFGS-B", True),
@@ -48,6 +48,7 @@ OPTIMIZER_ALIASES = {
     "trust-region": "trust-constr",
     "tr": "trust-constr",
 }
+IF_PRINT = False
 
 
 @dataclass
@@ -85,9 +86,7 @@ class D3Model(nn.Module):
         const_params = {}
         for param_name in PARAM_NAMES:
             if initial_params.get(param_name, None) is None:
-                trainable_params[param_name] = get_dftd3_default_params(
-                    damping, xc="b3-lyp", old=False
-                )[param_name] * np.random.uniform(0.8, 2.0)
+                trainable_params[param_name] = np.random.uniform(0.8, 2.0)
             else:
                 if initial_params[param_name] < -999:
                     const_params[param_name] = get_dftd3_default_params(
@@ -96,8 +95,9 @@ class D3Model(nn.Module):
                 else:
                     const_params[param_name] = initial_params[param_name]
 
-        print(f"Initial trainable D3 parameters: {trainable_params}")
-        print(f"Initial constant D3 parameters: {const_params}")
+        if IF_PRINT:
+            print(f"Initial trainable D3 parameters: {trainable_params}", flush=True)
+            print(f"Initial constant D3 parameters: {const_params}", flush=True)
 
         self.trainable_params = nn.ParameterDict(
             {
@@ -422,10 +422,11 @@ def _train_with_scipy_minimize(
     )
     cache = {"x": None, "grad": None, "obj": 0.0, "train_loss": 0.0}
 
-    print(
-        f"Epoch\t: Loss, Para={list(model.params.keys())}, Optimizer={optimizer_label}",
-        flush=True,
-    )
+    if IF_PRINT:
+        print(
+            f"Epoch\t: Loss, Para={list(model.params.keys())}, Optimizer={optimizer_label}",
+            flush=True,
+        )
 
     def _objective_and_grad(x: np.ndarray) -> tuple[float, np.ndarray, float]:
         x_arr = np.asarray(x, dtype=np.float64)
@@ -478,10 +479,11 @@ def _train_with_scipy_minimize(
         epoch = state["nfev"]
         if epoch % print_step == 0:
             params = model.current_params()
-            print(
-                f"Epoch {epoch}: Loss={train_loss_value:.6f}, Para={[f'{v:.2f}' for v in params.values()]}",
-                flush=True,
-            )
+            if IF_PRINT:
+                print(
+                    f"Epoch {epoch}: Loss={train_loss_value:.6f}, Para={[f'{v:.2f}' for v in params.values()]}",
+                    flush=True,
+                )
         _update_best(best, epoch, train_loss_value, model.current_params())
         state["nfev"] += 1
         return obj_value
@@ -626,10 +628,11 @@ def run_train(args: argparse.Namespace) -> None:
         )
 
         best = {}
-        print(
-            f"Epoch\t: Loss, Para={list(model.params.keys())}, Lr={optimizer.param_groups[0]['lr']:.2e}",
-            flush=True,
-        )
+        if IF_PRINT:
+            print(
+                f"Epoch\t: Loss, Para={list(model.params.keys())}, Lr={optimizer.param_groups[0]['lr']:.2e}",
+                flush=True,
+            )
 
         for epoch in range(args.epochs + 1):
             optimizer.zero_grad(set_to_none=True)
@@ -646,11 +649,12 @@ def run_train(args: argparse.Namespace) -> None:
             if epoch % args.print_step == 0:
                 loss_value = float(loss.item())
                 params = model.current_params()
-                print(
-                    f"Epoch {epoch}: Loss={loss_value:.6f}, Para={[f'{v:.2f}' for v in params.values()]}, "
-                    f"Lr={optimizer.param_groups[0]['lr']:.2e}",
-                    flush=True,
-                )
+                if IF_PRINT:
+                    print(
+                        f"Epoch {epoch}: Loss={loss_value:.6f}, Para={[f'{v:.2f}' for v in params.values()]}, "
+                        f"Lr={optimizer.param_groups[0]['lr']:.2e}",
+                        flush=True,
+                    )
                 if ("loss" not in best) or (loss_value < best["loss"]):
                     best = {"epoch": epoch, "loss": loss_value, "parameters": params}
     elif args.optimizer in SCIPY_MINIMIZE_METHODS:
