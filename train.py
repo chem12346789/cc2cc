@@ -58,12 +58,6 @@ if __name__ == "__main__":
         help="Number of epoch for training. Default is 10000.",
     )
     parser.add_argument(
-        "--distributed",
-        default=False,
-        type=str2bool,
-        help="Whether to use distributed training. Default is False.",
-    )
-    parser.add_argument(
         "--lr",
         type=float,
         default=1e-4,
