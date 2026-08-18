@@ -165,12 +165,13 @@ if __name__ == "__main__":
             grids = Grid(mol, args.grid_level, 7)
 
             if args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
-                print(f"SKIP: {name} already exists.")
-            else:
-                if mol.spin == 0:
-                    cc(mol, grids, name, args, evaluate=evaluate)
-                else:
-                    ucc(mol, grids, name, args, evaluate=evaluate)
+                print(f"Modifying: {name} already exists.")
+            #     print(f"SKIP: {name} already exists.")
+            # else:
+            #     if mol.spin == 0:
+            #         cc(mol, grids, name, args, evaluate=evaluate)
+            #     else:
+            #         ucc(mol, grids, name, args, evaluate=evaluate)
         except (ValueError, RuntimeError) as e:
             print(f"ERROR: {name_mol} {args.md_number}")
             print(e)
