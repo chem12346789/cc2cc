@@ -165,30 +165,30 @@ if __name__ == "__main__":
             grids = Grid(mol, args.grid_level, 7)
 
             if args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
-                print(f"Modifying: {name} already exists.")
-                data_dict = dict(
-                    np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
-                )
-                dm1_dft = data_dict["dm1_dft"]
-                if mol.spin == 0:
-                    mdft_d3bj = pyscf.scf.RKS(mol)
-                else:
-                    mdft_d3bj = pyscf.scf.UKS(mol)
-                mdft_d3bj.verbose = 4
-                mdft_d3bj.max_cycle = 200
-                mdft_d3bj.xc = "b3lyp-d3bj"
-                mdft_d3bj.kernel(dm1_dft)
-                gdft_d3bj = mdft_d3bj.Gradients()
-                grad_dft_d3bj = gdft_d3bj.kernel()
-                data_dict["grad_dft_d3bj"] = grad_dft_d3bj
-                np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)
+                # print(f"Modifying: {name} already exists.")
+                # data_dict = dict(
+                #     np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
+                # )
+                # dm1_dft = data_dict["dm1_dft"]
+                # if mol.spin == 0:
+                #     mdft_d3bj = pyscf.scf.RKS(mol)
+                # else:
+                #     mdft_d3bj = pyscf.scf.UKS(mol)
+                # mdft_d3bj.verbose = 4
+                # mdft_d3bj.max_cycle = 200
+                # mdft_d3bj.xc = "b3lyp-d3bj"
+                # mdft_d3bj.kernel(dm1_dft)
+                # gdft_d3bj = mdft_d3bj.Gradients()
+                # grad_dft_d3bj = gdft_d3bj.kernel()
+                # data_dict["grad_dft_d3bj"] = grad_dft_d3bj
+                # np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)
 
-            #     print(f"SKIP: {name} already exists.")
-            # else:
-            #     if mol.spin == 0:
-            #         cc(mol, grids, name, args, evaluate=evaluate)
-            #     else:
-            #         ucc(mol, grids, name, args, evaluate=evaluate)
+                print(f"SKIP: {name} already exists.")
+            else:
+                if mol.spin == 0:
+                    cc(mol, grids, name, args, evaluate=evaluate)
+                else:
+                    ucc(mol, grids, name, args, evaluate=evaluate)
         except (KeyError, ValueError, RuntimeError) as e:
             print(f"ERROR: {name_mol} {args.md_number}")
             print(e)
