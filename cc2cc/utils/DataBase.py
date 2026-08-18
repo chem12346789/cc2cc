@@ -167,7 +167,7 @@ class DataBase:
                 }
 
             except ValueError as e:
-                self.print(f"Error generating molecule {name}: {e}")
+                self.print(f"Error molecule: {name:>40}, error: {e}")
 
         # move atomic_name_dict in the head of name_list.
         for iter_atom_name, (atom_key, atom_name) in enumerate(
@@ -249,7 +249,7 @@ class DataBase:
                 input_mat = data["rho_cube_zmp"]
                 energy_target = data["e_cc"] - data["e_zmp"]
         else:
-            raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
+            raise ValueError(f"No input_mat in data: {self.args.rho_input}")
 
         data_dict = {
             "input": self.process_input(input_mat),
@@ -278,9 +278,9 @@ class DataBase:
                 elif self.args.rho_input == "zmp":
                     output_mat = data["tol_delta_zmp_grids"]
                 else:
-                    raise ValueError(f"Unknown rho_input: {self.args.rho_input}")
+                    raise ValueError(f"No output_mat in data: {self.args.rho_input}")
             else:
-                raise ValueError(f"Unknown output_target: {self.args.output_target}")
+                raise ValueError(f"No output_target: {self.args.output_target}")
             data_dict["output"] = output_mat.reshape((-1, 1))[filter_idx]
             del output_mat
 
@@ -302,12 +302,21 @@ class DataBase:
 
             if self.args.if_grad and len(data_dict["input"]) < MAX_GRAD_BATCH_SIZE:
                 grad2force = data["grad2force"]
-                grad_cc_train = data["grad_cc_train"]
+                if self.args.rho_input == "dft":
+                    grad_cc_train = data["grad_cc_train"]
+                elif self.args.rho_input == "dft_d3bj":
+                    grad_cc_train = data["grad_cc"] - data["grad_dft_d3bj"]
+                elif self.args.rho_input == "zmp":
+                    grad_cc_train = data["grad_cc"] - data["grad_zmp"]
+                else:
+                    raise ValueError(f"No grad in data: {self.args.rho_input}")
                 data_dict["grad2force"] = self.process_grad2force(grad2force)[
                     filter_idx
                 ]
                 data_dict["grad_cc_train"] = grad_cc_train.reshape(-1)
-                scale_grad /= self.loss_ene(grad_cc_train) + self.args.relative_weight_epsilon
+                scale_grad /= (
+                    self.loss_ene(grad_cc_train) + self.args.relative_weight_epsilon
+                )
             else:
                 data_dict["grad2force"] = 0
                 data_dict["grad_cc_train"] = 0
