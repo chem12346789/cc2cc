@@ -18,8 +18,8 @@ DATA_FRAME_NAMES = {
         "wtmad_2_df",
     ],
     "dft-fitset-def2": ["subset_rmsd_df", "subset_mapd_df", "subset_mpd_df"],
-    "gmtkn-diet30-def2": ["subset_wtmad_2_df", "wtmad_2_df"],
-    "gmtkn-diet100-def2": ["subset_wtmad_2_df", "wtmad_2_df"],
+    "gmtkn-diet30-def2": ["subset_mean_df", "subset_wtmad_2_df", "wtmad_2_df"],
+    "gmtkn-diet100-def2": ["subset_mean_df", "subset_wtmad_2_df", "wtmad_2_df"],
 }
 RENAME_DICT = {
     "cc_ene": "mae",
@@ -456,6 +456,9 @@ class Collect_info:
                         mean_reaction_energy,
                     )
                 )
+                self.data_frame_dict["subset_mean_df"].loc[
+                    self.name_subset_list, dft_type
+                ] = mean_reaction_energy
                 self._update_wtmad2_frames(dft_type, wtmad_2_subset, subset2set)
 
         if self.data_set == "gmtkn-def2":
