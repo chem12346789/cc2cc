@@ -7,6 +7,7 @@
         "ms-azuretools.vscode-containers",
         "ms-pyright.pyright",
         "ms-python.black-formatter",
+        "ms-toolsai.datawrangler",
         "ms-python.debugpy",
         "ms-python.python",
         "ms-python.vscode-python-envs",

@@ -60,6 +60,10 @@ def safe_name(text: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", text.strip()).strip(".-") or "run"
 
 
+def parse_csv_list(text: str) -> list[str]:
+    return [item.strip() for item in text.split(",") if item.strip()]
+
+
 def resolve_path(path_str: str) -> Path:
     candidate = Path(path_str).expanduser()
     if candidate.is_absolute():
@@ -384,6 +388,11 @@ def main() -> int:
     parser.add_argument("--probe-timeout-sec", type=int, default=30)
     parser.add_argument("--probe-workers", type=int, default=16)
     parser.add_argument("--max-nodes", type=int, default=0)
+    parser.add_argument(
+        "--exclude-gpu-nodes",
+        default="",
+        help="Comma-separated node names/expressions to exclude from GPU slot probing and submission target.",
+    )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--cpu-only", action="store_true")
     args = parser.parse_args()
@@ -410,9 +419,19 @@ def main() -> int:
 
     probe_nodes = get_partition_nodes(partition, states=USABLE_STATES, debug=args.debug)
     submission_pool = get_partition_nodes(partition, states=None, debug=args.debug)
+
+    excluded_gpu_nodes: set[str] = set()
+    for node_expr in parse_csv_list(args.exclude_gpu_nodes):
+        excluded_gpu_nodes.update(expand_hostnames(node_expr, debug=args.debug))
+
+    if excluded_gpu_nodes:
+        probe_nodes = [node for node in probe_nodes if node not in excluded_gpu_nodes]
+
     if excluded_nodes:
         probe_nodes = [node for node in probe_nodes if node not in excluded_nodes]
-        submission_pool = list(dict.fromkeys([*submission_pool, *excluded_nodes]))
+    submission_pool = list(
+        dict.fromkeys([*submission_pool, *excluded_nodes, *excluded_gpu_nodes])
+    )
     if args.max_nodes > 0:
         probe_nodes = probe_nodes[: args.max_nodes]
 
