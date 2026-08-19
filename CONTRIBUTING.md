@@ -24,23 +24,27 @@ see `.github/copilot-instructions.md`. For core engineering rules, see `AGENTS.m
 ## Code Compaction Rules
 
 ### Redundancy Elimination
+
 - Remove duplicate logic. If two functions differ only by a constant,
   unify with a parameter.
 - Eliminate dead branches and unreachable code.
 - Inline single-use variables when the name adds no clarity.
 
 ### Prefer Standard Library and Existing Utilities
+
 - Use `itertools`, `collections`, `functools`, `pathlib`, `dataclasses`
   before reimplementing equivalent logic.
 - Check existing project utilities (`cc2cc.utils.*`) before writing new helpers.
 
 ### Merge and Simplify
+
 - Combine adjacent blocks that operate on the same data into a single pass.
 - Replace verbose patterns (manual loops where a comprehension or `map`
   suffices) with idiomatic equivalents.
 - Reduce nesting: flatten via early returns, guard clauses, or extraction.
 
 ### Naming and Structure
+
 - Names should describe intent, not implementation (`compute_overlap`
   not `loop_func`).
 - Consistent naming within a module; avoid abbreviations that are not
@@ -49,6 +53,7 @@ see `.github/copilot-instructions.md`. For core engineering rules, see `AGENTS.m
   split it.
 
 ### Output Requirements
+
 - After compaction, verify the code still passes the same targeted tests.
 - Do not change public behavior during compaction — only structure.
 - Report what was merged, removed, or inlined.
@@ -82,6 +87,7 @@ Record the justification in the PR description.
 ## Comments
 
 ### What deserves a comment
+
 - Non-obvious physics: conventions that differ from the standard literature,
   sign choices, unit systems, or approximations applied.
 - Numerical assumptions: expected magnitude ranges, conditioning notes,
@@ -90,12 +96,14 @@ Record the justification in the PR description.
   and surrounding code (e.g. batched vs. flattened orbital indices).
 
 ### What does NOT deserve a comment
+
 - Restating what the code does in prose.
 - Boilerplate (`# initialize counter`, `# return result`).
 - Section dividers in short files (`# --- Helper Functions ---`).
 - TODOs without context or owner. Use the issue tracker instead.
 
 ### Style
+
 - Comments explain *why*, not *what*.
 - Keep comments to one or two lines. For longer explanations, reference a
   docstring, paper, or design document.
