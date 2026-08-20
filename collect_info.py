@@ -44,52 +44,54 @@ class Collect_info:
     def __init__(
         self,
         model_load,
+        epoch,
         basis,
         verbose=4,
-        is_sota=False,
         data_set="gmtkn-def2",
     ):
         self.model_load = model_load
+        self.epoch = epoch
         self.basis = basis
         self.verbose = verbose
         self.data_set = data_set
-        self.is_sota = is_sota
         self.data_frame_name_list = DATA_FRAME_NAMES[self.data_set]
         self.data_frame_dict = {}
 
         dir_str = os.environ.get("VALIDATE_DIR", "validate_hkqai")
-        self.data_path = (
-            Path(dir_str) / f"ccdft_{self.basis}_{self.model_load}_{self.data_set}.csv"
-        )
-        self.if_done = False
-        self.stamp = (
-            f"{self.model_load}_{self.data_set}_sota"
-            if self.is_sota
-            else f"{self.model_load}_{self.data_set}"
-        )
+        self.stamp = f"{self.basis}_{self.model_load}_{self.epoch}_{self.data_set}"
+        self.data_path = Path(dir_str) / f"ccdft_{self.stamp}.csv"
+        self.done_cache_path = Path(dir_str) / "collect_done_cache.json"
+        self.if_done = self.load_done_cache()
 
-        experiment_dict = {
-            "model_load": self.model_load,
-            "basis": self.basis,
-            "verbose": self.verbose,
-            "pid": os.getpid(),
-        }
-        self.run = wandb.init(
-            project="DFT2CC_validation",
-            resume="allow",
-            name=(
-                f"collect_{self.model_load}_{self.basis}_"
-                f"{'sota' if self.is_sota else 'standard'}"
-            ),
-            config=experiment_dict,
-            allow_val_change=True,
-            mode="disabled" if self.verbose < 3 else "online",
-        )
+        if self.if_done:
+            self.run = None
+            cache_entry = self._get_done_cache_entry()
+            output_log_str = cache_entry.get("output_log_str", "")
+            if output_log_str:
+                print(output_log_str, end="" if output_log_str.endswith("\n") else "\n")
+            else:
+                print("DONE")
+        else:
+            experiment_dict = {
+                "model_load": self.model_load,
+                "epoch": self.epoch,
+                "basis": self.basis,
+                "verbose": self.verbose,
+                "pid": os.getpid(),
+            }
+            self.run = wandb.init(
+                project="DFT2CC_validation",
+                resume="allow",
+                name=(f"collect_{self.stamp}"),
+                config=experiment_dict,
+                allow_val_change=True,
+                mode="disabled" if self.verbose < 3 else "online",
+            )
 
-        print("Collect_info initialized with the following parameters:")
-        for key, value in experiment_dict.items():
-            print(f"{key}: {value}")
-        print("")
+            print("Collect_info initialized with the following parameters:")
+            for key, value in experiment_dict.items():
+                print(f"{key}: {value}")
+            print("")
 
         with open(
             "/home/chenzihao/workspace/cc2cc_test5/cc2cc/utils/mol_dataset/subset.json"
@@ -107,6 +109,40 @@ class Collect_info:
         self.name_set_list = list(self.full_subset_dict.keys())
         self.data = pd.DataFrame()
 
+    def _load_done_cache_map(self):
+        if not self.done_cache_path.exists():
+            return {}
+        try:
+            with open(self.done_cache_path, "r") as f:
+                cache = json.load(f)
+            return cache if isinstance(cache, dict) else {}
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+    def _get_done_cache_entry(self):
+        cache = self._load_done_cache_map()
+        entry = cache.get(self.stamp, False)
+        if isinstance(entry, dict):
+            return entry
+        return {"done": bool(entry), "output_log_str": ""}
+
+    def load_done_cache(self):
+        return bool(self._get_done_cache_entry().get("done", False))
+
+    def save_done_cache(self, done, output_log_str=""):
+        if not done:
+            return
+        cache = self._load_done_cache_map()
+        entry = cache.get(self.stamp, False)
+        if isinstance(entry, dict) and entry.get("done", False):
+            return
+        if isinstance(entry, bool) and entry:
+            return
+        cache[self.stamp] = {"done": True, "output_log_str": output_log_str}
+        self.done_cache_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.done_cache_path, "w") as f:
+            json.dump(cache, f, indent=2, sort_keys=True)
+
     def reset(self):
         self.data = pd.DataFrame()
         if self.verbose > 3:
@@ -115,15 +151,9 @@ class Collect_info:
     def aggregate_data(self):
         for name_subset in self.name_subset_list:
             if "gmtkn-diet" in args.data_set.lower():
-                pattern = (
-                    f"*{self.basis}_{self.model_load}_gmtkn-def2_"
-                    f"molecule_{name_subset}.csv"
-                )
+                pattern = f"*{self.stamp}_gmtkn-def2_molecule_{name_subset}.csv"
             else:
-                pattern = (
-                    f"*{self.basis}_{self.model_load}_{self.data_set}_"
-                    f"molecule_{name_subset}.csv"
-                )
+                pattern = f"*{self.stamp}_molecule_{name_subset}.csv"
             print(f"Find {pattern} in validate directory...")
             data_path_list = list(Path("validate").glob(pattern))
             if len(data_path_list) != 1:
@@ -145,10 +175,9 @@ class Collect_info:
     def _subset_alias(subset_name):
         if subset_name == "BH76RC":
             return "BH76"
-        if "S66x8" in subset_name:
-            return "S66x8"
-        if "S22x5" in subset_name:
-            return "S22x5"
+        for prefix in ("S66x8", "S22x5"):
+            if prefix in subset_name:
+                return prefix
         return subset_name
 
     @staticmethod
@@ -211,10 +240,19 @@ class Collect_info:
         self.data["scf_d3bj_ene"] = self.data["scf_ene"] + correction.to_numpy()
 
     def get_wtmad_2(self):
+        output_log_list = []
+
+        def log_print(*args, **kwargs):
+            sep = kwargs.get("sep", " ")
+            end = kwargs.get("end", "\n")
+            output_log_list.append(sep.join(str(arg) for arg in args) + end)
+            return print(*args, **kwargs)
+
         if self.data.empty:
             if self.verbose > 3:
-                print("No data available to calculate WTMAD-2.")
-            return
+                log_print("No data available to calculate WTMAD-2.")
+            self.if_done = False
+            return False
 
         data_name_list = (
             self.data["name"].str.split(f"_{self.basis}", regex=False).str[0].to_numpy()
@@ -232,7 +270,7 @@ class Collect_info:
 
         for i_subset, subset_name in enumerate(self.name_subset_list):
             i_subset_name = self._subset_alias(subset_name)
-            print(subset_name, i_subset_name)
+            log_print(subset_name, i_subset_name)
 
             reaction_dict = data_set_json[f"reaction-{subset_name}"]
             total_counts_subset.append(len(reaction_dict))
@@ -260,7 +298,7 @@ class Collect_info:
                         molecule_stoichiometry[col[0]] = stoichiometry
                     else:
                         if self.verbose > 3:
-                            print(
+                            log_print(
                                 "Warning: Could not find molecule "
                                 f"{mole_name} in subset {subset_name}"
                             )
@@ -327,25 +365,23 @@ class Collect_info:
                     )
             self.data_frame_dict[data_frame_name] = df
 
-        print(
-            "Number of reactions process/done in each subset: "
-            f"{completed_counts_subset}/{total_counts_subset}"
-        )
         status_subset = self._format_status(
             completed_counts_subset, total_counts_subset
         )
-        print(f"Number of reactions process/done in each subset: {status_subset}")
+        log_print(f"Number of reactions process/done in each subset: {status_subset}")
 
         completed_counts_set = (status_subset == "DONE").astype(int)
         completed_counts_set = np.einsum("i,ij->j", completed_counts_set, subset2set)
         total_counts_set = np.einsum("i,ij->j", np.ones_like(status_subset), subset2set)
         status_set = self._format_status(completed_counts_set, total_counts_set)
-        print(f"Number of reactions process/done in each set: {completed_counts_set}")
-
-        status_summary = (
-            f"{int(np.sum(completed_counts_set))}/{int(np.sum(total_counts_set))}"
+        log_print(
+            f"Number of reactions process/done in each set: {completed_counts_set}"
         )
-        print(f"Total number of reactions process/done: {status_summary}")
+
+        status_summary = self._format_status(
+            [np.sum(completed_counts_set)], [np.sum(total_counts_set)]
+        )[0]
+        log_print(f"Total number of reactions process/done: {status_summary}")
 
         for df_name in self.data_frame_name_list:
             df = self.data_frame_dict[df_name]
@@ -373,7 +409,7 @@ class Collect_info:
         for dft_type in dft_type_list:
             if dft_type not in self.data.columns:
                 if self.verbose > 3:
-                    print(f"Warning: {dft_type} not found in data columns.")
+                    log_print(f"Warning: {dft_type} not found in data columns.")
                 for df in self.data_frame_dict.values():
                     df.pop(dft_type)
                 continue
@@ -483,8 +519,6 @@ class Collect_info:
         for df in self.data_frame_dict.values():
             # rename columns
             df.rename(columns=RENAME_DICT, inplace=True)
-            if not self.is_sota and "AI(M BJ)" in df.columns:
-                df.pop("AI(M BJ)")
 
         with pd.option_context(
             "display.max_rows",
@@ -495,22 +529,20 @@ class Collect_info:
             "{:.2f}".format,
         ):
             for df_name in self.data_frame_name_list:
-                print(self.data_frame_dict[df_name])
+                log_print(self.data_frame_dict[df_name])
 
-        if self.is_sota:
-            for df in self.data_frame_dict.values():
-                # raname AI to SOTA and AI(BJ) to SOTA(BJ)
-                if "AI" in df.columns and "AI(BJ)" in df.columns:
-                    df["SOTA"] = df["AI"]
-                    df["SOTA(BJ)"] = df["AI(BJ)"]
-
-        print(f"Saving excel backup files with timestamp: {self.stamp}")
+        log_print(f"Saving excel backup files with timestamp: {self.stamp}")
         for df_name, df in self.data_frame_dict.items():
-            print(f"{df_name}:\n{df}\n")
+            log_print(f"{df_name}:\n{df}\n")
             df.to_csv(f"validate_hkqai/csv_backup/{df_name}_{self.stamp}.csv")
             df.round(3).to_excel(
                 f"validate_hkqai/excel_backup/{df_name}_{self.stamp}.xlsx"
             )
+        done = status_summary == "DONE"
+        output_log_str = "".join(output_log_list)
+        self.if_done = done
+        self.save_done_cache(done, output_log_str)
+        return done
 
     def save_csv(self):
         self.data.to_csv(self.data_path, index=False)
@@ -535,7 +567,15 @@ if __name__ == "__main__":
     # print pid for monitoring
     print(f"Process ID: {os.getpid()}")
     parser = argparse.ArgumentParser(description="Collect and process validation data.")
-    parser.add_argument("--model_load", type=str, nargs="?", const="", default="")
+    parser.add_argument(
+        "--model_load",
+        type=str,
+        nargs="?",
+        const="",
+        default="",
+        help="Model load string. If not provided, defaults to an empty string, which mean from the bechmark DFT data. If provided, it should be a string that identifies the model to load.",
+    )
+    parser.add_argument("--epoch", type=int, required=True)
     parser.add_argument("--basis", type=str, required=True)
     parser.add_argument("--verbose", type=int, default=4)
     parser.add_argument("--frequency", type=str, default="10s")
@@ -543,13 +583,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_set", type=str, default="gmtkn-def2", choices=DATA_FRAME_NAMES
     )
-    parser.add_argument("--sota", action="store_true")
     args = parser.parse_args()
 
     collector = Collect_info(
         model_load=args.model_load,
+        epoch=args.epoch,
         basis=args.basis,
-        is_sota=args.sota,
         verbose=args.verbose,
         data_set=args.data_set,
     )
@@ -557,18 +596,17 @@ if __name__ == "__main__":
 
     while not collector.if_done:
         collector.reset()
-        loaded = args.sota and collector.load_csv()
+        loaded = collector.load_csv()
         if not loaded:
-            if args.sota:
-                print("No data loaded. Collecting new data.")
+            print("No data loaded. Collecting new data.")
             collector.aggregate_data()
             collector.add_d3bj_correction()
             collector.save_csv()
-        collector.get_wtmad_2()
+        collector.if_done = collector.get_wtmad_2()
         print("Waiting for new data...", flush=True)
 
         num_checks += 1
-        if args.sota or (args.max_checks != -1 and num_checks >= args.max_checks):
+        if args.max_checks != -1 and num_checks >= args.max_checks:
             print("Maximum number of checks reached. Exiting.")
             break
 
