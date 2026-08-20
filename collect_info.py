@@ -6,7 +6,6 @@ import os
 
 import pandas as pd
 import numpy as np
-import wandb
 
 AU2KCALMOL = 627.5094740631
 DIET_DATASETS = {"gmtkn-diet30-def2", "gmtkn-diet100-def2"}
@@ -68,9 +67,8 @@ class Collect_info:
             cache_entry = self._get_done_cache_entry()
             output_log_str = cache_entry.get("output_log_str", "")
             if output_log_str:
+                print("Previous run completed. Output log:")
                 print(output_log_str, end="" if output_log_str.endswith("\n") else "\n")
-            else:
-                print("DONE")
         else:
             experiment_dict = {
                 "model_load": self.model_load,
@@ -79,6 +77,8 @@ class Collect_info:
                 "verbose": self.verbose,
                 "pid": os.getpid(),
             }
+            import wandb
+
             self.run = wandb.init(
                 project="DFT2CC_validation",
                 resume="allow",
@@ -93,21 +93,21 @@ class Collect_info:
                 print(f"{key}: {value}")
             print("")
 
-        with open(
-            "/home/chenzihao/workspace/cc2cc_test5/cc2cc/utils/mol_dataset/subset.json"
-        ) as f:
-            self.full_subset_dict = json.load(f)[self.data_set]
+            with open(
+                "/home/chenzihao/workspace/cc2cc_test5/cc2cc/utils/mol_dataset/subset.json"
+            ) as f:
+                self.full_subset_dict = json.load(f)[self.data_set]
 
-        for name_set, subset_list_ in self.full_subset_dict.items():
-            self.full_subset_dict[name_set] = np.sort(subset_list_).tolist()
+            for name_set, subset_list_ in self.full_subset_dict.items():
+                self.full_subset_dict[name_set] = np.sort(subset_list_).tolist()
 
-        self.name_subset_list = [
-            name_subset
-            for subset in self.full_subset_dict.values()
-            for name_subset in subset
-        ]
-        self.name_set_list = list(self.full_subset_dict.keys())
-        self.data = pd.DataFrame()
+            self.name_subset_list = [
+                name_subset
+                for subset in self.full_subset_dict.values()
+                for name_subset in subset
+            ]
+            self.name_set_list = list(self.full_subset_dict.keys())
+            self.data = pd.DataFrame()
 
     def _load_done_cache_map(self):
         if not self.done_cache_path.exists():
@@ -151,9 +151,9 @@ class Collect_info:
     def aggregate_data(self):
         for name_subset in self.name_subset_list:
             if "gmtkn-diet" in args.data_set.lower():
-                pattern = f"*{self.stamp}_gmtkn-def2_molecule_{name_subset}.csv"
+                pattern = f"*{self.basis}_{self.model_load}_gmtkn-def2_molecule_{name_subset}.csv"
             else:
-                pattern = f"*{self.stamp}_molecule_{name_subset}.csv"
+                pattern = f"*{self.basis}_{self.model_load}_molecule_{name_subset}.csv"
             print(f"Find {pattern} in validate directory...")
             data_path_list = list(Path("validate").glob(pattern))
             if len(data_path_list) != 1:
@@ -270,7 +270,6 @@ class Collect_info:
 
         for i_subset, subset_name in enumerate(self.name_subset_list):
             i_subset_name = self._subset_alias(subset_name)
-            log_print(subset_name, i_subset_name)
 
             reaction_dict = data_set_json[f"reaction-{subset_name}"]
             total_counts_subset.append(len(reaction_dict))
@@ -583,6 +582,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_set", type=str, default="gmtkn-def2", choices=DATA_FRAME_NAMES
     )
+    parser.add_argument(
+        "--if-load-csv",
+        type=bool,
+        default=False,
+        help="If True, load existing CSV data instead of aggregating new data.",
+    )
     args = parser.parse_args()
 
     collector = Collect_info(
@@ -596,8 +601,9 @@ if __name__ == "__main__":
 
     while not collector.if_done:
         collector.reset()
-        loaded = collector.load_csv()
-        if not loaded:
+        if args.if_load_csv:
+            loaded = collector.load_csv()
+        else:
             print("No data loaded. Collecting new data.")
             collector.aggregate_data()
             collector.add_d3bj_correction()
