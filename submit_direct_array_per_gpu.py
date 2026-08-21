@@ -395,6 +395,12 @@ def main() -> int:
     )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--cpu-only", action="store_true")
+    parser.add_argument(
+        "--sleep",
+        type=float,
+        default=0.0,
+        help="Sleep this many seconds before submitting any jobs.",
+    )
     args = parser.parse_args()
 
     script_path = resolve_path(args.script)
@@ -492,6 +498,10 @@ def main() -> int:
 
     model_name = safe_name(extract_load_model_arg(script_text, "load") or "no-load")
     molecule_names = parse_molecule_names(script_text)
+
+    if args.sleep > 0:
+        print(f"[INFO] Sleeping {args.sleep:.3f}s before submissions...")
+        time.sleep(args.sleep)
 
     prev_job_by_bucket: dict[int, str] = {}
     submitted: list[tuple[int, int, str]] = []
