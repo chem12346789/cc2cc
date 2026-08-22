@@ -64,6 +64,20 @@ def parse_csv_list(text: str) -> list[str]:
     return [item.strip() for item in text.split(",") if item.strip()]
 
 
+def parse_sleep_seconds(value: str) -> float:
+    match = re.fullmatch(r"\s*([0-9]*\.?[0-9]+)\s*([smhSMH]?)\s*", value)
+    if not match:
+        raise argparse.ArgumentTypeError(
+            "Invalid --sleep value. Use formats like 30, 30s, 5m, 1.5h"
+        )
+    amount = float(match[1])
+    if amount < 0:
+        raise argparse.ArgumentTypeError("--sleep must be non-negative")
+    unit = match[2].lower() or "s"
+    factor = {"s": 1.0, "m": 60.0, "h": 3600.0}[unit]
+    return amount * factor
+
+
 def resolve_path(path_str: str) -> Path:
     candidate = Path(path_str).expanduser()
     if candidate.is_absolute():
@@ -397,9 +411,9 @@ def main() -> int:
     parser.add_argument("--cpu-only", action="store_true")
     parser.add_argument(
         "--sleep",
-        type=float,
+        type=parse_sleep_seconds,
         default=0.0,
-        help="Sleep this many seconds before submitting any jobs.",
+        help="Sleep before submitting jobs; supports s/m/h suffix (e.g. 30s, 5m, 1h).",
     )
     args = parser.parse_args()
 
