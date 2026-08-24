@@ -105,15 +105,10 @@ class DataBase:
         )
 
         loss_func_dict = {
-            "L1Loss": lambda _: 1,
-            "MSELoss": lambda x: np.sum(np.abs(x)),
-        }
-        loss_func_inversed_dict = {
-            "L1Loss": lambda _: 1,
-            "MSELoss": lambda x: np.sum(np.sqrt(x)),
+            "L1Loss": lambda x: np.sum(np.abs(x)),
+            "MSELoss": lambda x: np.sum(x**2),
         }
         self.loss_ene = loss_func_dict[args.loss_type]
-        self.loss_ene_inversed = loss_func_inversed_dict[args.loss_type]
 
         name_list = []
         error_molecule = []
