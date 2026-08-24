@@ -65,20 +65,13 @@ def test_model_uks(
         if_retry = True
         mdft.kernel()
 
-    for factor in [1.0, 4.0]:
+    for factor in [4.0]:
         if mdft.converged is False and if_retry:
             print(f"UKS not converged. Add dynamic level shift with factor {factor}.")
             mdft.level_shift = factor
             mdft.kernel()
     if mdft.converged is False:
-        print(
-            "Error: UKS not converged!!! Just use the direct output without convergence."
-        )
-        mhf = pyscf.scf.UHF(mol).density_fit()
-        mhf.kernel()
-        mdft.max_cycle = -1
-        mdft.level_shift = 0.0
-        mdft.kernel(dm0=mhf.make_rdm1())
+        print("Error: UKS not converged!!! Just use the unconvergence output.")
 
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
@@ -112,6 +105,7 @@ def test_model_uks(
         "scf_dipole_x": scf_dipole[0],
         "scf_dipole_y": scf_dipole[1],
         "scf_dipole_z": scf_dipole[2],
+        "converged": mdft.converged,
     }
 
     if args.if_grad:
