@@ -309,9 +309,10 @@ class DataBase:
                     filter_idx
                 ]
                 data_dict["grad_cc_train"] = grad_cc_train.reshape(-1)
-                scale_grad /= (
-                    self.loss_ene(grad_cc_train) + self.args.relative_weight_epsilon
-                )
+                if mol_info["natm"] > 1 and self.args.if_relative_weight_grad:
+                    scale_grad /= (
+                        self.loss_ene(grad_cc_train) + self.args.relative_weight_epsilon
+                    )
             else:
                 data_dict["grad2force"] = 0
                 data_dict["grad_cc_train"] = 0
