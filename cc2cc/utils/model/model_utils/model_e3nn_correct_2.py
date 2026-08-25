@@ -70,6 +70,10 @@ class E3nn(torch.nn.Module):
             internal_weights=True,
         )
 
+        # uniform_ initialization for the tensor product weights
+        with torch.no_grad():
+            self.tp1.weight.uniform_(-1, 1)
+
         self.readout = o3.Linear(hidden_irreps, irreps_output)
 
         self.register_buffer("edge_vec", edge_vec, persistent=False)
