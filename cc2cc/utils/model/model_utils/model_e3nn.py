@@ -71,8 +71,8 @@ class E3nn(torch.nn.Module):
         self.sh = o3.spherical_harmonics(
             irreps_sh,
             self.edge_vec,
-            normalize=False,
-            normalization="norm",
+            normalize=True,
+            normalization="component",
         )
         self.tp = o3.FullyConnectedTensorProduct(
             irreps_input,
@@ -82,12 +82,16 @@ class E3nn(torch.nn.Module):
             internal_weights=True,
         )
 
+        # xavier_uniform_ initialization for the tensor product weights
+        with torch.no_grad():
+            self.tp.weight.uniform_(-1, 1)
+
         irreps_sh_center = o3.Irreps.spherical_harmonics(lmax=self.lmax)
         self.sh_center = o3.spherical_harmonics(
             irreps_sh_center,
             self.center_vec,
-            normalize=False,
-            normalization="norm",
+            normalize=True,
+            normalization="component",
         )
         self.tp_center = o3.FullyConnectedTensorProduct(
             hidden_irreps,
@@ -96,23 +100,6 @@ class E3nn(torch.nn.Module):
             shared_weights=True,
             internal_weights=True,
         )
-
-        # xavier_uniform_ initialization for the tensor product weights
-        with torch.no_grad():
-            for weight in self.tp.weight_views():
-                mul_1, mul_2, mul_out = weight.shape
-                # formula from torch.nn.init.xavier_uniform_
-                a = (6 / (mul_1 * mul_2 + mul_out)) ** 0.5
-                new_weight = torch.empty_like(weight)
-                new_weight.uniform_(-a, a)
-                weight[:] = new_weight
-            for weight in self.tp_center.weight_views():
-                mul_1, mul_2, mul_out = weight.shape
-                # formula from torch.nn.init.xavier_uniform_
-                a = (6 / (mul_1 * mul_2 + mul_out)) ** 0.5
-                new_weight = torch.empty_like(weight)
-                new_weight.uniform_(-a, a)
-                weight[:] = new_weight
 
     def forward(self, f_in):
         # f_in shape: [CUBE_SIZE**3, 4]
