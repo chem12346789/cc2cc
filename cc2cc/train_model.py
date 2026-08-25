@@ -155,7 +155,7 @@ def train_model(train_list, eval_list, args):
             modeldict.database_train.sampler.set_epoch(epoch)
             modeldict.database_eval.sampler.set_epoch(epoch)
 
-        if epoch <= modeldict.start_step:
+        if epoch < modeldict.start_step:
             modeldict.scheduler.step()
             barrier()
             continue
@@ -164,7 +164,7 @@ def train_model(train_list, eval_list, args):
         train_record = modeldict.train_model(if_grad=if_grad)
         barrier()
 
-        if epoch % args.eval_step == 0 or epoch == args.epoch:
+        if epoch % args.eval_step == 0 or epoch == args.epoch or epoch == 0:
             eval_record = modeldict.eval_model()
             barrier()
 

@@ -293,6 +293,7 @@ class ModelClass:
                 ]
             else:
                 raise ValueError(f"Unknown cube type: {self.cube_type}")
+            # tipCx -> piCtx
             x = np.transpose(x, (2, 1, 3, 0, 4))
             shape_x = x.shape
             return x.reshape(shape_x[0], shape_x[1], shape_x[2], -1)

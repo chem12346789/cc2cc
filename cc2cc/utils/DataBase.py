@@ -209,7 +209,6 @@ class DataBase:
         Load the batch data to the GPU.
         Note all data is in the list ([data]), so we need to access the first element.
         """
-
         batch_gpu = {}
         for key, val in batch.items():
             if key in self.gpu_key:
@@ -255,9 +254,9 @@ class DataBase:
         # if you want to keep all the data, you can set the threshold to 0.
         # if you want to save more memory, you can set the threshold to a larger value.
         if self.if_eval:
-            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-10
+            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 0
         else:
-            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 1e-15
+            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 0
         data_dict["input"] = data_dict["input"][filter_idx]
         data_dict["weight"] = data_dict["weight"][filter_idx]
         del input_mat, weight_mat
@@ -367,7 +366,10 @@ class DataBase:
 
         data_dict["scale"] = data_weight * scale
         data_dict["scale_abs"] = data_weight * scale_abs
-        data_dict["scale_grad"] = data_weight * scale_grad
+        if self.args.if_relative_weight_grad:
+            data_dict["scale_grad"] = scale_grad
+        else:
+            data_dict["scale_grad"] = data_weight * scale_grad
         data_dict["scale_atomic"] = data_weight * scale_atomic
 
         self.print(
