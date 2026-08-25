@@ -73,6 +73,10 @@ class E3nn(torch.nn.Module):
             internal_weights=True,
         )
 
+        # uniform_ initialization for the tensor product weights
+        with torch.no_grad():
+            self.tp1.weight.uniform_(-1, 1)
+
         self.tensor_square = o3.TensorSquare(
             hidden_irreps,
             irreps_out=irreps_output,
