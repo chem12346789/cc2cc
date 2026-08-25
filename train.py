@@ -132,6 +132,18 @@ if __name__ == "__main__":
         help="Whether to use relative weight for the absolute loss function. Default is False.",
     )
     parser.add_argument(
+        "--if_relative_weight_atomic",
+        type=str2bool,
+        default=False,
+        help="Whether to use relative weight for the atomic loss function. Default is False.",
+    )
+    parser.add_argument(
+        "--if_relative_weight_grad",
+        type=str2bool,
+        default=False,
+        help="Whether to use relative weight for the gradient loss function. Default is False.",
+    )
+    parser.add_argument(
         "--relative_weight_epsilon",
         type=float,
         default=1e-8,

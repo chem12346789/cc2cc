@@ -164,7 +164,7 @@ def train_model(train_list, eval_list, args):
         train_record = modeldict.train_model(if_grad=if_grad)
         barrier()
 
-        if epoch % args.eval_step == 0:
+        if epoch % args.eval_step == 0 or epoch == args.epoch:
             eval_record = modeldict.eval_model()
             barrier()
 
