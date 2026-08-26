@@ -18,14 +18,12 @@ class Model(torch.nn.Module):
         self.cube_middle = (self.cube_size - 1) // 2
         self.input_level = 4
         self.before_weight = False
-        self.out_l = 0
         self.flat_size = self.input_level * self.cube_size
 
         e3nn_args = {
             "cube_type": self.cube_type,
             "cube_size": self.cube_size,
             "input_level": self.input_level,
-            "out_l": self.out_l,
         }
         for i in range(1, self.input_level + 1):
             setattr(self, f"conv{i}", E3nn(**{**e3nn_args, "lmax": i}))

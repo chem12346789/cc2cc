@@ -15,18 +15,13 @@ from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 
 
 class E3nn(torch.nn.Module):
-    def __init__(
-        self,
-        cube_type="cube",
-        cube_size=27,
-        input_level=4,
-        **kwargs,
-    ):
+    def __init__(self, cube_type, cube_size, input_level, lmax):
         super().__init__()
 
         self.input_level = input_level
         self.cube_type = cube_type
         self.cube_size = cube_size
+        self.lmax = lmax
 
         if self.cube_type == "cube":
             edge_vec = torch.zeros(
@@ -49,18 +44,18 @@ class E3nn(torch.nn.Module):
             "+".join(
                 [
                     f"{self.input_level}x{i}{'e' if i % 2 == 0 else 'o'}"
-                    for i in range(1)  # lmax is fixed to 2
+                    for i in range(self.lmax + 1)
                 ]
             )
         )
         irreps_output = o3.Irreps(f"{self.cube_size}x{0}e")
 
-        irreps_sh = o3.Irreps.spherical_harmonics(lmax=1)
+        irreps_sh = o3.Irreps.spherical_harmonics(lmax=self.lmax)
         sh = o3.spherical_harmonics(
             irreps_sh,
             edge_vec,
             normalize=True,
-            normalization="norm",
+            normalization="component",
         )
         self.tp1 = o3.FullyConnectedTensorProduct(
             irreps_input,

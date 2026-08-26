@@ -15,15 +15,8 @@ from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 
 
 class E3nn(torch.nn.Module):
-    def __init__(
-        self,
-        cube_type="cube",
-        cube_size=27,
-        input_level=4,
-        lmax=2,
-        out_l=0,
-        **kwargs,
-    ):
+
+    def __init__(self, cube_type, cube_size, input_level, lmax):
         super().__init__()
 
         self.input_level = input_level
