@@ -105,10 +105,11 @@ class DataBase:
         )
 
         loss_func_dict = {
+            "none": lambda x: 1.0,
             "L1Loss": lambda x: np.sum(np.abs(x)),
             "MSELoss": lambda x: np.sum(x**2),
         }
-        self.loss_ene = loss_func_dict[args.loss_type]
+        self.normalise = loss_func_dict[args.normal_type]
 
         name_list = []
         error_molecule = []
@@ -281,7 +282,7 @@ class DataBase:
             if self.args.if_abs:
                 if self.args.if_relative_weight_abs:
                     scale_abs /= (
-                        self.loss_ene(data_dict["output"] * data_dict["weight"])
+                        self.normalise(data_dict["output"] * data_dict["weight"])
                         + self.args.relative_weight_epsilon
                     )
                 error_energy = AU2KCALMOL * abs(
@@ -310,7 +311,8 @@ class DataBase:
                 data_dict["grad_cc_train"] = grad_cc_train.reshape(-1)
                 if mol_info["natm"] > 1 and self.args.if_relative_weight_grad:
                     scale_grad /= (
-                        self.loss_ene(grad_cc_train) + self.args.relative_weight_epsilon
+                        self.normalise(grad_cc_train)
+                        + self.args.relative_weight_epsilon
                     )
             else:
                 data_dict["grad2force"] = 0
@@ -356,8 +358,10 @@ class DataBase:
         data_dict["data_weight"] = data_weight
 
         if self.args.if_relative_weight:
-            scale /= self.loss_ene(energy_target) + self.args.relative_weight_epsilon
-            scale_atomic /= self.loss_ene(ae_target) + self.args.relative_weight_epsilon
+            scale /= self.normalise(energy_target) + self.args.relative_weight_epsilon
+            scale_atomic /= (
+                self.normalise(ae_target) + self.args.relative_weight_epsilon
+            )
         if abs(ae_target) < 1e-10:
             self.print(
                 f"Warning: ae_target is too small {ae_target:>6.3f} for {name:>40}, set to 0.0 to turn it off in the atomic loss calculation."

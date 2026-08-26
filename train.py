@@ -52,6 +52,13 @@ if __name__ == "__main__":
         help="Loss function for the energy. Default is MSELoss. Other options are L1Loss.",
     )
     parser.add_argument(
+        "--normal_type",
+        type=str,
+        choices=["none", "L1Loss", "MSELoss"],
+        default="MSELoss",
+        help="Normalization type for the loss. Default is MSELoss. Other options are L1Loss and none.",
+    )
+    parser.add_argument(
         "--epoch",
         type=int,
         default=10000,
