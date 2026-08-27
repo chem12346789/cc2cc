@@ -88,9 +88,9 @@ class E3nn(torch.nn.Module):
         # f_in shape: [CUBE_SIZE**3, 4]
         h_local = self.tp1(f_in, self.sh)
         # f_hidden shape: [CUBE_SIZE**3, (lmax+1)**2]
-        h_global = h_local.sum(dim=-2)
-        # f_hidden shape: [(lmax+1)**2]
-        f_out = self.tensor_square(h_global, self.sh)
+        h_global = h_local.sum(dim=-2, keepdim=True)
+        # f_hidden shape: [1, (lmax+1)**2]
+        f_out = self.tensor_square(h_global)
         # f_out shape: [1, CUBE_SIZE**3]
         return f_out
 
