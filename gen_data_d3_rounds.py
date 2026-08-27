@@ -62,6 +62,42 @@ if __name__ == "__main__":
         default=True,
         help="Whether to check the convergence of the wave function. Default is True.",
     )
+    parser.add_argument(
+        "--s6",
+        type=float,
+        default=1.0,
+        help="The s6 parameter for the D3 dispersion correction. Default is 1.0.",
+    )
+    parser.add_argument(
+        "--s8",
+        type=float,
+        default=0.0,
+        help="The s8 parameter for the D3 dispersion correction. Default is 1.0.",
+    )
+    parser.add_argument(
+        "--a1",
+        type=float,
+        default=0.0,
+        help="The a1 parameter for the D3 dispersion correction. Default is 0.0.",
+    )
+    parser.add_argument(
+        "--a2",
+        type=float,
+        default=0.0,
+        help="The a2 parameter for the D3 dispersion correction. Default is 0.0.",
+    )
+    parser.add_argument(
+        "--s9",
+        type=float,
+        default=1.0,
+        help="The s9 parameter for the D3 dispersion correction. Default is 1.0.",
+    )
+    parser.add_argument(
+        "--alp",
+        type=float,
+        default=14.0,
+        help="The alp parameter for the D3 dispersion correction. Default is 14.0.",
+    )
     args = add_args(parser)
 
     print_computer_info(args.device)
@@ -176,7 +212,17 @@ if __name__ == "__main__":
                 data_dict = dict(
                     np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
                 )
-                d3 = disp.DFTD3Dispersion(mol, param=)
+                d3 = disp.DFTD3Dispersion(
+                    mol,
+                    param={
+                        "s6": args.s6,
+                        "s8": args.s8,
+                        "s9": args.s9,
+                        "a1": args.a1,
+                        "a2": args.a2,
+                        "alp": args.alp,
+                    },
+                )
                 e_dft = data_dict["e_dft"]
                 grad_dft = data_dict["grad_dft"]
                 energy, gradient = d3.kernel()
