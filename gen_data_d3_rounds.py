@@ -176,12 +176,16 @@ if __name__ == "__main__":
                 data_dict = dict(
                     np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
                 )
-                d3 = disp.DFTD3Dispersion(mol, xc="b3lpy", param=)
+                d3 = disp.DFTD3Dispersion(mol, param=)
                 e_dft = data_dict["e_dft"]
                 grad_dft = data_dict["grad_dft"]
                 energy, gradient = d3.kernel()
                 data_dict[f"e_dft_d3bj_{args.d3_number}"] = energy + e_dft
                 data_dict[f"grad_dft_d3bj_{args.d3_number}"] = gradient + grad_dft
+                print(data_dict[f"e_dft_d3bj_{args.d3_number}"])
+                print(data_dict[f"e_dft_d3bj"])
+                print(data_dict[f"grad_dft_d3bj_{args.d3_number}"])
+                print(data_dict[f"grad_dft_d3bj"])
 
                 np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)
             else:
