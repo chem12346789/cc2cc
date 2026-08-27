@@ -4,7 +4,7 @@ from cc2cc.utils.env_var import EDGE_SIZE
 
 from cc2cc.utils.model.model_utils.model_dense import DenseNet
 from cc2cc.utils.model.model_utils.model_transformer import Transformer
-from cc2cc.utils.model.model_utils.model_e3nn_correct_n import E3nn
+from cc2cc.utils.model.model_utils.model_e3nn_n import E3nn
 
 
 class Model(torch.nn.Module):
