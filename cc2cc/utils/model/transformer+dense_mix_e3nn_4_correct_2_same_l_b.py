@@ -4,7 +4,7 @@ from cc2cc.utils.env_var import EDGE_SIZE
 
 from cc2cc.utils.model.model_utils.model_dense import DenseNet
 from cc2cc.utils.model.model_utils.model_transformer import Transformer
-from cc2cc.utils.model.model_utils.model_e3nn_correct_f import E3nn
+from cc2cc.utils.model.model_utils.model_e3nn_correct_2 import E3nn
 
 
 class Model(torch.nn.Module):
@@ -18,7 +18,7 @@ class Model(torch.nn.Module):
         self.cube_middle = (self.cube_size - 1) // 2
         self.input_level = 4
         self.before_weight = False
-        self.lmax = 2
+        self.lmax = 0
         self.flat_size = self.input_level * self.cube_size
 
         e3nn_args = {
