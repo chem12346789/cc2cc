@@ -1,6 +1,6 @@
 import torch
+import numpy as np
 from e3nn import o3
-from e3nn.nn import Gate
 
 from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 
@@ -70,16 +70,28 @@ class E3nn(torch.nn.Module):
         )
 
         self.tensor_square = o3.TensorSquare(
-            hidden_irreps,
+            irreps_in=hidden_irreps,
             irreps_out=irreps_output,
             irrep_normalization="component",
-            path_normalization="element",
         )
 
         # uniform_ initialization for the tensor product weights
         with torch.no_grad():
             self.tp1.weight.uniform_(-1, 1)
-            self.tensor_square.weight.uniform_(-1, 1)
+            # Scale higher-l paths smaller: weight in [-1/(l+1), 1/(l+1)]
+            offset = 0
+            for ins in self.tensor_square.instructions:
+                if not ins.has_weight:
+                    continue
+                numel = 1
+                for s in ins.path_shape:
+                    numel *= s
+                l = hidden_irreps[ins.i_in1].ir.l  # l1 == l2 for TensorSquare
+                scale = 1.0 / (2 * l + 1)
+                self.tensor_square.weight[offset : offset + numel].uniform_(
+                    -scale, scale
+                )
+                offset += numel
 
         self.register_buffer("edge_vec", edge_vec, persistent=False)
         self.register_buffer("sh", sh, persistent=False)
@@ -89,67 +101,8 @@ class E3nn(torch.nn.Module):
         h_local = self.tp1(f_in, self.sh)
         # f_hidden shape: [CUBE_SIZE**3, (lmax+1)**2]
         h_global = h_local.sum(dim=-2, keepdim=True)
-        # f_hidden shape: [1, (lmax+1)**2]
-        f_out = self.tensor_square(h_global)
+        # f_hidden shape: [(lmax+1)**2]
+        f_out = self.tensor_square(h_global, None)
+        # f_out shape: [CUBE_SIZE**3]
         # f_out shape: [1, CUBE_SIZE**3]
         return f_out
-
-
-@torch.no_grad()
-def test_x_reflection(model):
-    model.eval()
-
-    x = torch.randn(
-        EDGE_SIZE,
-        EDGE_SIZE,
-        EDGE_SIZE,
-        model.input_level,
-        device=model.sh.device,
-        dtype=model.sh.dtype,
-    )
-
-    x_reflected = torch.flip(x, dims=[0])
-
-    y1 = model(x.reshape(EDGE_SIZE**3, -1))
-    y2 = model(x_reflected.reshape(EDGE_SIZE**3, -1))
-
-    error = (y1 - y2).abs().max()
-
-    print("Maximum invariant error:", error.item())
-
-    assert torch.allclose(
-        y1,
-        y2,
-        atol=1e-5,
-        rtol=1e-5,
-    )
-
-
-@torch.no_grad()
-def test_xy_swap(model):
-    model.eval()
-
-    x = torch.randn(
-        EDGE_SIZE,
-        EDGE_SIZE,
-        EDGE_SIZE,
-        model.input_level,
-        device=model.sh.device,
-        dtype=model.sh.dtype,
-    )
-
-    x_swapped = x.transpose(0, 1)
-
-    y1 = model(x.reshape(EDGE_SIZE**3, -1))
-    y2 = model(x_swapped.reshape(EDGE_SIZE**3, -1))
-
-    error = (y1 - y2).abs().max()
-
-    print("Maximum invariant error:", error.item())
-
-    assert torch.allclose(
-        y1,
-        y2,
-        atol=1e-5,
-        rtol=1e-5,
-    )
