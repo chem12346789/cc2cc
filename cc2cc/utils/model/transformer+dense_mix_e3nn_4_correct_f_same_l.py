@@ -68,7 +68,7 @@ class Model(torch.nn.Module):
 
         x_cube = torch.cat(
             tuple(
-                torch.vmap(getattr(self, f"conv{i}"))(x_in)
+                (getattr(self, f"conv{i}"))(x_in)
                 for i in range(1, self.input_level + 1)
             ),
             dim=-2,
