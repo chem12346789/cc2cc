@@ -78,7 +78,20 @@ class E3nn(torch.nn.Module):
         # uniform_ initialization for the tensor product weights
         with torch.no_grad():
             self.tp1.weight.uniform_(-1, 1)
-            self.tensor_square.weight.uniform_(-1, 1)
+            # Scale higher-l paths smaller: weight in [-1/(l+1), 1/(l+1)]
+            offset = 0
+            for ins in self.tensor_square.instructions:
+                if not ins.has_weight:
+                    continue
+                numel = 1
+                for s in ins.path_shape:
+                    numel *= s
+                l = hidden_irreps[ins.i_in1].ir.l  # l1 == l2 for TensorSquare
+                scale = 1.0 / (2 * l + 1)
+                self.tensor_square.weight[offset : offset + numel].uniform_(
+                    -scale, scale
+                )
+                offset += numel
 
         self.register_buffer("edge_vec", edge_vec, persistent=False)
         self.register_buffer("sh", sh, persistent=False)
