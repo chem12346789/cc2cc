@@ -79,6 +79,7 @@ class D3Model(nn.Module):
             xc="b3-lyp",
             damping=damping,
             bidirectional=False,
+            abc=True
         )
         self.damping = damping
 
