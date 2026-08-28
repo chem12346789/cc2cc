@@ -19,8 +19,9 @@ from cc2cc.utils import AU2KCALMOL
 
 DTYPE = torch.float64
 DEFAULT_DEVICE = "cuda"
-POSITIVE_PARAM_EPS = 0.0
+POSITIVE_PARAM_EPS = -10
 PARAM_NAMES = ("s6", "rs6", "s18", "rs18", "alp")
+LOSS_TYPES = {"mae", "mse"}
 SUBSET_JSON_PATH = Path("cc2cc/utils/mol_dataset/subset.json")
 DATASET_JSON_DIR = Path("cc2cc/utils/mol_dataset")
 VALIDATE_DIR = Path("validate_hkqai_done")
@@ -48,7 +49,8 @@ OPTIMIZER_ALIASES = {
     "trust-region": "trust-constr",
     "tr": "trust-constr",
 }
-IF_PRINT = False
+IF_PRINT = 1
+DEFAULT_CONVERGENCE_TOL = 1e-10
 
 
 @dataclass
@@ -79,7 +81,7 @@ class D3Model(nn.Module):
             xc="b3-lyp",
             damping=damping,
             bidirectional=False,
-            abc=True
+            abc=True,
         )
         self.damping = damping
 
@@ -87,7 +89,7 @@ class D3Model(nn.Module):
         const_params = {}
         for param_name in PARAM_NAMES:
             if initial_params.get(param_name, None) is None:
-                trainable_params[param_name] = np.random.uniform(0.8, 2.0)
+                trainable_params[param_name] = np.random.uniform(0.0, 10.0)
             else:
                 if initial_params[param_name] < -999:
                     const_params[param_name] = get_dftd3_default_params(
@@ -346,7 +348,8 @@ def reaction_residuals(
         reaction_tensors.molecules_to_reactions,
         e_disp_kcalmol + data_dft_ene_kcalmol,
     )
-    return reaction_tensors.reference_energy - reaction_energy
+    residuals = reaction_tensors.reference_energy - reaction_energy
+    return residuals
 
 
 def _set_param_vector(model: D3Model, names: List[str], values: torch.Tensor) -> None:
@@ -374,7 +377,7 @@ def normalize_optimizer(value: str) -> str:
     return OPTIMIZER_ALIASES[key]
 
 
-def scipy_minimize_options(optimizer: str, epochs: int) -> Dict:
+def scipy_minimize_options(optimizer: str, epochs: int, convergence_tol: float) -> Dict:
     max_steps = max(1, epochs)
     if optimizer == "nelder-mead":
         return {
@@ -385,18 +388,35 @@ def scipy_minimize_options(optimizer: str, epochs: int) -> Dict:
             "adaptive": True,
         }
     if optimizer == "powell":
-        return {"maxiter": max_steps, "maxfev": max_steps, "xtol": 0.0, "ftol": 0.0}
+        return {
+            "maxiter": max_steps,
+            "maxfev": max_steps,
+            "xtol": convergence_tol,
+            "ftol": convergence_tol,
+        }
     if optimizer == "tnc":
-        return {"maxfun": max_steps}
+        return {
+            "maxfun": max_steps,
+            "xtol": convergence_tol,
+            "ftol": convergence_tol,
+            "gtol": convergence_tol,
+        }
     if optimizer == "trust-constr":
         return {
             "maxiter": max_steps,
-            "gtol": 1e-8,
-            "xtol": 1e-8,
-            "barrier_tol": 1e-8,
+            "gtol": convergence_tol,
+            "xtol": convergence_tol,
+            "barrier_tol": convergence_tol,
         }
     if optimizer in {"levenberg-marquardt", "l-bfgs-b"}:
-        return {"maxiter": max_steps, "maxfun": max_steps}
+        return {
+            "maxiter": max_steps,
+            "maxfun": max_steps,
+            "ftol": convergence_tol,
+            "gtol": convergence_tol,
+        }
+    if optimizer == "slsqp":
+        return {"maxiter": max_steps, "ftol": convergence_tol}
     return {"maxiter": max_steps}
 
 
@@ -437,27 +457,16 @@ def _train_with_scipy_minimize(
         theta_t = torch.tensor(x_arr, dtype=DTYPE, device=x0_t.device)
         _set_param_vector(model, names, theta_t)
         r = reaction_residuals(
-            model, input_batch, reaction_tensors, data_dft_ene_kcalmol
+            model,
+            input_batch,
+            reaction_tensors,
+            data_dft_ene_kcalmol,
         )
-        train_loss_value = torch.einsum(
-            "i,ij,j,j->j",
-            torch.abs(r),
-            reaction_tensors.reactions_to_subset,
-            reaction_tensors.one_over_mae,
-            reaction_tensors.one_over_number_of_reactions,
-        )
-        train_loss_value = float(torch.mean(torch.abs(train_loss_value)).item())
         if reaction_tensors.reaction_weight is not None:
             r = r * reaction_tensors.reaction_weight
-        obj_t = torch.einsum(
-            "i,ij,j,j->j",
-            torch.abs(r),
-            reaction_tensors.reactions_to_subset,
-            reaction_tensors.one_over_mae,
-            reaction_tensors.one_over_number_of_reactions,
-        )
-        obj_t = torch.mean(torch.abs(obj_t))
+        obj_t = torch.sqrt(torch.sum(r**2) + 1e-10) / r.numel()
         obj_value = float(obj_t.item())
+        train_loss_value = obj_value
         grads = torch.autograd.grad(
             obj_t,
             [model.params[n] for n in names],
@@ -478,13 +487,12 @@ def _train_with_scipy_minimize(
         obj_value, _, train_loss_value = _objective_and_grad(x)
 
         epoch = state["nfev"]
-        if epoch % print_step == 0:
+        if IF_PRINT and epoch % print_step == 0:
             params = model.current_params()
-            if IF_PRINT:
-                print(
-                    f"Epoch {epoch}: Loss={train_loss_value:.6f}, Para={[f'{v:.2f}' for v in params.values()]}",
-                    flush=True,
-                )
+            print(
+                f"Epoch {epoch}: Loss={train_loss_value:.6f}, Para={[f'{v:.2f}' for v in params.values()]}",
+                flush=True,
+            )
         _update_best(best, epoch, train_loss_value, model.current_params())
         state["nfev"] += 1
         return obj_value
@@ -502,6 +510,8 @@ def _train_with_scipy_minimize(
         options=options,
     )
     theta_opt_t = torch.tensor(result.x, dtype=DTYPE, device=x0_t.device)
+    if IF_PRINT:
+        print(f"Optimization with step {state['nfev']}: Result={result}", flush=True)
     _set_param_vector(model, names, theta_opt_t)
     return best
 
@@ -568,6 +578,13 @@ def parse_args() -> argparse.Namespace:
             "tnc, trust-constr/tr."
         ),
     )
+    parser.add_argument(
+        "--loss-type",
+        type=str.lower,
+        choices=sorted(LOSS_TYPES),
+        default="mae",
+        help="Loss type used in optimization objective.",
+    )
     param_help = (
         "Pass a value to make it a constant parameter, or pass a negative value to "
         "use the default value as a constant parameter. If not passed, it will be a "
@@ -578,6 +595,12 @@ def parse_args() -> argparse.Namespace:
             f"--{param_name}", type=float, default=None, help=param_help
         )
     parser.add_argument("--print_step", type=int, default=5000)
+    parser.add_argument(
+        "--convergence_tol",
+        type=float,
+        default=DEFAULT_CONVERGENCE_TOL,
+        help="Convergence tolerance for SciPy minimizers (smaller is tighter).",
+    )
     return parser.parse_args()
 
 
@@ -632,7 +655,9 @@ def run_train(args: argparse.Namespace) -> None:
             method=method,
             optimizer_label=optimizer_label,
             use_jac=use_jac,
-            options=scipy_minimize_options(args.optimizer, args.epochs),
+            options=scipy_minimize_options(
+                args.optimizer, args.epochs, args.convergence_tol
+            ),
         )
     else:
         raise ValueError(f"Unsupported optimizer: {args.optimizer}")
