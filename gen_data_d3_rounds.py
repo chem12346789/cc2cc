@@ -224,18 +224,19 @@ if __name__ == "__main__":
                     },
                 )
                 e_dft = data_dict["e_dft"]
-                grad_dft = data_dict["grad_dft"]
                 energy_force = d3.kernel()
                 energy = energy_force[0]
                 gradient = energy_force[1]
                 data_dict[f"e_dft_d3bj_{args.d3_number}"] = energy + e_dft
-                data_dict[f"grad_dft_d3bj_{args.d3_number}"] = gradient + grad_dft
-                print(data_dict[f"e_dft_d3bj_{args.d3_number}"])
-                print(data_dict[f"e_dft_d3bj"])
-                print(data_dict[f"grad_dft_d3bj_{args.d3_number}"])
-                print(data_dict[f"grad_dft_d3bj"])
+                print(data_dict[f"e_dft_d3bj_{args.d3_number}"], flush=True)
+                print(data_dict[f"e_dft_d3bj"], flush=True)
+                if not args.if_eval:
+                    grad_dft = data_dict["grad_dft"]
+                    data_dict[f"grad_dft_d3bj_{args.d3_number}"] = gradient + grad_dft
+                    print(data_dict[f"grad_dft_d3bj_{args.d3_number}"], flush=True)
+                    print(data_dict[f"grad_dft_d3bj"], flush=True)
 
-                # np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)
+                np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)
             else:
                 print(f"SKIP: {name} not exists, nothing to modify.")
         except (KeyError, ValueError, RuntimeError, FileNotFoundError) as e:
