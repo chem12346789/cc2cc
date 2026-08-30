@@ -228,6 +228,11 @@ class DataBase:
         scale_atomic = self.args.loss_multiplier_atomic
         self.print(f"\nLoading data {name:<40}")
         data = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
+        if (DATA_PATH / f"data_{name}_addon.npz").exists():
+            data_addon = np.load(
+                DATA_PATH / f"data_{name}_addon.npz", allow_pickle=True
+            )
+            data = {**data, **data_addon}
 
         weight_mat = data["weights"]
         if self.args.rho_input == "dft":
