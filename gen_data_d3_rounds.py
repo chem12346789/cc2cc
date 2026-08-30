@@ -212,7 +212,14 @@ if __name__ == "__main__":
                 data_dict = dict(
                     np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
                 )
-                data_dict_addon = {}
+                if (DATA_PATH / f"data_{name}_addon.npz").exists():
+                    data_dict_addon = dict(
+                        np.load(DATA_PATH / f"data_{name}_addon.npz", allow_pickle=True)
+                    )
+                    print(f"Modifying: {name} addon already exists.")
+                else:
+                    data_dict_addon = {}
+                    print(f"Modifying: {name} addon does not exist, creating new one.")
                 d3 = disp.DFTD3Dispersion(
                     mol,
                     param={
