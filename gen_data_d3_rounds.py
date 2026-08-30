@@ -212,6 +212,7 @@ if __name__ == "__main__":
                 data_dict = dict(
                     np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
                 )
+                data_dict_addon = {}
                 d3 = disp.DFTD3Dispersion(
                     mol,
                     param={
@@ -227,16 +228,20 @@ if __name__ == "__main__":
                 energy_force = d3.kernel()
                 energy = energy_force[0]
                 gradient = energy_force[1]
-                data_dict[f"e_dft_d3bj_{args.d3_number}"] = energy + e_dft
-                print(data_dict[f"e_dft_d3bj_{args.d3_number}"], flush=True)
+                data_dict_addon[f"e_dft_d3bj_{args.d3_number}"] = energy + e_dft
+                print(data_dict_addon[f"e_dft_d3bj_{args.d3_number}"], flush=True)
                 print(data_dict[f"e_dft_d3bj"], flush=True)
                 if not args.if_eval:
                     grad_dft = data_dict["grad_dft"]
-                    data_dict[f"grad_dft_d3bj_{args.d3_number}"] = gradient + grad_dft
-                    print(data_dict[f"grad_dft_d3bj_{args.d3_number}"], flush=True)
+                    data_dict_addon[f"grad_dft_d3bj_{args.d3_number}"] = (
+                        gradient + grad_dft
+                    )
+                    print(
+                        data_dict_addon[f"grad_dft_d3bj_{args.d3_number}"], flush=True
+                    )
                     print(data_dict[f"grad_dft_d3bj"], flush=True)
 
-                np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)
+                np.savez(DATA_PATH / f"data_{name}_addon.npz", **data_dict_addon)
             else:
                 print(f"SKIP: {name} not exists, nothing to modify.")
         except (KeyError, ValueError, RuntimeError, FileNotFoundError) as e:
