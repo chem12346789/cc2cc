@@ -307,7 +307,9 @@ class DataBase:
                 if self.args.rho_input == "dft":
                     grad_cc_train = data["grad_cc_train"]
                 elif self.args.rho_input in ["dft_d3bj", "dft_d3bj_1"]:
-                    grad_cc_train = data["grad_cc"] - data[self.args.rho_input]
+                    grad_cc_train = (
+                        data["grad_cc"] - data[f"grad_{self.args.rho_input}"]
+                    )
                 elif self.args.rho_input == "zmp":
                     grad_cc_train = data["grad_cc"] - data["grad_zmp"]
                 else:
