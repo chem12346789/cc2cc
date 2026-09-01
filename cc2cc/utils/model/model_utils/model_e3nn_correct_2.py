@@ -43,14 +43,6 @@ class E3nn(torch.nn.Module):
         hidden_irreps = o3.Irreps(
             "+".join([f"{self.input_level}x{i}e" for i in range(self.lmax + 1)])
         )
-        # hidden_irreps = o3.Irreps(
-        #     "+".join(
-        #         [
-        #             f"{self.input_level}x{i}{'e' if i % 2 == 0 else 'o'}"
-        #             for i in range(self.lmax + 1)
-        #         ]
-        #     )
-        # )
         irreps_output = o3.Irreps(f"{self.cube_size}x{0}e")
 
         irreps_sh = o3.Irreps.spherical_harmonics(lmax=self.lmax)
