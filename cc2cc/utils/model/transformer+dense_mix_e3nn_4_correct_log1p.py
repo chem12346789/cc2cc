@@ -62,6 +62,8 @@ class Model(torch.nn.Module):
         self.mixing_weight = torch.nn.Linear(self.flat_size, self.input_level + 2)
 
     def forward(self, x):
+        x = torch.log1p((-x).clamp(min=0))
+
         x_center = x[:, :, self.cube_middle]
 
         x_in = x.permute(0, 2, 1).contiguous()

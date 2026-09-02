@@ -69,7 +69,7 @@ class E3nn(torch.nn.Module):
         # f_in shape: [CUBE_SIZE**3, 4]
         f_hidden = self.tp1(f_in, self.sh)
         # f_hidden shape: [CUBE_SIZE**3, (lmax+1)**2]
-        f_hidden = f_hidden.sum(dim=-2, keepdim=True)
+        f_hidden = f_hidden.mean(dim=-2, keepdim=True)
         # f_hidden shape: [1, (lmax+1)**2]
         f_out = self.readout(f_hidden)
         # f_out shape: [1, CUBE_SIZE**3]
