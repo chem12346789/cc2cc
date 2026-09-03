@@ -521,7 +521,7 @@ def eval_loss_weighted(
     input_batch: Dict[str, torch.Tensor],
     reaction_tensors: ReactionTensors,
     data_dft_ene_kcalmol: torch.Tensor,
-) -> torch.Tensor:
+) -> tuple[torch.Tensor, torch.Tensor]:
     mean_absolute_deviation = 56.84 / 1505
     e_disp_kcalmol = model.dispersion_energy_kcalmol(input_batch)
 
@@ -536,7 +536,7 @@ def eval_loss_weighted(
         reaction_tensors.reactions_to_subset,
         reaction_tensors.one_over_number_of_reactions,
     )
-    return torch.abs(
+    loss = torch.abs(
         mean_absolute_deviation
         * torch.einsum(
             "i,i,i->",
@@ -545,6 +545,7 @@ def eval_loss_weighted(
             mean_reaction_energy,
         )
     )
+    return loss, e_disp_kcalmol
 
 
 def parse_args() -> argparse.Namespace:
@@ -727,15 +728,17 @@ def run_test(args: argparse.Namespace) -> None:
     )
     print(f"base_score: {base_score.item()}", flush=True)
 
-    loss = eval_loss_weighted(
+    loss, e_disp_kcalmol = eval_loss_weighted(
         model, input_batch, reaction_tensors, data_dft_ene_kcalmol
     )
     print(f"After fitting: {loss.item()}", flush=True)
 
-    data[f"modified_ai_d3{args.damping}"] = model.total_energy_hartree(
-        input_batch, scf_ene_au
+    data[f"modified_ai_d3{args.damping}"] = (
+        e_disp_kcalmol.detach().cpu().numpy() * units.kcal / units.mol / units.Hartree
+        + scf_ene_au
     )
     data.to_csv(data_path, index=False)
+    print(f"Saved modified data to {data_path}", flush=True)
 
 
 def main() -> None:

@@ -153,7 +153,7 @@ class Collect_info:
             if "gmtkn-diet" in args.data_set.lower():
                 pattern = f"*{self.basis}_{self.model_load}_gmtkn-def2_molecule_{name_subset}.csv"
             else:
-                pattern = f"*{self.basis}_{self.model_load}_molecule_{name_subset}.csv"
+                pattern = f"*{self.basis}_{self.model_load}_{self.data_set}_molecule_{name_subset}.csv"
             print(f"Find {pattern} in validate directory...")
             data_path_list = list(Path("validate").glob(pattern))
             if len(data_path_list) != 1:
@@ -194,17 +194,26 @@ class Collect_info:
             dtype=object,
         )
 
-    def _update_wtmad2_frames(self, dft_type, wtmad_2_subset, subset2set):
+    def _update_wtmad2_frames(
+        self, dft_type, wtmad_2_subset, subset2set, precent_counts_subset=None
+    ):
         self.data_frame_dict["subset_wtmad_2_df"].loc[
             self.name_subset_list, dft_type
         ] = wtmad_2_subset
+
         set_wtmad_2 = np.einsum("i,ij->j", wtmad_2_subset, subset2set)
-        self.data_frame_dict["wtmad_2_df"].loc[
-            self.name_set_list, dft_type
-        ] = set_wtmad_2
         self.data_frame_dict["wtmad_2_df"].loc["summary", dft_type] = np.sum(
             set_wtmad_2
         )
+        if precent_counts_subset is not None:
+            print(f"Updating WTMAD-2 frames for {dft_type} with precent_counts_subset.")
+            self.data_frame_dict["wtmad_2_df"].loc[self.name_set_list, dft_type] = (
+                set_wtmad_2 / precent_counts_subset
+            )
+        else:
+            self.data_frame_dict["wtmad_2_df"].loc[
+                self.name_set_list, dft_type
+            ] = set_wtmad_2
 
     def add_d3bj_correction(self):
         print(f"Current data columns: {self.data.columns.tolist()}")
@@ -369,6 +378,10 @@ class Collect_info:
         )
         log_print(f"Number of reactions process/done in each subset: {status_subset}")
 
+        precent_counts_subset = np.einsum(
+            "i,ij->j", total_counts_subset, subset2set
+        ) / np.sum(total_counts_subset)
+
         completed_counts_set = (status_subset == "DONE").astype(int)
         completed_counts_set = np.einsum("i,ij->j", completed_counts_set, subset2set)
         total_counts_set = np.einsum("i,ij->j", np.ones_like(status_subset), subset2set)
@@ -448,7 +461,9 @@ class Collect_info:
                     inverse_mae,
                     mean_reaction_energy,
                 )
-                self._update_wtmad2_frames(dft_type, wtmad_2_subset, subset2set)
+                self._update_wtmad2_frames(
+                    dft_type, wtmad_2_subset, subset2set, precent_counts_subset
+                )
             elif self.data_set == "dft-fitset-def2":
                 delta = reference_energy - reaction_energy_dft
                 self.data_frame_dict["subset_mpd_df"].loc[
@@ -546,7 +561,9 @@ class Collect_info:
     def save_csv(self):
         self.data.to_csv(self.data_path, index=False)
 
-    def load_csv(self):
+    def load_csv(self, path=None):
+        if path is not None:
+            self.data_path = Path(path)
         if not self.data_path.exists():
             print(f"CSV file {self.data_path} does not exist. No data loaded.")
             return False
@@ -583,10 +600,12 @@ if __name__ == "__main__":
         "--data_set", type=str, default="gmtkn-def2", choices=DATA_FRAME_NAMES
     )
     parser.add_argument(
-        "--if-load-csv",
-        type=bool,
-        default=False,
-        help="If True, load existing CSV data instead of aggregating new data.",
+        "--load_csv",
+        type=str,
+        nargs="?",
+        const="",
+        default="",
+        help="Path to the CSV file to load. If not provided, defaults to an empty string, which means no CSV will be loaded.",
     )
     args = parser.parse_args()
 
@@ -601,8 +620,8 @@ if __name__ == "__main__":
 
     while not collector.if_done:
         collector.reset()
-        if args.if_load_csv:
-            loaded = collector.load_csv()
+        if args.load_csv:
+            loaded = collector.load_csv(args.load_csv)
         else:
             print("No data loaded. Collecting new data.")
             collector.aggregate_data()
