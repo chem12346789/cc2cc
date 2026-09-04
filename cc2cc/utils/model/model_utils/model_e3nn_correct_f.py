@@ -104,7 +104,7 @@ class E3nn(torch.nn.Module):
         # f_in shape: [CUBE_SIZE**3, 4]
         h_local = self.tp1(f_in, self.sh)
         # f_hidden shape: [CUBE_SIZE**3, (lmax+1)**2]
-        h_global = h_local.sum(dim=-2, keepdim=True)
+        h_global = h_local.mean(dim=-2, keepdim=True)
         # f_hidden shape: [(lmax+1)**2]
         # stack quadratic and linear paths: [1, cube_size, 2]
         f_quad = self.tensor_square(h_global)
