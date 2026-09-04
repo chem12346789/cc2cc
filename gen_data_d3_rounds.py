@@ -7,6 +7,7 @@ import numpy as np
 
 import pyscf
 import pyscf.md
+import dftd3.pyscf as disp
 
 from cc2cc.utils import (
     gen_mole,
@@ -50,10 +51,52 @@ if __name__ == "__main__":
         help="Total number of training cycles. Default is 3.",
     )
     parser.add_argument(
+        "--d3_number",
+        type=int,
+        default=0,
+        help="The index of the D3 parameter set to use. Default is 0.",
+    )
+    parser.add_argument(
         "--check_convergence",
         type=str2bool,
         default=True,
         help="Whether to check the convergence of the wave function. Default is True.",
+    )
+    parser.add_argument(
+        "--s6",
+        type=float,
+        default=1.0,
+        help="The s6 parameter for the D3 dispersion correction. Default is 1.0.",
+    )
+    parser.add_argument(
+        "--s8",
+        type=float,
+        default=0.0,
+        help="The s8 parameter for the D3 dispersion correction. Default is 1.0.",
+    )
+    parser.add_argument(
+        "--a1",
+        type=float,
+        default=0.0,
+        help="The a1 parameter for the D3 dispersion correction. Default is 0.0.",
+    )
+    parser.add_argument(
+        "--a2",
+        type=float,
+        default=0.0,
+        help="The a2 parameter for the D3 dispersion correction. Default is 0.0.",
+    )
+    parser.add_argument(
+        "--s9",
+        type=float,
+        default=1.0,
+        help="The s9 parameter for the D3 dispersion correction. Default is 1.0.",
+    )
+    parser.add_argument(
+        "--alp",
+        type=float,
+        default=14.0,
+        help="The alp parameter for the D3 dispersion correction. Default is 14.0.",
     )
     args = add_args(parser)
 
@@ -165,13 +208,50 @@ if __name__ == "__main__":
             grids = Grid(mol, args.grid_level, 7)
 
             if args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
-                print(f"SKIP: {name} already exists.")
-            else:
-                if mol.spin == 0:
-                    cc(mol, grids, name, args, evaluate=evaluate)
+                print(f"Modifying: {name} already exists.")
+                data_dict = dict(
+                    np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
+                )
+                if (DATA_PATH / f"data_{name}_addon.npz").exists():
+                    data_dict_addon = dict(
+                        np.load(DATA_PATH / f"data_{name}_addon.npz", allow_pickle=True)
+                    )
+                    print(f"Modifying: {name} addon already exists.")
                 else:
-                    ucc(mol, grids, name, args, evaluate=evaluate)
-        except (KeyError, ValueError, RuntimeError) as e:
+                    data_dict_addon = {}
+                    print(f"Modifying: {name} addon does not exist, creating new one.")
+                d3 = disp.DFTD3Dispersion(
+                    mol,
+                    param={
+                        "s6": args.s6,
+                        "s8": args.s8,
+                        "s9": args.s9,
+                        "a1": args.a1,
+                        "a2": args.a2,
+                        "alp": args.alp,
+                    },
+                )
+                e_dft = data_dict["e_dft"]
+                energy_force = d3.kernel()
+                energy = energy_force[0]
+                gradient = energy_force[1]
+                data_dict_addon[f"e_dft_d3bj_{args.d3_number}"] = energy + e_dft
+                print(data_dict_addon[f"e_dft_d3bj_{args.d3_number}"], flush=True)
+                print(data_dict[f"e_dft_d3bj"], flush=True)
+                if not args.if_eval:
+                    grad_dft = data_dict["grad_dft"]
+                    data_dict_addon[f"grad_dft_d3bj_{args.d3_number}"] = (
+                        gradient + grad_dft
+                    )
+                    print(
+                        data_dict_addon[f"grad_dft_d3bj_{args.d3_number}"], flush=True
+                    )
+                    print(data_dict[f"grad_dft_d3bj"], flush=True)
+
+                np.savez(DATA_PATH / f"data_{name}_addon.npz", **data_dict_addon)
+            else:
+                print(f"SKIP: {name} not exists, nothing to modify.")
+        except (KeyError, ValueError, RuntimeError, FileNotFoundError) as e:
             print(f"ERROR: {name_mol} {args.md_number}")
             print(e)
             error_molecule.append(name)

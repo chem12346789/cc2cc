@@ -18,16 +18,17 @@ class Model(torch.nn.Module):
         self.cube_middle = (self.cube_size - 1) // 2
         self.input_level = 4
         self.before_weight = False
-        self.lmax = 2
+        self.lmax = 0
         self.flat_size = self.input_level * self.cube_size
 
         e3nn_args = {
             "cube_type": self.cube_type,
             "cube_size": self.cube_size,
             "input_level": self.input_level,
+            "lmax": self.lmax,
         }
         for i in range(1, self.input_level + 1):
-            setattr(self, f"conv{i}", E3nn(**{**e3nn_args, "lmax": i}))
+            setattr(self, f"conv{i}", E3nn(**e3nn_args))
 
         self.predictor = Transformer(
             d_model=self.cube_size,
@@ -44,7 +45,7 @@ class Model(torch.nn.Module):
             mlp=108,
             depth=5,
             dense_bias=False,
-            if_skip_connection_dense=0,
+            if_skip_connection_dense=1,
             dense_actv="gelu",
         )
 
@@ -53,7 +54,7 @@ class Model(torch.nn.Module):
             mlp=108,
             depth=5,
             dense_bias=False,
-            if_skip_connection_dense=0,
+            if_skip_connection_dense=1,
             drop_rate=0,
             dense_actv="gelu",
         )
@@ -67,7 +68,7 @@ class Model(torch.nn.Module):
 
         x_cube = torch.cat(
             tuple(
-                torch.vmap(getattr(self, f"conv{i}"))(x_in)
+                (getattr(self, f"conv{i}"))(x_in)
                 for i in range(1, self.input_level + 1)
             ),
             dim=-2,

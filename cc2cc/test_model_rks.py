@@ -2,6 +2,7 @@
 
 import timeit
 import numpy as np
+import dftd3.pyscf as disp
 import torch
 
 try:
@@ -76,6 +77,19 @@ def test_model_rks(
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
 
+    d3 = disp.DFTD3Dispersion(
+        mol,
+        param={
+            "s6": args.s6,
+            "s8": args.s8,
+            "s9": args.s9,
+            "a1": args.a1,
+            "a2": args.a2,
+            "alp": args.alp,
+        },
+    )
+    d3_energy_force = d3.kernel()
+
     if args.if_grad and args.max_cycle != -1:
         g = mdft.Gradients()
         g.xc = "b3lyp"
@@ -102,6 +116,7 @@ def test_model_rks(
         "name": name,
         "time_ai": time_ai,
         "scf_ene": e_scf,
+        "scf_d3bj_ene": e_scf + d3_energy_force[0],
         "scf_dipole_x": scf_dipole[0],
         "scf_dipole_y": scf_dipole[1],
         "scf_dipole_z": scf_dipole[2],
@@ -110,9 +125,10 @@ def test_model_rks(
 
     if args.if_grad:
         if grad_mdft is not None:
-            dict_.update({"grad_scf": grad_mdft})
+            dict_.update({"scf_grad": grad_mdft})
+            dict_.update({"scf_d3bj_grad": grad_mdft + d3_energy_force[1]})
         else:
-            dict_.update({"grad_scf": 0})
+            dict_.update({"scf_grad": 0})
 
     if (utils.DATA_PATH / f"data_{name}.npz").exists():
         data = np.load(utils.DATA_PATH / f"data_{name}.npz", allow_pickle=True)

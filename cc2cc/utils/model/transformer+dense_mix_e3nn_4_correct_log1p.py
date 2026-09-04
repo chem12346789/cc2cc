@@ -18,7 +18,7 @@ class Model(torch.nn.Module):
         self.cube_middle = (self.cube_size - 1) // 2
         self.input_level = 4
         self.before_weight = False
-        self.lmax = 2
+        self.lmax = 0
         self.flat_size = self.input_level * self.cube_size
 
         e3nn_args = {
@@ -45,7 +45,7 @@ class Model(torch.nn.Module):
             mlp=108,
             depth=5,
             dense_bias=False,
-            if_skip_connection_dense=0,
+            if_skip_connection_dense=1,
             dense_actv="gelu",
         )
 
@@ -54,7 +54,7 @@ class Model(torch.nn.Module):
             mlp=108,
             depth=5,
             dense_bias=False,
-            if_skip_connection_dense=0,
+            if_skip_connection_dense=1,
             drop_rate=0,
             dense_actv="gelu",
         )
@@ -62,13 +62,15 @@ class Model(torch.nn.Module):
         self.mixing_weight = torch.nn.Linear(self.flat_size, self.input_level + 2)
 
     def forward(self, x):
+        x = torch.log1p((-x).clamp(min=0))
+
         x_center = x[:, :, self.cube_middle]
 
         x_in = x.permute(0, 2, 1).contiguous()
 
         x_cube = torch.cat(
             tuple(
-                torch.vmap(getattr(self, f"conv{i}"))(x_in)
+                (getattr(self, f"conv{i}"))(x_in)
                 for i in range(1, self.input_level + 1)
             ),
             dim=-2,

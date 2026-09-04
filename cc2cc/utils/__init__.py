@@ -27,6 +27,9 @@ NO_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "ModelClass": ("cc2cc.utils.ModelClass", "ModelClass"),
     "Grid": ("cc2cc.utils.Grids", "Grid"),
     "GridCPU": ("cc2cc.utils.Grids", "GridCPU"),
+    "build_record_path": ("cc2cc.utils.run_helpers", "build_record_path"),
+    "release_memory": ("cc2cc.utils.run_helpers", "release_memory"),
+    "should_skip": ("cc2cc.utils.run_helpers", "should_skip"),
 }
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {

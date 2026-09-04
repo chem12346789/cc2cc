@@ -226,16 +226,23 @@ class DataBase:
         scale_abs = self.args.loss_multiplier_abs
         scale_grad = self.args.loss_multiplier_grad
         scale_atomic = self.args.loss_multiplier_atomic
-        self.print(f"\nLoading data {name:<40}")
         data = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
+        if (DATA_PATH / f"data_{name}_addon.npz").exists():
+            data_addon = np.load(
+                DATA_PATH / f"data_{name}_addon.npz", allow_pickle=True
+            )
+            self.print(f"\nLoading data and its addon {name:<40}")
+            data = {**data, **data_addon}
+        else:
+            self.print(f"\nLoading data {name:<40}")
 
         weight_mat = data["weights"]
         if self.args.rho_input == "dft":
             input_mat = data["rho_cube_dft"]
             energy_target = data["e_cc"] - data["e_dft"]
-        elif self.args.rho_input == "dft_d3bj":
+        elif self.args.rho_input in ["dft_d3bj", "dft_d3bj_1"]:
             input_mat = data["rho_cube_dft"]
-            energy_target = data["e_cc"] - data["e_dft_d3bj"]
+            energy_target = data["e_cc"] - data[f"e_{self.args.rho_input}"]
         elif self.args.rho_input == "zmp":
             if self.if_eval:
                 input_mat = data["rho_cube_dft"]
@@ -268,7 +275,7 @@ class DataBase:
             data_dict["grad_cc_train"] = 0
         else:
             if self.args.output_target == "tol_delta_grids":
-                if self.args.rho_input in ("dft", "dft_d3bj"):
+                if self.args.rho_input in ("dft", "dft_d3bj", "dft_d3bj_1"):
                     output_mat = data["tol_delta_grids"]
                 elif self.args.rho_input == "zmp":
                     output_mat = data["tol_delta_zmp_grids"]
@@ -299,8 +306,10 @@ class DataBase:
                 grad2force = data["grad2force"]
                 if self.args.rho_input == "dft":
                     grad_cc_train = data["grad_cc_train"]
-                elif self.args.rho_input == "dft_d3bj":
-                    grad_cc_train = data["grad_cc"] - data["grad_dft_d3bj"]
+                elif self.args.rho_input in ["dft_d3bj", "dft_d3bj_1"]:
+                    grad_cc_train = (
+                        data["grad_cc"] - data[f"grad_{self.args.rho_input}"]
+                    )
                 elif self.args.rho_input == "zmp":
                     grad_cc_train = data["grad_cc"] - data["grad_zmp"]
                 else:

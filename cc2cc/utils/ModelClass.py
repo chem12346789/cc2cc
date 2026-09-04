@@ -202,7 +202,8 @@ class ModelClass:
             state_dict = self._normalize_state_dict(checkpoint["state_dict"])
             self.state_dict = state_dict
             self.args.model = checkpoint["model"]
-            self.optimizer_state_dict = checkpoint.get("optimizer")
+            if getattr(self.args, "if_resume", False):
+                self.optimizer_state_dict = checkpoint.get("optimizer")
             self.print(f"Model loaded from {load_path} with model {self.args.model}")
         else:
             self.print("Model not found, starting from scratch.")

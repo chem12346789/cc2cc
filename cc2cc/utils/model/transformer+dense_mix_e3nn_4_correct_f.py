@@ -4,7 +4,7 @@ from cc2cc.utils.env_var import EDGE_SIZE
 
 from cc2cc.utils.model.model_utils.model_dense import DenseNet
 from cc2cc.utils.model.model_utils.model_transformer import Transformer
-from cc2cc.utils.model.model_utils.model_e3nn_correct_2 import E3nn
+from cc2cc.utils.model.model_utils.model_e3nn_correct_f import E3nn
 
 
 class Model(torch.nn.Module):
@@ -27,7 +27,7 @@ class Model(torch.nn.Module):
             "input_level": self.input_level,
         }
         for i in range(1, self.input_level + 1):
-            setattr(self, f"conv{i}", E3nn(**{**e3nn_args, "lmax": i}))
+            setattr(self, f"conv{i}", E3nn(**{**e3nn_args, "lmax": max(i - 1, 1)}))
 
         self.predictor = Transformer(
             d_model=self.cube_size,
@@ -67,7 +67,7 @@ class Model(torch.nn.Module):
 
         x_cube = torch.cat(
             tuple(
-                torch.vmap(getattr(self, f"conv{i}"))(x_in)
+                (getattr(self, f"conv{i}"))(x_in)
                 for i in range(1, self.input_level + 1)
             ),
             dim=-2,
