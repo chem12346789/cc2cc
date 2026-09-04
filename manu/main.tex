@@ -47,7 +47,7 @@ reprint,%
 
 
 \title{
-  A molecule
+  The Locality of Noncovalent Interactions: Machine-Learned Semilocal Corrections for DFT from Single Heavy Atoms
 }
 \author{XX}
 
@@ -135,27 +135,15 @@ In this article, we use the CCSD(T)/Def2-QZVPPD \cite{bartlettCoupledclusterTheo
 The electron density will be used as the calculation of the input of the neural network and the energy density will be used as the target of the neural network.
 
 The loss function is defined as
-% \begin{align}
-% 	\label{eq:loss}
-% 	L_{e} =
-% 	 & \lambda_{\rm{RE}} N_{\rm{atom}} \Big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \Big)^2 \nl
-% 	 & + \lambda_{\rm{ABS}} N_{\rm{atom}} \Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2 \nl
-% 	 & + \lambda_{\rm{AE}} N_{\rm{atom}} \Big(\bar{E}^{\rm{AE}}(\brm{r}_{i}) - E^{\rm{AE}}(\brm{r}_{i}) \Big)^2 .
-% \end{align}
 \onecolumngrid
 \begin{align}
   \label{eq:loss_self_scaled}
   L_{e} =
    & N_{\rm{atom}} \frac{\big(\int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \big)^2}{\Big| \int \d \brm{r}_{i} \bar{e}(\brm{r}_{i}) \Big| + \epsilon}
   + N_{\rm{atom}} \frac{\big(\bar{E}^{\rm{AE}} - E^{\rm{AE}} \big)^2}{\big| \bar{E}^{\rm{AE}} \big| + \epsilon} \nl
-  %  & + \frac{N_{\rm{atom}}}{N_{\rm{grids}}} \Big(\int \d \brm{r}_{i} \Big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \Big| \Big)^2
-   & + N_{\rm{atom}} \frac{\big(\int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \big| \big)^2}{\Big| \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i})\big| \Big| + \epsilon}
-  + N_{\rm{atom}} \frac{\big(\bar{F} - F \big)^2}{\big| \bar{F} \big| + \epsilon} .
-  % L_{e} =
-  %  & \sqrt{N_{\rm{atom}}} \frac{\big| \int \d \brm{r}_{i} \big(\bar{e}(\brm{r}_{i}) - e(\brm{r}_{i})\big) \big|}{\big| \int \d \brm{r}_{i} \bar{e}(\brm{r}_{i}) \big| + \epsilon}
-  % + \sqrt{N_{\rm{atom}}} \frac{\big|\bar{E}^{\rm{AE}} - E^{\rm{AE}} \big|}{\big| \bar{E}^{\rm{AE}} \big| + \epsilon} \nl
-  %  & + \frac{\sqrt{N_{\rm{atom}}}}{N_{\rm{grids}}} \frac{ \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \big| }{ \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i})\big| + \epsilon}
-  % + \sqrt{N_{\rm{atom}}} \frac{\int \d \brm{r}_{i} \big| \bar{F} - F \big|}{\int \d \brm{r}_{i} \big| \bar{F}\big| + \epsilon} .
+  %  & + N_{\rm{atom}} \lambda_{\rm{ABS}} \frac{\big(\int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \big| \big)^2}{\Big| \int \d \brm{r}_{i} \big| \bar{e}(\brm{r}_{i})\big| \Big| + \epsilon} % normal version
+   & + N_{\rm{atom}} \lambda_{\rm{ABS}} {\int \d \brm{r}_{i} \big( \bar{e}(\brm{r}_{i}) - e(\brm{r}_{i}) \big)^2}
+  + N_{\rm{atom}} \big(\bar{F} - F \big)^2.
 \end{align}
 \twocolumngrid
 Where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, respectively.
