@@ -403,6 +403,18 @@ def main() -> int:
     parser.add_argument("--probe-workers", type=int, default=16)
     parser.add_argument("--max-nodes", type=int, default=0)
     parser.add_argument(
+        "--no-slot-retry-attempts",
+        type=int,
+        default=0,
+        help="Retry attempts when no usable slots are found; 0 means retry forever.",
+    )
+    parser.add_argument(
+        "--no-slot-retry-interval",
+        type=parse_sleep_seconds,
+        default=30.0 * 60.0,
+        help="Wait interval before retrying slot probing; supports s/m/h suffix (e.g. 30m).",
+    )
+    parser.add_argument(
         "--exclude-gpu-nodes",
         default="",
         help="Comma-separated node names/expressions to exclude from GPU slot probing and submission target.",
@@ -459,12 +471,13 @@ def main() -> int:
     script_ntasks_per_node = read_sbatch_field(script_text, ["--ntasks-per-node"])
     script_cpus_per_task = read_sbatch_field(script_text, ["-c", "--cpus-per-task"])
 
-    if args.cpu_only:
-        slots = [
-            (expand_hostnames(node, debug=args.debug)[0], None)
-            for node in probe_nodes[:slot_limit]
-        ]
-    else:
+    def collect_slots() -> list[tuple[str, int | None]]:
+        if args.cpu_only:
+            return [
+                (expand_hostnames(node, debug=args.debug)[0], None)
+                for node in probe_nodes[:slot_limit]
+            ]
+
         with futures.ThreadPoolExecutor(max_workers=max(1, args.probe_workers)) as pool:
             tasks = [
                 pool.submit(
@@ -481,20 +494,43 @@ def main() -> int:
                 )
                 for node in probe_nodes
             ]
-            slots: list[tuple[str, int | None]] = []
+            collected_slots: list[tuple[str, int | None]] = []
             for future in futures.as_completed(tasks):
                 node, gpu_ids = future.result()
                 hosts = expand_hostnames(node, debug=args.debug)
                 if not hosts:
                     continue
-                slots.extend((hosts[0], gpu_id) for gpu_id in gpu_ids)
-                if len(slots) >= slot_limit:
+                collected_slots.extend((hosts[0], gpu_id) for gpu_id in gpu_ids)
+                if len(collected_slots) >= slot_limit:
                     break
-            slots = slots[:slot_limit]
+            return collected_slots[:slot_limit]
 
-    if not slots:
+    max_attempts = max(0, args.no_slot_retry_attempts)
+    attempt = 1
+    while True:
+        slots = collect_slots()
+        if slots:
+            break
+
         print("[WARN] No usable slots found. Nothing submitted.")
-        return 0
+        if max_attempts > 0 and attempt >= max_attempts:
+            return 0
+
+        wait_seconds = max(0.0, args.no_slot_retry_interval)
+        next_attempt = attempt + 1
+        if max_attempts > 0:
+            print(
+                f"[INFO] Retrying in {wait_seconds:.0f}s "
+                f"(attempt {next_attempt}/{max_attempts})..."
+            )
+        else:
+            print(
+                f"[INFO] Retrying in {wait_seconds:.0f}s "
+                f"(attempt {next_attempt}/unbounded)..."
+            )
+        if wait_seconds > 0:
+            time.sleep(wait_seconds)
+        attempt = next_attempt
 
     with resolve_path(args.time_array).open() as file:
         cfg = json.load(file)
