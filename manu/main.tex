@@ -147,6 +147,8 @@ The E3nn block only use the dot production of the input features to extract the 
 The Transformer block we use here is only composed of multilayer of the scaled dot-product attention part of the original transformer \cite{vaswaniAttentionAllYou2023-08-02}.
 % 
 The Mixture block combines the outputs from the different paths to produce the final prediction.
+% 
+Note the output, the predicted energy density for the central grid point, is only dependent on the $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$, so we call it a semi-local ML functional.
 %
 Other information about the architecture of the neural network is described in the appendix.
 
@@ -160,8 +162,6 @@ The dataset we use to train the neural network is listed in the Appendix.
 We use 128 molecules which consistent of less than 1-2 heavy (non-hydrogen) atoms as the training set and 34 molecules contain 4-5 heavy atoms as the validation set.
 % 
 In this article, we use the CCSD(T)/Def2-QZVPPD \cite{bartlettCoupledclusterTheoryQuantum2007-02-22,weigendBalancedBasisSets2005,zhengMinimallyAugmentedKarlsruhe2011-02} to calculate the electron density and the energy density of the molecules.
-%
-The electron density will be used as the calculation of the input of the neural network and the energy density will be used as the target of the neural network.
 
 The loss function is defined as
 \onecolumngrid
@@ -175,7 +175,8 @@ The loss function is defined as
   + N_{\rm{atom}} \big(\bar{F} - F \big)^2.
 \end{align}
 \twocolumngrid
-Where $N_{\rm{atom}}$ is the number of atoms in the molecule and $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, respectively.
+% 
+Where $N_{\rm{atom}}$ is the number of atoms in the molecule,  $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, and $F$ and $\bar{F}$ is the force of the predicted and target values, respectively.
 %
 The $\epsilon$ is a small number to avoid the division by zero and control the scale of the loss function, which is set to be $1 \times 10^{-4}$ in this article.
 %
@@ -196,19 +197,18 @@ The training process is monitored using the validation set every $5$ epochs, and
 
 The detail of the training dataset and validation dataset is listed in the Appendix.
 % 
-The training dataset consists of $69$ molecules (set A and set B) or $128$ molecules  (set A, set B and set C) with less than $3$ heavy (non-hydrogen) atoms, while the validation dataset consists of $115$ molecules with $4-5$ heavy atoms.
+The training dataset consists of $69$ molecules (set A and set B) or $128$ molecules  (set A, set B and set C) with $1-2$ heavy (non-hydrogen) atoms, while the validation dataset consists of $115$ molecules with $4-5$ heavy atoms.
 % 
 The validation loss is calculated using only the first two items in the loss function \eq{eq:loss_self_scaled}, which are the relative error in the total energy and the atomic energy error, to avoid the difficulty of calculating the absolute error and force in the total energy for large molecules.
 
 The training is performed on a single NVIDIA A100 GPU with 80 GB memory with double precision training using PyTorch \cite{paszkePyTorchImperativeStyle2019-12-03} and the training takes around $10$ days to complete. The version of PyTorch used is $2.8.0+$cu$128$, and CUDA version is $12.8$, the version of driver is $535.247.01$.
 
+\section{Results}
 \subsection{Testing on the GMTKN55 Dataset}
-
+We 
 
 \subsection{Comparison with other machine learning functionals}
 The main difference between our method and other machine learning functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07} is that we use the energy density as the target of the neural network instead of the total energy.
-
-\section{Results}
 
 \bibliography{ref}
 
