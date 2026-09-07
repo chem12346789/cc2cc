@@ -140,17 +140,17 @@ Then the exchange-correlation potential can be calculated by the functional deri
 % 
 Details of the energy density and the potential are provided in the Appendix.
 
-We use the E3nn block \cite{geigerE3nnEuclideanNeural2022-07-18} and the Slice block to extract the invariant features from the input, $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$.
-% 
-The E3nn block only use the dot production of the input features to extract the invariant features.
-% 
-The Transformer block we use here is only composed of multilayer of the scaled dot-product attention part of the original transformer \cite{vaswaniAttentionAllYou2023-08-02}.
-% 
-The Mixture block combines the outputs from the different paths to produce the final prediction.
-% 
-Note the output, the predicted energy density for the central grid point, is only dependent on the $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$, so we call it a semi-local ML functional.
+We use an E3nn block \cite{geigerE3nnEuclideanNeural2022-07-18} and a Slice block to extract invariant features from the input, $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$.
 %
-Other information about the architecture of the neural network is described in the appendix.
+The E3nn block uses only dot products of the input features to construct invariants.
+%
+The Transformer block consists of multiple layers of the scaled dot-product attention component from the original transformer \cite{vaswaniAttentionAllYou2023-08-02}.
+%
+The Mixture block combines outputs from these different paths to produce the final prediction.
+%
+Notably, the predicted energy density at the central grid point depends only on $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$; therefore, we refer to this model as a semi-local ML functional.
+%
+Additional architectural details are provided in the GitHub repository\cite{TODO:}.
 
 % TODO: We have $105,316$ parameters in the neural network.
 
@@ -205,7 +205,7 @@ The training is performed on a single NVIDIA A100 GPU with 80 GB memory with dou
 
 \section{Results}
 \subsection{Testing on the GMTKN55 Dataset}
-We 
+We
 
 \subsection{Comparison with other machine learning functionals}
 The main difference between our method and other machine learning functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07} is that we use the energy density as the target of the neural network instead of the total energy.
