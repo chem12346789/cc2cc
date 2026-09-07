@@ -60,7 +60,9 @@
         % 
         The architecture of the neural network.
         %
-        We use the E3nn block \cite{TODO:e3nn} to extract the invariant features from the input, and the Slice block is used to extract the energy density at the center (${\bm{e}(\brm{r}_i)}$), which is already the invariant feature, from the input.
+        We use the E3nn block \cite{TODO:e3nn} to extract the invariant features from the input.
+        % 
+        The Slice block is used to extract the energy density at the center (${\bm{e}(\brm{r}_i)}$), which is already the invariant feature, from the input.
         % 
         The transformer we use here is only composed of multilayer of the scaled dot-product attention part of the original transformer \cite{vaswaniAttentionAllYou2023-08-02}.
         %
