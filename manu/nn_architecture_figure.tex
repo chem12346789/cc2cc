@@ -13,7 +13,7 @@
         \node [block, right=of transformer] (flatten) {Flatten};
         \node [block, right=of flatten] (linear) {MLP};
         \node [block, right=of linear] (cat) {CAT};
-        \node [block, right=of cat, xshift=-0.2cm] (output) {ADD};
+        \node [block, right=of cat, xshift=-0.2cm] (output) {Mixture};
         \node [block1, right=of output] (output_final) {};
         \draw [-] (input-1) -- node[xshift=0.625cm] {$(N, 27, 4)$} (input.center);
         \draw [->] (input.center) -- (e3nn);
@@ -59,14 +59,12 @@
     \caption{
         % 
         The architecture of the neural network.
-        %
-        We use the E3nn block \cite{TODO:e3nn} to extract the invariant features from the input.
         % 
-        The Slice block is used to extract the energy density at the center (${\bm{e}(\brm{r}_i)}$), which is already the invariant feature, from the input.
+        The E3nn block \cite{geigerE3nnEuclideanNeural2022-07-18} and the Slice block extract the invariant features from the input.
         % 
-        The transformer we use here is only composed of multilayer of the scaled dot-product attention part of the original transformer \cite{vaswaniAttentionAllYou2023-08-02}.
-        %
-        Other information about the architecture of the neural network is described in the appendix.
+        The Mixture block combines the outputs from the different paths to produce the final prediction.
+        % 
+        The output of the neural network is the predicted energy density for the central grid point.
     }
     \label{fig:arch}
 \end{figure*}
