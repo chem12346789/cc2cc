@@ -46,7 +46,7 @@ reprint,%
 
 
 \title{
-  The Locality of Noncovalent Interactions: Machine-Learned Semilocal Corrections for DFT from Single Heavy Atoms
+  The Locality of Noncovalent Interactions: Machine-Learned Semilocal Corrections for DFT from Small Molecules
 }
 \author{XX}
 
@@ -54,9 +54,11 @@ reprint,%
 
 \begin{abstract}
   {
-    In this article, we introduce an approach to improve the accuracy of density functional theory (DFT) calculations by machine-learned semi-local corrections trained on single heavy (non-hydrogen) atoms.
+    In this article, we introduce a model structure and training loss to improve the accuracy of density functional theory (DFT) calculations by machine-learned semi-local corrections trained on small molecules.
     % 
-    % The proposed method 
+    The proposed method is training on the energy density of small molecules and then applied to larger systems, demonstrating the transferability of the learned corrections.
+    %
+    The results show that the machine-learned corrections can significantly improve the accuracy of DFT calculations for noncovalent interactions, even when the model is trained on a small dataset that contains only a few noncovalent interactions.
   }
 \end{abstract}
 
