@@ -6,6 +6,8 @@ from cc2cc.utils.model.model_utils.model_dense import DenseNet
 from cc2cc.utils.model.model_utils.model_transformer import Transformer
 from cc2cc.utils.model.model_utils.model_e3nn_correct_2 import E3nn
 
+SCALE = 1e5
+
 
 class Model(torch.nn.Module):
     """Transformer/e3nn mixed model."""
@@ -62,6 +64,7 @@ class Model(torch.nn.Module):
         self.mixing_weight = torch.nn.Linear(self.flat_size, self.input_level + 2)
 
     def forward(self, x):
+        x = x / SCALE
         x_center = x[:, :, self.cube_middle]
 
         x_in = x.permute(0, 2, 1).contiguous()
