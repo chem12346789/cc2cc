@@ -32,7 +32,7 @@ def test_model_rks(
     time_ai_start = timeit.default_timer()
     mdft = pyscf.dft.RKS(mol).density_fit()
     mol.stdout = mdft.stdout
-    if torch.cuda.is_available() and (mol.nao < 2000) and (not args.if_grad):
+    if torch.cuda.is_available() and (mol.nao < 5000) and (not args.if_grad):
         print("Use GPU for DFT calculation.")
         mdft = mdft.to_gpu()
         Grid = utils.GridGPU
