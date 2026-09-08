@@ -93,7 +93,8 @@ class DataBase:
         self.if_eval = if_eval
         self.process_input = process_input
         self.process_grad2force = process_grad2force
-        self.verbose = verbose
+        self.verbose = False
+        # self.verbose = verbose
         self.gpu_key = (
             "input",
             "weight",
@@ -257,6 +258,7 @@ class DataBase:
             "input": self.process_input(input_mat),
             "weight": weight_mat.reshape((-1, 1)),
         }
+        print(np.std(data_dict["input"]))
 
         # if the input_mat is too large, we filter the columns with small values to avoid the numrical instability in training. We keep the columns with the sum of absolute values larger than 1e-15.
         # if you want to keep all the data, you can set the threshold to 0.
