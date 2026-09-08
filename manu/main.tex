@@ -33,7 +33,6 @@ reprint,%
 }
 
 \renewcommand{\d}{{\rm d}}
-\newcommand{\calw}{\mathcal{W}}
 \newcommand{\nl}{\nonumber \\}
 \newcommand{\eq}[1]{Eq.\,(\ref{#1})}
 \newcommand{\Fig}[1]{Fig.\,\ref{#1}}
@@ -55,7 +54,9 @@ reprint,%
 
 \begin{abstract}
   {
-    In this article, we introduce an approach to improve the accuracy of density functional theory (DFT) calculations by machine-learned semilocal corrections trained on single heavy (non-hydrogen) atoms.
+    In this article, we introduce an approach to improve the accuracy of density functional theory (DFT) calculations by machine-learned semi-local corrections trained on single heavy (non-hydrogen) atoms.
+    % 
+    % The proposed method 
   }
 \end{abstract}
 
@@ -68,48 +69,40 @@ The well-known Kohn--Sham equation \cite{kohnSelfConsistentEquationsIncluding196
   \Big( - \frac{1}{2} \nabla^{2} + v_{\mathrm{ext}} + v_{\mathrm{H}} + v_{\rm{xc}}\Big) \phi_{i} = \epsilon_{i} \phi_{i}.
 \end{align}
 % 
-Where $\phi_{i}$ is the Kohn--Sham orbital, $\epsilon_{i}$ is the Kohn--Sham orbital energy, $v_{\mathrm{ext}}$ is the external potential (such as the electrostatic potential of nuclei), $v_{\mathrm{H}}$ is the electrostatic potential of the electron, and $v_{\rm{xc}}$ is the exchange-correlation potential.
+Here, $\phi_{i}$ is the Kohn--Sham orbital, $\epsilon_{i}$ is the corresponding orbital energy, $v_{\mathrm{ext}}$ is the external potential (for example, the electrostatic potential of the nuclei), $v_{\mathrm{H}}$ is the Hartree potential, and $v_{\rm{xc}}$ is the exchange-correlation potential.
 % 
-According to the Hohenberg-Kohn theorem \cite{hohenbergInhomogeneousElectronGas1964-11-09}, exchange-correlation energy density $e_{\rm{xc}}$ is the unique functional of the ground-state electron density, $\rho = n_{i} \vert \phi_{i} \vert^{2}$, where $n_{i}$ is the occupation number of the Kohn-Sham orbital.
+According to the Hohenberg-Kohn theorem \cite{hohenbergInhomogeneousElectronGas1964-11-09}, the exchange-correlation energy density $e_{\rm{xc}}$ is a unique functional of the ground-state electron density, $\rho = n_{i} \vert \phi_{i} \vert^{2}$, where $n_{i}$ is the occupation number of the Kohn--Sham orbital.
 %
-Then, the Kohn-Sham equation is solved iteratively utilizing the so-called potential term $v_{\rm{xc}} = \delta E_{\rm{xc}} / \delta \rho$.
+The Kohn--Sham equations are then solved iteratively using the potential term $v_{\rm{xc}} = \delta E_{\rm{xc}} / \delta \rho$.
 % 
-So, once this unique functional is obtained, the properties of the molecules can be calculated accurately and efficiently.
+Once this functional is known, molecular properties can be computed accurately and efficiently.
 %
-This is the main idea of the density functional theory (DFT) \cite{parrDensityFunctionalTheory1980}.
+This is the central idea of density functional theory (DFT) \cite{parrDensityFunctionalTheory1980}.
 
-One of the challenging tasks of the DFT calculation is to find the unique functional between the exact exchange-correlation energy density $e_{\rm{xc}}$ and the electron density $\rho$.
+One of the challenges in DFT is to determine the exact functional relationship between the exchange-correlation energy density $e_{\rm{xc}}$ and the electron density $\rho$.
 % 
-Numerous approximations have been proposed for this functional, including early local-density approximation functionals \cite{parrDensityFunctionalTheory1980}, hybrid functionals \cite{perdewAtomsMoleculesSolids1992-09-15}, and the rapidly growing class of machine-learning (ML) functionals which have been developed in recent years \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07}.
+Numerous approximations have been proposed, including early local-density approximation functionals \cite{parrDensityFunctionalTheory1980}, hybrid functionals \cite{perdewAtomsMoleculesSolids1992-09-15}, and the rapidly expanding class of machine-learning (ML) functionals developed in recent years \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07}.
 % 
-However, many of those ML functionals suffer from lack of transferability or the demand of large training sets.
+However, many ML functionals still suffer from limited transferability or require large training sets.
 
-The most popular test set, which used as a benchmark to evaluate their accuracy and transferability, is the GMTKN55 dataset. The GMTKN55 dataset divides the benchmark into 5 different categories: reaction energies for small or large systems, reaction barrier heights, intermolecular non-covalent interactions (NCI), and intramolecular NCI.
+The most widely used benchmark for evaluating accuracy and transferability is GMTKN55. GMTKN55 is organized into five categories: reaction energies for small and large systems, reaction barrier heights, intermolecular non-covalent interactions (NCI), and intramolecular NCI.
 % 
-The training set of ML functionals is often a similar composition of those categories as the test set, ensuring that the model can generalize well to unseen data \cite{kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23}.
+For many ML functionals, the training set is designed to have a category composition similar to that of the test set, which helps generalization to unseen data \cite{kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23}.
 % 
-In this article, we only use the 1 categories: reaction energies for small systems as the training set, while testing on the total GMTKN55 dataset.
+In this article, we train only on one category, reaction energies for small systems, while testing on the full GMTKN55 dataset.
 % 
-The reason for this choice is to show the transferability of the ML functional trained on a limited category of data.
+This design is intended to test the transferability of an ML functional trained on a narrowly scoped category.
 
-The organization of this article is as follows. In Section 2, we introduce the neural network architecture used to learn the functional. In Section 3, we present the training procedure and the results on the GMTKN55 dataset. Finally, we conclude with a discussion on the transferability of the ML functional.
+The remainder of this article is organized as follows. In Section 2, we introduce the neural network architecture used to learn the functional. In Section 3, we present the training procedure and results on GMTKN55. Finally, we conclude with a discussion of transferability.
 
 \input{nn_architecture_figure}
 
 \section{The NEURAL NETWORK}
-We use the transformer \cite{vaswaniAttentionAllYou2023-08-02} and e3nn network \cite{TODO} as the neural network to learn the functional between the electron density and the energy density of the molecule.
+We use a Transformer \cite{vaswaniAttentionAllYou2023-08-02} and an e3nn network \cite{TODO} to learn the functional relationship between electron density and molecular energy density.
 % 
-After the training, the neural network can predict the energy of the molecule given the electron density and then can be used to optimize the electron density iteratively using the self-consistent field (SCF) method.
+After training, the model predicts molecular energy from electron density and is then embedded in an iterative self-consistent field (SCF) procedure to optimize the density.
 
-The architecture of the neural network is shown in \Fig{fig:arch}.
-% 
-The total number of parameters in the neural network is around $1.2$ million.
-%
-The input of the neural network is a set of the energy density ${\tilde{\bm{e}}_{\rm{cube}}(\brm{r})}$ with the size of $(N, 27, 4)$, and the output is the energy density ${e(\brm{r})}$ with the size of $(N, 1)$.
-% 
-N is the number of the grid points in the normal dft procedure.
-
-The input of the neural network is the set of energy densities ${\tilde{\bm{e}}_{\rm{cube}}(\brm{r})}$ defined below.
+The input set of energy densities ${\tilde{\bm{e}}_{\rm{cube}}(\brm{r})}$ is defined as follows.
 % 
 \begin{align}
   \tilde{\bm{e}}(\brm{r}_{\rm{cube}}) =
@@ -117,38 +110,46 @@ The input of the neural network is the set of energy densities ${\tilde{\bm{e}}_
    & = \big\{ \tilde{e}(\mathbf{r}), \tilde{e}(\mathbf{r}_{\rm{aux}}) \big\} .
 \end{align}
 % 
-The $\tilde{e}(\brm{r})$ is the energy density calculated by the 4 functionals (LDA, VWN3, B88 and LYP) from the original B3LYP functional \cite{perdewAtomsMoleculesSolids1992-09-15}.
+The quantity $\tilde{e}(\brm{r})$ denotes the energy density computed from four components of the original B3LYP functional (LDA, VWN3, B88, and LYP) \cite{perdewAtomsMoleculesSolids1992-09-15}.
 % 
-The $\mathbf{r}_{\rm{cube}}$ is a cube around the grid point $\mathbf{r}$ with the size of $3 \times 3 \times 3$ and the distance between two adjacent grid points is $d$.
+The set $\mathbf{r}_{\rm{cube}}$ is a $3 \times 3 \times 3$ cube centered at grid point $\mathbf{r}$, with spacing $d$ between adjacent points.
 %
-This means that for each grid point $\mathbf{r}$, we involve a small region around it to capture the local environment and provide more features for the neural network.
+Thus, each central grid point $\mathbf{r}$ is augmented with its local neighborhood to capture local structure and provide richer input features.
 % 
-We refer to the grid points within the cube, excluding the central point, as auxiliary grid points.
+We refer to all noncentral points in this cube as auxiliary grid points.
 
-The energy density at the grid point $\mathbf{r}$, denoted as $e(\brm{r})$, can be predicted by the neural network as
+The energy density at the central grid point $\mathbf{r}$, denoted $e(\brm{r})$, is predicted by the network as
 % 
 \begin{align}
   e_{\rm{NN}}(\brm{r})
-  = & {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \calw \big),
+  = & {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \bm{\theta} \big),
 \end{align}
 % 
-where ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \calw \big)$ represents the neural network function parameterized by $\calw$, taking $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$ as input.
+where ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \bm{\theta} \big)$ is the neural-network mapping parameterized by $\bm{\theta}$ and evaluated on $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$.
 % 
 The total exchange-correlation energy is obtained by integrating the energy density over the entire grid.
 % 
-Then the exchange-correlation potential can be calculated by the functional derivative of the exchange-correlation energy with respect to the electron density, which is used in the Kohn-Sham equation \eq{eq:KS}, so the properties of the molecules can be solved using the self-consistent field method.
+The exchange-correlation potential is then obtained as the functional derivative of this energy with respect to electron density and inserted into the Kohn--Sham equation \eq{eq:KS}, enabling molecular properties to be solved self-consistently.
 % 
-Details of the energy density and the potential are provided in the Appendix.
+Details of the formulation for exchange-correlation potential are provided in the Appendix.
+% 
+Notably, the predicted energy density at the central grid point depends only on the energy-density tensor of the local cube, $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$; therefore, we classify this model as a semi-local ML functional.
 
-We use an E3nn block \cite{geigerE3nnEuclideanNeural2022-07-18} and a Slice block to extract invariant features from the input, $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$.
+The network architecture is shown in \Fig{fig:arch}.
+% 
+The model contains approximately $1.2$ million parameters.
 %
-The E3nn block uses only dot products of the input features to construct invariants.
+The model input is the energy-density tensor ${\tilde{\bm{e}}_{\rm{cube}}(\brm{r})}$ of size $(N, 27, 4)$, and the output is the energy density ${e(\brm{r})}$ of size $(N, 1)$.
+% 
+Here, $N$ denotes the number of grid points in a standard DFT calculation and serves as the batch size.
+
+We use an E3nn block \cite{geigerE3nnEuclideanNeural2022-07-18} together with a Slice block to extract invariant features from $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$.
 %
-The Transformer block consists of multiple layers of the scaled dot-product attention component from the original transformer \cite{vaswaniAttentionAllYou2023-08-02}.
+The E3nn block constructs invariants using only dot products of the input features.
 %
-The Mixture block combines outputs from these different paths to produce the final prediction.
+The Transformer block consists of multiple layers built from the scaled dot-product attention component of the original Transformer \cite{vaswaniAttentionAllYou2023-08-02}.
 %
-Notably, the predicted energy density at the central grid point depends only on $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$; therefore, we refer to this model as a semi-local ML functional.
+The Mixture block combines outputs from these pathways to produce the final prediction.
 %
 Additional architectural details are provided in the GitHub repository\cite{TODO:}.
 
@@ -176,11 +177,15 @@ The loss function is defined as
 \end{align}
 \twocolumngrid
 % 
-Where $N_{\rm{atom}}$ is the number of atoms in the molecule,  $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ is the atomic energy of the predicted and target values, and $F$ and $\bar{F}$ is the force of the predicted and target values, respectively.
+where $N_{\rm{atom}}$ is the number of atoms in the molecule, $E^{\rm{AE}}$ and $\bar{E}^{\rm{AE}}$ are the predicted and target atomic energies, and $F$ and $\bar{F}$ are the predicted and target forces, respectively.
 %
-The $\epsilon$ is a small number to avoid the division by zero and control the scale of the loss function, which is set to be $1 \times 10^{-4}$ in this article.
+The parameter $\epsilon$ is a small constant introduced to avoid division by zero and control the scale of the loss; in this work, we set $\epsilon = 1 \times 10^{-4}$.
 %
-The first term is the relative error in the total energy, the second term is the error in the atomic energy, the third term is the absolute error in the total energy, and the fourth term is the error in the force; See the Appendix for the definition of the atomic energy and force.
+The first term represents the relative error in the total energy, the second term captures the atomic-energy error, the third term penalizes the absolute energy-density error, and the fourth term optimizes the force.
+% 
+The optimization of the force will stabilize the SCF procedure in the testing phase.
+% 
+See the Appendix for the definitions of atomic energy and force.
 
 \subsection{Training details}
 The neural network is trained using the AdamW optimizer \cite{loshchilovDecoupledWeightDecay2019-01-04} with the scheduler of cosine annealing with warm restarts \cite{loshchilovSGDRStochasticGradient2017-05-03}.
@@ -287,22 +292,21 @@ To make it clear, the auxiliary grid points $\mathbf{r}_{i;\rm{aux}}$ are define
 
 In the standard DFT procedure, each grid point is assigned a weight $w_{i}$, which is used to perform numerical integration.
 % 
-We set all the weights of the auxiliary grid points ($w_{i;\rm{aux}}$) to be zero. Thus, they do not contribute to the total energy and potential in the DFT procedure.
+We set all the weights of the auxiliary grid points ($w_{i;\rm{aux}}$) to be zero. Thus, they do not contribute to the total energy in the DFT procedure.
 % 
 \begin{align}
   E'_{\rm{xc}} =
-   & \int e_{\rm{NN}}(\mathbf{r}) \d \mathbf{r} = \int \d {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \calw \big).
+   & \int e_{\rm{NN}}(\mathbf{r}) \d \mathbf{r} = \int \d {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \bm{\theta} \big).
 \end{align}
-Consequently, while the auxiliary grid points influence the potential through the functional derivative, they do not directly contribute to the total energy integration. This ensures the procedure remains consistent with the standard DFT framework.
 % 
-The contribution of the electron density $\rho$ to the $\mu \nu$-th element of Fock matrix which contributed by the ML exchange-correlation, ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \calw \big)$,  is calculated as
+The contribution of the electron density $\rho$ to the $\mu \nu$-th element of Fock matrix which contributed by the ML exchange-correlation, ${\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}_{\rm{cube}}); \bm{\theta} \big)$,  is calculated as
 % 
 \begin{align}
   F_{\mu \nu}^{\rm{ML}}
   = & \frac{\delta E'_{\rm{xc}}}{\delta P_{\mu \nu}} \nl
   = & \int \d \brm{r} \sum_{\brm{r}' \in \brm{r}_{\rm{cube}}} \frac{\delta e_{\rm{NN}}(\brm{r}')} {\delta \rho(\brm{r}')} \chi_{\mu}(\brm{r}') \chi_{\nu}(\brm{r}') \nl
-  = & \int \d \brm{r} \sum_{\brm{r}' \in \brm{r}_{\rm{cube}}} \frac{\delta {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}'); \calw \big)}{\delta \rho(\brm{r}')} \chi_{\mu}(\brm{r}') \chi_{\nu}(\brm{r}') \nl
-  = & \int \d \brm{r} \sum_{\brm{r}' \in \brm{r}_{\rm{cube}}} \frac{\partial {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}'); \calw \big)}{\partial \tilde{e}(\brm{r}')} \frac{\delta \tilde{e}(\brm{r}')}{\delta \rho(\brm{r}')} \chi_{\mu}(\brm{r}') \chi_{\nu}(\brm{r}').
+  = & \int \d \brm{r} \sum_{\brm{r}' \in \brm{r}_{\rm{cube}}} \frac{\delta {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}'); \bm{\theta} \big)}{\delta \rho(\brm{r}')} \chi_{\mu}(\brm{r}') \chi_{\nu}(\brm{r}') \nl
+  = & \int \d \brm{r} \sum_{\brm{r}' \in \brm{r}_{\rm{cube}}} \frac{\partial {\rm{NN}}\big( \tilde{\bm{e}}(\brm{r}'); \bm{\theta} \big)}{\partial \tilde{e}(\brm{r}')} \frac{\delta \tilde{e}(\brm{r}')}{\delta \rho(\brm{r}')} \chi_{\mu}(\brm{r}') \chi_{\nu}(\brm{r}').
 \end{align}
 % 
 % \begin{align}
@@ -311,6 +315,10 @@ The contribution of the electron density $\rho$ to the $\mu \nu$-th element of F
 % 	 & = \int \frac{\delta e_{\rm{NN}}(\mathbf{r}_{\rm{cube}}) }{\delta \rho(\brm{r})} \d \mathbf{r}_{\rm{cube}}
 % \end{align}
 and the contribution of the derivative of the electron density $\nabla \rho$ to the Fock matrix is calculated similarly.
+% 
+Consequently, the auxiliary grid points influence the potential just like the center points with the same weights, $w_{i}$.
+% 
+This ensures the procedure remains consistent with the standard DFT framework with only minor modifications.
 
 To make the neural network can capture more information about the local environment of the grid point $\brm{r}_{i}$ in the training set, we set the cube to be aligned with the main rotation axis of the secondary derivative matrix of the electron density at the grid point $\brm{r}_{i}$.
 %
@@ -332,7 +340,7 @@ The eigenvectors $\mathbf{u}(\brm{r}_{i})$ of this matrix represent the main rot
    & \text{ for } m,n,p \in \{-1,0,1\} \big\}.
 \end{align}
 % 
-Although this alignment process adds some computational cost, it provides a consistent local reference frame for the input features, which may help the model learn more effectively.
+Although this alignment process adds some computational cost, it provides a much more local reference frame for the input features, which may help the model learn more effectively.
 % 
 While in the test set, we do not perform this alignment process, and the cube is aligned with the global coordinate system.
 
