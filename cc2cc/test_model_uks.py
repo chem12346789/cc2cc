@@ -77,17 +77,25 @@ def test_model_uks(
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
 
-    d3 = disp.DFTD3Dispersion(
-        mol,
-        param={
+    if (
+        args.s6 is None
+        or args.s8 is None
+        or args.s9 is None
+        or args.a1 is None
+        or args.a2 is None
+        or args.alp is None
+    ):
+        d3 = disp.DFTD3Dispersion(mol)
+    else:
+        param = {
             "s6": args.s6,
             "s8": args.s8,
             "s9": args.s9,
             "a1": args.a1,
             "a2": args.a2,
             "alp": args.alp,
-        },
-    )
+        }
+        d3 = disp.DFTD3Dispersion(mol, param=param)
     d3_energy_force = d3.kernel()
 
     if args.if_grad and args.max_cycle != -1:

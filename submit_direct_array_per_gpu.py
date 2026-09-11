@@ -9,6 +9,7 @@ import re
 import shlex
 import subprocess
 import time
+import os
 import uuid
 from contextlib import suppress
 from pathlib import Path
@@ -393,6 +394,7 @@ def submit_with_optional_exclude_retry(
 
 
 def main() -> int:
+    print(f"PID_THIS_RUN={os.getpid()}")
     parser = argparse.ArgumentParser()
     parser.add_argument("--script", default="test_direct.bash")
     parser.add_argument("--time-array", required=True)
