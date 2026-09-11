@@ -54,11 +54,13 @@ reprint,%
 
 \begin{abstract}
   {
-    In this article, we introduce a model structure and training loss to improve the accuracy of density functional theory (DFT) calculations by machine-learned semi-local corrections trained on small molecules.
+    In this article, we introduce a model structure and training loss for improving the accuracy of density functional theory (DFT) calculations using machine-learned semi-local corrections.
     % 
-    The proposed method is training on the energy density of small molecules and then applied to larger systems, demonstrating the transferability of the learned corrections.
-    %
-    The results show that the machine-learned corrections can significantly improve the accuracy of DFT calculations for noncovalent interactions, even when the model is trained on a small dataset that contains only a few noncovalent interactions.
+    The model is trained on the energy density of small molecules and then applied to larger systems.
+    % 
+    The results show that the learned corrections can significantly improve DFT accuracy for noncovalent interactions, even with a small training dataset whose largest molecules are C$_{2}$H$_{6}$, B$_{2}$H$_{6}$, and Si$_{2}$H$_{6}$.
+    % 
+    These findings demonstrate the transferability of semi-local corrections learned from small molecules to noncovalent interactions in larger systems.
   }
 \end{abstract}
 
@@ -118,7 +120,7 @@ The set $\mathbf{r}_{\rm{cube}}$ is a $3 \times 3 \times 3$ cube centered at gri
 %
 Thus, each central grid point $\mathbf{r}$ is augmented with its local neighborhood to capture local structure and provide richer input features.
 % 
-We refer to all noncentral points in this cube as auxiliary grid points.
+We refer to all noncentral points in this cube as auxiliary grid points, $\mathbf{r}_{\rm{aux}}$.
 
 The energy density at the central grid point $\mathbf{r}$, denoted $e(\brm{r})$, is predicted by the network as
 % 
@@ -133,9 +135,13 @@ The total exchange-correlation energy is obtained by integrating the energy dens
 % 
 The exchange-correlation potential is then obtained as the functional derivative of this energy with respect to electron density and inserted into the Kohn--Sham equation \eq{eq:KS}, enabling molecular properties to be solved self-consistently.
 % 
-Details of the formulation for exchange-correlation potential are provided in the Appendix.
-% 
 Notably, the predicted energy density at the central grid point depends only on the energy-density tensor of the local cube, $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$; therefore, we classify this model as a semi-local ML functional.
+
+The weights of these auxiliary grid points, $\mathbf{r}_{\rm{aux}}$, are set to zero, so they do not affect the number of electrons or the total energy, they only serve as additional features for the neural network.
+% 
+Auxiliary grid points do contribute to the exchange-correlation potential, which is calculated using the weights of the central grid point and integrated over the entire grid.
+% 
+Details of the formulation for exchange-correlation potential are provided in the Appendix.
 
 The network architecture is shown in \Fig{fig:arch}.
 % 
@@ -143,15 +149,15 @@ The model contains approximately $1.2$ million parameters.
 %
 The model input is the energy-density tensor ${\tilde{\bm{e}}_{\rm{cube}}(\brm{r})}$ of size $(N, 27, 4)$, and the output is the energy density ${e(\brm{r})}$ of size $(N, 1)$.
 % 
-Here, $N$ denotes the number of grid points in a standard DFT calculation and serves as the batch size.
-
+Here, $N$ denotes the number of grid points in a standard DFT calculation.
+% 
+We use a combination of E3nn, Transformer, and Mixture blocks to process the input features.
+% 
+The Mixture block combines outputs from these pathways to produce the final prediction, which is similar to the Mixture of Experts (MoE) architecture \cite{caiSurveyMixtureExperts2025}.
+% 
 We use an E3nn block \cite{geigerE3nnEuclideanNeural2022-07-18} together with a Slice block to extract invariant features from $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$.
 %
-The E3nn block constructs invariants using only dot products of the input features.
-%
 The Transformer block consists of multiple layers built from the scaled dot-product attention component of the original Transformer \cite{vaswaniAttentionAllYou2023-08-02}.
-%
-The Mixture block combines outputs from these pathways to produce the final prediction.
 %
 Additional architectural details are provided in the GitHub repository\cite{TODO:}.
 
@@ -256,7 +262,7 @@ We use the molecules in datasets A, B, and C as the training set and the molecul
 % 
 Datasets A, B, and C are defined as follows: dataset A comprises single-atom systems from GMTKN55 \cite{goerigkLookDensityFunctional2017}; dataset B comprises molecules with one heavy (non-hydrogen) atom from W4-11; and dataset C comprises molecules with two heavy atoms from W4-11.
 % 
-This lead to $136$ molecules in the training set and $34$ molecules in the validation set, while the number of molecules in GMTKN55 datasets is 2462 \cite{goerigkLookDensityFunctional2017}.
+This lead to 47 atoms/ions and $81$ molecules in the training set and $34$ molecules in the validation set, while the number of molecules in GMTKN55 datasets is 2462 \cite{goerigkLookDensityFunctional2017}.
 % % TODO: ablation study on the dataset size.
 To improve training efficiency and balance the dataset across different atom species, we add 9 additional copies of dataset A.
 
@@ -347,7 +353,5 @@ Although this alignment process adds some computational cost, it provides a much
 While in the test set, we do not perform this alignment process, and the cube is aligned with the global coordinate system.
 
 \section{Ablation Study}
-\subsection{Ablation study on the dataset size}
-In this subsection, we analyze the impact of dataset size on the performance of the neural network. We train the model with varying dataset sizes and evaluate its accuracy on the validation set. The results are summarized in Table~\ref{tab:dataset_size}.
 
 \end{document}
