@@ -32,7 +32,7 @@ def test_model_rks(
     time_ai_start = timeit.default_timer()
     mdft = pyscf.dft.RKS(mol).density_fit()
     mol.stdout = mdft.stdout
-    if torch.cuda.is_available() and (mol.nao < 5000) and (not args.if_grad):
+    if torch.cuda.is_available() and (mol.nao < 2000) and (not args.if_grad):
         print("Use GPU for DFT calculation.")
         mdft = mdft.to_gpu()
         Grid = utils.GridGPU
@@ -77,17 +77,15 @@ def test_model_rks(
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
 
-    d3 = disp.DFTD3Dispersion(
-        mol,
-        param={
-            "s6": args.s6,
-            "s8": args.s8,
-            "s9": args.s9,
-            "a1": args.a1,
-            "a2": args.a2,
-            "alp": args.alp,
-        },
-    )
+    param = {
+        "s6": args.s6,
+        "s8": args.s8,
+        "s9": args.s9,
+        "a1": args.a1,
+        "a2": args.a2,
+        "alp": args.alp,
+    }
+    d3 = disp.DFTD3Dispersion(mol, param=param)
     d3_energy_force = d3.kernel()
 
     if args.if_grad and args.max_cycle != -1:

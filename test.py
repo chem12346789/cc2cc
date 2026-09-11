@@ -64,38 +64,38 @@ def main():
     parser.add_argument(
         "--s6",
         type=float,
-        default=1.0,
-        help="The s6 parameter for the D3 dispersion correction. Default is 1.0.",
+        default=None,
+        help="The s6 parameter for the D3 dispersion correction. Default is None, which means it is the DEFAULT value.",
     )
     parser.add_argument(
         "--s8",
         type=float,
-        default=0.0,
-        help="The s8 parameter for the D3 dispersion correction. Default is 1.0.",
+        default=None,
+        help="The s8 parameter for the D3 dispersion correction. Default is None, which means it is the DEFAULT value.",
     )
     parser.add_argument(
         "--a1",
         type=float,
-        default=0.0,
-        help="The a1 parameter for the D3 dispersion correction. Default is 0.0.",
+        default=None,
+        help="The a1 parameter for the D3 dispersion correction. Default is None, which means it is the DEFAULT value.",
     )
     parser.add_argument(
         "--a2",
         type=float,
-        default=0.0,
-        help="The a2 parameter for the D3 dispersion correction. Default is 0.0.",
+        default=None,
+        help="The a2 parameter for the D3 dispersion correction. Default is None, which means it is the DEFAULT value.",
     )
     parser.add_argument(
         "--s9",
         type=float,
-        default=1.0,
-        help="The s9 parameter for the D3 dispersion correction. Default is 1.0.",
+        default=None,
+        help="The s9 parameter for the D3 dispersion correction. Default is None, which means it is the DEFAULT value.",
     )
     parser.add_argument(
         "--alp",
         type=float,
-        default=14.0,
-        help="The alp parameter for the D3 dispersion correction. Default is 14.0.",
+        default=None,
+        help="The alp parameter for the D3 dispersion correction. Default is None, which means it is the DEFAULT value.",
     )
     args = add_args(parser)
 
