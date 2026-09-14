@@ -51,8 +51,8 @@ def test_model_uks(
         cube_size=modeldict.cube_size,
     )
 
-    mdft.verbose = 4
-    mdft.mol.verbose = 4
+    mdft.verbose = 9
+    mdft.mol.verbose = 9
     mdft.conv_tol = 1e-7
     mdft.conv_tol_grad = 1e-3
 
