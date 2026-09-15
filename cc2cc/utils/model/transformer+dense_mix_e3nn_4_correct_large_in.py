@@ -78,7 +78,8 @@ class Model(torch.nn.Module):
             dense_actv="gelu",
         )
 
-        self.mixing_weight = torch.nn.Linear(self.flat_size, self.input_level + 3)
+        self.mixing_weight = torch.nn.Linear(self.flat_size, self.input_level + 2)
+        self.mixing_weight1 = torch.nn.Linear(self.flat_size, 1)
 
     def forward(self, x):
         x_center = x[:, :, self.cube_middle]
@@ -93,9 +94,14 @@ class Model(torch.nn.Module):
             dim=-2,
         )
 
-        weight_out = torch.softmax(
-            self.mixing_weight(x_cube.reshape(-1, self.flat_size)), dim=-1
+        weight_out = torch.cat(
+            (
+                self.mixing_weight(x_cube.reshape(-1, self.flat_size)),
+                self.mixing_weight1(x_cube.reshape(-1, self.flat_size)),
+            ),
+            dim=-1,
         )
+        weight_out = torch.softmax(weight_out, dim=-1)
 
         x_cube1 = self.densenet(self.predictor(x_cube).reshape(-1, self.flat_size))
         x_cube2 = self.densenet1(self.predictor1(x_cube).reshape(-1, self.flat_size))
@@ -103,5 +109,5 @@ class Model(torch.nn.Module):
         center_values = x_center.reshape(-1, self.input_level)
         x_center = self.densenet_center(center_values)
 
-        expert_outputs = torch.cat((x_cube1, x_cube2, x_center, center_values), dim=-1)
+        expert_outputs = torch.cat((x_cube1, x_center, center_values, x_cube2), dim=-1)
         return (weight_out * expert_outputs).sum(dim=-1, keepdim=True)
