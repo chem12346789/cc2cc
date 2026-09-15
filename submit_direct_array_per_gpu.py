@@ -5,15 +5,15 @@ from __future__ import annotations
 import argparse
 import concurrent.futures as futures
 import json
+import os
 import re
 import shlex
 import subprocess
 import time
-import os
 import uuid
 from contextlib import suppress
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 ROOT = Path(__file__).resolve().parent
 TEST_SCRIPT_DIR = ROOT / "test_script"
@@ -345,7 +345,6 @@ def parse_job_id(text: str) -> str:
 def build_submit_command(
     partition: str,
     task_id: int,
-    cpus_per_task: int | str,
     gpu_index: int | None,
     job_name: str,
     dependency: str | None,
@@ -362,7 +361,6 @@ def build_submit_command(
         "--array",
         str(task_id),
     ]
-    command += ["--cpus-per-task", str(cpus_per_task)]
     if gpu_index is not None:
         command += ["--export", f"ALL,FORCE_CUDA_VISIBLE_DEVICES={gpu_index}"]
     command += ["--job-name", job_name]
@@ -393,12 +391,17 @@ def submit_with_optional_exclude_retry(
     return parse_job_id(run_cmd(retry_command, debug=debug))
 
 
-def main() -> int:
-    print(f"PID_THIS_RUN={os.getpid()}")
+def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--script", default="test_direct.bash")
     parser.add_argument("--time-array", required=True)
     parser.add_argument("--array-concurrency", type=int, default=1)
+    parser.add_argument(
+        "--min-slots",
+        type=int,
+        default=1,
+        help="Minimum usable slots required before submitting; retry probing until reached.",
+    )
     parser.add_argument("--min-free-memory", type=float, default=15.0)
     parser.add_argument("--max-gpu-power", type=float, default=None)
     parser.add_argument("--probe-timeout-sec", type=int, default=30)
@@ -408,7 +411,7 @@ def main() -> int:
         "--no-slot-retry-attempts",
         type=int,
         default=0,
-        help="Retry attempts when no usable slots are found; 0 means retry forever.",
+        help="Retry attempts when fewer than --min-slots usable slots are found; 0 means retry forever.",
     )
     parser.add_argument(
         "--no-slot-retry-interval",
@@ -429,7 +432,73 @@ def main() -> int:
         default=0.0,
         help="Sleep before submitting jobs; supports s/m/h suffix (e.g. 30s, 5m, 1h).",
     )
+    return parser
+
+
+def wait_for_slots(
+    collect_slots: Callable[[], list[tuple[str, int | None]]],
+    *,
+    min_slots: int,
+    max_attempts: int,
+    retry_interval: float,
+) -> list[tuple[str, int | None]]:
+    max_attempts = max(0, max_attempts)
+    attempt = 1
+    while True:
+        slots = collect_slots()
+        if len(slots) >= min_slots:
+            return slots
+
+        print(
+            f"[WARN] Found {len(slots)} usable slots; "
+            f"need at least {min_slots}. Nothing submitted."
+        )
+        if max_attempts > 0 and attempt >= max_attempts:
+            return []
+
+        wait_seconds = max(0.0, retry_interval)
+        next_attempt = attempt + 1
+        attempt_limit = str(max_attempts) if max_attempts > 0 else "unbounded"
+        print(
+            f"[INFO] Retrying in {wait_seconds:.0f}s "
+            f"(attempt {next_attempt}/{attempt_limit})..."
+        )
+        if wait_seconds > 0:
+            time.sleep(wait_seconds)
+        attempt = next_attempt
+
+
+def print_submission_summary(
+    submitted: list[tuple[int, int, str]], *, task_count: int, slot_count: int
+) -> None:
+    job_ids_by_bucket: dict[int, list[str]] = {}
+    task_ids_by_bucket: dict[int, list[str]] = {}
+    for task_id, bucket_id, job_id in submitted:
+        job_ids_by_bucket.setdefault(bucket_id, []).append(job_id)
+        task_ids_by_bucket.setdefault(bucket_id, []).append(str(task_id))
+
+    print(
+        "[PID-SUMMARY]",
+        " ".join(" ".join(ids) for _, ids in sorted(job_ids_by_bucket.items())),
+    )
+    print(
+        "[SLURM_ARRAY_TASK_ID]",
+        " ".join(
+            f"{bucket_id}:{','.join(ids)}"
+            for bucket_id, ids in sorted(task_ids_by_bucket.items())
+        ),
+    )
+    print(
+        f"[DONE] submissions={len(submitted)}, tasks={task_count}, slots={slot_count}"
+    )
+
+
+def main() -> int:
+    print(f"PID_THIS_RUN={os.getpid()}")
+    parser = build_argument_parser()
     args = parser.parse_args()
+    if args.min_slots < 1:
+        parser.error("--min-slots must be at least 1")
 
     script_path = resolve_path(args.script)
     if not script_path.exists():
@@ -444,6 +513,8 @@ def main() -> int:
 
     task_ids = parse_array_ids(array_spec)
     slot_limit = max(1, parse_array_limit(array_spec) or args.array_concurrency)
+    if args.min_slots > slot_limit:
+        parser.error("--min-slots must not exceed the array concurrency limit")
     output_log_path, error_log_path = make_log_paths(script_path, script_text)
     excluded_nodes = set(
         expand_hostnames(
@@ -481,7 +552,7 @@ def main() -> int:
             ]
 
         with futures.ThreadPoolExecutor(max_workers=max(1, args.probe_workers)) as pool:
-            tasks = [
+            probe_futures = [
                 pool.submit(
                     probe_node_gpus,
                     node,
@@ -497,7 +568,7 @@ def main() -> int:
                 for node in probe_nodes
             ]
             collected_slots: list[tuple[str, int | None]] = []
-            for future in futures.as_completed(tasks):
+            for future in futures.as_completed(probe_futures):
                 node, gpu_ids = future.result()
                 hosts = expand_hostnames(node, debug=args.debug)
                 if not hosts:
@@ -507,42 +578,24 @@ def main() -> int:
                     break
             return collected_slots[:slot_limit]
 
-    max_attempts = max(0, args.no_slot_retry_attempts)
-    attempt = 1
-    while True:
-        slots = collect_slots()
-        if slots:
-            break
-
-        print("[WARN] No usable slots found. Nothing submitted.")
-        if max_attempts > 0 and attempt >= max_attempts:
-            return 0
-
-        wait_seconds = max(0.0, args.no_slot_retry_interval)
-        next_attempt = attempt + 1
-        if max_attempts > 0:
-            print(
-                f"[INFO] Retrying in {wait_seconds:.0f}s "
-                f"(attempt {next_attempt}/{max_attempts})..."
-            )
-        else:
-            print(
-                f"[INFO] Retrying in {wait_seconds:.0f}s "
-                f"(attempt {next_attempt}/unbounded)..."
-            )
-        if wait_seconds > 0:
-            time.sleep(wait_seconds)
-        attempt = next_attempt
+    slots = wait_for_slots(
+        collect_slots,
+        min_slots=args.min_slots,
+        max_attempts=args.no_slot_retry_attempts,
+        retry_interval=args.no_slot_retry_interval,
+    )
+    if not slots:
+        return 0
 
     with resolve_path(args.time_array).open() as file:
-        cfg = json.load(file)
+        timing_config = json.load(file)
 
     runtime_by_task = {
-        task_id: float(runtime) for task_id, runtime in zip(task_ids, cfg["time_array"])
+        task_id: float(runtime)
+        for task_id, runtime in zip(task_ids, timing_config["time_array"])
     }
-    cpus_per_task_by_task = cfg["cpus_per_task"]
     task_buckets = split_by_time(task_ids, runtime_by_task, len(slots))
-    assignment = {
+    assignment_by_task = {
         task_id: (bucket_idx + 1, slots[bucket_idx][0], slots[bucket_idx][1])
         for bucket_idx, bucket in enumerate(task_buckets)
         for task_id in bucket
@@ -555,15 +608,15 @@ def main() -> int:
         print(f"[INFO] Sleeping {args.sleep:.3f}s before submissions...")
         time.sleep(args.sleep)
 
-    prev_job_by_bucket: dict[int, str] = {}
+    last_job_id_by_bucket: dict[int, str] = {}
     submitted: list[tuple[int, int, str]] = []
     for task_id in task_ids:
         if runtime_by_task[task_id] == 0:
             continue
-        bucket, node_name, gpu_index = assignment[task_id]
+        bucket_id, node_name, gpu_index = assignment_by_task[task_id]
         dependency = (
-            f"afterany:{prev_job_by_bucket[bucket]}"
-            if bucket in prev_job_by_bucket
+            f"afterany:{last_job_id_by_bucket[bucket_id]}"
+            if bucket_id in last_job_id_by_bucket
             else None
         )
         molecule_name = (
@@ -577,40 +630,22 @@ def main() -> int:
             else [node for node in submission_pool if node != node_name]
         )
         command = build_submit_command(
-            partition,
-            task_id,
-            cpus_per_task_by_task[task_id],
-            gpu_index,
-            safe_name(f"{model_name}-{molecule_name}"),
-            dependency,
-            exclude,
-            output_log_path,
-            error_log_path,
-            script_path,
+            partition=partition,
+            task_id=task_id,
+            gpu_index=gpu_index,
+            job_name=safe_name(f"{model_name}-{molecule_name}"),
+            dependency=dependency,
+            exclude=exclude,
+            output_log_path=output_log_path,
+            error_log_path=error_log_path,
+            script_path=script_path,
         )
         job_id = submit_with_optional_exclude_retry(command, exclude, args.debug)
-        prev_job_by_bucket[bucket] = job_id
-        submitted.append((task_id, bucket, job_id))
+        last_job_id_by_bucket[bucket_id] = job_id
+        submitted.append((task_id, bucket_id, job_id))
 
-    by_bucket_jobs: dict[int, list[str]] = {}
-    by_bucket_tasks: dict[int, list[str]] = {}
-    for task_id, bucket, job_id in submitted:
-        by_bucket_jobs.setdefault(bucket, []).append(job_id)
-        by_bucket_tasks.setdefault(bucket, []).append(str(task_id))
-
-    print(
-        "[PID-SUMMARY]",
-        " ".join(" ".join(ids) for _, ids in sorted(by_bucket_jobs.items())),
-    )
-    print(
-        "[SLURM_ARRAY_TASK_ID]",
-        " ".join(
-            f"{bucket}:{','.join(ids)}"
-            for bucket, ids in sorted(by_bucket_tasks.items())
-        ),
-    )
-    print(
-        f"[DONE] submissions={len(submitted)}, tasks={len(task_ids)}, slots={len(slots)}"
+    print_submission_summary(
+        submitted, task_count=len(task_ids), slot_count=len(slots)
     )
     return 0
 

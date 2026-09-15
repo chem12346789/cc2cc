@@ -45,12 +45,14 @@ class Collect_info:
         model_load,
         epoch,
         basis,
+        force_d3_b3lyp=False,
         verbose=4,
         data_set="gmtkn-def2",
     ):
         self.model_load = model_load
         self.epoch = epoch
         self.basis = basis
+        self.force_d3_b3lyp = force_d3_b3lyp
         self.verbose = verbose
         self.data_set = data_set
         self.data_frame_name_list = DATA_FRAME_NAMES[self.data_set]
@@ -224,7 +226,8 @@ class Collect_info:
         ):
             if self.verbose > 3:
                 print("D3BJ correction already added.")
-            return
+            if not self.force_d3_b3lyp:
+                return
 
         if "name" not in self.data.columns:
             return
@@ -607,6 +610,12 @@ if __name__ == "__main__":
         default="",
         help="Path to the CSV file to load. If not provided, defaults to an empty string, which means no CSV will be loaded.",
     )
+    parser.add_argument(
+        "--force_d3_b3lyp",
+        type=bool,
+        default=True,
+        help="Force the D3 method use B3LYP's parameters.",
+    )
     args = parser.parse_args()
 
     collector = Collect_info(
@@ -615,6 +624,7 @@ if __name__ == "__main__":
         basis=args.basis,
         verbose=args.verbose,
         data_set=args.data_set,
+        force_d3_b3lyp=args.force_d3_b3lyp,
     )
     num_checks = 0
 

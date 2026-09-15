@@ -218,7 +218,27 @@ The training is performed on a single NVIDIA A100 GPU with 80 GB memory with dou
 
 \section{Results}
 \subsection{Testing on the GMTKN55 Dataset}
-We
+We use the original GMTKN55 dataset and WTMAD-2 metric for evaluating the performance of our model.
+% 
+The first one is the model trained on set A and set B, while the second one is the model trained on set A, set B, and set C.
+% 
+\begin{table}
+  \begin{tabular}{|l|c|c|c|c|}
+    \hline
+    Model   & Model 1 & Model 2 & B3LYP & \\
+    \hline
+    Subset1 &         &         &       & \\
+    Subset2 &         &         &       & \\
+    Subset3 &         &         &       & \\
+    Subset4 &         &         &       & \\
+    Subset5 &         &         &       & \\
+    \hline
+    Total   &         &         &       & \\
+    \hline
+  \end{tabular}
+\end{table}
+% 
+Others density functional approximation (DFA) can be found in the original GMTKN55 dataset.
 
 \subsection{Comparison with other machine learning functionals}
 The main difference between our method and other machine learning functionals \cite{nagaiCompletingDensityFunctional2020-05-05,chenDeePKSComprehensiveDataDriven2021-01-12,kirkpatrickPushingFrontiersDensity2021-12-10,luiseAccurateScalableExchangecorrelation2025-06-23,anMitigatingErrorCancellation2025-08-07} is that we use the energy density as the target of the neural network instead of the total energy.
