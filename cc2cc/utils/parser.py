@@ -168,8 +168,8 @@ def add_args(parser: argparse.ArgumentParser):
     )
     parser.add_argument(
         "--load_epoch",
-        type=int,
-        default=-1,
+        type=str,
+        default="-1",
         help="Epoch for loading the model. Default is -1.",
     )
     # behavior of the program
