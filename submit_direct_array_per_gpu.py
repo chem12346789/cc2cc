@@ -149,19 +149,22 @@ def expand_hostnames(expression: str, *, debug: bool = False) -> list[str]:
         ]
 
 
-def get_partition_nodes(
-    partition: str, *, states: set[str] | None, debug: bool = False
-) -> list[str]:
+def get_partition_nodes_split(
+    partition: str, *, usable_states: set[str], debug: bool = False
+) -> tuple[list[str], list[str]]:
     rows = run_cmd(["sinfo", "-h", "-N", "-p", partition, "-o", "%n|%t"], debug=debug)
-    nodes: list[str] = []
+    usable: list[str] = []
+    all_nodes: list[str] = []
     for row in (line.strip() for line in rows.splitlines() if line.strip()):
         node, _, state = row.partition("|")
-        if states is None or state.strip().lower().rstrip("*~+#") in states:
-            nodes.extend(expand_hostnames(normalize_node(node), debug=debug))
-    unique_nodes = list(dict.fromkeys(nodes))
-    if not unique_nodes:
+        for host in expand_hostnames(normalize_node(node), debug=debug):
+            all_nodes.append(host)
+            if state.strip().lower().rstrip("*~+#") in usable_states:
+                usable.append(host)
+    usable_nodes = list(dict.fromkeys(usable))
+    if not usable_nodes:
         raise RuntimeError(f"No nodes found in partition {partition!r}")
-    return unique_nodes
+    return usable_nodes, list(dict.fromkeys(all_nodes))
 
 
 def extract_load_model_arg(script_text: str, key: str) -> str | None:
@@ -522,18 +525,17 @@ def main() -> int:
         )
     )
 
-    probe_nodes = get_partition_nodes(partition, states=USABLE_STATES, debug=args.debug)
-    submission_pool = get_partition_nodes(partition, states=None, debug=args.debug)
+    probe_nodes, submission_pool = get_partition_nodes_split(
+        partition, usable_states=USABLE_STATES, debug=args.debug
+    )
 
     excluded_gpu_nodes: set[str] = set()
     for node_expr in parse_csv_list(args.exclude_gpu_nodes):
         excluded_gpu_nodes.update(expand_hostnames(node_expr, debug=args.debug))
 
-    if excluded_gpu_nodes:
-        probe_nodes = [node for node in probe_nodes if node not in excluded_gpu_nodes]
-
-    if excluded_nodes:
-        probe_nodes = [node for node in probe_nodes if node not in excluded_nodes]
+    excluded = excluded_nodes | excluded_gpu_nodes
+    if excluded:
+        probe_nodes = [node for node in probe_nodes if node not in excluded]
     submission_pool = list(
         dict.fromkeys([*submission_pool, *excluded_nodes, *excluded_gpu_nodes])
     )
@@ -546,10 +548,7 @@ def main() -> int:
 
     def collect_slots() -> list[tuple[str, int | None]]:
         if args.cpu_only:
-            return [
-                (expand_hostnames(node, debug=args.debug)[0], None)
-                for node in probe_nodes[:slot_limit]
-            ]
+            return [(node, None) for node in probe_nodes[:slot_limit]]
 
         with futures.ThreadPoolExecutor(max_workers=max(1, args.probe_workers)) as pool:
             probe_futures = [
@@ -570,10 +569,7 @@ def main() -> int:
             collected_slots: list[tuple[str, int | None]] = []
             for future in futures.as_completed(probe_futures):
                 node, gpu_ids = future.result()
-                hosts = expand_hostnames(node, debug=args.debug)
-                if not hosts:
-                    continue
-                collected_slots.extend((hosts[0], gpu_id) for gpu_id in gpu_ids)
+                collected_slots.extend((node, gpu_id) for gpu_id in gpu_ids)
                 if len(collected_slots) >= slot_limit:
                     break
             return collected_slots[:slot_limit]
