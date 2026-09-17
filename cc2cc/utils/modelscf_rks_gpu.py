@@ -7,7 +7,6 @@ GPU4PySCF version of the modified RKS hooks used by cc2cc.
 import types
 
 import cupy as cp
-import torch
 
 from gpu4pyscf import lib
 from gpu4pyscf.lib import logger
@@ -17,7 +16,7 @@ from gpu4pyscf.lib.cupy_helper import tag_array, transpose_sum
 
 from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.GridsGPU import GridGPU as Grid, iterate_grid_segments
-
+from cc2cc.utils.env_var import MAX_GPU_JK_NAO
 
 def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
     """
@@ -140,6 +139,31 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
             logger.debug(ks_, "nelec by numeric integration = %s", n)
             t0 = logger.timer(ks_, "vxc", *t0)
 
+        if mol.nao > MAX_GPU_JK_NAO:
+            logger.debug(
+                ks_,
+                "Large system detected: %d AO, using CPU for J/K calculations",
+                mol.nao,
+            )
+            ks_jk = ks_.to_cpu()
+
+            def get_j(mol, dm, hermi):
+                dm = cp.asnumpy(dm)
+                return cp.asarray(ks_jk.get_j(mol, dm, hermi))
+
+            def get_k(mol, dm, hermi, omega=0):
+                dm = cp.asnumpy(dm)
+                return cp.asarray(ks_jk.get_k(mol, dm, hermi, omega=omega))
+
+            def get_jk(mol, dm, hermi):
+                dm = cp.asnumpy(dm)
+                return cp.asarray(ks_jk.get_jk(mol, dm, hermi))
+
+        else:
+            get_j = ks_.get_j
+            get_k = ks_.get_k
+            get_jk = ks_.get_jk
+
         incremental_jk = (
             ks_._eri is None
             and ks_.direct_scf
@@ -152,27 +176,27 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
 
         if not ni.libxc.is_hybrid_xc(ks_.xc):
             vk = None
-            vj = ks_.get_j(mol, _dm, hermi)
+            vj = get_j(mol, _dm, hermi)
             if incremental_jk:
                 vj += vhf_last.vj
             vxc += vj
         else:
             omega, alpha, hyb = ni.rsh_and_hybrid_coeff(ks_.xc, spin=mol.spin)
             if omega == 0:
-                vj, vk = ks_.get_jk(mol, _dm, hermi)
+                vj, vk = get_jk(mol, _dm, hermi)
                 vk *= hyb
             elif alpha == 0:  # LR=0, only SR exchange
-                vj = ks_.get_j(mol, _dm, hermi)
-                vk = ks_.get_k(mol, _dm, hermi, omega=-omega)
+                vj = get_j(mol, _dm, hermi)
+                vk = get_k(mol, _dm, hermi, omega=-omega)
                 vk *= hyb
             elif hyb == 0:  # SR=0, only LR exchange
-                vj = ks_.get_j(mol, _dm, hermi)
-                vk = ks_.get_k(mol, _dm, hermi, omega=omega)
+                vj = get_j(mol, _dm, hermi)
+                vk = get_k(mol, _dm, hermi, omega=omega)
                 vk *= alpha
             else:  # SR and LR exchange with different ratios
-                vj, vk = ks_.get_jk(mol, _dm, hermi)
+                vj, vk = get_jk(mol, _dm, hermi)
                 vk *= hyb
-                vklr = ks_.get_k(mol, _dm, hermi, omega=omega)
+                vklr = get_k(mol, _dm, hermi, omega=omega)
                 vklr *= alpha - hyb
                 vk += vklr
             if incremental_jk:

@@ -30,15 +30,14 @@ def test_model_rks(
     """
     # 2.0 Prepare
     time_ai_start = timeit.default_timer()
-    mdft = pyscf.dft.RKS(mol).density_fit()
-    mol.stdout = mdft.stdout
-    if torch.cuda.is_available() and (mol.nao < 2000) and (not args.if_grad):
+    if torch.cuda.is_available() and (not args.if_grad):
         print("Use GPU for DFT calculation.")
-        mdft = mdft.to_gpu()
+        mdft = pyscf.dft.RKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
         utils.get_veff_modified_rks_gpu(mdft, modeldict, args.max_memory_gpu)
     else:
         print("Use CPU for DFT calculation.")
+        mdft = pyscf.dft.RKS(mol).density_fit()
         Grid = utils.GridCPU
         utils.get_veff_modified_rks(mdft, modeldict)
 
@@ -50,6 +49,7 @@ def test_model_rks(
         cube_type=modeldict.cube_type,
         cube_size=modeldict.cube_size,
     )
+    mol.stdout = mdft.stdout
 
     mdft.verbose = 9
     mdft.mol.verbose = 9

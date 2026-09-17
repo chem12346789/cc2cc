@@ -35,7 +35,6 @@ def test_model_uks(
         mdft = pyscf.dft.UKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
         utils.get_veff_modified_uks_gpu(mdft, modeldict, args.max_memory_gpu)
-        mol.stdout = mdft.stdout
     else:
         print("Use CPU for DFT calculation.")
         mdft = pyscf.dft.UKS(mol).density_fit()
@@ -50,6 +49,7 @@ def test_model_uks(
         cube_type=modeldict.cube_type,
         cube_size=modeldict.cube_size,
     )
+    mol.stdout = mdft.stdout
 
     mdft.verbose = 9
     mdft.mol.verbose = 9
