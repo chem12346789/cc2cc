@@ -93,8 +93,7 @@ class DataBase:
         self.if_eval = if_eval
         self.process_input = process_input
         self.process_grad2force = process_grad2force
-        self.verbose = False
-        # self.verbose = verbose
+        self.verbose = verbose
         self.gpu_key = (
             "input",
             "weight",
