@@ -46,6 +46,6 @@ CHECKPOINTS_PATH = MAIN_PATH / "checkpoints"
 
 MAX_GPU_JK_NAO = os.environ.get("DFT2CC_MAX_GPU_JK_NAO")
 if MAX_GPU_JK_NAO is None:
-    MAX_GPU_JK_NAO = 200
+    MAX_GPU_JK_NAO = 1500
 else:
     MAX_GPU_JK_NAO = int(MAX_GPU_JK_NAO)

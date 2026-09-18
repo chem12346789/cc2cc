@@ -165,19 +165,20 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 "Large system detected: %d AO, using CPU for J/K calculations",
                 mol.nao,
             )
-            ks_jk = ks_.to_cpu()
+            if getattr(ks_, "ks_jk", None) is None:
+                ks_.ks_jk = ks_.to_cpu()
 
             def get_j(mol, dm, hermi):
                 dm = cp.asnumpy(dm)
-                return cp.asarray(ks_jk.get_j(mol, dm, hermi))
+                return cp.asarray(ks_.ks_jk.get_j(mol, dm, hermi))
 
             def get_k(mol, dm, hermi, omega=0):
                 dm = cp.asnumpy(dm)
-                return cp.asarray(ks_jk.get_k(mol, dm, hermi, omega=omega))
+                return cp.asarray(ks_.ks_jk.get_k(mol, dm, hermi, omega=omega))
 
             def get_jk(mol, dm, hermi):
                 dm = cp.asnumpy(dm)
-                return cp.asarray(ks_jk.get_jk(mol, dm, hermi))
+                return cp.asarray(ks_.ks_jk.get_jk(mol, dm, hermi))
 
         else:
             get_j = ks_.get_j
