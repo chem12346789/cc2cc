@@ -151,7 +151,12 @@ class Collect_info:
             print("Data reset.")
 
     def aggregate_data(self):
-        for name_subset in self.name_subset_list:
+        aggregate_subset_list = self.name_subset_list.copy()
+        for prefix in ("S66x8", "S22x5"):
+            if any(name.startswith(f"{prefix}-") for name in self.name_subset_list):
+                aggregate_subset_list.extend([f"{prefix}-A", f"{prefix}-B"])
+
+        for name_subset in aggregate_subset_list:
             if "gmtkn-diet" in args.data_set.lower():
                 pattern = f"*{self.basis}_{self.model_load}_gmtkn-def2_molecule_{name_subset}.csv"
             else:
@@ -238,8 +243,12 @@ class Collect_info:
         data_test = pd.read_csv(
             f"validate_hkqai_done/ccdft_def2-QZVP(D)__{reference_set}.csv"
         )
+        if "b3lyp-d3bj_ene" in data_test.columns:
+            d3bj_column, base_column = "b3lyp-d3bj_ene", "b3lyp_ene"
+        else:
+            d3bj_column, base_column = "scf-d3bj_ene", "scf_ene"
         correction_by_name = dict(
-            zip(data_test["name"], data_test["b3lyp-d3bj_ene"] - data_test["b3lyp_ene"])
+            zip(data_test["name"], data_test[d3bj_column] - data_test[base_column])
         )
 
         reference_names = self.data["name"].str.replace(
