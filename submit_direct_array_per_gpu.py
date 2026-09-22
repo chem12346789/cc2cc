@@ -407,7 +407,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--min-free-memory", type=float, default=15.0)
     parser.add_argument("--max-gpu-power", type=float, default=None)
-    parser.add_argument("--probe-timeout-sec", type=int, default=30)
+    parser.add_argument("--probe-timeout-sec", type=int, default=60)
     parser.add_argument("--probe-workers", type=int, default=16)
     parser.add_argument("--max-nodes", type=int, default=0)
     parser.add_argument(
