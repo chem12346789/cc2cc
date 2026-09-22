@@ -10,9 +10,6 @@ checkpoint*/
 validate*/
 checkpoints
 validate
-/gen_data_script/
-/test_script/*
-/train_script/
 /log_backup
 /tmp_mol
 /work_script/
@@ -58,6 +55,7 @@ PlotNeuralNet/
 # ignore bash
 bash*
 out_mkdir
+test_script/cluster.local.sh
 
 # wandb files
 wandb/*
