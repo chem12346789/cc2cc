@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+# Copy to cluster.local.sh and set values for this cluster. This file is not tracked.
+# export PYTHON_BIN="$HOME/anaconda3/envs/pyscf/bin/python"
+# export PYSCF_TMPDIR="$HOME/tmp"
+# export PYTHONPATH="$HOME/python${PYTHONPATH:+:$PYTHONPATH}"
+# export LD_LIBRARY_PATH="$HOME/anaconda3/envs/pyscf/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"

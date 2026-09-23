@@ -192,6 +192,40 @@ def extract_load_model_arg(script_text: str, key: str) -> str | None:
     return None
 
 
+def extract_load_model_args(script_text: str) -> list[str]:
+    values: list[str] = []
+    for raw_line in script_text.splitlines():
+        line = raw_line.strip()
+        if (
+            not line
+            or line.startswith("#")
+            or "load_model_args" not in line
+            or "--load" not in line
+        ):
+            continue
+        tokens = shlex.split(line, comments=True)
+        assignments = [
+            token.split("=", 1)[1]
+            for token in tokens
+            if token.startswith("load_model_args=")
+        ]
+        for value in assignments or [line]:
+            value_tokens = shlex.split(value, comments=True)
+            if any(token == "--load" for token in value_tokens):
+                values.append(value)
+    return list(dict.fromkeys(values))
+
+
+def extract_model_option(value: str, key: str) -> str | None:
+    tokens = shlex.split(value, comments=True)
+    for index, token in enumerate(tokens):
+        if token == f"--{key}" and index + 1 < len(tokens):
+            return tokens[index + 1]
+        if token.startswith(f"--{key}="):
+            return token.split("=", 1)[1]
+    return None
+
+
 def parse_molecule_names(script_text: str) -> list[str]:
     if not (
         match := re.search(r"name_mol_input_list\s*=\s*\((.*?)\)", script_text, re.S)
@@ -354,6 +388,7 @@ def build_submit_command(
     exclude: list[str],
     output_log_path: str | None,
     error_log_path: str | None,
+    model_index: int,
     script_path: Path,
 ) -> list[str]:
     command = [
@@ -364,8 +399,10 @@ def build_submit_command(
         "--array",
         str(task_id),
     ]
+    export_values = ["ALL", f"MODEL_INDEX={model_index}"]
     if gpu_index is not None:
-        command += ["--export", f"ALL,FORCE_CUDA_VISIBLE_DEVICES={gpu_index}"]
+        export_values.append(f"FORCE_CUDA_VISIBLE_DEVICES={gpu_index}")
+    command += ["--export", ",".join(export_values)]
     command += ["--job-name", job_name]
     if output_log_path and error_log_path:
         command += ["--output", output_log_path, "--error", error_log_path]
@@ -407,7 +444,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--min-free-memory", type=float, default=15.0)
     parser.add_argument("--max-gpu-power", type=float, default=None)
-    parser.add_argument("--probe-timeout-sec", type=int, default=30)
+    parser.add_argument("--probe-timeout-sec", type=int, default=60)
     parser.add_argument("--probe-workers", type=int, default=16)
     parser.add_argument("--max-nodes", type=int, default=0)
     parser.add_argument(
@@ -586,9 +623,16 @@ def main() -> int:
     with resolve_path(args.time_array).open() as file:
         timing_config = json.load(file)
 
+    time_array = timing_config["time_array"]
+    if len(time_array) != len(task_ids):
+        raise ValueError(
+            f"Timing array length ({len(time_array)}) does not match "
+            f"task array length ({len(task_ids)})"
+        )
+
     runtime_by_task = {
         task_id: float(runtime)
-        for task_id, runtime in zip(task_ids, timing_config["time_array"])
+        for task_id, runtime in zip(task_ids, time_array)
     }
     task_buckets = split_by_time(task_ids, runtime_by_task, len(slots))
     assignment_by_task = {
@@ -597,7 +641,7 @@ def main() -> int:
         for task_id in bucket
     }
 
-    model_name = safe_name(extract_load_model_arg(script_text, "load") or "no-load")
+    model_args_list = extract_load_model_args(script_text) or [""]
     molecule_names = parse_molecule_names(script_text)
 
     if args.sleep > 0:
@@ -606,39 +650,44 @@ def main() -> int:
 
     last_job_id_by_bucket: dict[int, str] = {}
     submitted: list[tuple[int, int, str]] = []
-    for task_id in task_ids:
-        if runtime_by_task[task_id] == 0:
-            continue
-        bucket_id, node_name, gpu_index = assignment_by_task[task_id]
-        dependency = (
-            f"afterany:{last_job_id_by_bucket[bucket_id]}"
-            if bucket_id in last_job_id_by_bucket
-            else None
+    for model_index, model_args in enumerate(model_args_list):
+        model_name = safe_name(
+            extract_model_option(model_args, "load") or f"model-{model_index}"
         )
-        molecule_name = (
-            molecule_names[task_id]
-            if 0 <= task_id < len(molecule_names)
-            else f"task-{task_id}"
-        )
-        exclude = (
-            []
-            if args.cpu_only
-            else [node for node in submission_pool if node != node_name]
-        )
-        command = build_submit_command(
-            partition=partition,
-            task_id=task_id,
-            gpu_index=gpu_index,
-            job_name=safe_name(f"{model_name}-{molecule_name}"),
-            dependency=dependency,
-            exclude=exclude,
-            output_log_path=output_log_path,
-            error_log_path=error_log_path,
-            script_path=script_path,
-        )
-        job_id = submit_with_optional_exclude_retry(command, exclude, args.debug)
-        last_job_id_by_bucket[bucket_id] = job_id
-        submitted.append((task_id, bucket_id, job_id))
+        for task_id in task_ids:
+            if runtime_by_task[task_id] == 0:
+                continue
+            bucket_id, node_name, gpu_index = assignment_by_task[task_id]
+            dependency = (
+                f"afterany:{last_job_id_by_bucket[bucket_id]}"
+                if bucket_id in last_job_id_by_bucket
+                else None
+            )
+            molecule_name = (
+                molecule_names[task_id]
+                if 0 <= task_id < len(molecule_names)
+                else f"task-{task_id}"
+            )
+            exclude = (
+                []
+                if args.cpu_only
+                else [node for node in submission_pool if node != node_name]
+            )
+            command = build_submit_command(
+                partition=partition,
+                task_id=task_id,
+                gpu_index=gpu_index,
+                job_name=safe_name(f"{model_name}-{molecule_name}"),
+                dependency=dependency,
+                exclude=exclude,
+                output_log_path=output_log_path,
+                error_log_path=error_log_path,
+                model_index=model_index,
+                script_path=script_path,
+            )
+            job_id = submit_with_optional_exclude_retry(command, exclude, args.debug)
+            last_job_id_by_bucket[bucket_id] = job_id
+            submitted.append((task_id, bucket_id, job_id))
 
     print_submission_summary(
         submitted, task_count=len(task_ids), slot_count=len(slots)
