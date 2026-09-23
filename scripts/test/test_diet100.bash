@@ -5,13 +5,13 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=24
 #SBATCH --time=2400:00:00
-#SBATCH -a [0-54]%3
+#SBATCH -a [0-54]%4
 #SBATCH -J validate-diet100
 
 ROOT_DIR="${SLURM_SUBMIT_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
 SCRIPT_DIR="${ROOT_DIR}"
-source "${SCRIPT_DIR}/lib/runtime.sh"
-source "${SCRIPT_DIR}/lib/test_job.sh"
+source "${SCRIPT_DIR}/__lib__/runtime.sh"
+source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
 0) export load_model_args="--load atom-1563701 --load_epoch 4940" ;;

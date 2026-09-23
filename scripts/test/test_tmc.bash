@@ -10,8 +10,8 @@
 
 ROOT_DIR="${SLURM_SUBMIT_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
 SCRIPT_DIR="${ROOT_DIR}"
-source "${SCRIPT_DIR}/lib/runtime.sh"
-source "${SCRIPT_DIR}/lib/test_job.sh"
+source "${SCRIPT_DIR}/__lib__/runtime.sh"
+source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 # export load_model_args="--load atom-571426 --load_epoch " #
 # export load_model_args="--load atom-1317610 --load_epoch " #

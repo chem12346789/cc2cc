@@ -25,7 +25,7 @@ cc2cc is a PyTorch + PySCF workflow for learning and evaluating DFT-inspired cor
 
 ## Important conventions
 
-- Keep site-specific Slurm paths and environment overrides in `scripts/test/cluster.local.sh`.
+- Keep site-specific Slurm paths and environment overrides in `scripts/cluster.local.sh`.
 - Keep project-wide importable code free of cluster-specific assumptions.
 - Use the repo root as the working directory when launching batch jobs.
 
@@ -39,5 +39,5 @@ python test.py
 For Slurm jobs:
 
 ```bash
-sbatch scripts/test/script_test/test_diet30.bash
+sbatch scripts/test/test_diet30.bash
 ```

@@ -1,17 +1,18 @@
 #!/bin/bash
 #slurm options
-#SBATCH -p cpu
+#SBATCH -p gpu
 #SBATCH --nodes 1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=28
+#SBATCH --cpus-per-task=8
 #SBATCH --time=2400:00:00
 #SBATCH -a [0-1]%2
-#SBATCH -J validate-diet30
+#SBATCH -J benchmark_tmc_skala
+#SBATCH -o log/benchmark_tmc_skala_%A_%a.out
 
 ROOT_DIR="${SLURM_SUBMIT_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
 SCRIPT_DIR="${ROOT_DIR}"
-source "${SCRIPT_DIR}/lib/runtime.sh"
-source "${SCRIPT_DIR}/lib/test_job.sh"
+source "${SCRIPT_DIR}/__lib__/runtime.sh"
+source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 # export load_model_args="--load atom-82794 --load_epoch 10005"
 export load_model_args="--load test"
@@ -25,10 +26,16 @@ export basis_args="def2-QZVP(D)"
 # export basis_args="def2-SVP"
 export DATASET="tmc-def2"
 select_molecule_profile tmc
-setup_test_job 8000
+# export DATASET="gmtkn-def2"
+# export name_mol_input_list=("W4_11-ch" "W4_11-ch4")
+
+setup_gpu_test_job 20000 15000
+# Arguments: PySCF memory (MiB); minimum free GPU memory (MiB).
 export PYTHONUNBUFFERED=1
+export SKALA_PYTHON_BIN="${SKALA_PYTHON_BIN:-$HOME/anaconda3/envs/skala-py3.11/bin/python}"
+export LD_LIBRARY_PATH="${SKALA_LIBRARY_PATH:-$HOME/anaconda3/envs/skala-py3.11/lib}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 sleep $SLURM_ARRAY_TASK_ID
 begin_test_job
-run_test_job --max_cycle 50 --device cpu --benchmark_method B3LYP --benchmark_disp None
+run_external_benchmark_job "${SKALA_PYTHON_BIN}" test_skala.py --basis "${basis_args}" --dataset "${DATASET}" --name_mol "${name_mol_input}"
 finish_test_job

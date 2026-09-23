@@ -55,7 +55,7 @@ PlotNeuralNet/
 # ignore bash
 bash*
 out_mkdir
-scripts/test/cluster.local.sh
+scripts/cluster.local.sh
 
 # wandb files
 wandb/*

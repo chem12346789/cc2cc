@@ -16,8 +16,13 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 ROOT = Path(__file__).resolve().parent
-TEST_SCRIPT_DIR = ROOT / "scripts" / "test"
-TMP_DIR = TEST_SCRIPT_DIR / "tmp"
+SCRIPTS_ROOT = ROOT / "scripts"
+TEST_SCRIPT_DIR = SCRIPTS_ROOT / "test"
+BENCHMARK_SCRIPT_DIR = SCRIPTS_ROOT / "benchmark"
+CALCULATOR_SCRIPT_DIR = SCRIPTS_ROOT / "calculator"
+HELPER_SCRIPT_DIR = SCRIPTS_ROOT / "__lib__"
+CONFIG_SCRIPT_DIR = SCRIPTS_ROOT / "__config__"
+TMP_DIR = ROOT / "tmp"
 USABLE_STATES = {"idle", "mix", "mixed"}
 
 
@@ -83,7 +88,17 @@ def resolve_path(path_str: str) -> Path:
     candidate = Path(path_str).expanduser()
     if candidate.is_absolute():
         return candidate
-    for base in (TEST_SCRIPT_DIR, ROOT, Path.cwd()):
+    search_bases = (
+        SCRIPTS_ROOT,
+        TEST_SCRIPT_DIR,
+        BENCHMARK_SCRIPT_DIR,
+        CALCULATOR_SCRIPT_DIR,
+        HELPER_SCRIPT_DIR,
+        CONFIG_SCRIPT_DIR,
+        ROOT,
+        Path.cwd(),
+    )
+    for base in search_bases:
         resolved = (base / candidate).resolve()
         if resolved.exists():
             return resolved
@@ -433,7 +448,11 @@ def submit_with_optional_exclude_retry(
 
 def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--script", default="test_direct.bash")
+    parser.add_argument(
+        "--script",
+        default=str(SCRIPTS_ROOT / "test" / "test_diet30.bash"),
+        help="Job script under the current scripts layout (for example scripts/test/test_diet30.bash).",
+    )
     parser.add_argument("--time-array", required=True)
     parser.add_argument("--array-concurrency", type=int, default=1)
     parser.add_argument(

@@ -14,9 +14,9 @@ This directory contains reproducible evaluation and benchmark submission scripts
 Run Slurm jobs from the repository root, for example:
 
 ```bash
-sbatch scripts/test/script_test/test_diet30.bash
+sbatch scripts/test/test_diet30.bash
 ```
 
 Keep model names, epochs, datasets, and Slurm resource requests in the individual
 job scripts. Keep site-specific Python paths, scratch directories, and module setup
-in `cluster.local.sh`.
+in `scripts/cluster.local.sh` and shared runtime helpers in `scripts/__lib__/`.
