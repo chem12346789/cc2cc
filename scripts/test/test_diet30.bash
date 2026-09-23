@@ -9,8 +9,7 @@
 #SBATCH -J validate-diet30
 ###SBATCH --exclude=gpu[01-03,05-07]
 
-ROOT_DIR="${SLURM_SUBMIT_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
-SCRIPT_DIR="${ROOT_DIR}"
+SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 

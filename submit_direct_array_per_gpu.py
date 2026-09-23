@@ -241,10 +241,13 @@ def extract_model_option(value: str, key: str) -> str | None:
     return None
 
 
-def parse_molecule_names(script_text: str) -> list[str]:
-    if not (
-        match := re.search(r"name_mol_input_list\s*=\s*\((.*?)\)", script_text, re.S)
-    ):
+def parse_molecule_names(script_text: str, profile: str | None = None) -> list[str]:
+    profile_pattern = (
+        rf"{re.escape(profile)}\)\s*name_mol_input_list\s*=\s*\((.*?)\)"
+        if profile
+        else r"name_mol_input_list\s*=\s*\((.*?)\)"
+    )
+    if not (match := re.search(profile_pattern, script_text, re.S)):
         return []
     names: list[str] = []
     for value in shlex.split(match.group(1), comments=True):
@@ -287,16 +290,6 @@ def clean_tmp(*, debug: bool = False) -> None:
             path.unlink()
             if debug:
                 print(f"[DEBUG] removed old tmp: {path}")
-
-
-def make_log_paths(script_path: Path, script_text: str) -> tuple[str, str]:
-    load = safe_name(extract_load_model_arg(script_text, "load") or "no-load")
-    epoch = safe_name(extract_load_model_arg(script_text, "load_epoch") or "no-epoch")
-    log_dir = Path("log") / safe_name(script_path.stem) / load / epoch
-    log_dir.mkdir(parents=True, exist_ok=True)
-    base = str(log_dir / "%x-a%a")
-    print(f"[INFO] Log path={base}")
-    return f"{base}.out", f"{base}.err"
 
 
 def wait_probe_done(job_id: str, timeout_sec: int) -> bool:
@@ -574,7 +567,6 @@ def main() -> int:
     slot_limit = max(1, parse_array_limit(array_spec) or args.array_concurrency)
     if args.min_slots > slot_limit:
         parser.error("--min-slots must not exceed the array concurrency limit")
-    output_log_path, error_log_path = make_log_paths(script_path, script_text)
     excluded_nodes = set(
         expand_hostnames(
             read_sbatch_field(script_text, ["-x", "--exclude"]) or "", debug=args.debug
@@ -661,7 +653,14 @@ def main() -> int:
     }
 
     model_args_list = extract_load_model_args(script_text) or [""]
-    molecule_names = parse_molecule_names(script_text)
+    profile_match = re.search(
+        r"^\s*select_molecule_profile\s+([A-Za-z0-9_.-]+)", script_text, re.M
+    )
+    profile = profile_match[1] if profile_match else None
+    helper_text = (HELPER_SCRIPT_DIR / "test_job.sh").read_text()
+    molecule_names = parse_molecule_names(
+        f"{script_text}\n{helper_text}", profile
+    )
 
     if args.sleep > 0:
         print(f"[INFO] Sleeping {args.sleep:.3f}s before submissions...")
@@ -687,6 +686,7 @@ def main() -> int:
                 if 0 <= task_id < len(molecule_names)
                 else f"task-{task_id}"
             )
+            job_name = safe_name(f"{model_name}-{molecule_name}")
             exclude = (
                 []
                 if args.cpu_only
@@ -696,11 +696,11 @@ def main() -> int:
                 partition=partition,
                 task_id=task_id,
                 gpu_index=gpu_index,
-                job_name=safe_name(f"{model_name}-{molecule_name}"),
+                job_name=job_name,
                 dependency=dependency,
                 exclude=exclude,
-                output_log_path=output_log_path,
-                error_log_path=error_log_path,
+                output_log_path=None,
+                error_log_path=None,
                 model_index=model_index,
                 script_path=script_path,
             )

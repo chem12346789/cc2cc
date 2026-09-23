@@ -8,14 +8,13 @@
 #SBATCH -a [0-54]%4
 #SBATCH -J validate-diet100
 
-ROOT_DIR="${SLURM_SUBMIT_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
-SCRIPT_DIR="${ROOT_DIR}"
+SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
-0) export load_model_args="--load atom-1563701 --load_epoch 4940" ;;
-1) export load_model_args="--load atom-1560444 --load_epoch 4940" ;;
+0) export load_model_args="--load atom-1563701 --load_epoch 2395" ;;
+1) export load_model_args="--load atom-1560444 --load_epoch 2395" ;;
 esac
 
 export if_continue_args=1

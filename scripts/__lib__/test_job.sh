@@ -94,6 +94,20 @@ select_molecule_profile() {
     esac
 
     export name_mol_input="${name_mol_input_list[${array_index}]}"
+
+    local load_name="no-load"
+    local load_epoch="no-epoch"
+    if [[ "${load_model_args:-}" =~ --load[[:space:]=]+([^[:space:]]+) ]]; then
+        load_name="${BASH_REMATCH[1]}"
+    fi
+    if [[ "${load_model_args:-}" =~ --load_epoch[[:space:]=]+([^[:space:]]+) ]]; then
+        load_epoch="${BASH_REMATCH[1]}"
+    fi
+    local set_name="${name_mol_input#molecule_}"
+    local log_dir="${REPO_ROOT}/log/${load_name}/${load_epoch}"
+    mkdir -p "${log_dir}"
+    exec >"${log_dir}/${set_name}.out" \
+        2>"${log_dir}/${set_name}.err"
 }
 
 run_test_job() {
