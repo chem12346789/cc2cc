@@ -5,23 +5,27 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=28
 #SBATCH --time=2400:00:00
-#SBATCH -a [0-1]%2
+#SBATCH -a [0-54]%8
 #SBATCH -J validate-data
-#SBATCH -o log/benchmark-%A-%a.log -e log/benchmark-%A-%a.err
+#SBATCH -o log/test-atom-%A-%a.log -e log/test-atom-%A-%a.err
+###SBATCH --exclude=cpu[18]
 
 ROOT_DIR="${SLURM_SUBMIT_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
-SCRIPT_DIR="${ROOT_DIR}/test_script"
+SCRIPT_DIR="${ROOT_DIR}"
 source "${SCRIPT_DIR}/lib/runtime.sh"
 source "${SCRIPT_DIR}/lib/test_job.sh"
 
-export load_epoch="-1"
-
 export if_continue_args=0
 export name_mol_reverse=0
+export load_epoch="-1"
+
+# export basis_args="def2-QZVPPD"
 export basis_args="def2-QZVP(D)"
+# export basis_args="cc-pVQZ"
+
 export DATASET="gmtkn-def2"
-select_molecule_profile tmc
-setup_cpu_test_job 25000
+select_molecule_profile gmtkn55
+setup_cpu_test_job 8000
 begin_test_job benchmark_dft
 run_cpu_benchmark_job
 finish_test_job

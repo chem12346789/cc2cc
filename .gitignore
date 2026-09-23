@@ -12,7 +12,7 @@ checkpoints
 validate
 /log_backup
 /tmp_mol
-/work_script/
+/scripts/work/
 /wandb/
 /wandb
 hkqai*.ipynb
@@ -29,8 +29,8 @@ out
 *.npz
 *.png
 tmp_mol/*
-jupyter-notebook/new_dataset/sets
-jupyter-notebook/*.csv
+notebooks/new_dataset/sets
+notebooks/*.csv
 
 PlotNeuralNet/
 
@@ -55,7 +55,7 @@ PlotNeuralNet/
 # ignore bash
 bash*
 out_mkdir
-test_script/cluster.local.sh
+scripts/test/cluster.local.sh
 
 # wandb files
 wandb/*

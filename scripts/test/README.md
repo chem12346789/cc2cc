@@ -14,7 +14,7 @@ This directory contains reproducible evaluation and benchmark submission scripts
 Run Slurm jobs from the repository root, for example:
 
 ```bash
-sbatch test_script/test_diet30.bash
+sbatch scripts/test/script_test/test_diet30.bash
 ```
 
 Keep model names, epochs, datasets, and Slurm resource requests in the individual

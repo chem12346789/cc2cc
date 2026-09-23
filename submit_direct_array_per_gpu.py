@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 ROOT = Path(__file__).resolve().parent
-TEST_SCRIPT_DIR = ROOT / "test_script"
+TEST_SCRIPT_DIR = ROOT / "scripts" / "test"
 TMP_DIR = TEST_SCRIPT_DIR / "tmp"
 USABLE_STATES = {"idle", "mix", "mixed"}
 

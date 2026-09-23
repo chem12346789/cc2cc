@@ -39,9 +39,9 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 - `submit_direct_array_per_gpu.py`: per-GPU job dispatch helper
 
 ### Script directories (Slurm/HPC)
-`gen_data_script/`, `train_script/`, `test_script/`, `work_script/` assume
-local paths (`~/anaconda3/envs/pyscf`, `~/backup-hd/tmp`, jemalloc). Never move
-those assumptions into importable Python modules.
+`scripts/train/`, `scripts/test/`, and `scripts/work/` assume local paths
+(`~/anaconda3/envs/pyscf`, `~/backup-hd/tmp`, jemalloc). Keep those assumptions
+out of importable Python modules.
 
 ## Data & Checkpoint Conventions
 | Item | Default | Override |

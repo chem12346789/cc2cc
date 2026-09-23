@@ -10,7 +10,7 @@
 #SBATCH -o log/benchmark_tmc_skala_%A_%a.out
 
 ROOT_DIR="${SLURM_SUBMIT_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
-SCRIPT_DIR="${ROOT_DIR}/test_script"
+SCRIPT_DIR="${ROOT_DIR}"
 source "${SCRIPT_DIR}/lib/runtime.sh"
 source "${SCRIPT_DIR}/lib/test_job.sh"
 

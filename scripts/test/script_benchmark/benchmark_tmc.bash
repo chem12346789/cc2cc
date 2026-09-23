@@ -3,14 +3,13 @@
 #SBATCH -p cpu
 #SBATCH --nodes 1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=48
+#SBATCH --cpus-per-task=28
 #SBATCH --time=2400:00:00
 #SBATCH -a [0-1]%2
-#SBATCH -J benchmark_tmc_dm21
-#SBATCH -o log/benchmark_tmc_dm21_%A_%a.out
+#SBATCH -J validate-diet30
 
 ROOT_DIR="${SLURM_SUBMIT_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
-SCRIPT_DIR="${ROOT_DIR}/test_script"
+SCRIPT_DIR="${ROOT_DIR}"
 source "${SCRIPT_DIR}/lib/runtime.sh"
 source "${SCRIPT_DIR}/lib/test_job.sh"
 
@@ -22,19 +21,14 @@ export load_model_args="--load test"
 export if_continue_args=0
 export IF_GRAD=0
 export name_mol_reverse=0
-# export basis_args="def2-QZVP(D)"
-export basis_args="def2-SVP"
+export basis_args="def2-QZVP(D)"
+# export basis_args="def2-SVP"
 export DATASET="tmc-def2"
 select_molecule_profile tmc
-# export DATASET="gmtkn-def2"
-# export name_mol_input_list=("W4_11-ch" "W4_11-ch4")
-
-setup_gpu_test_job 20000 15000
-# Arguments: PySCF memory (MiB); minimum free GPU memory (MiB).
-export DM21_PYTHON_BIN="${DM21_PYTHON_BIN:-$HOME/anaconda3/envs/dm21-py3.8/bin/python}"
-export LD_LIBRARY_PATH="${DM21_LIBRARY_PATH:-$HOME/anaconda3/envs/dm21-py3.8/lib}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+setup_test_job 8000
+export PYTHONUNBUFFERED=1
 
 sleep $SLURM_ARRAY_TASK_ID
 begin_test_job
-run_external_benchmark_job "${DM21_PYTHON_BIN}" test_dm21.py --basis "${basis_args}" --dataset "${DATASET}" --name_mol "${name_mol_input}"
+run_test_job --max_cycle 50 --device cpu --benchmark_method B3LYP --benchmark_disp None
 finish_test_job
