@@ -623,9 +623,16 @@ def main() -> int:
     with resolve_path(args.time_array).open() as file:
         timing_config = json.load(file)
 
+    time_array = timing_config["time_array"]
+    if len(time_array) != len(task_ids):
+        raise ValueError(
+            f"Timing array length ({len(time_array)}) does not match "
+            f"task array length ({len(task_ids)})"
+        )
+
     runtime_by_task = {
         task_id: float(runtime)
-        for task_id, runtime in zip(task_ids, timing_config["time_array"])
+        for task_id, runtime in zip(task_ids, time_array)
     }
     task_buckets = split_by_time(task_ids, runtime_by_task, len(slots))
     assignment_by_task = {

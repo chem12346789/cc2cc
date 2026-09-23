@@ -8,7 +8,8 @@
 #SBATCH -J test-model-detail
 #SBATCH -o log/test-model-detail-%A.log -e log/test-model-detail-%A.err
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="${SLURM_SUBMIT_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPT_DIR="${ROOT_DIR}/test_script"
 source "${SCRIPT_DIR}/lib/runtime.sh"
 source "${SCRIPT_DIR}/lib/test_job.sh"
 

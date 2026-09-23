@@ -42,21 +42,21 @@ for rs18 in $(seq 0.15 0.05 0.15); do
     for rs6 in $(seq 0.8 0.1 0.8); do
         echo "Training with rs6=${rs6}, rs18=${rs18}..."
 
-        # ${PYTHON_BIN} d3_para.py \
-        #     --mode train \
-        #     --basis "${basis_args}" \
-        #     --load "${load_args}" \
-        #     --epochs 1000 \
-        #     --print_step 1 \
-        #     --lr 1e-2 \
-        #     --dataset gmtkn-def2 \
-        #     --damping bj \
-        #     --loss-type "${LOSS_TYPE}" \
-        #     --s6 1.0 \
-        #     --alp 14 \
-        #     --rs6 "${rs6}" \
-        #     --rs18 "${rs18}" \
-        #     --optimizer lbfgs
+        ${PYTHON_BIN} d3_para.py \
+            --mode train \
+            --basis "${basis_args}" \
+            --load "${load_args}" \
+            --epochs 1000 \
+            --print_step 1 \
+            --lr 1e-2 \
+            --dataset gmtkn-def2 \
+            --damping bj \
+            --loss-type "${LOSS_TYPE}" \
+            --s6 1.0 \
+            --alp 14 \
+            --rs6 "${rs6}" \
+            --rs18 "${rs18}" \
+            --optimizer lbfgs
 
         ${PYTHON_BIN} d3_para.py \
             --mode test \
