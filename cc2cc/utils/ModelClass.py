@@ -73,6 +73,11 @@ class DataRecordList:
     def save(self, path):
         pd.DataFrame(self.data_dict).to_csv(path, index=False)
 
+    def trim(self):
+        self.data_dict = {
+            key: values[: self.iter] for key, values in self.data_dict.items()
+        }
+
     def merge(self):
         self.data_dict = (
             pd.DataFrame(self.data_dict)
@@ -524,6 +529,7 @@ class ModelClass:
             event, ready_record = pending_records.popleft()
             event.synchronize()
             data_record_l.add_data_record(ready_record)
+        data_record_l.trim()
         data_record_l.merge()
         return data_record_l
 
@@ -549,6 +555,7 @@ class ModelClass:
             event, ready_record = pending_records.popleft()
             event.synchronize()
             data_record_l.add_data_record(ready_record)
+        data_record_l.trim()
         data_record_l.merge()
         return data_record_l
 

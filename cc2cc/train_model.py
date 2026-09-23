@@ -47,6 +47,24 @@ def _enable_deterministic_mode():
     print("Warning: Using deterministic mode, which may slow down training.")
 
 
+def _gather_records(record, is_distributed):
+    if not is_distributed:
+        return record
+
+    gathered_records = (
+        [None] * dist.get_world_size() if dist.get_rank() == 0 else None
+    )
+    dist.gather_object(record.data_dict, gathered_records, dst=0)
+    if gathered_records is not None:
+        record.data_dict = {
+            key: np.concatenate([shard[key] for shard in gathered_records])
+            for key in record.data_dict
+        }
+        record.iter = len(record.data_dict["name"])
+        record.merge()
+    return record
+
+
 class _Logger:
     __slots__ = ("run", "timer", "best_loss", "loss_dir", "checkpoint_stride")
 
@@ -162,10 +180,12 @@ def train_model(train_list, eval_list, args):
 
         if_grad = epoch % args.grad_step == 0
         train_record = modeldict.train_model(if_grad=if_grad)
+        train_record = _gather_records(train_record, is_distributed)
         barrier()
 
         if epoch % args.eval_step == 0 or epoch == args.epoch or epoch == 0:
             eval_record = modeldict.eval_model()
+            eval_record = _gather_records(eval_record, is_distributed)
             barrier()
 
             if logger:
