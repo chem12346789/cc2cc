@@ -13,8 +13,12 @@ source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
-0) export load_model_args="--load atom-1563701 --load_epoch 2395" ;;
-1) export load_model_args="--load atom-1560444 --load_epoch 2395" ;;
+0) export load_model_args="--load atom-1563701 --load_epoch 4955" ;;
+1) export load_model_args="--load atom-1221273 --load_epoch 2395" ;;
+2) export load_model_args="--load atom-1560444 --load_epoch 4955" ;;
+3) export load_model_args="--load atom-82794 --load_epoch 4940" ;;
+4) export load_model_args="--load atom-82794 --load_epoch 2395" ;;
+5) export load_model_args="--load atom-82794 --load_epoch 1115" ;;
 esac
 
 export if_continue_args=1

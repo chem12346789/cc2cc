@@ -30,6 +30,6 @@ for model_load_epoch_pair in "${model_load_epoch_pairs[@]}"; do
     find "validate/${basis_args}_${model_load}/${load_epoch}" -maxdepth 1 -type f -exec cp -t validate -- {} +
 
     echo "Starting data collection for model ${model_load} with epoch ${load_epoch} and basis ${basis_args}..."
-    ~/anaconda3/envs/pyscf/bin/python collect_info.py --model_load "${model_load}" --epoch "${load_epoch}" --basis "${basis_args}" --verbose 4 --data_set gmtkn-def2 --frequency 30m --max_checks 0 --load_csv "${load_csv}" 1>"log/collect_info_${model_load}_${load_epoch}.log" 2>"log/collect_info_${model_load}_${load_epoch}.err"
+    ~/anaconda3/envs/pyscf/bin/python collect_info.py --model_load "${model_load}" --epoch "${load_epoch}" --basis "${basis_args}" --verbose 4 --data_set gmtkn-def2 --frequency 30m --max_checks 0 --load_csv "${load_csv}" >"log/collect_info_${model_load}_${load_epoch}.log" 2>&1
     cat log/collect_info_${model_load}_${load_epoch}.log | grep "summary" | tail -n 1
 done
