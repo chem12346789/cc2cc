@@ -82,7 +82,7 @@ class E3nn(torch.nn.Module):
             internal_weights=True,
         )
 
-        # xavier_uniform_ initialization for the tensor product weights
+        # uniform_ initialization for the tensor product weights
         with torch.no_grad():
             self.tp.weight.uniform_(-1, 1)
 

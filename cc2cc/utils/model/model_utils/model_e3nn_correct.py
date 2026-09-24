@@ -60,6 +60,10 @@ class E3nn(torch.nn.Module):
             internal_weights=True,
         )
 
+        # uniform_ initialization for the tensor product weights
+        with torch.no_grad():
+            self.tp1.weight.uniform_(-1, 1)
+
         self.readout = o3.Linear(hidden_irreps, irreps_output)
 
         self.register_buffer("edge_vec", edge_vec, persistent=False)
@@ -69,7 +73,7 @@ class E3nn(torch.nn.Module):
         # f_in shape: [CUBE_SIZE**3, 4]
         f_hidden = self.tp1(f_in, self.sh)
         # f_hidden shape: [CUBE_SIZE**3, (lmax+1)**2]
-        f_hidden = f_hidden.sum(dim=-2, keepdim=True)
+        f_hidden = f_hidden.mean(dim=-2, keepdim=True)
         # f_hidden shape: [1, (lmax+1)**2]
         f_out = self.readout(f_hidden)
         # f_out shape: [1, CUBE_SIZE**3]
