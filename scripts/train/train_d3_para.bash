@@ -38,8 +38,8 @@ export LOSS_TYPE="mse"
 mkdir -p log
 mkdir -p validate
 
-for rs18 in $(seq 0.15 0.05 0.15); do
-    for rs6 in $(seq 0.8 0.1 0.8); do
+for rs18 in $(seq -3.0 0.05 2.0); do
+    for rs6 in $(seq 0 0.025 0.2); do
         echo "Training with rs6=${rs6}, rs18=${rs18}..."
 
         ${PYTHON_BIN} d3_para.py \
