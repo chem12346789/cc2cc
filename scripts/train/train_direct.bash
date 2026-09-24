@@ -5,8 +5,8 @@
 # =========================
 # export MODEL="--model transformer+dense_mix_e3nn_4"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct"
-# export MODEL="--model transformer+dense_mix_e3nn_4_correct_large_in"
-export MODEL="--load atom-82794 --load_epoch 10005 --if_resume 0"
+export MODEL="--model transformer+dense_mix_e3nn_4_correct_no_skip"
+# export MODEL="--load atom-82794 --load_epoch 10005 --if_resume 0"
 
 # =========================
 # Data and targets
@@ -19,8 +19,8 @@ export BASIS_ARGS="def2-QZVPPD"
 export RHO_INPUT="dft"
 # export RHO_INPUT="dft_d3bj_1"
 # export SPLIT_CONFIG="mol0.json"
-# export SPLIT_CONFIG="mol1.json"
-export SPLIT_CONFIG="mol2_ex.json"
+export SPLIT_CONFIG="mol1.json"
+# export SPLIT_CONFIG="mol2_ex.json"
 # export SPLIT_CONFIG="test.json"
 # export SPLIT_CONFIG="mini.json"
 export MOL0_WEIGHTING=4
@@ -60,7 +60,7 @@ export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${C
 # Hardware and environment
 # =========================
 export NUMBER_OF_GPU=1
-export CUDA_VISIBLE_DEVICES=5
+export CUDA_VISIBLE_DEVICES=1
 
 if [ ${NUMBER_OF_GPU} -gt 1 ]; then
 	export DISTRIBUTED="--distributed 1"
