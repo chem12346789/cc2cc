@@ -129,7 +129,7 @@ def main():
                 print(f"SKIP: {name}")
                 continue
 
-            print(f"RUN: {name}", flush=True)
+            print(f"\n\n\n{'-' * 80}\nRUN: {name}\n{'-' * 80}", flush=True)
             _run_one(
                 mol,
                 name,
