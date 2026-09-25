@@ -2,7 +2,7 @@
 
 This document covers code style, compaction rules, dependency evaluation criteria,
 and commenting conventions. For behavioral constraints applied to every request,
-see `.github/copilot-instructions.md`. For core engineering rules, see `AGENTS.md`.
+see [.github/copilot-instructions.md](../.github/copilot-instructions.md). For core engineering rules, see [AGENTS.md](../AGENTS.md).
 
 ## Python Style
 

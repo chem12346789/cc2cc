@@ -28,7 +28,7 @@ unless explicitly asked otherwise.
 - Prefer, in order: stdlib → existing project utils → PyTorch/PySCF ecosystem
   → new well-maintained dependency → custom implementation.
 - Ask before adding, removing, or upgrading any dependency.
-- See CONTRIBUTING.md for full dependency evaluation criteria.
+- See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for full dependency evaluation criteria.
 
 ## Comments
 

@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=24
 #SBATCH --time=2400:00:00
-#SBATCH -a [0-54]%4
+#SBATCH -a [2]%1
 #SBATCH -J validate-diet100
 
 SCRIPT_DIR="scripts"
@@ -13,15 +13,11 @@ source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
-0) export load_model_args="--load atom-1563701 --load_epoch 4955" ;;
-1) export load_model_args="--load atom-1221273 --load_epoch 2395" ;;
-2) export load_model_args="--load atom-1560444 --load_epoch 4955" ;;
-3) export load_model_args="--load atom-82794 --load_epoch 4940" ;;
-4) export load_model_args="--load atom-82794 --load_epoch 2395" ;;
-5) export load_model_args="--load atom-82794 --load_epoch 1115" ;;
+0) export load_model_args="--load atom-1824146 --load_epoch 4940" ;;
+# 1) export load_model_args="--load atom-1822511 --load_epoch 4955" ;;
 esac
 
-export if_continue_args=1
+export if_continue_args=0
 export IF_GRAD=0
 export name_mol_reverse=0
 export DATASET="gmtkn-diet100-def2"

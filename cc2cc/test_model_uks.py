@@ -16,6 +16,7 @@ import pyscf.dft
 import cc2cc.utils as utils
 
 pyscf.lib.logger.TIMER_LEVEL = 4
+VERBOSE = 4
 
 
 def test_model_uks(
@@ -51,8 +52,8 @@ def test_model_uks(
     )
     mol.stdout = mdft.stdout
 
-    mdft.verbose = 9
-    mdft.mol.verbose = 9
+    mdft.verbose = VERBOSE
+    mdft.mol.verbose = VERBOSE
     mdft.conv_tol = 1e-7
     mdft.conv_tol_grad = 1e-3
 
@@ -66,7 +67,7 @@ def test_model_uks(
         if_retry = True
         mdft.kernel()
 
-    for factor in [4.0]:
+    for factor in [4.0, 8.0]:
         if mdft.converged is False and if_retry:
             print(f"UKS not converged. Add dynamic level shift with factor {factor}.")
             mdft.level_shift = factor

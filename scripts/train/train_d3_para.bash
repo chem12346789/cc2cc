@@ -8,11 +8,12 @@
 #SBATCH --time=20:00:00
 #SBATCH -J train-d3-para
 #SBATCH -o log/train-d3-para-%A.log -e log/train-d3-para-%A.err
+#SBATCH --exclude=gpu[01,02,03,04,05,07]
 
 export basis_args="def2-QZVP(D)"
 # export load_args=""
-export load_args="atom-2647768"
-# export load_args="atom-98386"
+# export load_args="atom-2647768"
+export load_args="atom-98386"
 # export load_args=""
 
 export NVIDIA_VISIBLE_DEVICES=1
@@ -38,8 +39,8 @@ export LOSS_TYPE="mse"
 mkdir -p log
 mkdir -p validate
 
-for rs18 in $(seq -3.0 0.05 2.0); do
-    for rs6 in $(seq 0 0.025 0.2); do
+for rs18 in $(seq 0.0 0.05 0.25); do
+    for rs6 in $(seq 0.5 0.1 1.0); do
         echo "Training with rs6=${rs6}, rs18=${rs18}..."
 
         ${PYTHON_BIN} d3_para.py \
@@ -62,7 +63,7 @@ for rs18 in $(seq -3.0 0.05 2.0); do
             --mode test \
             --basis "${basis_args}" \
             --load "${load_args}" \
-            --dataset gmtkn-def2 \
+            --dataset gmtkn-diet100-def2 \
             --damping bj
     done
 done
