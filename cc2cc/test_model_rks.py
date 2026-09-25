@@ -67,7 +67,7 @@ def test_model_rks(
         if_retry = True
         mdft.kernel()
 
-    for factor in [4.0, 8.0, 16.0]:
+    for factor in [1.0]:
         if mdft.converged is False and if_retry:
             print(f"RKS not converged. Add level shift with factor {factor}.")
             mdft.level_shift = factor
