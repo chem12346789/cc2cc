@@ -14,6 +14,15 @@ unless explicitly asked otherwise.
 - No speculative abstractions, compatibility layers, or unrelated refactors.
 - Trust valid inputs; no redundant assertions, broad try/except, or fallbacks.
 
+## Commit Approval
+
+- Complete requested changes and report validation results before asking for commit approval.
+- Do not commit until the user explicitly approves the specific changes (for example, "commit").
+- Task completion or approval of an edit does not authorize a commit; each commit needs approval.
+- Stage and commit only approved changes; preserve unrelated and pre-existing changes. Never use `git add .`.
+- If approved changes cannot be staged separately, ask before committing.
+- Do not push unless explicitly requested.
+
 ## PyTorch and Numerical Rules
 
 - Use `dtype=torch.float64` explicitly for all physics tensors.
