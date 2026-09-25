@@ -71,6 +71,7 @@ def test_model_uks(
         if mdft.converged is False and if_retry:
             print(f"UKS not converged. Add dynamic level shift with factor {factor}.")
             mdft.level_shift = factor
+            mdft.max_cycle = args.max_cycle * 5
             mdft.kernel()
     if mdft.converged is False:
         print("Error: UKS not converged!!! Just use the unconvergence output.")
