@@ -521,8 +521,10 @@ def eval_loss_weighted(
     input_batch: Dict[str, torch.Tensor],
     reaction_tensors: ReactionTensors,
     data_dft_ene_kcalmol: torch.Tensor,
+    dataset: str,
+    dataset_json: Dict,
+    batch_subset: List[str],
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    mean_absolute_deviation = 56.84 / 1505
     e_disp_kcalmol = model.dispersion_energy_kcalmol(input_batch)
 
     reaction_energy = torch.einsum(
@@ -530,13 +532,50 @@ def eval_loss_weighted(
         reaction_tensors.molecules_to_reactions,
         e_disp_kcalmol + data_dft_ene_kcalmol,
     )
+    loss = weighted_dataset_score(
+        reaction_tensors, reaction_energy, dataset, dataset_json, batch_subset
+    )
+    return loss, e_disp_kcalmol
+
+
+def weighted_dataset_score(
+    reaction_tensors: ReactionTensors,
+    reaction_energy: torch.Tensor,
+    dataset: str,
+    dataset_json: Dict,
+    batch_subset: List[str],
+) -> torch.Tensor:
     mean_reaction_energy = torch.einsum(
         "i,ij,j->j",
         torch.abs(reaction_tensors.reference_energy - reaction_energy),
         reaction_tensors.reactions_to_subset,
         reaction_tensors.one_over_number_of_reactions,
     )
-    loss = torch.abs(
+    if dataset in {"gmtkn-diet30-def2", "gmtkn-diet100-def2"}:
+        number_of_reactions = torch.tensor(
+            [
+                len(dataset_json[f"reaction-{subset_name}"])
+                for subset_name in batch_subset
+            ],
+            device=reaction_tensors.reference_energy.device,
+            dtype=DTYPE,
+        )
+        subset_weights = torch.tensor(
+            [
+                next(iter(dataset_json[f"reaction-{subset_name}"].values()))[
+                    "weight"
+                ]
+                for subset_name in batch_subset
+            ],
+            device=reaction_tensors.reference_energy.device,
+            dtype=DTYPE,
+        )
+        return torch.einsum(
+            "i,i,i->", number_of_reactions, subset_weights, mean_reaction_energy
+        ) / torch.sum(number_of_reactions)
+
+    mean_absolute_deviation = 56.84 / 1505
+    return torch.abs(
         mean_absolute_deviation
         * torch.einsum(
             "i,i,i->",
@@ -674,15 +713,17 @@ def run_train(args: argparse.Namespace) -> None:
 
 
 def run_test(args: argparse.Namespace) -> None:
-    data_path = VALIDATE_DIR / f"ccdft_{args.basis}_{args.load}_gmtkn-def2.csv"
+    data_path = VALIDATE_DIR / f"ccdft_{args.basis}_{args.load}_{args.dataset}.csv"
     load_para_path = (
         VALIDATE_DIR
         / f"ccdft_{args.basis}_{args.load}_{args.damping}_dft-fitset-def2.json"
     )
-    dataset_json_path = DATASET_JSON_DIR / "gmtkn-def2.json"
+    dataset_json_path = DATASET_JSON_DIR / f"{args.dataset}.json"
 
     with open(SUBSET_JSON_PATH, "r", encoding="utf-8") as f:
-        batch_subset = flatten_subset(json.load(f)["full_subset_dict"])
+        subset_json = json.load(f)
+        subset_key = "full_subset_dict" if args.dataset == "gmtkn-def2" else args.dataset
+        batch_subset = flatten_subset(subset_json[subset_key])
 
     with open(load_para_path, "r", encoding="utf-8") as f:
         initial_params = json.load(f)["parameters"]
@@ -713,23 +754,23 @@ def run_test(args: argparse.Namespace) -> None:
     reaction_energy_dft = torch.einsum(
         "ji,i->j", reaction_tensors.molecules_to_reactions, data_dft_ene_kcalmol
     )
-    mean_absolute_deviation = 56.84 / 1505
-    mean_reaction_energy = torch.einsum(
-        "i,ij,j->j",
-        torch.abs(reaction_tensors.reference_energy - reaction_energy_dft),
-        reaction_tensors.reactions_to_subset,
-        reaction_tensors.one_over_number_of_reactions,
-    )
-    base_score = mean_absolute_deviation * torch.einsum(
-        "i,i,i->",
-        reaction_tensors.number_of_reactions,
-        reaction_tensors.one_over_mae,
-        mean_reaction_energy,
+    base_score = weighted_dataset_score(
+        reaction_tensors,
+        reaction_energy_dft,
+        args.dataset,
+        dataset_json,
+        batch_subset,
     )
     print(f"base_score: {base_score.item()}", flush=True)
 
     loss, e_disp_kcalmol = eval_loss_weighted(
-        model, input_batch, reaction_tensors, data_dft_ene_kcalmol
+        model,
+        input_batch,
+        reaction_tensors,
+        data_dft_ene_kcalmol,
+        args.dataset,
+        dataset_json,
+        batch_subset,
     )
     print(f"After fitting: {loss.item()}", flush=True)
 

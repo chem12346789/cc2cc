@@ -106,8 +106,9 @@ select_molecule_profile() {
     local set_name="${name_mol_input#molecule_}"
     local log_dir="${REPO_ROOT}/log/${load_name}/${load_epoch}"
     mkdir -p "${log_dir}"
-    exec >"${log_dir}/${set_name}.out" \
-        2>"${log_dir}/${set_name}.err"
+    exec >"${log_dir}/${set_name}_${array_index}.out" \
+        2>"${log_dir}/${set_name}_${array_index}.err"
+    printf 'array_index=%s\n' "${array_index}"
 }
 
 run_test_job() {
