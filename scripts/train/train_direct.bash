@@ -3,8 +3,8 @@
 # =========================
 # Model and checkpoint
 # =========================
-export MODEL="--model transformer+dense_mix_e3nn_4"
-# export MODEL="--model transformer+dense_mix_e3nn_4_correct"
+# export MODEL="--model transformer+dense_mix_e3nn_4"
+export MODEL="--model transformer+dense_mix_e3nn_4_correct"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct_no_skip"
 # export MODEL="--load atom-82794 --load_epoch 10005 --if_resume 0"
 
@@ -19,8 +19,8 @@ export BASIS_ARGS="def2-QZVPPD"
 export RHO_INPUT="dft"
 # export RHO_INPUT="dft_d3bj_1"
 # export SPLIT_CONFIG="mol0.json"
-export SPLIT_CONFIG="mol1.json"
-# export SPLIT_CONFIG="mol2_ex.json"
+# export SPLIT_CONFIG="mol1_add.json"
+export SPLIT_CONFIG="mol2_ex_add.json"
 # export SPLIT_CONFIG="test.json"
 # export SPLIT_CONFIG="mini.json"
 export MOL0_WEIGHTING=4
@@ -45,7 +45,7 @@ export ABS_ARG="--loss_multiplier_abs 1e-2 --if_relative_weight_abs 0 --if_abs $
 # =========================
 # Optimizer and scheduler
 # =========================
-export LEARNING_RATE="1e-4"
+export LEARNING_RATE="3e-4"
 export COSINE_ETA_MIN_EFFECTIVE="1e-8"
 # export COSINE_ETA_MIN_RATIO="1e-3"
 # export COSINE_ETA_MIN_EFFECTIVE=$(awk -v lr="${LEARNING_RATE}" -v ratio="${COSINE_ETA_MIN_RATIO}" 'BEGIN { printf "%.12g", lr * ratio }')
@@ -106,7 +106,7 @@ train_run() {
 		${DISTRIBUTED}
 		${MODEL}
 		--save_dir "atom-${PID_THIS_RUN}"
-		--seed 9527
+		--seed 42
 		--epoch 250001
 		--eval_step 5
 		--max_norm "${MAX_NORM}"
