@@ -5,7 +5,6 @@ export model_load_epoch_pairs=(
     "atom-82794:2395"
     "atom-82794:4940"
     "atom-82794:10005"
-    "atom-1221273:2395"
     "atom-1221273:4955"
     "atom-557276:2390"
     "atom-556724:2395"

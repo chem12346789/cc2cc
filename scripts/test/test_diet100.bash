@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=24
 #SBATCH --time=2400:00:00
-#SBATCH -a [0-11,13-54]%4
+#SBATCH -a [0]%1
 #SBATCH -J validate-diet100
 
 SCRIPT_DIR="scripts"
@@ -13,8 +13,9 @@ source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
-0) export load_model_args="--load atom-557276 --load_epoch 2390" ;;
-1) export load_model_args="--load atom-556724 --load_epoch 2395" ;;
+0) export load_model_args="--load atom-1221273 --load_epoch 4955" ;;
+# 1) export load_model_args="--load atom-557276 --load_epoch 2390" ;;
+# 2) export load_model_args="--load atom-556724 --load_epoch 2395" ;;
 esac
 
 export if_continue_args=0
