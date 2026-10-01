@@ -19,12 +19,12 @@ export BASIS_ARGS="def2-QZVPPD"
 export RHO_INPUT="dft"
 # export RHO_INPUT="dft_d3bj_1"
 # export SPLIT_CONFIG="mol0.json"
-# export SPLIT_CONFIG="mol1_add.json"
-export SPLIT_CONFIG="mol2_ex_add.json"
+export SPLIT_CONFIG="mol1_add.json"
+# export SPLIT_CONFIG="mol2_ex_add.json"
 # export SPLIT_CONFIG="test.json"
 # export SPLIT_CONFIG="mini.json"
-export MOL0_WEIGHTING=4
-export APPEND_MOL0=9
+export MOL0_WEIGHTING=40
+export APPEND_MOL0=0
 export RELATIVE_WEIGHT_EPSILON=1e-10
 
 export OUTPUT_ARG="--output_target tol_delta_grids"
@@ -54,13 +54,13 @@ export WEIGHT_DECAY="1e-12"
 export MAX_NORM=1
 # export SCHEDULER="--optimizer AdamW --scheduler constant"
 # export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1500 --cosine_T_mult 1"
-export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
+export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1600 --cosine_T_mult 2"
 
 # =========================
 # Hardware and environment
 # =========================
 export NUMBER_OF_GPU=1
-export CUDA_VISIBLE_DEVICES=3
+export CUDA_VISIBLE_DEVICES=4
 
 if [ ${NUMBER_OF_GPU} -gt 1 ]; then
 	export DISTRIBUTED="--distributed 1"
