@@ -87,8 +87,8 @@ if __name__ == "__main__":
         "--scheduler",
         type=str,
         default="constant",
-        choices=["cosine", "constant", "cosine_warm"],
-        help="Learning rate scheduler. Default is constant.",
+        choices=["cosine", "constant", "cosine_warm", "onecycle"],
+        help="Learning rate scheduler. Onecycle uses --lr as its peak. Default is constant.",
     )
     parser.add_argument(
         "--cosine_eta_min",
@@ -100,7 +100,7 @@ if __name__ == "__main__":
         "--cosine_T",
         type=int,
         default=16,
-        help="Number of periods for the cosine scheduler. Default is 16.",
+        help="Cosine period in epochs (converted to optimizer updates). Default is 16.",
     )
     parser.add_argument(
         "--cosine_T_mult",

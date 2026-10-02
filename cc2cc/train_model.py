@@ -174,7 +174,6 @@ def train_model(train_list, eval_list, args):
             modeldict.database_eval.sampler.set_epoch(epoch)
 
         if epoch < modeldict.start_step:
-            modeldict.scheduler.step()
             barrier()
             continue
 
@@ -191,7 +190,6 @@ def train_model(train_list, eval_list, args):
             if logger:
                 logger.log(modeldict, train_record, eval_record, epoch)
 
-        modeldict.scheduler.step()
         barrier()
 
     if is_distributed:

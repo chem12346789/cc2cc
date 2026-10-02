@@ -251,23 +251,7 @@ class ModelClass:
         if self.optimizer_state_dict is not None:
             self.optimizer.load_state_dict(self.optimizer_state_dict)
 
-        if self.args.scheduler == "cosine":
-            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer,
-                T_max=self.args.cosine_T,
-                eta_min=self.args.cosine_eta_min,
-            )
-        elif self.args.scheduler == "constant":
-            self.scheduler = optim.lr_scheduler.ConstantLR(self.optimizer)
-        elif self.args.scheduler == "cosine_warm":
-            self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                self.optimizer,
-                T_0=self.args.cosine_T,
-                T_mult=self.args.cosine_T_mult,
-                eta_min=self.args.cosine_eta_min,
-            )
-        else:
-            raise ValueError(f"Unknown scheduler {self.args.scheduler}")
+        self.scheduler = None
 
         loss_dict = {
             "L1Loss": torch.nn.L1Loss,
@@ -348,6 +332,61 @@ class ModelClass:
 
         self.print(f"Training on {len(self.database_train)} systems.")
         self.print(f"Evaluating on {len(self.database_eval)} systems.")
+
+        steps_per_epoch = len(self.database_train.data_gpu)
+        start_update = self.start_step * steps_per_epoch
+        max_lrs = [
+            self.args.muon_lr if group.get("use_muon", False) else self.args.lr
+            for group in self.optimizer.param_groups
+        ]
+        for group, max_lr in zip(self.optimizer.param_groups, max_lrs):
+            group["initial_lr"] = max_lr
+            group["lr"] = max_lr
+
+        if self.args.scheduler == "onecycle":
+            for group, max_lr in zip(self.optimizer.param_groups, max_lrs):
+                group["initial_lr"] = max_lr / 25.0
+                group["max_lr"] = max_lr
+                group["min_lr"] = max_lr / 25.0 / 1000.0
+            self.scheduler = optim.lr_scheduler.OneCycleLR(
+                self.optimizer,
+                max_lr=max_lrs,
+                total_steps=(self.args.epoch + 1) * steps_per_epoch,
+                pct_start=0.1,
+                anneal_strategy="cos",
+                cycle_momentum=False,
+                div_factor=25.0,
+                final_div_factor=1000.0,
+                last_epoch=start_update - 1,
+            )
+        elif self.args.scheduler == "cosine":
+            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
+                self.optimizer,
+                T_max=self.args.cosine_T * steps_per_epoch,
+                eta_min=self.args.cosine_eta_min,
+                last_epoch=start_update - 1,
+            )
+        elif self.args.scheduler == "constant":
+            total_iters = 5 * steps_per_epoch
+            if 0 < start_update <= total_iters:
+                for group in self.optimizer.param_groups:
+                    group["lr"] /= 3.0
+            self.scheduler = optim.lr_scheduler.ConstantLR(
+                self.optimizer,
+                total_iters=total_iters,
+                last_epoch=start_update - 1,
+            )
+        elif self.args.scheduler == "cosine_warm":
+            self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                self.optimizer,
+                T_0=self.args.cosine_T * steps_per_epoch,
+                T_mult=self.args.cosine_T_mult,
+                eta_min=self.args.cosine_eta_min,
+            )
+            if start_update:
+                self.scheduler.step(start_update)
+        else:
+            raise ValueError(f"Unknown scheduler {self.args.scheduler}")
 
     def _estimate_checkpoint_size(self, state_dict):
         payload = {
@@ -538,6 +577,7 @@ class ModelClass:
             tot_loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
             self.optimizer.step()
+            self.scheduler.step()
             self.optimizer.zero_grad(set_to_none=True)
             if event is None:
                 data_record_l.add_data_record(data_record)
