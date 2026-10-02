@@ -54,6 +54,21 @@ out of importable Python modules.
 - Dataset names: `gmtkn-def2`, `gmtkn-diet30-def2`, `gmtkn-diet100-def2`, `dft-fitset-def2`
 - Basis names: `def2-QZVPPD`, `def2-TZVPPD`, `def2-QZVP(D)`
 
+### Training Logs and Loss Snapshots
+- `log/train-<run-id>.log`: startup arguments and dataset sizes, checkpoint path,
+  and epoch-level train/eval loss, learning rate, and elapsed-time summaries.
+- `checkpoints/checkpoint_<save_dir>/loss/train-<epoch>.csv` and
+  `eval-<epoch>.csv`: per-sample loss records for the training and evaluation
+  sets. The run identifier in the log often matches the checkpoint directory;
+  verify the recorded checkpoint path and arguments when associating artifacts.
+- Loss CSVs are written when a best-loss metric improves or the checkpoint
+  stride is reached (`eval_step * 32`); they are not necessarily emitted at
+  every logged evaluation. The last CSV epoch can therefore precede the last
+  epoch in the log and should not be treated as proof that training stopped.
+- Interpret zero-valued loss columns with the run configuration and loss
+  construction in `cc2cc/utils/ModelClass.py`; a CSV value alone does not show
+  whether that component was active for the run.
+
 ## Full Environment Variables
 | Variable | Purpose |
 |---|---|

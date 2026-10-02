@@ -214,17 +214,40 @@ class ModelClass:
             self.print("Model not found, starting from scratch.")
 
     def init_train(self):
-        optimizer_cls = {
-            "AdamW": optim.AdamW,
-            "Adafactor": getattr(optim, "Adafactor", None),
-        }.get(self.args.optimizer)
-        if optimizer_cls is None:
-            raise ValueError(f"Unknown optimizer {self.args.optimizer}")
-        self.optimizer = optimizer_cls(
-            self.model.parameters(),
-            lr=self.args.lr,
-            weight_decay=self.args.weight_decay,
-        )
+        if self.args.optimizer == "Muon":
+            from pytorch_optimizer import Muon
+
+            muon_params = []
+            adamw_params = []
+            for name, param in self.model.named_parameters():
+                if param.ndim >= 2 and "mixing_weight" not in name.split("."):
+                    muon_params.append(param)
+                else:
+                    adamw_params.append(param)
+
+            # Muon orthogonalizes updates in bfloat16; model weights remain float64.
+            self.optimizer = Muon(
+                [
+                    dict(params=adamw_params, lr=self.args.lr, use_muon=False),
+                    dict(params=muon_params, lr=self.args.muon_lr, use_muon=True),
+                ],
+                weight_decay=self.args.weight_decay,
+                adamw_wd=self.args.weight_decay,
+                adamw_betas=(0.9, 0.999),
+                adamw_eps=1e-8,
+            )
+        else:
+            optimizer_cls = {
+                "AdamW": optim.AdamW,
+                "Adafactor": getattr(optim, "Adafactor", None),
+            }.get(self.args.optimizer)
+            if optimizer_cls is None:
+                raise ValueError(f"Unknown optimizer {self.args.optimizer}")
+            self.optimizer = optimizer_cls(
+                self.model.parameters(),
+                lr=self.args.lr,
+                weight_decay=self.args.weight_decay,
+            )
         if self.optimizer_state_dict is not None:
             self.optimizer.load_state_dict(self.optimizer_state_dict)
 
@@ -533,6 +556,7 @@ class ModelClass:
         data_record_l.merge()
         return data_record_l
 
+    @torch.inference_mode()
     def eval_model(self):
         self.eval()
         self.optimizer.zero_grad(set_to_none=True)

@@ -74,8 +74,14 @@ if __name__ == "__main__":
         "--optimizer",
         type=str,
         default="AdamW",
-        choices=["AdamW", "Adafactor"],
+        choices=["AdamW", "Adafactor", "Muon"],
         help="Optimizer for the training. Default is AdamW.",
+    )
+    parser.add_argument(
+        "--muon_lr",
+        type=float,
+        default=2e-2,
+        help="Learning rate for Muon matrix parameters. Default is 2e-2.",
     )
     parser.add_argument(
         "--scheduler",

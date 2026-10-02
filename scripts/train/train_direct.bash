@@ -54,6 +54,7 @@ export WEIGHT_DECAY="1e-12"
 export MAX_NORM=1
 # export SCHEDULER="--optimizer AdamW --scheduler constant"
 # export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1500 --cosine_T_mult 1"
+# export SCHEDULER="--optimizer Muon --muon_lr 2e-2 --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1600 --cosine_T_mult 2"
 export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1600 --cosine_T_mult 2"
 
 # =========================
@@ -139,8 +140,8 @@ train_run() {
 	echo "Scheduler: ${SCHEDULER}"
 	echo "Split config: ${SPLIT_CONFIG}"
 
-	# OMP_WAIT_POLICY=PASSIVE CUDA_LAUNCH_BLOCKING=1 numactl --cpunodebind=${NUMA_NODE} --memnodebind=${NUMA_NODE} ${TORCHRUN_PATH} train.py "${train_args[@]}"
-	OMP_WAIT_POLICY=PASSIVE CUDA_LAUNCH_BLOCKING=1 numactl --cpunodebind=${NUMA_NODE} --preferred=${NUMA_NODE} ${TORCHRUN_PATH} train.py "${train_args[@]}"
+	# OMP_WAIT_POLICY=PASSIVE numactl --cpunodebind=${NUMA_NODE} --memnodebind=${NUMA_NODE} ${TORCHRUN_PATH} train.py "${train_args[@]}"
+	OMP_WAIT_POLICY=PASSIVE numactl --cpunodebind=${NUMA_NODE} --preferred=${NUMA_NODE} ${TORCHRUN_PATH} train.py "${train_args[@]}"
 	echo DONE
 }
 export -f train_run

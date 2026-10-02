@@ -2,6 +2,7 @@
 name = "cc2cc"
 version = "0.1.0"
 description = "cc2cc: AI for density functional theory"
+dependencies = ["pytorch-optimizer==3.11.0"]
 
 [build-system]
 build-backend = "setuptools.build_meta"
