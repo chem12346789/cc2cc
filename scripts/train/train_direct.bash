@@ -23,7 +23,7 @@ export SPLIT_CONFIG="mol1_add.json"
 # export SPLIT_CONFIG="mol2_ex_add.json"
 # export SPLIT_CONFIG="test.json"
 # export SPLIT_CONFIG="mini.json"
-export MOL0_WEIGHTING=40
+export MOL0_WEIGHTING=4
 export APPEND_MOL0=0
 export RELATIVE_WEIGHT_EPSILON=1e-10
 
@@ -45,7 +45,7 @@ export LOSS_ARGS="--loss_type L1Loss --normal_type L1Loss"
 # =========================
 # Optimizer and scheduler
 # =========================
-export LEARNING_RATE="3e-4"
+export LEARNING_RATE="3e-5"
 export COSINE_ETA_MIN_EFFECTIVE="1e-8"
 # export COSINE_ETA_MIN_RATIO="1e-3"
 # export COSINE_ETA_MIN_EFFECTIVE=$(awk -v lr="${LEARNING_RATE}" -v ratio="${COSINE_ETA_MIN_RATIO}" 'BEGIN { printf "%.12g", lr * ratio }')
@@ -55,7 +55,8 @@ export MAX_NORM=1
 # export SCHEDULER="--optimizer AdamW --scheduler constant"
 # export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1500 --cosine_T_mult 1"
 # export SCHEDULER="--optimizer Muon --muon_lr 2e-2 --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1600 --cosine_T_mult 2"
-export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1600 --cosine_T_mult 2"
+# export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1600 --cosine_T_mult 2"
+export SCHEDULER="--optimizer AdamW --scheduler onecycle"
 
 # =========================
 # Hardware and environment
@@ -108,7 +109,7 @@ train_run() {
 		${MODEL}
 		--save_dir "atom-${PID_THIS_RUN}"
 		--seed 42
-		--epoch 250001
+		--epoch 10000
 		--eval_step 5
 		--max_norm "${MAX_NORM}"
 		--rho_input "${RHO_INPUT}"
