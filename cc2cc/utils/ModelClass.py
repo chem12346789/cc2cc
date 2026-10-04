@@ -15,6 +15,7 @@ from torch.nn.parallel import DistributedDataParallel
 from cc2cc.utils.DataBase import DataBase
 from cc2cc.utils.env_var import CHECKPOINTS_PATH, CUBE_MIDDLE, MAIN_PATH
 from cc2cc.utils.mol import AU2KCALMOL
+from cc2cc.utils.schedulers import CosineAnnealingWarmRestarts2
 
 CUBE_INDEX = {
     "cube5": np.array(
@@ -376,6 +377,24 @@ class ModelClass:
                 total_iters=total_iters,
                 last_epoch=start_update - 1,
             )
+        elif self.args.scheduler == "cosine_warm2":
+            if self.args.cosine_restart_lr is None or self.args.cosine_restart_step is None:
+                raise ValueError(
+                    "cosine_warm2 requires --cosine_restart_lr and --cosine_restart_step"
+                )
+            self.scheduler = CosineAnnealingWarmRestarts2(
+                self.optimizer,
+                T_0=self.args.cosine_T * steps_per_epoch,
+                T_mult=self.args.cosine_T_mult,
+                eta_min=self.args.cosine_eta_min,
+                restart_step=self.args.cosine_restart_step * steps_per_epoch,
+                restart_lrs=[
+                    self.args.cosine_restart_lr * max_lr / self.args.lr
+                    for max_lr in max_lrs
+                ],
+            )
+            if start_update:
+                self.scheduler.step(start_update)
         elif self.args.scheduler == "cosine_warm":
             self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
                 self.optimizer,

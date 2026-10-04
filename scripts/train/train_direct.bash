@@ -5,6 +5,7 @@
 # =========================
 # export MODEL="--model transformer+dense_mix_e3nn_4"
 export MODEL="--model transformer+dense_mix_e3nn_4_correct"
+# export MODEL="--model transformer+dense_mix_e3nn_4_correct2"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct_no_skip"
 # export MODEL="--load atom-82794 --load_epoch 10005 --if_resume 0"
 
@@ -24,7 +25,7 @@ export SPLIT_CONFIG="mol1_add.json"
 # export SPLIT_CONFIG="test.json"
 # export SPLIT_CONFIG="mini.json"
 export MOL0_WEIGHTING=4
-export APPEND_MOL0=0
+export APPEND_MOL0=9
 export RELATIVE_WEIGHT_EPSILON=1e-10
 
 export OUTPUT_ARG="--output_target tol_delta_grids"
@@ -39,13 +40,13 @@ export IF_ABS=1
 
 export GRAD_ARG="--loss_multiplier_grad 1 --if_relative_weight_grad 0 --if_grad ${IF_GRAD} --grad_step 1"
 export ATOMIC_ARG="--loss_multiplier_atomic 1 --if_atomic ${IF_ATOMIC}"
-export ABS_ARG="--loss_multiplier_abs 1e-2 --if_relative_weight_abs 0 --if_abs ${IF_ABS}"
-export LOSS_ARGS="--loss_type L1Loss --normal_type L1Loss"
+export ABS_ARG="--loss_multiplier_abs 1e-3 --if_relative_weight_abs 0 --if_abs ${IF_ABS}"
+# export LOSS_ARGS="--loss_type L1Loss --normal_type L1Loss"
 
 # =========================
 # Optimizer and scheduler
 # =========================
-export LEARNING_RATE="3e-5"
+export LEARNING_RATE="3e-4"
 export COSINE_ETA_MIN_EFFECTIVE="1e-8"
 # export COSINE_ETA_MIN_RATIO="1e-3"
 # export COSINE_ETA_MIN_EFFECTIVE=$(awk -v lr="${LEARNING_RATE}" -v ratio="${COSINE_ETA_MIN_RATIO}" 'BEGIN { printf "%.12g", lr * ratio }')
@@ -54,9 +55,10 @@ export WEIGHT_DECAY="1e-12"
 export MAX_NORM=1
 # export SCHEDULER="--optimizer AdamW --scheduler constant"
 # export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1500 --cosine_T_mult 1"
-# export SCHEDULER="--optimizer Muon --muon_lr 2e-2 --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1600 --cosine_T_mult 2"
-# export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1600 --cosine_T_mult 2"
-export SCHEDULER="--optimizer AdamW --scheduler onecycle"
+# export SCHEDULER="--optimizer Muon --muon_lr 2e-2 --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
+# export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
+# export SCHEDULER="--optimizer AdamW --scheduler cosine_warm2 --cosine_restart_step 1000 --cosine_restart_lr 1e-4 --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
+export SCHEDULER="--optimizer Muon --muon_lr 2e-2 --scheduler cosine_warm2 --cosine_restart_step 1000 --cosine_restart_lr 1e-4 --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
 
 # =========================
 # Hardware and environment
@@ -109,7 +111,7 @@ train_run() {
 		${MODEL}
 		--save_dir "atom-${PID_THIS_RUN}"
 		--seed 42
-		--epoch 10000
+		--epoch 12500
 		--eval_step 5
 		--max_norm "${MAX_NORM}"
 		--rho_input "${RHO_INPUT}"

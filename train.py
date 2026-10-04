@@ -87,8 +87,20 @@ if __name__ == "__main__":
         "--scheduler",
         type=str,
         default="constant",
-        choices=["cosine", "constant", "cosine_warm", "onecycle"],
+        choices=["cosine", "constant", "cosine_warm", "cosine_warm2", "onecycle"],
         help="Learning rate scheduler. Onecycle uses --lr as its peak. Default is constant.",
+    )
+    parser.add_argument(
+        "--cosine_restart_lr",
+        type=float,
+        default=None,
+        help="New cosine peak LR for cosine_warm2; required for this scheduler.",
+    )
+    parser.add_argument(
+        "--cosine_restart_step",
+        type=int,
+        default=None,
+        help="Epoch count at which cosine_warm2 restarts (converted to optimizer updates); required for this scheduler.",
     )
     parser.add_argument(
         "--cosine_eta_min",
