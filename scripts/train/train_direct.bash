@@ -4,8 +4,8 @@
 # Model and checkpoint
 # =========================
 # export MODEL="--model transformer+dense_mix_e3nn_4"
-export MODEL="--model transformer+dense_mix_e3nn_4_correct"
-# export MODEL="--model transformer+dense_mix_e3nn_4_correct2"
+# export MODEL="--model transformer+dense_mix_e3nn_4_correct"
+export MODEL="--model transformer+dense_mix_e3nn_4_correct2"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct_no_skip"
 # export MODEL="--load atom-82794 --load_epoch 10005 --if_resume 0"
 
@@ -18,10 +18,11 @@ export BASIS_ARGS="def2-QZVPPD"
 # Options: dft, dft_d3bj, zmp
 # export RHO_INPUT="zmp"
 export RHO_INPUT="dft"
+# export RHO_INPUT="dft_d3bj"
 # export RHO_INPUT="dft_d3bj_1"
 # export SPLIT_CONFIG="mol0.json"
-export SPLIT_CONFIG="mol1_add.json"
-# export SPLIT_CONFIG="mol2_ex_add.json"
+# export SPLIT_CONFIG="mol1_add.json"
+export SPLIT_CONFIG="mol2_ex_add.json"
 # export SPLIT_CONFIG="test.json"
 # export SPLIT_CONFIG="mini.json"
 export MOL0_WEIGHTING=4
@@ -40,7 +41,7 @@ export IF_ABS=1
 
 export GRAD_ARG="--loss_multiplier_grad 1 --if_relative_weight_grad 0 --if_grad ${IF_GRAD} --grad_step 1"
 export ATOMIC_ARG="--loss_multiplier_atomic 1 --if_atomic ${IF_ATOMIC}"
-export ABS_ARG="--loss_multiplier_abs 1e-3 --if_relative_weight_abs 0 --if_abs ${IF_ABS}"
+export ABS_ARG="--loss_multiplier_abs 1e-2 --if_relative_weight_abs 0 --if_abs ${IF_ABS}"
 # export LOSS_ARGS="--loss_type L1Loss --normal_type L1Loss"
 
 # =========================
@@ -57,8 +58,7 @@ export MAX_NORM=1
 # export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1500 --cosine_T_mult 1"
 # export SCHEDULER="--optimizer Muon --muon_lr 2e-2 --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
 # export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
-# export SCHEDULER="--optimizer AdamW --scheduler cosine_warm2 --cosine_restart_step 1000 --cosine_restart_lr 1e-4 --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
-export SCHEDULER="--optimizer Muon --muon_lr 2e-2 --scheduler cosine_warm2 --cosine_restart_step 1000 --cosine_restart_lr 1e-4 --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
+export SCHEDULER="--optimizer AdamW --scheduler cosine_warm2 --cosine_restart_step 1000 --cosine_restart_lr 1e-4 --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
 
 # =========================
 # Hardware and environment

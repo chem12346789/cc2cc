@@ -100,7 +100,7 @@ if __name__ == "__main__":
         "--cosine_restart_step",
         type=int,
         default=None,
-        help="Epoch count at which cosine_warm2 restarts (converted to optimizer updates); required for this scheduler.",
+        help="Epoch threshold after which natural cosine_warm2 restarts use the new peak LR (converted to optimizer updates); required for this scheduler.",
     )
     parser.add_argument(
         "--cosine_eta_min",

@@ -30,15 +30,10 @@ class CosineWarm2Tests(unittest.TestCase):
         initial = CosineAnnealingWarmRestarts(
             self.make_optimizer(), T_0=4, T_mult=2, eta_min=0.001
         )
-        restarted_optimizer = self.make_optimizer()
-        for group, lr in zip(restarted_optimizer.param_groups, [0.02, 0.04]):
-            group["lr"] = lr
-        restarted = CosineAnnealingWarmRestarts(
-            restarted_optimizer, T_0=4, T_mult=2, eta_min=0.001
-        )
-        for step in range(24):
-            reference = initial if step < 7 else restarted
-            reference.step(step if step < 7 else step - 7)
+        for step in range(48):
+            initial.base_lrs = [0.1, 0.2] if step < 12 else [0.02, 0.04]
+            initial.step(step)
+            reference = initial
             for actual, expected in zip(scheduler.get_last_lr(), reference.get_last_lr()):
                 self.assertAlmostEqual(actual, expected)
             self.assertEqual(scheduler.last_epoch, step)
@@ -47,10 +42,30 @@ class CosineWarm2Tests(unittest.TestCase):
             optimizer.step()
             scheduler.step()
 
+    def test_fixed_cycles_and_aligned_threshold(self):
+        for threshold, first_restart in [(4, 4), (7, 8)]:
+            with self.subTest(threshold=threshold):
+                scheduler = CosineAnnealingWarmRestarts2(
+                    self.make_optimizer(), T_0=4, T_mult=1, eta_min=0.001,
+                    restart_step=threshold, restart_lrs=[0.02, 0.04],
+                )
+                reference = CosineAnnealingWarmRestarts(
+                    self.make_optimizer(), T_0=4, T_mult=1, eta_min=0.001
+                )
+                for step in [0, 3.5, 4, 6.5, 7, 7.5, 8, 12]:
+                    reference.base_lrs = (
+                        [0.1, 0.2] if step < first_restart else [0.02, 0.04]
+                    )
+                    reference.step(step)
+                    scheduler.step(step)
+                    self.assertEqual(scheduler.get_last_lr(), reference.get_last_lr())
+                    self.assertEqual(scheduler.T_cur, reference.T_cur)
+                    self.assertEqual(scheduler.T_i, reference.T_i)
+
     def test_resume_and_state_dict(self):
         optimizer = self.make_optimizer()
         scheduler = self.make_scheduler(optimizer)
-        for step in [0, 6, 7, 8, 11, 19]:
+        for step in [0, 6, 7, 8, 11, 12, 13, 19, 27, 28]:
             scheduler.step(step)
             resumed = self.make_scheduler(self.make_optimizer())
             resumed.step(step)

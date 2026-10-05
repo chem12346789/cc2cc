@@ -20,12 +20,12 @@ class CosineAnnealingWarmRestarts2(CosineAnnealingWarmRestarts):
 
     def step(self, epoch=None):
         absolute_step = self.last_epoch + 1 if epoch is None else epoch
-        if absolute_step >= self.restart_step:
-            self.base_lrs = list(self.restart_lrs)
-            cycle_step = absolute_step - self.restart_step
-        else:
-            self.base_lrs = list(self.initial_peak_lrs)
-            cycle_step = absolute_step
-        # Reset both the phase and the growing period at the forced restart.
-        super().step(cycle_step)
-        self.last_epoch = math.floor(absolute_step)
+        super().step(absolute_step)
+        peak_lrs = (
+            self.restart_lrs
+            if absolute_step - self.T_cur >= self.restart_step
+            else self.initial_peak_lrs
+        )
+        if self.base_lrs != peak_lrs:
+            self.base_lrs = list(peak_lrs)
+            super().step(absolute_step)

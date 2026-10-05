@@ -46,9 +46,9 @@ sbatch scripts/test/test_diet30.bash
 
 Use `--scheduler cosine_warm2 --cosine_restart_step 160 --cosine_restart_lr 1e-4`
 to keep the existing `cosine_warm` schedule until 160 epochs have
-completed, then restart at the new peak learning rate. The restart resets the
-cycle length to `--cosine_T` epochs; subsequent cycles retain the new peak and
-grow by `--cosine_T_mult`. `--cosine_eta_min` stays unchanged. Parameter-group
+completed, then use the new peak learning rate at the first natural restart
+at or after that threshold. The current cycle is unchanged; cycle timing and
+growth by `--cosine_T_mult` continue without resetting. `--cosine_eta_min` stays unchanged. Parameter-group
 peak ratios (including Muon) are preserved relative to `--lr`. Both restart
 arguments are required. `--cosine_restart_step` is multiplied by the number of
 optimizer updates per epoch, like `--cosine_T`. Resumed training uses the same
