@@ -16,7 +16,7 @@ from cc2cc.utils import (
     process_config,
 )
 from cc2cc.utils.rotate import rotate
-from cc2cc.utils import Grid, DATA_PATH
+from cc2cc.utils import Grid, DATA_PATH, diff_rho, AU2KCALMOL
 from cc2cc.utils.parser import gen_name_args, str2bool
 from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc
@@ -166,6 +166,52 @@ if __name__ == "__main__":
 
             if args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
                 print(f"SKIP: {name} already exists.")
+                # 1. Standard DFT (B3LYP)
+                data_npz = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
+                if "dm1_dft" in data_npz and "e_dft" in data_npz:
+                    dm_dft = data_npz["dm1_dft"]
+                    e_dft = float(data_npz["e_dft"])
+                else:
+                    mf_dft = pyscf.dft.RKS(mol, xc="b3lyp") if mol.spin == 0 else pyscf.dft.UKS(mol, xc="b3lyp")
+                    mf_dft.kernel()
+                    dm_dft = mf_dft.make_rdm1()
+                    e_dft = float(mf_dft.e_tot)
+
+                # 2. Post-DFT VV10 (using standard DFT 1-RDM)
+                nlcgrids = pyscf.dft.gen_grid.Grids(mol)
+                nlcgrids.build()
+                ni = pyscf.dft.numint.NumInt()
+                dm_dft_tot = dm_dft if mol.spin == 0 else (dm_dft[0] + dm_dft[1])
+                _, enlc_post, _ = ni.nr_nlc_vxc(mol, nlcgrids, "vv10", dm_dft_tot)
+                e_post_vv10 = e_dft + enlc_post
+
+                # 3. SCF-VV10 (VV10 in the SCF loop)
+                mf_scf = pyscf.dft.RKS(mol, xc="b3lyp") if mol.spin == 0 else pyscf.dft.UKS(mol, xc="b3lyp")
+                mf_scf.nlc = "vv10"
+                mf_scf.kernel()
+                dm_scf_vv10 = mf_scf.make_rdm1()
+                e_scf_vv10 = float(mf_scf.e_tot)
+
+                # 4. Electronic density difference
+                drho = diff_rho(mol, dm_dft, dm_scf_vv10, grids)
+
+                print(f"\n=== Energy and density comparison: {name} ===")
+                print("Energy relative to B3LYP total (kcal/mol):")
+                print("  B3LYP baseline:                      0.00000000")
+                print(
+                    "  Post-DFT VV10:                      "
+                    f"{(e_post_vv10 - e_dft) * AU2KCALMOL:>16.8f}"
+                )
+                print(
+                    "  Self-consistent SCF-VV10:            "
+                    f"{(e_scf_vv10 - e_dft) * AU2KCALMOL:>16.8f}"
+                )
+                print(
+                    "  SCF-VV10 minus post-DFT:             "
+                    f"{(e_scf_vv10 - e_post_vv10) * AU2KCALMOL:>16.8f}"
+                )
+                print(f"Integrated absolute density difference (electrons): {drho:.10e}\n")
+
             else:
                 if mol.spin == 0:
                     cc(mol, grids, name, args, evaluate=evaluate)
