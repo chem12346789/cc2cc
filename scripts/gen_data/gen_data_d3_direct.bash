@@ -1,4 +1,12 @@
 #!/bin/bash
+# CLUSTER-ONLY: This script is configured for this cluster; do not run it elsewhere.
+
+if [[ "$(hostname)" == "user-MZ73-LM1-000" ]]; then
+    :
+else
+    printf 'Error: this script can only run on user-MZ73-LM1-000 (current host: %s).\n' "$(hostname)" >&2
+    exit 1
+fi
 
 # Parameters for train.py
 export DATASET="gmtkn-def2"

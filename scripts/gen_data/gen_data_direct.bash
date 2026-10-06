@@ -1,4 +1,12 @@
 #!/bin/bash
+# CLUSTER-ONLY: This script is configured for this cluster; do not run it elsewhere.
+
+if [[ "$(hostname)" == "user-MZ73-LM1-000" ]]; then
+    :
+else
+    printf 'Error: this script can only run on user-MZ73-LM1-000 (current host: %s).\n' "$(hostname)" >&2
+    exit 1
+fi
 
 # Parameters for train.py
 export DATASET="gmtkn-def2"
@@ -35,11 +43,12 @@ mkdir -p log
 mkdir -p data/grids_dft
 
 # Clear previous PID file
-> log/save_pid.txt
+>log/save_pid.txt
 
-for MP_NUMBER in $(seq 0 $((MP_TOTAL - 1)));
-# for MP_NUMBER in 1;
-do
+for MP_NUMBER in $(
+    # for MP_NUMBER in 1;
+    seq 0 $((MP_TOTAL - 1))
+); do
     nohup bash -c "
         export LD_PRELOAD=~/.local/lib/libjemalloc.so:$LD_PRELOAD
         ~/anaconda3/envs/pyscf/bin/python gen_data.py --basis ${basis_args} --dataset ${DATASET} --if_continue ${IF_CONTINUE} --if_eval 0 --name_mol_reverse 0 --md_number ${MD_NUMBER} --device cpu --mp_number ${MP_NUMBER} --mp_total ${MP_TOTAL} --grid_level 4 --gen_config ${GEN_CONFIG} 
@@ -47,4 +56,3 @@ do
     echo $! >>log/save_pid.txt
     echo "Started gen_data.py with MP_NUMBER=${MP_NUMBER}, PID=$!"
 done
-
