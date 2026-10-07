@@ -82,6 +82,13 @@ weights require `4 * P`, and the current radial MLP requires `32 + 17 * P`.
 These counts exclude the readout. The MLP is not necessarily the smallest
 choice; its benefit is sharing a smooth function of radius.
 
+The `model_e3nn_correct3` variant feeds `r / EDGE_LEN` to the same radial MLP,
+so the default grid radii are `0`, `1`, `sqrt(2)`, and `sqrt(3)` rather than
+values near zero. Its mixed model is
+`transformer+dense_mix_e3nn_4_correct3`. This changes radial-network
+conditioning, not the represented set of grid shells; it requires retraining
+and is not checkpoint-compatible with `correct2`.
+
 ## Symmetry, limitations, and use
 
 - Radius is unchanged by rotations and reflections. Sharing radial weights

@@ -233,7 +233,7 @@ if __name__ == "__main__":
 
                 print(f"\n=== Energy and density comparison: {name} ===")
                 print("Energy relative to B3LYP total (kcal/mol):")
-                print("  B3LYP baseline:                      0.00000000")
+                print("  B3LYP baseline:                      0.0")
                 print(
                     "  Post-DFT VV10:                      "
                     f"{(e_post_vv10 - e_dft) * AU2KCALMOL:>16.8f}"
