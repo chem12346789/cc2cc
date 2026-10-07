@@ -5,7 +5,7 @@
 # =========================
 # export MODEL="--model transformer+dense_mix_e3nn_4"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct"
-export MODEL="--model transformer+dense_mix_e3nn_4_correct2"
+export MODEL="--model transformer+dense_mix_e3nn_4_correct3"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct_no_skip"
 # export MODEL="--load atom-82794 --load_epoch 10005 --if_resume 0"
 
@@ -64,7 +64,7 @@ export SCHEDULER="--optimizer AdamW --scheduler cosine_warm2 --cosine_restart_st
 # Hardware and environment
 # =========================
 export NUMBER_OF_GPU=1
-export CUDA_VISIBLE_DEVICES=4
+export CUDA_VISIBLE_DEVICES=2
 
 if [ ${NUMBER_OF_GPU} -gt 1 ]; then
 	export DISTRIBUTED="--distributed 1"
@@ -110,7 +110,7 @@ train_run() {
 		${DISTRIBUTED}
 		${MODEL}
 		--save_dir "atom-${PID_THIS_RUN}"
-		--seed 42
+		--seed 0
 		--epoch 12500
 		--eval_step 5
 		--max_norm "${MAX_NORM}"
