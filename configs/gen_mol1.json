@@ -1,6 +1,6 @@
 {
     "train": [
-        "W4_11-ch4"
+        "molecule1-W4_11"
     ],
     "eval": [
         "molecule3-W4_11",

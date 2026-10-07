@@ -22,6 +22,7 @@ NO_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "print_computer_info": ("cc2cc.utils.computer_info", "print_computer_info"),
     "TestDataDFT": ("cc2cc.utils.TestDataDFT", "TestDataDFT"),
     "diff_rho": ("cc2cc.utils.TestDataDFT", "diff_rho"),
+    "eval_nlc_exc_density": ("cc2cc.utils.nlc", "eval_nlc_exc_density"),
     "Timer": ("cc2cc.utils.timer", "Timer"),
     "DataRecord": ("cc2cc.utils.DataRecord", "DataRecord"),
     "ModelClass": ("cc2cc.utils.ModelClass", "ModelClass"),

@@ -31,6 +31,14 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 ### Top-level entry points
 - `gen_data.py`: molecule selection → `gen_mole()` → optional MD/rotation →
   `Grid` → `cc()`/`ucc()` → `.npz` grid data
+  - Existing-cache comparisons report B3LYP/post-DFT VV10 and SCF-VV10
+    integrated absolute density differences against cached `dm1_cc` (electrons).
+    Post-DFT VV10 energy density uses the same `Grid` coordinates, ordering,
+    and weights as the density comparisons.
+    Its weighted integral is checked against PySCF `nr_nlc_vxc` on the same
+    density and grid (`rtol=1e-10`, `atol=1e-12` Hartree); mismatches are errors.
+    Caches missing `dm1_dft`, `e_dft`, or `dm1_cc` are logged and skipped
+    without recomputing DFT.
 - `train.py`: train/eval list setup → `train_model()`
 - `test.py`: checkpoint loading and RKS/UKS model validation
 - `benchmark_dft.py`: baseline DFT benchmarking

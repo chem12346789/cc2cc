@@ -17,7 +17,7 @@ export basis_args="def2-QZVPPD"
 
 export MP_TOTAL=1
 export MD_NUMBER=1
-export GEN_CONFIG="gen_mol2.json"
+export GEN_CONFIG="gen_mol1.json"
 
 export DATASET="gmtkn-def2"
 export IF_CONTINUE=1
