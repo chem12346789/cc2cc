@@ -5,6 +5,8 @@ from pathlib import Path
 import unittest
 from unittest.mock import MagicMock, Mock, sentinel
 
+import numpy as np
+
 
 class TestGenDataDensityComparison(unittest.TestCase):
     def test_cached_cc_density_comparisons(self):
@@ -84,16 +86,23 @@ class TestGenDataDensityComparison(unittest.TestCase):
             orelse=[],
         )
         block = ast.fix_missing_locations(ast.Module(body=[loop], type_ignores=[]))
-        fields = {"dm1_dft": sentinel.dm_dft, "e_dft": 1.0, "dm1_cc": sentinel.dm_cc}
-        for missing in ((), ("dm1_dft",), ("e_dft",), ("dm1_cc",), tuple(fields)):
+        weights = np.array([0.2, 0.3])
+        fields = {
+            "dm1_dft": sentinel.dm_dft, "e_dft": 1.0,
+            "dm1_cc": sentinel.dm_cc, "weights": weights,
+        }
+        for missing in ((), ("dm1_dft",), ("e_dft",), ("dm1_cc",), ("weights",), tuple(fields)):
             with self.subTest(missing=missing):
                 archive = MagicMock()
                 archive.__enter__.return_value = {
                     key: value for key, value in fields.items() if key not in missing
                 }
-                np = Mock()
-                np.load.return_value = archive
-                namespace = dict(np=np, DATA_PATH=Path("."), name="test", completed=[])
+                mock_np = Mock()
+                mock_np.load.return_value = archive
+                grid = Mock(weights=weights.copy())
+                namespace = dict(
+                    np=mock_np, DATA_PATH=Path("."), name="test", completed=[], grids=grid
+                )
                 output = io.StringIO()
                 with contextlib.redirect_stdout(output):
                     exec(compile(block, str(source), "exec"), namespace)
@@ -105,3 +114,10 @@ class TestGenDataDensityComparison(unittest.TestCase):
                     self.assertEqual(namespace["dm_dft"], sentinel.dm_dft)
                     self.assertEqual(namespace["e_dft"], 1.0)
                     self.assertEqual(namespace["dm_cc"], sentinel.dm_cc)
+                    self.assertIs(grid.weights, weights)
+
+        archive.__enter__.return_value = fields
+        grid.weights = np.ones(3)
+        with self.assertRaisesRegex(ValueError, "Cached weights shape"):
+            exec(compile(block, str(source), "exec"), namespace)
+        self.assertEqual(grid.weights.shape, (3,))
