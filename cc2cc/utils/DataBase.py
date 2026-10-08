@@ -243,6 +243,9 @@ class DataBase:
         elif self.args.rho_input in ["dft_d3bj", "dft_d3bj_1"]:
             input_mat = data["rho_cube_dft"]
             energy_target = data["e_cc"] - data[f"e_{self.args.rho_input}"]
+        elif self.args.rho_input == "dft_d3bj_vv10":
+            input_mat = data["rho_cube_dft"]
+            energy_target = data["e_cc"] - (data["e_dft"] + data["e_vv10"])
         elif self.args.rho_input == "zmp":
             if self.if_eval:
                 input_mat = data["rho_cube_dft"]

@@ -17,9 +17,9 @@ export BASIS_ARGS="def2-QZVPPD"
 
 # Options: dft, dft_d3bj, zmp
 # export RHO_INPUT="zmp"
-export RHO_INPUT="dft"
+# export RHO_INPUT="dft"
 # export RHO_INPUT="dft_d3bj"
-# export RHO_INPUT="dft_d3bj_1"
+export RHO_INPUT="dft_d3bj_vv10"
 # export SPLIT_CONFIG="mol0.json"
 # export SPLIT_CONFIG="mol1_add.json"
 export SPLIT_CONFIG="mol2_ex_add.json"
