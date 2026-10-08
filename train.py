@@ -80,8 +80,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--muon_lr",
         type=float,
-        default=2e-2,
-        help="Learning rate for Muon matrix parameters. Default is 2e-2.",
+        default=0,
+        help="Learning rate for Muon matrix parameters. Default is 0.",
     )
     parser.add_argument(
         "--scheduler",
