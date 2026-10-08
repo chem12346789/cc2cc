@@ -27,6 +27,59 @@ from cc2cc.utils import (
 from cc2cc.utils.parser import gen_name_args, str2bool
 from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc
+from cc2cc.utils.nlc import post_dft_vv10_gradient
+
+
+def _converged_b3lyp(mol, dm0=None):
+    mf = (
+        pyscf.dft.RKS(mol, xc="b3lyp")
+        if mol.spin == 0
+        else pyscf.dft.UKS(mol, xc="b3lyp")
+    )
+    mf.verbose = 0
+    mf.max_cycle = 200
+    mf.nlc = ""
+    mf.conv_tol = 1e-12
+    mf.conv_tol_grad = 1e-8
+    mf.conv_tol_cpscf = 1e-10
+    mf.kernel(dm0=dm0)
+    if not mf.converged:
+        raise RuntimeError("B3LYP did not converge for Post-DFT VV10.")
+    return mf
+
+
+def _post_vv10_total_energy(mol, grid_level):
+    mf = _converged_b3lyp(mol)
+    dm = mf.make_rdm1()
+    dm_tot = dm if mol.spin == 0 else dm[0] + dm[1]
+    grids = Grid(mol, grid_level, 7)
+    enlc = np.dot(
+        eval_nlc_exc_density(mol, grids, dm_tot, "vv10"),
+        np.asarray(grids.weights),
+    )
+    return float(mf.e_tot) + enlc
+
+
+def _post_vv10_finite_difference_gradient(mol, grid_level, step=1e-3):
+    """Central-difference reference gradient in Hartree/Bohr; step in Bohr."""
+    coords = mol.atom_coords()
+    gradient = np.empty_like(coords)
+    for atom in range(mol.natm):
+        for axis in range(3):
+            displaced_energies = []
+            for sign in (1, -1):
+                displaced_mol = mol.copy()
+                displaced_coords = coords.copy()
+                displaced_coords[atom, axis] += sign * step
+                displaced_mol.set_geom_(displaced_coords, unit="Bohr")
+                displaced_energies.append(
+                    _post_vv10_total_energy(displaced_mol, grid_level)
+                )
+            gradient[atom, axis] = (
+                displaced_energies[0] - displaced_energies[1]
+            ) / (2 * step)
+    return gradient
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -55,6 +108,12 @@ if __name__ == "__main__":
         type=int,
         default=3,
         help="Total number of training cycles. Default is 3.",
+    )
+    parser.add_argument(
+        "--check_post_vv10_gradient",
+        action="store_true",
+        help="Check analytical Post-DFT VV10 gradients against finite differences "
+        "(six additional B3LYP calculations per atom).",
     )
     parser.add_argument(
         "--check_convergence",
@@ -218,6 +277,25 @@ if __name__ == "__main__":
                         f"for {name}: {enlc_post} vs {enlc_post_check} Hartree"
                     )
                 e_post_vv10 = e_dft + enlc_post
+                mf_dft = _converged_b3lyp(mol, dm0=dm_dft)
+                grad_post_vv10 = post_dft_vv10_gradient(mf_dft, nlcgrids)
+                grad_post_vv10_fd = None
+                if args.check_post_vv10_gradient:
+                    grad_post_vv10_fd = _post_vv10_finite_difference_gradient(
+                        mol, args.grid_level
+                    )
+                    grad_error = np.max(np.abs(grad_post_vv10 - grad_post_vv10_fd))
+                    print(
+                        "Post-DFT VV10 analytical/FD gradient max difference "
+                        f"(Hartree/Bohr): {grad_error:.12e}"
+                    )
+                    if not np.allclose(
+                        grad_post_vv10, grad_post_vv10_fd, rtol=0, atol=5e-5
+                    ):
+                        raise RuntimeError(
+                            f"Post-DFT VV10 gradient check failed for {name}: "
+                            f"max difference {grad_error} Hartree/Bohr"
+                        )
 
                 addon_path = DATA_PATH / f"data_{name}_addon.npz"
                 if addon_path.exists():
@@ -228,7 +306,14 @@ if __name__ == "__main__":
                 data_dict_addon.pop("exc_post_grid", None)
                 data_dict_addon["exc_post_vv10_grid"] = exc_post_vv10_grid
                 data_dict_addon["enlc_post"] = enlc_post
+                data_dict_addon["grad_post_vv10"] = grad_post_vv10
+                if grad_post_vv10_fd is not None:
+                    data_dict_addon["grad_post_vv10_fd"] = grad_post_vv10_fd
                 np.savez(addon_path, **data_dict_addon)
+                print(
+                    "Post-DFT VV10 gradient (Hartree/Bohr):\n"
+                    f"{grad_post_vv10}"
+                )
 
                 # 3. SCF-VV10 (VV10 in the SCF loop)
                 mf_scf = (
@@ -239,8 +324,19 @@ if __name__ == "__main__":
                 mf_scf.nlc = "vv10"
                 mf_scf.verbose = 4
                 mf_scf.kernel()
+                if args.check_convergence and not mf_scf.converged:
+                    raise RuntimeError("SCF-VV10 did not converge.")
                 dm_scf_vv10 = mf_scf.make_rdm1()
                 e_scf_vv10 = float(mf_scf.e_tot)
+                scf_gradient = mf_scf.nuc_grad_method()
+                scf_gradient.grid_response = True
+                grad_scf_vv10 = scf_gradient.kernel()
+                data_dict_addon["grad_scf_vv10"] = grad_scf_vv10
+                np.savez(addon_path, **data_dict_addon)
+                print(
+                    "SCF-VV10 gradient (Hartree/Bohr):\n"
+                    f"{grad_scf_vv10}"
+                )
 
                 # 4. Electronic density difference
                 drho = diff_rho(mol, dm_dft, dm_scf_vv10, grids)

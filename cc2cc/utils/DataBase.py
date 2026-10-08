@@ -245,7 +245,7 @@ class DataBase:
             energy_target = data["e_cc"] - data[f"e_{self.args.rho_input}"]
         elif self.args.rho_input == "dft_d3bj_vv10":
             input_mat = data["rho_cube_dft"]
-            energy_target = data["e_cc"] - (data["e_dft"] + data["e_vv10"])
+            energy_target = data["e_cc"] - (data["e_dft"] + data["enlc_post"])
         elif self.args.rho_input == "zmp":
             if self.if_eval:
                 input_mat = data["rho_cube_dft"]
@@ -281,6 +281,8 @@ class DataBase:
             if self.args.output_target == "tol_delta_grids":
                 if self.args.rho_input in ("dft", "dft_d3bj", "dft_d3bj_1"):
                     output_mat = data["tol_delta_grids"]
+                if self.args.rho_input == "dft_d3bj_vv10":
+                    output_mat = data["tol_delta_grids"] - data["exc_post_vv10_grid"]
                 elif self.args.rho_input == "zmp":
                     output_mat = data["tol_delta_zmp_grids"]
                 else:
@@ -313,6 +315,10 @@ class DataBase:
                 elif self.args.rho_input in ["dft_d3bj", "dft_d3bj_1"]:
                     grad_cc_train = (
                         data["grad_cc"] - data[f"grad_{self.args.rho_input}"]
+                    )
+                elif self.args.rho_input == "dft_d3bj_vv10":
+                    grad_cc_train = (
+                        data["grad_cc"] - data["grad_dft"] - data["grad_vv10"]
                     )
                 elif self.args.rho_input == "zmp":
                     grad_cc_train = data["grad_cc"] - data["grad_zmp"]

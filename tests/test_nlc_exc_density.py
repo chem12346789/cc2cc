@@ -28,7 +28,12 @@ class TestNlcExcDensity(unittest.TestCase):
             if isinstance(node, ast.Assign)
             and ast.unparse(node.targets[0]) == "addon_path"
         )
-        block = ast.Module(body=comparison.body[start:start + 6], type_ignores=[])
+        stop = next(
+            i + 1 for i, node in enumerate(comparison.body[start:], start)
+            if isinstance(node, ast.Expr)
+            and ast.unparse(node.value).startswith("np.savez(")
+        )
+        block = ast.Module(body=comparison.body[start:stop], type_ignores=[])
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "data_AHB21-1A_def2-QZVPPD_addon.npz"
             for existing in (False, True):
@@ -37,6 +42,8 @@ class TestNlcExcDensity(unittest.TestCase):
                         np.savez(path, e_dft_d3bj_0=-1.5, exc_post_grid=np.zeros(2))
                     exc_post_vv10_grid = np.array([0.1, 0.2], dtype=np.float64)
                     namespace = dict(
+                        grad_post_vv10=np.zeros((2, 3), dtype=np.float64),
+                        grad_post_vv10_fd=None,
                         np=np, DATA_PATH=Path(directory),
                         name="AHB21-1A_def2-QZVPPD",
                         exc_post_vv10_grid=exc_post_vv10_grid, enlc_post=-0.3,
@@ -49,8 +56,17 @@ class TestNlcExcDensity(unittest.TestCase):
                         )
                         self.assertEqual(addon["exc_post_vv10_grid"].dtype, np.float64)
                         self.assertEqual(addon["enlc_post"], -0.3)
+                        np.testing.assert_array_equal(
+                            addon["grad_post_vv10"], namespace["grad_post_vv10"]
+                        )
                         if existing:
                             self.assertEqual(addon["e_dft_d3bj_0"], -1.5)
+                    namespace["grad_post_vv10_fd"] = np.full((2, 3), 1e-7)
+                    exec(compile(block, str(source), "exec"), namespace)
+                    with np.load(path) as addon:
+                        np.testing.assert_array_equal(
+                            addon["grad_post_vv10_fd"], namespace["grad_post_vv10_fd"]
+                        )
 
     def test_post_dft_nlc_check_reports_and_rejects_mismatch(self):
         source = Path(__file__).resolve().parents[1] / "gen_data.py"
