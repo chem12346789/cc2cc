@@ -38,8 +38,10 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     and must match the rebuilt grid's shape.
     Its weighted integral is checked against PySCF `nr_nlc_vxc` on the same
     density and grid (`rtol=1e-10`, `atol=1e-12` Hartree); mismatches are errors.
-    After this check, `exc_post_grid` (VV10 energy per volume, in atomic units)
-    is saved to `data_{name}_addon.npz`, preserving existing addon fields.
+    After this check, `exc_post_vv10_grid` (VV10 energy per volume, in atomic
+    units) and its weighted integral, `enlc_post`, are saved to
+    `data_{name}_addon.npz`, preserving existing addon fields and removing the
+    legacy `exc_post_grid` field.
     Caches missing `dm1_dft`, `e_dft`, `dm1_cc`, or `weights` are logged and skipped
     without recomputing DFT.
 - `train.py`: train/eval list setup → `train_model()`

@@ -28,22 +28,27 @@ class TestNlcExcDensity(unittest.TestCase):
             if isinstance(node, ast.Assign)
             and ast.unparse(node.targets[0]) == "addon_path"
         )
-        block = ast.Module(body=comparison.body[start:start + 4], type_ignores=[])
+        block = ast.Module(body=comparison.body[start:start + 6], type_ignores=[])
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "data_AHB21-1A_def2-QZVPPD_addon.npz"
             for existing in (False, True):
                 with self.subTest(existing=existing):
                     if existing:
                         np.savez(path, e_dft_d3bj_0=-1.5, exc_post_grid=np.zeros(2))
-                    exc_post_grid = np.array([0.1, 0.2], dtype=np.float64)
+                    exc_post_vv10_grid = np.array([0.1, 0.2], dtype=np.float64)
                     namespace = dict(
                         np=np, DATA_PATH=Path(directory),
-                        name="AHB21-1A_def2-QZVPPD", exc_post_grid=exc_post_grid,
+                        name="AHB21-1A_def2-QZVPPD",
+                        exc_post_vv10_grid=exc_post_vv10_grid, enlc_post=-0.3,
                     )
                     exec(compile(block, str(source), "exec"), namespace)
                     with np.load(path) as addon:
-                        np.testing.assert_array_equal(addon["exc_post_grid"], exc_post_grid)
-                        self.assertEqual(addon["exc_post_grid"].dtype, np.float64)
+                        self.assertNotIn("exc_post_grid", addon)
+                        np.testing.assert_array_equal(
+                            addon["exc_post_vv10_grid"], exc_post_vv10_grid
+                        )
+                        self.assertEqual(addon["exc_post_vv10_grid"].dtype, np.float64)
+                        self.assertEqual(addon["enlc_post"], -0.3)
                         if existing:
                             self.assertEqual(addon["e_dft_d3bj_0"], -1.5)
 
@@ -71,7 +76,7 @@ class TestNlcExcDensity(unittest.TestCase):
                 namespace = dict(
                     np=np, pyscf=mock_pyscf, mol=object(), name="test",
                     nlcgrids=Mock(weights=np.array([1.0, 2.0])),
-                    dm_dft_tot=object(), exc_post_grid=np.array([0.1, 0.1]),
+                    dm_dft_tot=object(), exc_post_vv10_grid=np.array([0.1, 0.1]),
                     e_dft=-1.0, AU2KCALMOL=AU2KCALMOL,
                 )
                 output = io.StringIO()

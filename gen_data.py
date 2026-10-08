@@ -225,7 +225,9 @@ if __name__ == "__main__":
                         data_dict_addon = dict(data_addon)
                 else:
                     data_dict_addon = {}
+                data_dict_addon.pop("exc_post_grid", None)
                 data_dict_addon["exc_post_vv10_grid"] = exc_post_vv10_grid
+                data_dict_addon["enlc_post"] = enlc_post
                 np.savez(addon_path, **data_dict_addon)
 
                 # 3. SCF-VV10 (VV10 in the SCF loop)
