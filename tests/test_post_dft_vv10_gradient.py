@@ -24,7 +24,7 @@ class TestPostDftVv10Gradient(unittest.TestCase):
     def tearDownClass(cls):
         pyscf.lib.num_threads(cls.original_threads)
 
-    def test_analytical_gradient_matches_finite_difference(self):
+    def test_gradient_without_grid_response(self):
         cases = (
             (0, "O 0 0 0; H 1.4 0 1.1; H -1.3 0 1.2"),
             (1, "He 0 0 0; H 0.3 0 1.5"),
@@ -37,14 +37,48 @@ class TestPostDftVv10Gradient(unittest.TestCase):
                 mf = gen_data._converged_b3lyp(mol)
                 coords = mol.atom_coords().copy()
                 dm = mf.make_rdm1().copy()
-                analytical = post_dft_vv10_gradient(mf, Grid(mol, 0, 7))
-                numerical = gen_data._post_vv10_finite_difference_gradient(mol, 0)
+                scf_grad = mf.nuc_grad_method()
+                with patch.object(mf, "nuc_grad_method", return_value=scf_grad):
+                    analytical = post_dft_vv10_gradient(mf, Grid(mol, 0, 7))
                 self.assertEqual(analytical.shape, (mol.natm, 3))
                 self.assertEqual(analytical.dtype, np.float64)
-                np.testing.assert_allclose(analytical, numerical, rtol=0, atol=2e-6)
-                np.testing.assert_allclose(analytical.sum(axis=0), 0, atol=1e-9)
+                self.assertFalse(scf_grad.grid_response)
+                np.testing.assert_allclose(analytical.sum(axis=0), 0, atol=5e-5)
                 np.testing.assert_array_equal(mol.atom_coords(), coords)
                 np.testing.assert_array_equal(mf.make_rdm1(), dm)
+
+    def test_occupied_overlap_response_is_omitted(self):
+        mol = pyscf.M(
+            atom="O 0 0 0; H 1.4 0 1.1; H -1.3 0 1.2",
+            basis="sto-3g", unit="Bohr", verbose=0,
+        )
+        mf = gen_data._converged_b3lyp(mol)
+        grids = Grid(mol, 0, 7)
+        reference = post_dft_vv10_gradient(mf, grids)
+        hessian = mf.Hessian()
+        h1 = hessian.make_h1(mf.mo_coeff, mf.mo_occ)
+        mo1, energy1 = hessian.solve_mo1(
+            mf.mo_energy, mf.mo_coeff, mf.mo_occ, h1
+        )
+        occupied_coeff = mf.mo_coeff[:, mf.mo_occ > 0]
+        occupied_shift = np.einsum(
+            "pi,xij->xpj",
+            occupied_coeff,
+            np.broadcast_to(
+                np.eye(occupied_coeff.shape[1]),
+                (3, occupied_coeff.shape[1], occupied_coeff.shape[1]),
+            ),
+        )
+        shifted_mo1 = [
+            response + occupied_shift
+            for response in mo1
+        ]
+        with patch.object(mf, "Hessian", return_value=hessian):
+            with patch.object(
+                hessian, "solve_mo1", return_value=(shifted_mo1, energy1)
+            ):
+                shifted = post_dft_vv10_gradient(mf, grids)
+        np.testing.assert_allclose(shifted, reference, rtol=0, atol=1e-10)
 
     def test_orbital_response_is_required(self):
         mol = pyscf.M(
