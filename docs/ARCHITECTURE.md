@@ -34,10 +34,15 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   - Existing-cache comparisons report B3LYP/post-DFT VV10 and SCF-VV10
     integrated absolute density differences against cached `dm1_cc` (electrons).
     Post-DFT VV10 energy density uses the same `Grid` coordinates, ordering,
-    and weights as the density comparisons.
+    and weights as the density comparisons. Weights are loaded from the cache
+    and must match the rebuilt grid's shape.
     Its weighted integral is checked against PySCF `nr_nlc_vxc` on the same
     density and grid (`rtol=1e-10`, `atol=1e-12` Hartree); mismatches are errors.
-    Caches missing `dm1_dft`, `e_dft`, or `dm1_cc` are logged and skipped
+    After this check, `exc_post_vv10_grid` (VV10 energy per volume, in atomic
+    units) and its weighted integral, `enlc_post`, are saved to
+    `data_{name}_addon.npz`, preserving existing addon fields and removing the
+    legacy `exc_post_grid` field.
+    Caches missing `dm1_dft`, `e_dft`, `dm1_cc`, or `weights` are logged and skipped
     without recomputing DFT.
 - `train.py`: train/eval list setup → `train_model()`
 - `test.py`: checkpoint loading and RKS/UKS model validation

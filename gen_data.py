@@ -179,7 +179,7 @@ if __name__ == "__main__":
                 ) as data_npz:
                     missing_keys = [
                         key
-                        for key in ("dm1_dft", "e_dft", "dm1_cc")
+                        for key in ("dm1_dft", "e_dft", "dm1_cc", "weights")
                         if key not in data_npz
                     ]
                     if missing_keys:
@@ -192,14 +192,19 @@ if __name__ == "__main__":
                     dm_dft = data_npz["dm1_dft"]
                     e_dft = float(data_npz["e_dft"])
                     dm_cc = data_npz["dm1_cc"]
+                    weights = data_npz["weights"]
+                    if weights.shape != grids.weights.shape:
+                        raise ValueError(
+                            f"Cached weights shape {weights.shape} does not match "
+                            f"grid weights shape {grids.weights.shape} for {name}"
+                        )
+                    grids.weights = weights
 
                 # 2. Post-DFT VV10 (using standard DFT 1-RDM)
                 nlcgrids = grids
                 dm_dft_tot = dm_dft if mol.spin == 0 else (dm_dft[0] + dm_dft[1])
-                exc_post_grid = eval_nlc_exc_density(
-                    mol, nlcgrids, dm_dft_tot, "vv10"
-                )
-                enlc_post = np.dot(exc_post_grid, nlcgrids.weights)
+                exc_post_vv10_grid = eval_nlc_exc_density(mol, nlcgrids, dm_dft_tot, "vv10")
+                enlc_post = np.dot(exc_post_vv10_grid, nlcgrids.weights)
                 _, enlc_post_check, _ = pyscf.dft.numint.NumInt().nr_nlc_vxc(
                     mol, nlcgrids, "vv10", dm_dft_tot
                 )
@@ -213,6 +218,17 @@ if __name__ == "__main__":
                         f"for {name}: {enlc_post} vs {enlc_post_check} Hartree"
                     )
                 e_post_vv10 = e_dft + enlc_post
+
+                addon_path = DATA_PATH / f"data_{name}_addon.npz"
+                if addon_path.exists():
+                    with np.load(addon_path, allow_pickle=True) as data_addon:
+                        data_dict_addon = dict(data_addon)
+                else:
+                    data_dict_addon = {}
+                data_dict_addon.pop("exc_post_grid", None)
+                data_dict_addon["exc_post_vv10_grid"] = exc_post_vv10_grid
+                data_dict_addon["enlc_post"] = enlc_post
+                np.savez(addon_path, **data_dict_addon)
 
                 # 3. SCF-VV10 (VV10 in the SCF loop)
                 mf_scf = (
@@ -258,11 +274,12 @@ if __name__ == "__main__":
                     f"(SCF-VV10 vs CCSD, electrons): {drho_scf_vv10_cc:.10e}\n"
                 )
 
-            else:
-                if mol.spin == 0:
-                    cc(mol, grids, name, args, evaluate=evaluate)
-                else:
-                    ucc(mol, grids, name, args, evaluate=evaluate)
+            # else:
+            #     if mol.spin == 0:
+            #         cc(mol, grids, name, args, evaluate=evaluate)
+            #     else:
+            #         ucc(mol, grids, name, args, evaluate=evaluate)
+
         except (KeyError, ValueError, RuntimeError) as e:
             print(f"ERROR: {name_mol} {args.md_number}")
             print(e)
