@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=24
 #SBATCH --time=2400:00:00
-#SBATCH -a [0]%1
+#SBATCH -a [0-54]%4
 #SBATCH -J validate-diet100
 
 SCRIPT_DIR="scripts"
