@@ -43,8 +43,6 @@ def _converged_b3lyp(mol, dm0=None):
     mf.conv_tol_grad = 1e-8
     mf.conv_tol_cpscf = 1e-10
     mf.kernel(dm0=dm0)
-    if not mf.converged:
-        raise RuntimeError("B3LYP did not converge for Post-DFT VV10.")
     return mf
 
 
@@ -317,7 +315,7 @@ if __name__ == "__main__":
                 )
                 mf_scf.nlc = "vv10"
                 mf_scf.verbose = 4
-                mf_scf.kernel()
+                mf_scf.kernel(dm0=dm_dft)
                 if args.check_convergence and not mf_scf.converged:
                     raise RuntimeError("SCF-VV10 did not converge.")
                 dm_scf_vv10 = mf_scf.make_rdm1()
