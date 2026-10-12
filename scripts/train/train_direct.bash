@@ -3,9 +3,9 @@
 # =========================
 # Model and checkpoint
 # =========================
-# export MODEL="--model transformer+dense_mix_e3nn_4"
+export MODEL="--model transformer+dense_mix_e3nn_4"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct"
-export MODEL="--model transformer+dense_mix_e3nn_4_correct3"
+# export MODEL="--model transformer+dense_mix_e3nn_4_correct3"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct_no_skip"
 # export MODEL="--load atom-82794 --load_epoch 10005 --if_resume 0"
 
