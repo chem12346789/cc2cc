@@ -40,7 +40,10 @@
   ],
   "train_exclude": [
     "W4_11-bn",
-    "W4_11-c2"
+    "W4_11-c2",
+    "W4_11-b2",
+    "W4_11-be2",
+    "W4_11-of"
   ],
   "eval_exclude": []
 }

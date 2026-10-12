@@ -3,9 +3,9 @@
 # =========================
 # Model and checkpoint
 # =========================
-export MODEL="--model transformer+dense_mix_e3nn_4"
+# export MODEL="--model transformer+dense_mix_e3nn_4"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct"
-# export MODEL="--model transformer+dense_mix_e3nn_4_correct3"
+export MODEL="--model transformer+dense_mix_e3nn_4_correct3"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct_no_skip"
 # export MODEL="--load atom-82794 --load_epoch 10005 --if_resume 0"
 
@@ -17,12 +17,12 @@ export BASIS_ARGS="def2-QZVPPD"
 
 # Options: dft, dft_d3bj, zmp
 # export RHO_INPUT="zmp"
-# export RHO_INPUT="dft"
+export RHO_INPUT="dft"
 # export RHO_INPUT="dft_d3bj"
-export RHO_INPUT="dft_d3bj_vv10"
+# export RHO_INPUT="dft_d3bj_vv10"
 # export SPLIT_CONFIG="mol0.json"
-# export SPLIT_CONFIG="mol1_add.json"
-export SPLIT_CONFIG="mol2_ex_add.json"
+export SPLIT_CONFIG="mol1_add.json"
+# export SPLIT_CONFIG="mol2_ex_add.json"
 # export SPLIT_CONFIG="test.json"
 # export SPLIT_CONFIG="mini.json"
 export MOL0_WEIGHTING=4
@@ -57,14 +57,14 @@ export MAX_NORM=1
 # export SCHEDULER="--optimizer AdamW --scheduler constant"
 # export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 1500 --cosine_T_mult 1"
 # export SCHEDULER="--optimizer Muon --muon_lr 2e-2 --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
-# export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
-export SCHEDULER="--optimizer AdamW --scheduler cosine_warm2 --cosine_restart_step 1000 --cosine_restart_lr 1e-4 --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
+export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
+# export SCHEDULER="--optimizer AdamW --scheduler cosine_warm2 --cosine_restart_step 1000 --cosine_restart_lr 1e-4 --cosine_eta_min ${COSINE_ETA_MIN_EFFECTIVE} --cosine_T 160 --cosine_T_mult 2"
 
 # =========================
 # Hardware and environment
 # =========================
 export NUMBER_OF_GPU=1
-export CUDA_VISIBLE_DEVICES=2
+export CUDA_VISIBLE_DEVICES=3
 
 if [ ${NUMBER_OF_GPU} -gt 1 ]; then
 	export DISTRIBUTED="--distributed 1"
@@ -110,7 +110,7 @@ train_run() {
 		${DISTRIBUTED}
 		${MODEL}
 		--save_dir "atom-${PID_THIS_RUN}"
-		--seed 0
+		--seed 1
 		--epoch 12500
 		--eval_step 5
 		--max_norm "${MAX_NORM}"
