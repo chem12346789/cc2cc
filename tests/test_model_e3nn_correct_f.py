@@ -1,3 +1,4 @@
+import importlib
 import unittest
 
 import torch
@@ -7,6 +8,29 @@ from cc2cc.utils.model.model_utils.model_e3nn_correct_f import E3nn
 
 
 class DistanceAndAngleAwareE3nnTests(unittest.TestCase):
+    def test_mixed_architecture_uses_increasing_angular_orders(self):
+        module = importlib.import_module(
+            "cc2cc.utils.model.transformer+dense_mix_e3nn_4_correct_f"
+        )
+        model = module.Model().double()
+        self.assertEqual(
+            [getattr(model, f"conv{i}").lmax for i in range(1, 5)],
+            [0, 1, 2, 3],
+        )
+        self.assertEqual(model.lmax, 3)
+        inputs = torch.ones(
+            (2, 4, EDGE_SIZE**3),
+            dtype=torch.float64,
+            device="cpu",
+            requires_grad=True,
+        )
+        output = model(inputs)
+        self.assertEqual(output.shape, (2, 1))
+        self.assertTrue(torch.isfinite(output).all())
+        output.sum().backward()
+        self.assertIsNotNone(inputs.grad)
+        self.assertTrue(torch.isfinite(inputs.grad).all())
+
     def make_model(self, lmax=0):
         model = E3nn("cube", EDGE_SIZE**3, 2, lmax)
         with torch.no_grad():
