@@ -20,9 +20,7 @@ class E3nn(torch.nn.Module):
     from each grid point to the cube center, divided by EDGE_LEN.
     """
 
-    def __init__(
-        self, cube_type: str, cube_size: int, input_level: int, lmax: int
-    ):
+    def __init__(self, cube_type: str, cube_size: int, input_level: int, lmax: int):
         super().__init__()
         self.input_level = input_level
         self.cube_type = cube_type
@@ -65,9 +63,8 @@ class E3nn(torch.nn.Module):
                 16, cast(int, self.tp1.weight_numel), device="cpu", dtype=torch.float64
             ),
         )
-        self.readout = o3.Linear(hidden_irreps, irreps_output).to(
-            device="cpu", dtype=torch.float64
-        )
+        self.readout = o3.Linear(hidden_irreps, irreps_output)
+        self.readout = self.readout.to(device="cpu", dtype=torch.float64)
 
         self.register_buffer("edge_vec", edge_vec, persistent=False)
         self.register_buffer("radii", radii, persistent=False)

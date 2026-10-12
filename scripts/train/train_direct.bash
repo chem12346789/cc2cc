@@ -29,7 +29,7 @@ export MOL0_WEIGHTING=4
 export APPEND_MOL0=9
 export RELATIVE_WEIGHT_EPSILON=1e-10
 
-export OUTPUT_ARG="--output_target tol_delta_grids"
+export OUTPUT_ARG="--output_target tol_delta_gri4ds"
 # export OUTPUT_ARG="--output_target b3lyp"
 
 # =========================
