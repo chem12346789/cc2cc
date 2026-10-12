@@ -1,8 +1,8 @@
 ---
 name: grammar-check
 description: Grammar and style check for selected text
+disable-model-invocation: true
 ---
-
 <!-- Tip: Use /create-prompt in chat to generate content with agent assistance -->
 
 Proofread the following text. Fix grammar, spelling, punctuation, and style.
