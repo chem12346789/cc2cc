@@ -63,7 +63,7 @@ class E3nn(torch.nn.Module):
         self.tp1.to(device="cpu", dtype=torch.float64)
         self.radial = torch.nn.Sequential(
             torch.nn.Linear(1, 16, device="cpu", dtype=torch.float64),
-            torch.nn.SiLU(),
+            torch.nn.GELU(),
             torch.nn.Linear(
                 16, cast(int, self.tp1.weight_numel), device="cpu", dtype=torch.float64
             ),
@@ -82,7 +82,7 @@ class E3nn(torch.nn.Module):
             torch.nn.Linear(
                 2 * self.cube_size, self.cube_size, device="cpu", dtype=torch.float64
             ),
-            torch.nn.SiLU(),
+            torch.nn.GELU(),
             torch.nn.Linear(
                 self.cube_size, self.cube_size, device="cpu", dtype=torch.float64
             ),

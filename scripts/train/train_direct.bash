@@ -30,7 +30,7 @@ export MOL0_WEIGHTING=4
 export APPEND_MOL0=9
 export RELATIVE_WEIGHT_EPSILON=1e-10
 
-export OUTPUT_ARG="--output_target tol_delta_gri4ds"
+export OUTPUT_ARG="--output_target tol_delta_grids"
 # export OUTPUT_ARG="--output_target b3lyp"
 
 # =========================
@@ -65,7 +65,7 @@ export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${C
 # Hardware and environment
 # =========================
 export NUMBER_OF_GPU=1
-export CUDA_VISIBLE_DEVICES=3
+export CUDA_VISIBLE_DEVICES=1
 
 if [ ${NUMBER_OF_GPU} -gt 1 ]; then
 	export DISTRIBUTED="--distributed 1"
@@ -111,7 +111,7 @@ train_run() {
 		${DISTRIBUTED}
 		${MODEL}
 		--save_dir "atom-${PID_THIS_RUN}"
-		--seed 1
+		--seed 42
 		--epoch 12500
 		--eval_step 5
 		--max_norm "${MAX_NORM}"
