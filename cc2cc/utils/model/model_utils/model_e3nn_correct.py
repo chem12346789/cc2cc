@@ -1,76 +1,78 @@
+"""Distance-aware E3nn with radii normalized by EDGE_LEN.
+
+Import E3nn from this module to use spacing-normalized radial inputs.
+The constructor and input/output shapes match model_e3nn_correct2, but
+checkpoints are not interchangeable.
+"""
+
+from typing import cast
+
 import torch
 from e3nn import o3
-from e3nn.nn import Gate
 
-from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
-
-# E3NN-based octahedral equivariant network for 3D scalar field prediction.
-
-# This module implements an E3NN network that processes 27 points in a cube,
-# each with 1 scalar channel, and outputs 27 scalars at the center point.
-# The network is equivariant to full octahedral symmetry.
-
-# Input coordinates: 27 points in a cube from (-0.01, -0.01, -0.01) to (0.01, 0.01, 0.01)
-# Output coordinates: 1 point at (0, 0, 0)
+from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_LEN, EDGE_SIZE
 
 
 class E3nn(torch.nn.Module):
-    def __init__(self, cube_type, cube_size, input_level, lmax):
-        super().__init__()
+    """Scalar readout with learned radial tensor-product weights.
 
+    Radial dependence works even at lmax=0. The radial input is the distance
+    from each grid point to the cube center, divided by EDGE_LEN.
+    """
+
+    def __init__(self, cube_type: str, cube_size: int, input_level: int, lmax: int):
+        super().__init__()
         self.input_level = input_level
         self.cube_type = cube_type
         self.cube_size = cube_size
         self.lmax = lmax
 
-        if self.cube_type == "cube":
-            edge_vec = torch.zeros(
-                (EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3),
-                device="cpu",
-                dtype=torch.get_default_dtype(),
-            )
-            for i in range(EDGE_SIZE):
-                for j in range(EDGE_SIZE):
-                    for k in range(EDGE_SIZE):
-                        edge_vec[i, j, k, 0] = (i - CUBE_MIDDLE) * EDGE_LEN
-                        edge_vec[i, j, k, 1] = (j - CUBE_MIDDLE) * EDGE_LEN
-                        edge_vec[i, j, k, 2] = (k - CUBE_MIDDLE) * EDGE_LEN
-        else:
+        if self.cube_type != "cube":
             raise NotImplementedError("Only cube type is implemented.")
-        edge_vec = edge_vec.reshape(EDGE_SIZE**3, 3)
+
+        axis = (
+            torch.arange(EDGE_SIZE, dtype=torch.float64, device="cpu") - CUBE_MIDDLE
+        ) * EDGE_LEN
+        edge_vec = torch.stack(
+            torch.meshgrid(axis, axis, axis, indexing="ij"), dim=-1
+        ).reshape(EDGE_SIZE**3, 3)
+        radii = torch.linalg.vector_norm(edge_vec, dim=-1, keepdim=True) / EDGE_LEN
 
         irreps_input = o3.Irreps(f"{self.input_level}x0e")
         hidden_irreps = o3.Irreps(
-            "+".join([f"{self.input_level}x{i}e" for i in range(self.lmax + 1)])
+            "+".join(f"{self.input_level}x{i}e" for i in range(self.lmax + 1))
         )
-        irreps_output = o3.Irreps(f"{self.cube_size}x{0}e")
-
+        irreps_output = o3.Irreps(f"{self.cube_size}x0e")
         irreps_sh = o3.Irreps.spherical_harmonics(lmax=self.lmax)
         sh = o3.spherical_harmonics(
-            irreps_sh,
-            edge_vec,
-            normalize=True,
-            normalization="component",
+            irreps_sh, edge_vec, normalize=True, normalization="component"
         )
+
         self.tp1 = o3.FullyConnectedTensorProduct(
             irreps_input,
             irreps_sh,
             hidden_irreps,
-            shared_weights=True,
-            internal_weights=True,
+            shared_weights=False,
+            internal_weights=False,
         )
-
+        self.tp1.to(device="cpu", dtype=torch.float64)
+        self.radial = torch.nn.Sequential(
+            torch.nn.Linear(1, 16, device="cpu", dtype=torch.float64),
+            torch.nn.GELU(),
+            torch.nn.Linear(
+                16, cast(int, self.tp1.weight_numel), device="cpu", dtype=torch.float64
+            ),
+        )
         self.readout = o3.Linear(hidden_irreps, irreps_output)
+        self.readout = self.readout.to(device="cpu", dtype=torch.float64)
 
         self.register_buffer("edge_vec", edge_vec, persistent=False)
+        self.register_buffer("radii", radii, persistent=False)
         self.register_buffer("sh", sh, persistent=False)
 
-    def forward(self, f_in):
-        # f_in shape: [CUBE_SIZE**3, 4]
-        f_hidden = self.tp1(f_in, self.sh)
-        # f_hidden shape: [CUBE_SIZE**3, (lmax+1)**2]
+    def forward(self, f_in: torch.Tensor) -> torch.Tensor:
+        """Map [..., EDGE_SIZE**3, input_level] to [..., 1, cube_size]."""
+        weights = self.radial(self.radii)
+        f_hidden = self.tp1(f_in, self.sh, weights)
         f_hidden = f_hidden.mean(dim=-2, keepdim=True)
-        # f_hidden shape: [1, (lmax+1)**2]
-        f_out = self.readout(f_hidden)
-        # f_out shape: [1, CUBE_SIZE**3]
-        return f_out
+        return self.readout(f_hidden)

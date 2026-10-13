@@ -106,7 +106,7 @@ class DistanceAndAngleAwareE3nnTests(unittest.TestCase):
     def test_nonlinear_head_merges_scalar_features(self):
         model = self.make_model(2)
         self.assertIsInstance(model.mixer, torch.nn.Sequential)
-        self.assertIsInstance(model.mixer[1], torch.nn.SiLU)
+        self.assertIsInstance(model.mixer[1], torch.nn.GELU)
         self.assertEqual(model.mixer[0].in_features, 2 * model.cube_size)
         self.assertEqual(model.mixer[0].out_features, model.cube_size)
         self.assertEqual(model.mixer[2].out_features, model.cube_size)
@@ -119,7 +119,7 @@ class DistanceAndAngleAwareE3nnTests(unittest.TestCase):
             [model.tensor_square(hidden), model.readout(hidden)], dim=-1
         )
         expected = model.mixer[2](
-            torch.nn.functional.silu(model.mixer[0](features))
+            torch.nn.functional.gelu(model.mixer[0](features))
         )
         torch.testing.assert_close(model(inputs), expected)
         with torch.no_grad():

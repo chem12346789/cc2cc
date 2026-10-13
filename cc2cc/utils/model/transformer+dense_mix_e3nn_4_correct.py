@@ -8,7 +8,7 @@ from cc2cc.utils.model.model_utils.model_e3nn_correct import E3nn
 
 
 class Model(torch.nn.Module):
-    """Transformer/e3nn mixed model."""
+    """Transformer/e3nn mixed model using spacing-normalized radial inputs."""
 
     def __init__(self):
         super().__init__()
