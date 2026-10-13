@@ -111,7 +111,7 @@ train_run() {
 		${DISTRIBUTED}
 		${MODEL}
 		--save_dir "atom-${PID_THIS_RUN}"
-		--seed 42
+		--seed 1
 		--epoch 12500
 		--eval_step 5
 		--max_norm "${MAX_NORM}"
