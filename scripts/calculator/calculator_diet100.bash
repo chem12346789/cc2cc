@@ -3,7 +3,6 @@ export model_load_epoch_pairs=(
     "atom-dft:1000"
     "atom-82794:1115"
     "atom-82794:2395"
-    "atom-82794:4940"
     "atom-82794:10005"
     "atom-1221273:4955"
     "atom-690235:1115"

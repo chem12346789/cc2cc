@@ -318,9 +318,20 @@ def probe_node_gpus(
     ntasks_per_node: str | None,
     cpus_per_task: str | None,
 ) -> tuple[str, list[int]]:
+    if timeout <= 0:
+        raise ValueError("probe-timeout-sec must be positive")
     tag = uuid.uuid4().hex[:10]
     out_file = TMP_DIR / f"gpu_probe_{node}_{tag}.out"
     err_file = TMP_DIR / f"gpu_probe_{node}_{tag}.err"
+    # Add one second so integer clock rounding cannot shorten the sample window.
+    probe_command = (
+        f"deadline=$(($(date +%s) + {timeout} + 1)); "
+        'while [ "$(date +%s)" -lt "$deadline" ]; do '
+        "nvidia-smi --query-gpu=memory.free,power.draw,index "
+        "--format=csv,noheader,nounits || exit 1; "
+        "sleep 1; done; printf 'PROBE_COMPLETE\\n'"
+    )
+    walltime_sec = timeout + 10
     cmd = [
         "sbatch",
         "--parsable",
@@ -329,7 +340,7 @@ def probe_node_gpus(
         "--nodelist",
         node,
         "--time",
-        "00:00:30",
+        f"{walltime_sec // 60}:{walltime_sec % 60:02d}",
         "--job-name",
         "probe-gpu-mem",
         "--output",
@@ -337,7 +348,7 @@ def probe_node_gpus(
         "--error",
         str(err_file),
         "--wrap",
-        "nvidia-smi --query-gpu=memory.free,power.draw,index --format=csv,noheader,nounits",
+        probe_command,
     ]
     cmd += ["--nodes", nodes] if nodes else ["--nodes", "1"]
     cmd += (
@@ -351,9 +362,14 @@ def probe_node_gpus(
     job_id: str | None = None
     try:
         job_id = parse_job_id(run_cmd(cmd, debug=debug))
-        if wait_probe_done(job_id, timeout) and out_file.exists():
+        if wait_probe_done(job_id, 2 * timeout + 10) and out_file.exists():
             text = out_file.read_text().strip()
-    except RuntimeError:
+        if not text.endswith("PROBE_COMPLETE"):
+            detail = err_file.read_text().strip() if err_file.exists() else ""
+            print(f"[WARN] Incomplete GPU probe on {node}. {detail}")
+            text = ""
+    except RuntimeError as exc:
+        print(f"[WARN] GPU probe failed on {node}: {exc}")
         text = ""
     finally:
         if job_id is not None:
@@ -367,17 +383,24 @@ def probe_node_gpus(
                 pass
 
     min_mib = int(min_free_gb * 1024)
-    usable: list[int] = []
+    extrema: dict[int, tuple[int, float]] = {}
     for line in text.splitlines():
+        if line == "PROBE_COMPLETE":
+            continue
         parts = [part.strip() for part in line.split(",")[:3]]
         if len(parts) < 3:
             continue
         free_mib = int(parts[0].split()[0])
         power = float(parts[1].split()[0])
         gpu_index = int(parts[2].split()[0])
-        if free_mib >= min_mib and (max_power is None or power <= max_power):
-            usable.append(gpu_index)
-    return node, sorted(set(usable))
+        previous_free, previous_power = extrema.get(gpu_index, (free_mib, power))
+        extrema[gpu_index] = (min(previous_free, free_mib), max(previous_power, power))
+    usable = [
+        gpu_index
+        for gpu_index, (free_mib, power) in extrema.items()
+        if free_mib >= min_mib and (max_power is None or power <= max_power)
+    ]
+    return node, sorted(usable)
 
 
 def parse_job_id(text: str) -> str:
@@ -454,9 +477,19 @@ def build_argument_parser() -> argparse.ArgumentParser:
         default=1,
         help="Minimum usable slots required before submitting; retry probing until reached.",
     )
-    parser.add_argument("--min-free-memory", type=float, default=15.0)
-    parser.add_argument("--max-gpu-power", type=float, default=None)
-    parser.add_argument("--probe-timeout-sec", type=int, default=60)
+    parser.add_argument(
+        "--min-free-memory", type=float, default=15.0,
+        help="Minimum sampled free GPU memory over the probe window, in GiB.",
+    )
+    parser.add_argument(
+        "--max-gpu-power", type=float, default=None,
+        help="Maximum sampled GPU power over the probe window, in watts; unset disables the power filter.",
+    )
+    parser.add_argument(
+        "--probe-timeout-sec", type=int, default=60,
+        help="Positive sampling duration after the probe starts, with one-second sampling. "
+        "Queue/startup allowance is this duration plus 10 seconds.",
+    )
     parser.add_argument("--probe-workers", type=int, default=16)
     parser.add_argument("--max-nodes", type=int, default=0)
     parser.add_argument(
@@ -551,6 +584,8 @@ def main() -> int:
     args = parser.parse_args()
     if args.min_slots < 1:
         parser.error("--min-slots must be at least 1")
+    if args.probe_timeout_sec <= 0:
+        parser.error("--probe-timeout-sec must be positive")
 
     script_path = resolve_path(args.script)
     if not script_path.exists():

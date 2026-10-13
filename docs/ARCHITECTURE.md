@@ -57,7 +57,15 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 - `benchmark_dft.py`: baseline DFT benchmarking
 - `d3_para.py`: D3 parameter fitting/testing
 - `collect_info.py`: collect validation CSV summaries
-- `submit_direct_array_per_gpu.py`: per-GPU job dispatch helper
+- `submit_direct_array_per_gpu.py`: per-GPU job dispatch helper. GPU probes
+  sample roughly once per second for `--probe-timeout-sec` (default 60 seconds)
+  after starting, with roughly up to two extra seconds for clock rounding and
+  the final sampling interval. Selection uses
+  minimum sampled free memory (`--min-free-memory`, GiB) and maximum sampled
+  power (`--max-gpu-power`, watts), not averages. Peaks between samples can be
+  missed; measurements do not reserve GPU resources. The total wait is bounded
+  by twice the sampling duration plus 10 seconds to allow queue/startup time;
+  incomplete probes are rejected.
 
 ### Script directories (Slurm/HPC)
 `scripts/train/`, `scripts/test/`, and `scripts/work/` assume local paths
