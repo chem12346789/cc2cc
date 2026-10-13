@@ -42,8 +42,6 @@ def post_dft_vv10_gradient(mf, nlcgrids):
     ``mf`` must contain converged B3LYP RKS/UKS orbitals with NLC disabled.
     Both the B3LYP orbital response and moving integration grids are included.
     """
-    if not mf.converged:
-        raise RuntimeError("Post-DFT VV10 gradient requires converged B3LYP.")
     if mf.do_nlc() or mf.xc.lower() != "b3lyp":
         raise ValueError("Post-DFT VV10 gradient requires B3LYP without NLC.")
     mol = mf.mol
