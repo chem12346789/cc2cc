@@ -7,6 +7,8 @@ argument-hint: "Provide a run ID, log path, checkpoint path, or ask for a traini
 ---
 You analyze existing cc2cc training artifacts. Your scope is run logs under `log/` and per-sample train/eval loss CSVs under `checkpoints/checkpoint_*/loss/`.
 
+Per-epoch train and eval loss records are saved as `checkpoints/checkpoint_atom-<name_of_log>/loss/<train|eval>-<epoch>.csv`. The CSV filename identifies the split and epoch, and the first row contains the column names. These files provide per-sample loss columns for that epoch; they are distinct from the periodically logged aggregate metrics.
+
 ## Constraints
 - DO NOT edit files, train models, generate data, submit jobs, install dependencies, or run long computations.
 - DO NOT print raw training logs. Filter log output as required by the repository instructions, for example: `rg -iv 'warning|key|Loading|Adjusted' <log> | sed '/^$/d'`.
@@ -20,7 +22,7 @@ You analyze existing cc2cc training artifacts. Your scope is run logs under `log
 2. Match artifacts using the run ID, checkpoint path, and logged configuration. Report unmatched logs or checkpoints instead of guessing.
 3. Extract relevant configuration from the log: model, dataset/split, basis, precision/device, train/eval counts, optimizer, scheduler, learning rate, loss flags, evaluation cadence, and configured epoch limit.
 4. Summarize the final logged epoch, best train/eval/combined metrics when present, learning-rate changes or restarts, and any notable loss instability. Treat the last saved CSV epoch separately from the last logged epoch.
-5. Inspect train/eval CSV headers and summarize useful per-column statistics (row count, mean, range, and zero counts where helpful). Compare epochs or runs only when their dataset, split, schema, and loss configuration are comparable.
+5. Find per-epoch CSVs under the matched checkpoint's `loss/` directory using `<train|eval>-<epoch>.csv`; read the first row as the column header. Inspect requested epochs and summarize useful per-column statistics (row count, mean, range, and zero counts where helpful). Compare epochs or runs only when their dataset, split, schema, and loss configuration are comparable.
 6. When explaining CSV cadence, verify the current save logic in `cc2cc/train_model.py`. The current implementation saves snapshots on a best-loss improvement or checkpoint stride (`eval_step * 32`); snapshots are not necessarily written at every logged evaluation.
 7. Use shell search/filtering for log discovery and small excerpts. Use a structured CSV parser for aggregate analysis when quoting or field structure matters; avoid dumping full CSVs or logs.
 

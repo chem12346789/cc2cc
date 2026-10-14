@@ -4,9 +4,8 @@
 # Model and checkpoint
 # =========================
 # export MODEL="--model transformer+dense_mix_e3nn_4"
-export MODEL="--model transformer+dense_mix_e3nn_4_correct"
-# export MODEL="--model transformer+dense_mix_e3nn_4_correct3"
-# export MODEL="--model transformer+dense_mix_e3nn_4_correct_f"
+# export MODEL="--model transformer+dense_mix_e3nn_4_correct"
+export MODEL="--model transformer+dense_mix_e3nn_4_correct_f"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct_no_skip"
 # export MODEL="--load atom-82794 --load_epoch 10005 --if_resume 0"
 
@@ -66,7 +65,7 @@ export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${C
 # Hardware and environment
 # =========================
 export NUMBER_OF_GPU=1
-export CUDA_VISIBLE_DEVICES=2
+export CUDA_VISIBLE_DEVICES=1
 
 if [ ${NUMBER_OF_GPU} -gt 1 ]; then
 	export DISTRIBUTED="--distributed 1"

@@ -158,6 +158,8 @@ The Mixture block combines outputs from these pathways to produce the final pred
 We use an E3nn block \cite{geigerE3nnEuclideanNeural2022-07-18} together with a Slice block to extract invariant features from $\tilde{\bm{e}}(\brm{r}_{\rm{cube}})$.
 %
 The Transformer block consists of multiple layers built from the scaled dot-product attention component of the original Transformer \cite{vaswaniAttentionAllYou2023-08-02}.
+% 
+We use GELU consistently in the scalar nonlinear layers as a smooth baseline activation. A radial-MLP comparison with SiLU showed comparable validation performance, providing no clear motivation to change the baseline.
 %
 Additional architectural details are provided in the GitHub repository\cite{TODO:}.
 
