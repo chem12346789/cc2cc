@@ -92,11 +92,12 @@ out of importable Python modules.
   verify the recorded checkpoint path and arguments when associating artifacts.
 - Loss CSVs are written when a best-loss metric improves or the checkpoint
   stride is reached (`eval_step * 32`). For `cosine_warm` and `cosine_warm2`,
-  cycle-end epochs also force evaluation, a checkpoint, and loss CSVs, even
-  outside the evaluation interval. These weights include the final low-LR
-  update, before any update at the restarted LR; the saved optimizer LR
-  already holds the next cycle's LR. With zero-based epoch labels, `cosine_T=160`
-  and `cosine_T_mult=2` produce cycle-end checkpoints at 159, 479, 1119, etc.
+  the last scheduled evaluation before each LR restart forces a checkpoint
+  and loss CSVs, without adding evaluations outside `eval_step`. With
+  zero-based epoch labels, `cosine_T=160`, `cosine_T_mult=2`, and `eval_step=5`
+  produce pre-restart checkpoints at 155, 475, 1115, etc. If a cycle's final
+  low-LR update falls on a scheduled evaluation, that epoch is saved instead;
+  its optimizer LR already holds the next cycle's LR.
   Loss CSVs are not necessarily emitted at
   every logged evaluation. The last CSV epoch can therefore precede the last
   epoch in the log and should not be treated as proof that training stopped.

@@ -187,13 +187,19 @@ def train_model(train_list, eval_list, args):
         train_record = _gather_records(train_record, is_distributed)
         barrier()
 
-        # The scheduler has reset the next LR, but no high-LR update has run yet.
-        cycle_end = (
-            isinstance(modeldict.scheduler, CosineAnnealingWarmRestarts)
-            and modeldict.scheduler.last_epoch > 0
-            and modeldict.scheduler.T_cur == 0
-        )
-        if cycle_end or epoch % args.eval_step == 0 or epoch == args.epoch or epoch == 0:
+        if epoch % args.eval_step == 0 or epoch == args.epoch or epoch == 0:
+            scheduler = modeldict.scheduler
+            # Save the last scheduled evaluation before the next cycle's updates.
+            cycle_end = (
+                epoch % args.eval_step == 0
+                and isinstance(scheduler, CosineAnnealingWarmRestarts)
+                and scheduler.last_epoch > 0
+                and (
+                    scheduler.T_cur == 0
+                    or scheduler.T_i - scheduler.T_cur
+                    < args.eval_step * len(modeldict.database_train.data_gpu)
+                )
+            )
             eval_record = modeldict.eval_model()
             eval_record = _gather_records(eval_record, is_distributed)
             barrier()

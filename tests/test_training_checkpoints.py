@@ -19,16 +19,20 @@ training = importlib.import_module("cc2cc.train_model")
 
 
 class TrainingCheckpointTests(unittest.TestCase):
-    def run_training(self, scheduler_kind, start_step=0, stride=160):
+    def run_training(
+        self, scheduler_kind, start_step=0, stride=160, cycle_epochs=2, end_epoch=13
+    ):
         parameter = torch.nn.Parameter(
             torch.tensor(1.0, dtype=torch.float64, device="cpu")
         )
         optimizer = torch.optim.SGD([parameter], lr=0.1)
         if scheduler_kind == "cosine_warm":
-            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=4, T_mult=2)
+            scheduler = CosineAnnealingWarmRestarts(
+                optimizer, T_0=cycle_epochs * 2, T_mult=2
+            )
         elif scheduler_kind == "cosine_warm2":
             scheduler = CosineAnnealingWarmRestarts2(
-                optimizer, T_0=4, T_mult=2, eta_min=0.001,
+                optimizer, T_0=cycle_epochs * 2, T_mult=2, eta_min=0.001,
                 restart_step=4, restart_lrs=[0.02],
             )
         else:
@@ -65,7 +69,7 @@ class TrainingCheckpointTests(unittest.TestCase):
         best_loss = Mock()
         best_loss.update.return_value = False
         logger = training._Logger(Mock(), Mock(), best_loss, Path("loss"), stride)
-        args = SimpleNamespace(seed=None, epoch=13, grad_step=1, eval_step=5)
+        args = SimpleNamespace(seed=None, epoch=end_epoch, grad_step=1, eval_step=5)
         with (
             patch.object(training, "ModelClass", return_value=model),
             patch.object(training._Logger, "setup", return_value=logger),
@@ -73,36 +77,53 @@ class TrainingCheckpointTests(unittest.TestCase):
             training.train_model({}, {}, args)
         return model, logger, record, saved, update_lrs
 
-    def test_cycle_ends_force_checkpoint_and_loss_records(self):
+    def test_last_evaluations_force_checkpoint_and_loss_records(self):
         for kind in ("cosine_warm", "cosine_warm2"):
             with self.subTest(scheduler=kind):
                 model, logger, record, saved, lrs = self.run_training(kind)
-                self.assertEqual([entry[0] for entry in saved], [0, 1, 5, 13])
-                self.assertEqual(model.eval_model.call_count, 5)
+                self.assertEqual([entry[0] for entry in saved], [0, 5, 10])
+                self.assertEqual(model.eval_model.call_count, 4)
                 self.assertEqual(
                     [call.args[0]["epoch"] for call in logger.run.log.call_args_list],
-                    [0, 1, 5, 10, 13],
+                    [0, 5, 10, 13],
                 )
                 self.assertEqual(
                     [call.args[0] for call in record.save.call_args_list],
                     [
                         Path("loss") / f"{prefix}-{epoch}.csv"
-                        for epoch in (0, 1, 5, 13)
+                        for epoch in (0, 5, 10)
                         for prefix in ("train", "eval")
                     ],
                 )
-                # A saved boundary includes all low-LR updates and no next-cycle update.
-                self.assertEqual(saved[1][2], 4)
+                self.assertEqual(saved[1][2], 12)
+                self.assertEqual(saved[2][2], 22)
                 self.assertLess(lrs[3], lrs[4])
                 self.assertLess(lrs[11], lrs[12])
                 self.assertTrue(
                     torch.allclose(saved[2][1], saved[1][1] *
-                                   np.prod([1 - 2 * lr for lr in lrs[4:12]]))
+                                   np.prod([1 - 2 * lr for lr in lrs[12:22]]))
                 )
 
     def test_resumed_scheduler_uses_remaining_cycle(self):
         _, _, _, saved, _ = self.run_training("cosine_warm", start_step=3)
-        self.assertEqual([entry[0] for entry in saved], [5, 13])
+        self.assertEqual([entry[0] for entry in saved], [5, 10])
+
+    def test_requested_160_epoch_schedule(self):
+        for kind in ("cosine_warm", "cosine_warm2"):
+            with self.subTest(scheduler=kind), patch("builtins.print"):
+                _, _, _, saved, _ = self.run_training(
+                    kind, stride=0, cycle_epochs=160, end_epoch=10080
+                )
+                self.assertEqual(
+                    [entry[0] for entry in saved],
+                    [155, 475, 1115, 2395, 4955, 10075],
+                )
+
+    def test_restart_on_next_evaluation_does_not_save_early(self):
+        _, _, _, saved, _ = self.run_training(
+            "cosine_warm", stride=0, cycle_epochs=6, end_epoch=18
+        )
+        self.assertEqual([entry[0] for entry in saved], [5, 15])
 
     def test_other_schedulers_preserve_evaluation_and_save_stride(self):
         model, logger, _, saved, _ = self.run_training("constant", stride=10)
@@ -141,9 +162,9 @@ class TrainingCheckpointTests(unittest.TestCase):
             logger = training._Logger(
                 Mock(), Mock(), best_loss, model.dir_checkpoint / "loss", 160
             )
-            logger.log(model, record, record, 159, force_checkpoint=True)
+            logger.log(model, record, record, 155, force_checkpoint=True)
             checkpoint = torch.load(
-                model.dir_checkpoint / "159.pth", weights_only=True,
+                model.dir_checkpoint / "155.pth", weights_only=True,
                 map_location="cpu",
             )
             self.assertEqual(checkpoint["model"], "test")
