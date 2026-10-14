@@ -91,7 +91,13 @@ out of importable Python modules.
   sets. The run identifier in the log often matches the checkpoint directory;
   verify the recorded checkpoint path and arguments when associating artifacts.
 - Loss CSVs are written when a best-loss metric improves or the checkpoint
-  stride is reached (`eval_step * 32`); they are not necessarily emitted at
+  stride is reached (`eval_step * 32`). For `cosine_warm` and `cosine_warm2`,
+  cycle-end epochs also force evaluation, a checkpoint, and loss CSVs, even
+  outside the evaluation interval. These weights include the final low-LR
+  update, before any update at the restarted LR; the saved optimizer LR
+  already holds the next cycle's LR. With zero-based epoch labels, `cosine_T=160`
+  and `cosine_T_mult=2` produce cycle-end checkpoints at 159, 479, 1119, etc.
+  Loss CSVs are not necessarily emitted at
   every logged evaluation. The last CSV epoch can therefore precede the last
   epoch in the log and should not be treated as proof that training stopped.
 - Interpret zero-valued loss columns with the run configuration and loss

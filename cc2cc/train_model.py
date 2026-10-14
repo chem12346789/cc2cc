@@ -6,6 +6,7 @@ import random
 import numpy as np
 import torch
 from torch import distributed as dist
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 import wandb
 
@@ -107,7 +108,7 @@ class _Logger:
             args.eval_step * 32,
         )
 
-    def log(self, modeldict, train_record, eval_record, epoch):
+    def log(self, modeldict, train_record, eval_record, epoch, force_checkpoint=False):
         stats = {
             f"{prefix}_{key}": np.mean(val)
             for prefix, record in (("train", train_record), ("eval", eval_record))
@@ -133,7 +134,11 @@ class _Logger:
             {"train_loss": train_loss, "eval_loss": eval_loss, "tot_loss": tot_loss}
         )
         self.run.log(metrics)
-        if improved or (self.checkpoint_stride and epoch % self.checkpoint_stride == 0):
+        if (
+            force_checkpoint
+            or improved
+            or (self.checkpoint_stride and epoch % self.checkpoint_stride == 0)
+        ):
             modeldict.save_model(epoch)
             train_record.save(self.loss_dir / f"train-{epoch}.csv")
             eval_record.save(self.loss_dir / f"eval-{epoch}.csv")
@@ -182,13 +187,22 @@ def train_model(train_list, eval_list, args):
         train_record = _gather_records(train_record, is_distributed)
         barrier()
 
-        if epoch % args.eval_step == 0 or epoch == args.epoch or epoch == 0:
+        # The scheduler has reset the next LR, but no high-LR update has run yet.
+        cycle_end = (
+            isinstance(modeldict.scheduler, CosineAnnealingWarmRestarts)
+            and modeldict.scheduler.last_epoch > 0
+            and modeldict.scheduler.T_cur == 0
+        )
+        if cycle_end or epoch % args.eval_step == 0 or epoch == args.epoch or epoch == 0:
             eval_record = modeldict.eval_model()
             eval_record = _gather_records(eval_record, is_distributed)
             barrier()
 
             if logger:
-                logger.log(modeldict, train_record, eval_record, epoch)
+                logger.log(
+                    modeldict, train_record, eval_record, epoch,
+                    force_checkpoint=cycle_end,
+                )
 
         barrier()
 
