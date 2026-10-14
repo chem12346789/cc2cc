@@ -663,6 +663,11 @@ def main() -> int:
         max_attempts=args.no_slot_retry_attempts,
         retry_interval=args.no_slot_retry_interval,
     )
+    slot_details = ", ".join(
+        f"{node} (GPU {gpu_id})" if gpu_id is not None else f"{node} (CPU)"
+        for node, gpu_id in slots
+    )
+    print(f"[INFO] Available slots after probing: {len(slots)} [{slot_details}]")
     if not slots:
         return 0
 
