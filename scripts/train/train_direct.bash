@@ -5,8 +5,6 @@
 # =========================
 export MODEL="--model transformer+dense_mix_e3nn_4_correct"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct_f"
-# export MODEL="--model transformer+dense_mix_e3nn_4_correct_no_skip"
-# export MODEL="--load atom-82794 --load_epoch 10005 --if_resume 0"
 
 # =========================
 # Data and targets
@@ -19,7 +17,7 @@ export BASIS_ARGS="def2-QZVPPD"
 export RHO_INPUT="dft"
 # export RHO_INPUT="dft_d3bj"
 # export RHO_INPUT="dft_d3bj_vv10"
-# export SPLIT_CONFIG="mol0.json"
+
 # export SPLIT_CONFIG="mol1_add.json"
 export SPLIT_CONFIG="mol2_ex_add.json"
 # export SPLIT_CONFIG="test.json"
