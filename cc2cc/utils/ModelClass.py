@@ -1,8 +1,8 @@
 import os
-import pickle
 import shutil
 import time
 from collections import deque
+from io import BytesIO
 from typing import cast
 
 import numpy as np
@@ -58,6 +58,18 @@ TIME_LIST = [
 
 STATE_DICT_PREFIXES = ("_orig_mod.",)
 DEBUG = 0
+
+
+class _CheckpointSizeBuffer(BytesIO):
+    def __init__(self):
+        super().__init__()
+        self.size = 0
+
+    def write(self, data):
+        # Discard streamed tensor bytes instead of buffering the whole checkpoint.
+        size = len(data)
+        self.size += size
+        return size
 
 
 class _LossEvent:
@@ -173,6 +185,7 @@ class ModelClass:
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=True)
+            self.state_dict = None
 
         self._maybe_compile_model()
 
@@ -284,6 +297,7 @@ class ModelClass:
             )
         if self.optimizer_state_dict is not None:
             self.optimizer.load_state_dict(self.optimizer_state_dict)
+            self.optimizer_state_dict = None
 
         self.scheduler = None
 
@@ -446,9 +460,9 @@ class ModelClass:
             "model": self.args.model,
             "optimizer": self.optimizer.state_dict(),
         }
-        return max(
-            len(pickle.dumps(payload, protocol=pickle.HIGHEST_PROTOCOL)), 1 << 20
-        )
+        with _CheckpointSizeBuffer() as buffer:
+            torch.save(payload, buffer)
+            return max(buffer.size, 1 << 20)
 
     def save_model(self, epoch):
         if not self.dir_checkpoint.exists():
@@ -535,7 +549,9 @@ class ModelClass:
             print(f"{batch['name']}")
 
         if if_train:
-            input_.requires_grad = True
+            input_.requires_grad_(
+                self.args.if_grad and if_grad and batch["grad_cc_train"].ndim != 0
+            )
         else:
             input_ = input_.detach()
 
@@ -606,7 +622,8 @@ class ModelClass:
                     break
                 atomic_batch = self.database_train.dataset.get_from_name(name_atom)
                 atomic_batch = self.database_train.process_batch(
-                    atomic_batch, device=self.local_rank
+                    {key: atomic_batch[key] for key in ("input", "weight")},
+                    device=self.local_rank,
                 )
                 _, atomic_output = self.model_output(
                     atomic_batch["input"], atomic_batch["weight"]

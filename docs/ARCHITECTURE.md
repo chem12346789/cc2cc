@@ -23,6 +23,13 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   gradient, and ZMP helpers
 - `DataBase.py`, `TestDataDFT.py`, `DataRecord.py`, `ModelClass.py`: data
   loading, record keeping, model init, checkpoints, losses
+  - Dataset tensors remain on CPU; batch device transfers do not evict them.
+    Base/addon NPZ arrays are read lazily, with addon keys taking precedence,
+    and both archives close after loading each system. Grid targets are retained
+    only for absolute loss. Atomic forwards transfer only inputs and weights.
+  - Loaded checkpoint references are released after model/optimizer restoration.
+    Checkpoint-size checks stream serialization into a byte counter rather than
+    retaining a full serialized checkpoint in RAM.
 - `model/`: neural model definitions; `--model NAME` → `model/NAME.py` with `Model`
 - `*.json`: dataset/split definitions (`gmtkn-def2`, `gmtkn-diet30-def2`,
   `gmtkn-diet100-def2`, `dft-fitset-def2`)

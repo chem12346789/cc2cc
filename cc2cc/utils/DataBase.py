@@ -3,7 +3,8 @@ Module for handling molecular data and generating datasets for machine learning 
 """
 
 from itertools import product
-from collections import Counter
+from collections import ChainMap, Counter
+from contextlib import ExitStack
 import numpy as np
 
 import torch
@@ -222,20 +223,24 @@ class DataBase:
         """
         Load the data.
         """
+        with ExitStack() as stack:
+            data = stack.enter_context(
+                np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
+            )
+            addon_path = DATA_PATH / f"data_{name}_addon.npz"
+            if addon_path.exists():
+                data_addon = stack.enter_context(np.load(addon_path, allow_pickle=True))
+                self.print(f"\nLoading data and its addon {name:<40}")
+                data = ChainMap(data_addon, data)
+            else:
+                self.print(f"\nLoading data {name:<40}")
+            return self._load_data(mol_info, name, data)
+
+    def _load_data(self, mol_info, name, data):
         scale = self.args.loss_multiplier
         scale_abs = self.args.loss_multiplier_abs
         scale_grad = self.args.loss_multiplier_grad
         scale_atomic = self.args.loss_multiplier_atomic
-        data = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
-        if (DATA_PATH / f"data_{name}_addon.npz").exists():
-            data_addon = np.load(
-                DATA_PATH / f"data_{name}_addon.npz", allow_pickle=True
-            )
-            self.print(f"\nLoading data and its addon {name:<40}")
-            data = {**data, **data_addon}
-        else:
-            self.print(f"\nLoading data {name:<40}")
-
         weight_mat = data["weights"]
         if self.args.rho_input == "dft":
             input_mat = data["rho_cube_dft"]
@@ -278,21 +283,22 @@ class DataBase:
             data_dict["grad2force"] = 0
             data_dict["grad_cc_train"] = 0
         else:
-            if self.args.output_target == "tol_delta_grids":
-                if self.args.rho_input in ("dft", "dft_d3bj", "dft_d3bj_1"):
-                    output_mat = data["tol_delta_grids"]
-                elif self.args.rho_input == "dft_d3bj_vv10":
-                    output_mat = data["tol_delta_grids"] - data["exc_post_vv10_grid"]
-                elif self.args.rho_input == "zmp":
-                    output_mat = data["tol_delta_zmp_grids"]
-                else:
-                    raise ValueError(f"No output_mat in data: {self.args.rho_input}")
-            else:
-                raise ValueError(f"No output_target: {self.args.output_target}")
-            data_dict["output"] = output_mat.reshape((-1, 1))[filter_idx]
-            del output_mat
-
+            data_dict["output"] = 0
             if self.args.if_abs:
+                if self.args.output_target == "tol_delta_grids":
+                    if self.args.rho_input in ("dft", "dft_d3bj", "dft_d3bj_1"):
+                        output_mat = data["tol_delta_grids"]
+                    elif self.args.rho_input == "dft_d3bj_vv10":
+                        output_mat = data["tol_delta_grids"] - data["exc_post_vv10_grid"]
+                    elif self.args.rho_input == "zmp":
+                        output_mat = data["tol_delta_zmp_grids"]
+                    else:
+                        raise ValueError(f"No output_mat in data: {self.args.rho_input}")
+                else:
+                    raise ValueError(f"No output_target: {self.args.output_target}")
+                data_dict["output"] = output_mat.reshape((-1, 1))[filter_idx]
+                del output_mat
+
                 if self.args.if_relative_weight_abs:
                     scale_abs /= (
                         self.normalise(data_dict["output"] * data_dict["weight"])
@@ -400,6 +406,8 @@ class DataBase:
         for key in self.gpu_key:
             if isinstance(data_dict[key], np.ndarray):
                 self.print(f"key: {key}, shape: {data_dict[key].shape}")
-            data_dict[key] = torch.as_tensor(data_dict[key], dtype=self.dtype)
+            data_dict[key] = torch.as_tensor(
+                data_dict[key], dtype=self.dtype, device="cpu"
+            )
 
         return num_data_used, data_dict
