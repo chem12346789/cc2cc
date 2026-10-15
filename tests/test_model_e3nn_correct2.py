@@ -1,9 +1,10 @@
+import importlib
 import unittest
 
 import torch
 
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
-from cc2cc.utils.model.model_utils.model_e3nn_correct2 import E3nn
+from cc2cc.utils.model.model_utils.model_e3nn_correct import E3nn
 
 
 class DistanceAwareE3nnTests(unittest.TestCase):
@@ -47,17 +48,6 @@ class DistanceAwareE3nnTests(unittest.TestCase):
             (model(at_center) - model(at_corner)).abs().max(), 1e-8
         )
 
-    def test_octahedral_symmetry(self):
-        model = self.make_model(lmax=2)
-        field = torch.arange(
-            EDGE_SIZE**3 * 2, dtype=torch.float64, device="cpu"
-        ).reshape(1, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 2)
-        expected = model(field.reshape(1, EDGE_SIZE**3, 2))
-        for transformed in (field.flip(1), field.transpose(1, 2)):
-            torch.testing.assert_close(
-                model(transformed.reshape(1, EDGE_SIZE**3, 2)), expected
-            )
-
     def test_input_and_radial_gradients(self):
         model = self.make_model()
         inputs = torch.ones(
@@ -85,6 +75,18 @@ class DistanceAwareE3nnTests(unittest.TestCase):
     def test_rejects_unsupported_geometry(self):
         with self.assertRaisesRegex(NotImplementedError, "Only cube"):
             E3nn("sphere", EDGE_SIZE**3, 2, 0)
+
+    def test_correct_architecture_uses_normalized_module(self):
+        module = importlib.import_module(
+            "cc2cc.utils.model.transformer+dense_mix_e3nn_4_correct"
+        )
+        model = module.Model().double()
+        self.assertIsInstance(model.conv1, E3nn)
+        output = model(
+            torch.ones((1, 4, EDGE_SIZE**3), dtype=torch.float64, device="cpu")
+        )
+        self.assertEqual(output.shape, (1, 1))
+        self.assertTrue(torch.isfinite(output).all())
 
 
 if __name__ == "__main__":

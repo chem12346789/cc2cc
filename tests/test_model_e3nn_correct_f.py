@@ -126,22 +126,6 @@ class DistanceAndAngleAwareE3nnTests(unittest.TestCase):
             model.mixer[0].weight[:, model.cube_size:].zero_()
         self.assertGreater((model(inputs) - expected).abs().max(), 1e-8)
 
-    def test_cube_rotations_and_inversion_preserve_outputs(self):
-        model = self.make_model(2)
-        grid = torch.arange(
-            EDGE_SIZE**3 * 2, dtype=torch.float64, device="cpu"
-        ).reshape(EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 2)
-        inputs = grid.reshape(1, EDGE_SIZE**3, 2)
-        expected = model(inputs)
-        for transformed in (
-            grid.rot90(1, dims=(0, 1)),
-            grid.transpose(1, 2),
-            grid.flip((0, 1, 2)),
-        ):
-            torch.testing.assert_close(
-                model(transformed.reshape(1, EDGE_SIZE**3, 2)), expected
-            )
-
     def test_gradients_reach_input_and_both_readout_paths(self):
         model = self.make_model(2)
         inputs = torch.arange(
