@@ -57,7 +57,7 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 - `benchmark_dft.py`: baseline DFT benchmarking
 - `d3_para.py`: D3 parameter fitting/testing
 - `collect_info.py`: collect validation CSV summaries
-- `submit_direct_array_per_gpu.py`: per-GPU job dispatch helper. GPU probes
+- `scripts/submit_direct_array_per_gpu.py`: per-GPU job dispatch helper. GPU probes
   sample roughly once per second for `--probe-timeout-sec` (default 60 seconds)
   after starting, with roughly up to two extra seconds for clock rounding and
   the final sampling interval. Selection uses

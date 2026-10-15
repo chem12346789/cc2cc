@@ -23,7 +23,7 @@ data*.ipynb
 *.zip
 *map
 submit*
-!/submit_direct_array_per_gpu.py
+!/scripts/submit_direct_array_per_gpu.py
 out
 *.egg-info/
 *.npz

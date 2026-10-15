@@ -255,6 +255,9 @@ if __name__ == "__main__":
                             f"Cached weights shape {weights.shape} does not match "
                             f"grid weights shape {grids.weights.shape} for {name}"
                         )
+                    assert np.allclose(
+                        grids.weights, weights, rtol=1e-10, atol=1e-12
+                    ), f"Cached weights do not match grid weights for {name}"
                     grids.weights = weights
 
                 # 2. Post-DFT VV10 (using standard DFT 1-RDM)
@@ -304,6 +307,7 @@ if __name__ == "__main__":
                 data_dict_addon["exc_post_vv10_grid"] = exc_post_vv10_grid
                 data_dict_addon["e_post_vv10"] = e_post_vv10
                 data_dict_addon["grad_post_vv10"] = grad_post_vv10
+                data_dict_addon["coords"] = grids.coords
                 np.savez(addon_path, **data_dict_addon)
                 print("Post-DFT VV10 gradient (Hartree/Bohr):\n" f"{grad_post_vv10}")
 
