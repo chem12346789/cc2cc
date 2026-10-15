@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import submit_direct_array_per_gpu as submit
+import scripts.submit_direct_array_per_gpu as submit
 
 
 class GPUProbeTests(unittest.TestCase):

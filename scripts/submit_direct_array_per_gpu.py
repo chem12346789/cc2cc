@@ -15,8 +15,8 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Callable, Iterable
 
-ROOT = Path(__file__).resolve().parent
-SCRIPTS_ROOT = ROOT / "scripts"
+SCRIPTS_ROOT = Path(__file__).resolve().parent
+ROOT = SCRIPTS_ROOT.parent
 TEST_SCRIPT_DIR = SCRIPTS_ROOT / "test"
 BENCHMARK_SCRIPT_DIR = SCRIPTS_ROOT / "benchmark"
 CALCULATOR_SCRIPT_DIR = SCRIPTS_ROOT / "calculator"
