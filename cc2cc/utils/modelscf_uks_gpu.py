@@ -132,7 +132,7 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
         vhf_last=0,
         hermi=1,
     ):
-        logger.debug(ks_, "Using modified get_veff (gpu4pyscf)")
+        logger.info(ks_, "Using modified get_veff (gpu4pyscf)")
         if mol is None:
             mol = ks_.mol
 
@@ -156,11 +156,11 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 max_memory=max_memory_gpu,
                 hermi=hermi,
             )
-            logger.debug(ks_, "nelec by numeric integration = %s", n)
+            logger.info(ks_, "nelec by numeric integration = %s", n)
             t0 = logger.timer(ks_, "  vxc", *t0)
 
         if mol.nao > MAX_GPU_JK_NAO:
-            logger.debug(
+            logger.info(
                 ks_,
                 "Large system detected: %d AO, using CPU for J/K calculations",
                 mol.nao,
