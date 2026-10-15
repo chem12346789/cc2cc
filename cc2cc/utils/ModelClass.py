@@ -49,9 +49,37 @@ TORCH_LIST = [
     "loss_tot_grad",
     "loss_tot_atomic",
 ]
+TIME_LIST = [
+    "time_loss_tot_ene",
+    "time_loss_tot_abs",
+    "time_loss_tot_grad",
+    "time_loss_tot_atomic",
+]
 
 STATE_DICT_PREFIXES = ("_orig_mod.",)
 DEBUG = 0
+
+
+class _LossEvent:
+    def __init__(self, event, data_record, timing_events):
+        self.event = event
+        self.data_record = data_record
+        self.timing_events = timing_events
+
+    def _resolve_timings(self):
+        for key, (start, end) in self.timing_events.items():
+            self.data_record[key] = np.array(start.elapsed_time(end) / 1000.0)
+        self.timing_events.clear()
+
+    def query(self):
+        is_complete = self.event.query()
+        if is_complete:
+            self._resolve_timings()
+        return is_complete
+
+    def synchronize(self):
+        self.event.synchronize()
+        self._resolve_timings()
 
 
 class DataRecordList:
@@ -59,7 +87,7 @@ class DataRecordList:
         self.data_dict = {
             "name": ["" for _ in range(len_batch)],
         }
-        for key in TORCH_LIST:
+        for key in TORCH_LIST + TIME_LIST:
             self.data_dict[key] = np.zeros(len_batch)
         self.iter = 0
 
@@ -68,7 +96,12 @@ class DataRecordList:
             if key not in data_record:
                 raise ValueError(f"Key {key} not found in data_record.")
             value = data_record[key]
-            values[self.iter] = value if key == "name" else AU2KCALMOL * value.item()
+            if key == "name":
+                values[self.iter] = value
+            elif key in TIME_LIST:
+                values[self.iter] = value.item()
+            else:
+                values[self.iter] = AU2KCALMOL * value.item()
         self.iter += 1
 
     def save(self, path):
@@ -481,6 +514,22 @@ class ModelClass:
         scale_grad = batch["scale_grad"]
         scale_atomic = batch["scale_atomic"]
         data_record = {"name": batch["name"]}
+        timing_events = {}
+
+        def start_timing():
+            if if_use_cuda_event:
+                event = torch.cuda.Event(enable_timing=True)
+                event.record()
+                return event
+            return time.perf_counter()
+
+        def finish_timing(key, start):
+            if if_use_cuda_event:
+                end = torch.cuda.Event(enable_timing=True)
+                end.record()
+                timing_events[key] = (start, end)
+            else:
+                data_record[key] = np.array(time.perf_counter() - start)
 
         if DEBUG:
             print(f"{batch['name']}")
@@ -496,25 +545,30 @@ class ModelClass:
 
         sum_output = torch.sum(output)
         if if_train:
+            timing_start = start_timing()
             tot_loss = scale * self.loss_fun(sum_target, sum_output)
             data_record["loss_tot_ene"] = tensor_to_numpy(tot_loss)
+            finish_timing("time_loss_tot_ene", timing_start)
         else:
             tot_loss = torch.tensor(0.0, device=self.device, dtype=self.dtype)
         data_record["loss_ene"] = tensor_to_numpy(torch.abs(sum_target - sum_output))
 
         if if_train:
             if self.args.if_abs:
+                timing_start = start_timing()
                 target = batch["output"] * weight
                 abs_error = torch.abs(target - output)
                 loss_ene_abs = scale_abs * self.loss_fun(target, output)
                 tot_loss = tot_loss + loss_ene_abs
                 data_record["loss_ene_abs"] = tensor_to_numpy(torch.sum(abs_error))
                 data_record["loss_tot_abs"] = tensor_to_numpy(loss_ene_abs)
+                finish_timing("time_loss_tot_abs", timing_start)
 
             if self.args.if_grad and if_grad:
                 grad_cc_train = batch["grad_cc_train"]
                 grad2force = batch["grad2force"]
                 if len(grad_cc_train.shape) != 0:
+                    timing_start = start_timing()
                     middle_ = torch.autograd.grad(
                         outputs=torch.sum(output),
                         inputs=input_,
@@ -528,8 +582,11 @@ class ModelClass:
                         torch.sum(torch.abs(grad_cc_train - force))
                     )
                     data_record["loss_tot_grad"] = tensor_to_numpy(loss_grad)
+                    finish_timing("time_loss_tot_grad", timing_start)
 
         if self.args.if_atomic and scale_atomic != 0:
+            if if_train:
+                timing_start = start_timing()
             ae_target = batch["ae_target"]
             ae_output = sum_output.clone()
 
@@ -568,16 +625,22 @@ class ModelClass:
             else:
                 data_record["loss_tot_atomic"] = np.array(0.0)
                 data_record["loss_ene_atomic"] = np.array(0.0)
+            if if_train:
+                finish_timing("time_loss_tot_atomic", timing_start)
 
         data_record["loss_tot"] = tensor_to_numpy(tot_loss)
         for key in TORCH_LIST:
             if key not in data_record:
                 data_record[key] = np.array(0.0)
+        for key in TIME_LIST:
+            if key not in data_record and key not in timing_events:
+                data_record[key] = np.array(0.0)
 
         event = None
         if if_use_cuda_event:
-            event = torch.cuda.Event()
-            event.record()
+            final_event = torch.cuda.Event()
+            final_event.record()
+            event = _LossEvent(final_event, data_record, timing_events)
 
         if DEBUG:
             print(data_record)
