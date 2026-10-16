@@ -15,6 +15,7 @@ validate
 /scripts/work/
 /wandb/
 /wandb
+/tmp
 hkqai*.ipynb
 dgx1*.ipynb
 local*.ipynb
