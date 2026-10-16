@@ -2,7 +2,6 @@
     "recommendations": [
         "foxundermoon.shell-format",
         "james-yu.latex-workshop",
-        "johnny-zhao.oai-compatible-copilot",
         "mechatroner.rainbow-csv",
         "ms-azuretools.vscode-containers",
         "ms-pyright.pyright",

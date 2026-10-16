@@ -24,7 +24,7 @@ export basis_args="def2-QZVP(D)"
 export DATASET="tmc-def2"
 select_molecule_profile tmc
 
-setup_gpu_test_job 8000 15000
+setup_gpu_test_job 16000 15000
 # Arguments: PySCF memory (MiB); minimum free GPU memory (MiB).
 
 sleep $SLURM_ARRAY_TASK_ID

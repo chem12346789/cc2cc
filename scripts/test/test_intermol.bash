@@ -25,7 +25,7 @@ export basis_args="def2-QZVP(D)"
 
 select_molecule_profile intermolecular
 
-setup_gpu_test_job 32000 15000 1
+setup_gpu_test_job 16000 15000 1
 # Arguments: PySCF memory (MiB); minimum free GPU memory (MiB); enable Numba threads.
 
 begin_test_job
