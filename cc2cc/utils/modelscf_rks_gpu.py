@@ -10,12 +10,14 @@ import cupy as cp
 
 from gpu4pyscf import lib
 from gpu4pyscf.lib import logger
-from gpu4pyscf.dft.numint import NumInt, _scale_ao, _GDFTOpt
+from gpu4pyscf.dft.numint import NumInt, _scale_ao
 from gpu4pyscf.grad.rks import _gga_grad_sum_
 from gpu4pyscf.lib.cupy_helper import tag_array, transpose_sum
 
 from cc2cc.utils.ModelClass import ModelClass
-from cc2cc.utils.GridsGPU import GridGPU as Grid, iterate_grid_segments
+from cc2cc.utils.GridsGPU import (
+    GridGPU as Grid, iterate_grid_segments, eval_xc_eff_gpu, get_cached_gdftopt,
+)
 from cc2cc.utils.env_var import MAX_GPU_JK_NAO
 
 
@@ -40,7 +42,7 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
         """
         xctype = ni._xc_type(xc_code)
 
-        grids.opt = _GDFTOpt.from_mol(mol)
+        grids.opt = get_cached_gdftopt(grids, mol)
         _sorted_mol = grids.opt._sorted_mol
         mo_coeff = getattr(dms, "mo_coeff", None)
         mo_occ = getattr(dms, "mo_occ", None)
@@ -65,9 +67,7 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
             ):
                 gridcube = grids.gen_cube(_sorted_mol, dms_sorted, coords_)
                 rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(ni, dms_sorted)
-                energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
-                energy_den = cp.asarray(energy_den)
-                middle_cube = cp.asarray(middle_cube)
+                energy_den, middle_cube = eval_xc_eff_gpu(modeldict, rho_cube, weights_)
 
                 excsum[0] += cp.sum(energy_den)
                 wv = cp.einsum("ixgC,giC->xgC", vxc_mat, middle_cube, optimize=True)
@@ -264,8 +264,7 @@ def get_veff_grad_modified_rks_gpu(ks_grad, modeldict):
                     rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(
                         ni, dms, ao_deriv=ao_deriv
                     )
-                    _, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
-                    middle_cube = cp.asarray(middle_cube)
+                    _, middle_cube = eval_xc_eff_gpu(modeldict, rho_cube, weights_)
 
                     wv = cp.einsum(
                         "ilpC,piC->lpC",

@@ -737,8 +737,10 @@ class ModelClass:
             raise ValueError(f"Unknown cube type: {self.cube_type}")
         return (rho * self.b3lyp_weights(rho)).sum(-1)
 
-    def eval_xc_eff(self, rho_cube, weights_, weight_response=False):
-        """Optionally return dE/dweight with density and cube coordinates fixed."""
+    def eval_xc_eff(
+        self, rho_cube, weights_, weight_response=False, *, return_tensors=False
+    ):
+        """Optionally return weight derivatives and detached on-device tensors."""
         input_mat = torch.as_tensor(rho_cube, dtype=self.dtype, device=self.device)
         weights_mat = torch.as_tensor(
             weights_.reshape((-1, 1)), dtype=self.dtype, device=self.device
@@ -754,11 +756,9 @@ class ModelClass:
             )
         else:
             middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
-        exc_cube = exc_cube.detach().cpu().numpy().squeeze(-1)
-        middle_cube = middle_cube.detach().cpu().numpy()
+        outputs = (exc_cube.detach().squeeze(-1), middle_cube.detach())
         if weight_response:
-            return (
-                exc_cube, middle_cube,
-                weight_derivative.detach().cpu().numpy().ravel(),
-            )
-        return exc_cube, middle_cube
+            outputs += (weight_derivative.detach().reshape(-1),)
+        if return_tensors:
+            return outputs
+        return tuple(output.cpu().numpy() for output in outputs)

@@ -9,8 +9,10 @@ opt in to GPU4PySCF explicitly.
 from __future__ import annotations
 
 import cupy as cp
+import torch
 from pyscf import __config__
 from gpu4pyscf.dft import gen_grid, numint, radi
+from gpu4pyscf.dft.numint import _GDFTOpt
 from gpu4pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 from gpu4pyscf.lib.cupy_helper import asarray
 
@@ -19,6 +21,28 @@ from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_LEN, EDGE_SIZE
 GridsGPU = gen_grid.Grids
 OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
 SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
+
+
+def get_cached_gdftopt(grids, mol):
+    """Cache only the integration optimizer, not the memory-heavy J/K objects."""
+    key = (
+        cp.cuda.Device().id, mol.cart, mol.charge, mol.spin,
+        mol._atm.tobytes(), mol._bas.tobytes(), mol._env.tobytes(),
+    )
+    if getattr(grids, "_model_gdftopt_key", None) != key:
+        grids._model_gdftopt = _GDFTOpt.from_mol(mol)
+        grids._model_gdftopt_key = key
+    return grids._model_gdftopt
+
+
+def eval_xc_eff_gpu(modeldict, rho_cube, weights):
+    """Use stream-aware DLPack exchange without staging through host memory."""
+    rho_tensor = torch.utils.dlpack.from_dlpack(rho_cube)
+    weight_tensor = torch.utils.dlpack.from_dlpack(weights)
+    outputs = modeldict.eval_xc_eff(
+        rho_tensor, weight_tensor, return_tensors=True
+    )
+    return tuple(cp.from_dlpack(output) for output in outputs)
 
 
 def iterate_grid_segments(mol, grids, nao, deriv, max_memory):

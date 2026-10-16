@@ -44,6 +44,15 @@ to include atom-centered grid motion and Becke-weight derivatives.
 AO-overlap Pulay terms remain handled by PySCF in either mode.
 This option does not add grid response to the separate GPU implementations.
 
+### GPU SCF integration
+
+The GPU RKS/UKS hooks exchange model inputs and outputs with PyTorch through
+stream-aware DLPack, without staging model outputs through CPU NumPy arrays.
+CPU model callers still receive NumPy arrays by default.
+The numerical-integration optimizer is reused on each grid object across SCF
+iterations and rebuilt when molecular integral data or the CUDA device changes.
+This does not cache J/K objects or change the large-system CPU J/K fallback.
+
 ## Quick start
 
 ```bash

@@ -42,6 +42,30 @@ class TestModelGridResponse(unittest.TestCase):
     def tearDownClass(cls):
         pyscf.lib.num_threads(cls.threads)
 
+    def test_tensor_outputs_preserve_numpy_results(self):
+        rho = np.linspace(0.1, 0.9, 24).reshape(2, 4, 3)
+        weights = np.array([0.3, 0.7])
+        for before_weight in (False, True):
+            for weight_response in (False, True):
+                with self.subTest(weighted=before_weight, response=weight_response):
+                    functional = ToyFunctional(3, before_weight)
+                    expected = functional.eval_xc_eff(
+                        rho, weights, weight_response=weight_response
+                    )
+                    with patch.object(torch.Tensor, "cpu",
+                                      side_effect=AssertionError("host transfer")):
+                        actual = functional.eval_xc_eff(
+                            torch.as_tensor(rho, dtype=torch.float64, device="cpu"),
+                            torch.as_tensor(weights, dtype=torch.float64, device="cpu"),
+                            weight_response=weight_response, return_tensors=True,
+                        )
+                    self.assertEqual(len(actual), 3 if weight_response else 2)
+                    for tensor, array in zip(actual, expected):
+                        self.assertIsInstance(array, np.ndarray)
+                        self.assertEqual(tensor.dtype, torch.float64)
+                        self.assertFalse(tensor.requires_grad)
+                        np.testing.assert_array_equal(tensor.numpy(), array)
+
     def test_b3lyp_limit_matches_pyscf_in_both_modes(self):
         for spin in (0, 1):
             with self.subTest(spin=spin):
