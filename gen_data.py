@@ -60,6 +60,19 @@ def _post_vv10_total_energy(mol, grid_level):
 
 def _post_vv10_finite_difference_gradient(mol, grid_level, step=1e-3):
     """Central-difference reference gradient in Hartree/Bohr; step in Bohr."""
+    return _finite_difference_gradient(
+        mol, lambda displaced: _post_vv10_total_energy(displaced, grid_level), step
+    )
+
+
+def _b3lyp_finite_difference_gradient(mol, step=1e-3):
+    """Central-difference B3LYP gradient in Hartree/Bohr; step in Bohr."""
+    return _finite_difference_gradient(
+        mol, lambda displaced: _converged_b3lyp(displaced).e_tot, step
+    )
+
+
+def _finite_difference_gradient(mol, total_energy, step):
     coords = mol.atom_coords()
     gradient = np.empty_like(coords)
     for atom in range(mol.natm):
@@ -70,9 +83,7 @@ def _post_vv10_finite_difference_gradient(mol, grid_level, step=1e-3):
                 displaced_coords = coords.copy()
                 displaced_coords[atom, axis] += sign * step
                 displaced_mol.set_geom_(displaced_coords, unit="Bohr")
-                displaced_energies.append(
-                    _post_vv10_total_energy(displaced_mol, grid_level)
-                )
+                displaced_energies.append(total_energy(displaced_mol))
             gradient[atom, axis] = (displaced_energies[0] - displaced_energies[1]) / (
                 2 * step
             )
@@ -294,6 +305,13 @@ if __name__ == "__main__":
                     print(
                         "Post-DFT VV10 analytical/FD gradient max difference "
                         f"(Hartree/Bohr): {grad_error:.12e}"
+                    )
+                    grad_dft = mf_dft.nuc_grad_method().kernel()
+                    grad_dft_fd = _b3lyp_finite_difference_gradient(mol)
+                    grad_dft_error = np.max(np.abs(grad_dft - grad_dft_fd))
+                    print(
+                        "DFT (B3LYP) analytical/FD gradient max difference "
+                        f"(Hartree/Bohr): {grad_dft_error:.12e}"
                     )
 
                 addon_path = DATA_PATH / f"data_{name}_addon.npz"

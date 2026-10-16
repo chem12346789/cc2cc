@@ -1,7 +1,7 @@
 {
     "train": [
-        "ADDON-As",
-        "ADDON-Bi"
+        "W4_11-n2",
+        "W4_11-o2"
     ],
     "eval": []
 }

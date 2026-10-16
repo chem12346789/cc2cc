@@ -23,11 +23,26 @@ cc2cc is a PyTorch + PySCF workflow for learning and evaluating DFT-inspired cor
 3. Validate or benchmark with scripts in `scripts/test/`.
 4. Inspect outputs in `validate*` and `checkpoints/`.
 
+When `gen_data.py --if_continue true` compares cached data for a multi-atom
+molecule, it reports analytical/central-finite-difference maximum gradient
+differences for both Post-DFT VV10 and DFT (B3LYP), in Hartree/Bohr.
+The B3LYP check uses a 0.001 Bohr displacement and six additional B3LYP
+calculations per atom.
+
 ## Important conventions
 
 - Keep site-specific Slurm paths and environment overrides in `scripts/cluster.local.sh`.
 - Keep project-wide importable code free of cluster-specific assumptions.
 - Use the repo root as the working directory when launching batch jobs.
+
+### Custom model gradients
+
+CPU RKS/UKS model gradients retain PySCF's default `grid_response=False`.
+After installing the model gradient with `get_veff_grad_modified_rks` or
+`get_veff_grad_modified_uks`, set `g.grid_response = True` before `g.kernel()`
+to include atom-centered grid motion and Becke-weight derivatives.
+AO-overlap Pulay terms remain handled by PySCF in either mode.
+This option does not add grid response to the separate GPU implementations.
 
 ## Quick start
 

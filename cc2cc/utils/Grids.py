@@ -5,6 +5,8 @@ This module is the PySCF counterpart of :mod:`cc2cc.utils.grids_gpu`.
 
 from __future__ import annotations
 
+import copy
+
 import numpy as np
 from numba import njit
 
@@ -12,6 +14,7 @@ import pyscf
 from pyscf import __config__
 from pyscf.dft import gen_grid, numint, radi
 from pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
+from pyscf.grad.rks import grids_response_cc
 
 from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 
@@ -46,6 +49,22 @@ def iterate_grid_segments(mol, grids, nao, deriv, max_memory, non0tab=None):
         if not allow_sparse:
             mask = None
         yield mask, weight, coords
+
+
+def iterate_grid_response_segments(mol, grids, nao, deriv, max_memory):
+    """Atom-centered blocks with Becke-weight nuclear derivatives."""
+    for atom, (coords, weights, weight1) in enumerate(grids_response_cc(grids)):
+        atom_grid = copy.copy(grids)
+        atom_grid.coords = coords
+        atom_grid.weights = weights
+        atom_grid.non0tab = None
+        start = 0
+        for mask, block_weights, block_coords in iterate_grid_segments(
+            mol, atom_grid, nao, deriv, max_memory
+        ):
+            stop = start + len(block_weights)
+            yield atom, mask, block_weights, block_coords, weight1[:, :, start:stop]
+            start = stop
 
 
 def rho_evaluator(

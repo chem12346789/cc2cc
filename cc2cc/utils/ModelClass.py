@@ -737,15 +737,28 @@ class ModelClass:
             raise ValueError(f"Unknown cube type: {self.cube_type}")
         return (rho * self.b3lyp_weights(rho)).sum(-1)
 
-    def eval_xc_eff(self, rho_cube, weights_):
+    def eval_xc_eff(self, rho_cube, weights_, weight_response=False):
+        """Optionally return dE/dweight with density and cube coordinates fixed."""
         input_mat = torch.as_tensor(rho_cube, dtype=self.dtype, device=self.device)
         weights_mat = torch.as_tensor(
             weights_.reshape((-1, 1)), dtype=self.dtype, device=self.device
         )
         input_mat.requires_grad = True
+        density_input = input_mat
+        weights_mat.requires_grad = weight_response
         input_mat, exc_cube = self.model_output(input_mat, weights_mat)
         exc_cube += torch.einsum("i,ij->ij", self.get_b3lyp_ene(input_mat), weights_mat)
-        middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
+        if weight_response:
+            middle_cube, weight_derivative = torch.autograd.grad(
+                torch.sum(exc_cube), (density_input, weights_mat)
+            )
+        else:
+            middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
         exc_cube = exc_cube.detach().cpu().numpy().squeeze(-1)
         middle_cube = middle_cube.detach().cpu().numpy()
+        if weight_response:
+            return (
+                exc_cube, middle_cube,
+                weight_derivative.detach().cpu().numpy().ravel(),
+            )
         return exc_cube, middle_cube

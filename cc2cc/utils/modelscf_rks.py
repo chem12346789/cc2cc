@@ -16,7 +16,9 @@ from pyscf.dft.numint import NumInt, _scale_ao, _dot_ao_ao_dense
 from pyscf.grad.rks import _gga_grad_sum_
 
 from cc2cc.utils.ModelClass import ModelClass
-from cc2cc.utils.Grids import Grid, iterate_grid_segments
+from cc2cc.utils.Grids import (
+    Grid, iterate_grid_segments, iterate_grid_response_segments,
+)
 
 
 def get_veff_modified_rks(ks, modeldict):
@@ -217,23 +219,35 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
         nao = mol.nao
 
         vmat = np.zeros((nset, 3, nao, nao))
+        exc = np.zeros((mol.natm, 3)) if ks_grad.grid_response else None
 
         if xctype == "GGA":
             ao_deriv = 2
-            for mask, weights_, coords_ in iterate_grid_segments(
-                mol,
-                grids,
-                nao,
-                ao_deriv,
-                max_memory=max_memory // (2 * modeldict.model.cube_size),
-                non0tab=None,
-            ):
+            memory = max_memory // (2 * modeldict.model.cube_size)
+            if ks_grad.grid_response:
+                blocks = iterate_grid_response_segments(
+                    mol, grids, nao, ao_deriv, memory
+                )
+            else:
+                blocks = (
+                    (None, mask, weights, coords, None)
+                    for mask, weights, coords in iterate_grid_segments(
+                        mol, grids, nao, ao_deriv, max_memory=memory, non0tab=None
+                    )
+                )
+            for atom, mask, weights_, coords_, weight1 in blocks:
                 for idm in range(nset):
                     gridcube = grids.gen_cube(mol, dms, coords_, mask)
                     rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(
                         ni, dms, ao_deriv=ao_deriv
                     )
-                    _, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
+                    if ks_grad.grid_response:
+                        _, middle_cube, weight_derivative = modeldict.eval_xc_eff(
+                            rho_cube, weights_, weight_response=True
+                        )
+                        exc += np.einsum("p,axp->ax", weight_derivative, weight1)
+                    else:
+                        _, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
 
                     wv = np.einsum(
                         "ilpC,piC->lpC",
@@ -243,9 +257,12 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
                     )
                     wv[0] *= 0.5
                     wv = wv.reshape(4, len(gridcube.coords))  # lpC -> lP
-                    _gga_grad_sum_(vmat[idm], mol, ao_value, wv, None, ao_loc)
+                    vtmp = np.zeros_like(vmat[idm])
+                    _gga_grad_sum_(vtmp, mol, ao_value, wv, None, ao_loc)
+                    vmat[idm] += vtmp
+                    if ks_grad.grid_response:
+                        exc[atom] += 2 * np.einsum("xij,ji->x", vtmp, dms)
 
-        exc = None
         if nset == 1:
             vmat = vmat[0]
         # - sign because nabla_X = -nabla_x
