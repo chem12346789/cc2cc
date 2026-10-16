@@ -19,6 +19,7 @@ esac
 export if_continue_args=0
 export name_mol_reverse=0
 export IF_GRAD=1
+export GRID_RESPONSE="${GRID_RESPONSE:-1}"
 export DATASET="gmtkn-def2"
 
 export basis_args="def2-QZVPPD"

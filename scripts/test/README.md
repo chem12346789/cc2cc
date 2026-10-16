@@ -17,6 +17,13 @@ Run Slurm jobs from the repository root, for example:
 sbatch scripts/test/test_diet30.bash
 ```
 
+`test_force.bash` enables grid response by default. Disable it with
+`sbatch --export=ALL,GRID_RESPONSE=0 scripts/test/test_force.bash`.
+Other evaluation scripts and `test.py` default to disabled grid response.
+When invoking `test.py` directly, use
+`--if_grad 1 --grid_response 1` (enabled) or `--if_grad 1 --grid_response 0`
+(disabled). The grid-response setting has no effect without force calculations.
+
 Keep model names, epochs, datasets, and Slurm resource requests in the individual
 job scripts. Keep site-specific Python paths, scratch directories, and module setup
 in `scripts/cluster.local.sh` and shared runtime helpers in `scripts/__lib__/`.

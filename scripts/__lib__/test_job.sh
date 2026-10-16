@@ -124,6 +124,7 @@ run_test_job() {
         --name_mol "${name_mol_input}" \
         --if_continue "${if_continue_args}" \
         --if_grad "${IF_GRAD}" \
+        --grid_response "${GRID_RESPONSE:-0}" \
         "$@"
 }
 

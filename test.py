@@ -44,6 +44,13 @@ def main():
         help="Whether to calculate the force. Default is False.",
     )
     parser.add_argument(
+        "--grid_response",
+        type=int,
+        choices=(0, 1),
+        default=0,
+        help="Include grid response in force calculations: 1 enables, 0 disables (default).",
+    )
+    parser.add_argument(
         "--max_memory_gpu",
         type=int,
         default=4000,

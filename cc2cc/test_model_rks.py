@@ -101,6 +101,7 @@ def test_model_rks(
 
     if args.if_grad and args.max_cycle != -1:
         g = mdft.Gradients()
+        g.grid_response = bool(args.grid_response)
         g.xc = "b3lyp"
         g.grids = mdft.grids
         if torch.cuda.is_available() and (not args.if_grad):
