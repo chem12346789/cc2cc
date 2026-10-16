@@ -656,4 +656,7 @@ if __name__ == "__main__":
 
         time.sleep(parse_time(args.frequency))
 
+    if collector.load_csv(args.load_csv or None):
+        converged = collector.data["converged"].eq(True).sum()
+        print(f"Converged tests: {converged}/{len(collector.data)}")
     print("All data processed. Exiting.")
