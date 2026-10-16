@@ -44,6 +44,31 @@ def main():
         help="Whether to calculate the force. Default is False.",
     )
     parser.add_argument(
+        "--grid_response",
+        type=int,
+        choices=(0, 1),
+        default=0,
+        help="Include grid response in force calculations: 1 enables, 0 disables (default).",
+    )
+    parser.add_argument(
+        "--conv_tol",
+        type=float,
+        default=1e-7,
+        help="SCF energy convergence tolerance in Hartree. Default is 1e-7.",
+    )
+    parser.add_argument(
+        "--conv_tol_grad",
+        type=float,
+        default=1e-3,
+        help="SCF orbital-gradient convergence tolerance. Default is 1e-3.",
+    )
+    parser.add_argument(
+        "--require_convergence",
+        type=str2bool,
+        default=False,
+        help="Reject unconverged SCF results. Default is False.",
+    )
+    parser.add_argument(
         "--max_memory_gpu",
         type=int,
         default=4000,
