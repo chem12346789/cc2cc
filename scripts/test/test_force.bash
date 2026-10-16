@@ -13,11 +13,9 @@ SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
-export load_model_args="--load atom-1705553 --load_epoch 1115"
-# export load_model_args="--load atom-3054023 --load_epoch 475"
-# export load_model_args="--load atom-3055766 --load_epoch 1115"
-# export load_model_args="--load atom-1692437 --load_epoch 2380"
-# export load_model_args="--load atom-82794 --load_epoch 10005"
+case "${MODEL_INDEX:-0}" in
+0) export load_model_args="--load atom-7297 --load_epoch 1115" ;;
+esac
 
 export if_continue_args=0
 export name_mol_reverse=0
