@@ -54,8 +54,8 @@ def test_model_rks(
 
     mdft.verbose = VERBOSE
     mdft.mol.verbose = VERBOSE
-    mdft.conv_tol = 1e-7
-    mdft.conv_tol_grad = 1e-3
+    mdft.conv_tol = args.conv_tol
+    mdft.conv_tol_grad = args.conv_tol_grad
 
     if args.max_cycle == -1:
         mdft.max_cycle = -1
@@ -73,6 +73,8 @@ def test_model_rks(
             mdft.level_shift = factor
             mdft.kernel()
     if mdft.converged is False:
+        if args.require_convergence:
+            raise RuntimeError(f"RKS did not converge for {name}")
         print("Error: RKS not converged!!! Just use the unconvergence output.")
 
     dm1_scf = mdft.make_rdm1()

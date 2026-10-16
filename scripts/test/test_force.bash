@@ -20,10 +20,11 @@ export if_continue_args=0
 export name_mol_reverse=0
 export IF_GRAD=1
 export GRID_RESPONSE="${GRID_RESPONSE:-1}"
-export DATASET="gmtkn-def2"
+export DATASET="force-def2"
 
 export basis_args="def2-QZVPPD"
 select_molecule_profile force
+export name_mol_input="${FORCE_SET:-molecule_Force}"
 
 # export basis_args="def2-TZVP"
 # export name_mol_input="molecule_Force"
@@ -33,5 +34,5 @@ setup_gpu_test_job 16000 15000
 
 sleep $SLURM_ARRAY_TASK_ID
 begin_test_job
-run_test_job --max_cycle 50
+run_test_job --max_cycle 250 --conv_tol 1e-11 --conv_tol_grad 1e-7 --require_convergence 1
 finish_test_job
