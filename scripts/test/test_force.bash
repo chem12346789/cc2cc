@@ -7,17 +7,14 @@
 #SBATCH --time=2400:00:00
 #SBATCH -a [0]%1
 #SBATCH -J validate-force
-#SBATCH -o log/test-force-%A.log -e log/test-force-%A.err
 
 SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
-export load_model_args="--load atom-1705553 --load_epoch 1115"
-# export load_model_args="--load atom-3054023 --load_epoch 475"
-# export load_model_args="--load atom-3055766 --load_epoch 1115"
-# export load_model_args="--load atom-1692437 --load_epoch 2380"
-# export load_model_args="--load atom-82794 --load_epoch 10005"
+case "${MODEL_INDEX:-0}" in
+0) export load_model_args="--load atom-7297 --load_epoch 1115" ;;
+esac
 
 export if_continue_args=0
 export name_mol_reverse=0
@@ -25,7 +22,7 @@ export IF_GRAD=1
 export DATASET="gmtkn-def2"
 
 export basis_args="def2-QZVPPD"
-export name_mol_input="W4_11-ch4"
+select_molecule_profile force
 
 # export basis_args="def2-TZVP"
 # export name_mol_input="molecule_Force"

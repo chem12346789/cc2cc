@@ -84,6 +84,9 @@ select_molecule_profile() {
     nciblind10)
         name_mol_input_list=("molecule_NCIBLIND10")
         ;;
+    force)
+        name_mol_input_list=("molecule_Force")
+        ;;
     tmc)
         name_mol_input_list=("TMB28_C1" "TMB28_T1")
         ;;
