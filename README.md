@@ -23,11 +23,15 @@ cc2cc is a PyTorch + PySCF workflow for learning and evaluating DFT-inspired cor
 3. Validate or benchmark with scripts in `scripts/test/`.
 4. Inspect outputs in `validate*` and `checkpoints/`.
 
-When `gen_data.py --if_continue true` compares cached data for a multi-atom
+When `gen_data.py --if_continue true --if_eval false` compares cached data for a multi-atom
 molecule, it reports analytical/central-finite-difference maximum gradient
 differences for both Post-DFT VV10 and DFT (B3LYP), in Hartree/Bohr.
 The B3LYP check uses a 0.001 Bohr displacement and six additional B3LYP
 calculations per atom.
+Evaluation (`--if_eval true`) skips gradient generation and checks, and does not
+add or update gradients in the addon archive; existing cached fields are preserved.
+It also skips electronic density difference calculations and reporting while
+retaining energy comparisons.
 
 ## Important conventions
 

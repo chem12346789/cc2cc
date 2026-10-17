@@ -17,8 +17,9 @@ export basis_args="def2-QZVPPD"
 
 export MP_TOTAL=3
 export MD_NUMBER=0
-export GEN_CONFIG="gen_test.json"
+# export GEN_CONFIG="gen_test.json"
 # export GEN_CONFIG="gen_mol2.json"
+export GEN_CONFIG="gen_val.json"
 
 export DATASET="gmtkn-def2"
 export IF_CONTINUE=1
@@ -52,7 +53,7 @@ for MP_NUMBER in $(
 ); do
     nohup bash -c "
         export LD_PRELOAD=~/.local/lib/libjemalloc.so:$LD_PRELOAD
-        ~/anaconda3/envs/pyscf/bin/python gen_data.py --basis ${basis_args} --dataset ${DATASET} --if_continue ${IF_CONTINUE} --if_eval 0 --name_mol_reverse 0 --md_number ${MD_NUMBER} --device cpu --mp_number ${MP_NUMBER} --mp_total ${MP_TOTAL} --grid_level 4 --gen_config ${GEN_CONFIG} 
+        ~/anaconda3/envs/pyscf/bin/python gen_data.py --basis ${basis_args} --dataset ${DATASET} --if_continue ${IF_CONTINUE} --if_eval 1 --name_mol_reverse 0 --md_number ${MD_NUMBER} --device cpu --mp_number ${MP_NUMBER} --mp_total ${MP_TOTAL} --grid_level 4 --gen_config ${GEN_CONFIG} 
     " >log/gen_data-${PID_THIS_RUN}-${MP_NUMBER}.log 2>log/gen_data-${PID_THIS_RUN}-${MP_NUMBER}.err &
     echo $! >>log/save_pid.txt
     echo "Started gen_data.py with MP_NUMBER=${MP_NUMBER}, PID=$!"

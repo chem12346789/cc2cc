@@ -43,7 +43,11 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     Post-DFT VV10 energy density uses the same `Grid` coordinates, ordering,
     and weights as the density comparisons. Weights are loaded from the cache
     and must match the rebuilt grid's shape.
-  - `grad_post_vv10` is analytical: B3LYP is reconverged from the cached density
+  - Evaluation (`--if_eval true`) skips gradient generation, checks, and gradient
+    addon updates, preserving any previously cached gradients.
+    Electronic density difference calculations and reporting are also skipped
+    during evaluation; energy comparisons remain enabled.
+    `grad_post_vv10` is analytical: B3LYP is reconverged from the cached density
     at tight tolerances, and PySCF's coupled-perturbed RKS/UKS solver supplies
     its orbital response. The VV10 and B3LYP atom-centered grid-motion terms
     are included. `grad_scf_vv10` uses PySCF's SCF-VV10 gradient.

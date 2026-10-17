@@ -22,13 +22,19 @@ class TestGenDataDensityComparison(unittest.TestCase):
         start = next(
             index
             for index, node in enumerate(comparison.body)
-            if isinstance(node, ast.Assign)
-            and isinstance(node.targets[0], ast.Name)
-            and node.targets[0].id == "drho"
+            if isinstance(node, ast.If)
+            and ast.unparse(node.test) == "not evaluate"
+            and any(
+                isinstance(child, ast.Assign)
+                and isinstance(child.targets[0], ast.Name)
+                and child.targets[0].id == "drho"
+                for child in node.body
+            )
         )
         block = ast.Module(body=comparison.body[start:], type_ignores=[])
         diff_rho = Mock(side_effect=[0.01, 0.02, 0.03])
         namespace = dict(
+            evaluate=False,
             dm_cc=sentinel.dm_cc,
             diff_rho=diff_rho,
             mol=sentinel.mol,
@@ -70,6 +76,19 @@ class TestGenDataDensityComparison(unittest.TestCase):
             "(SCF-VV10 vs CCSD, electrons): 3.0000000000e-02",
             output.getvalue(),
         )
+        namespace["evaluate"] = True
+        for name in ("drho", "drho_dft_cc", "drho_scf_vv10_cc"):
+            namespace.pop(name)
+        diff_rho.reset_mock()
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            exec(compile(block, str(source), "exec"), namespace)
+        diff_rho.assert_not_called()
+        self.assertNotIn("density", output.getvalue())
+        self.assertIn("Energy comparison: test", output.getvalue())
+        self.assertIn("SCF-VV10 minus post-DFT:", output.getvalue())
+        for name in ("drho", "drho_dft_cc", "drho_scf_vv10_cc"):
+            self.assertNotIn(name, namespace)
 
     def test_missing_cached_fields_skip_comparison(self):
         source = Path(__file__).resolve().parents[1] / "gen_data.py"
