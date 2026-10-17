@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=2400:00:00
-#SBATCH -a [0-54]%2
+#SBATCH -a [0-54]%3
 #SBATCH -J validate-diet100
 
 SCRIPT_DIR="scripts"
@@ -14,6 +14,9 @@ source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
 0) export load_model_args="--load atom-7297 --load_epoch 1115" ;;
+1) export load_model_args="--load atom-4114139 --load_epoch 1115" ;;
+2) export load_model_args="--load atom-4113237 --load_epoch 1115" ;;
+3) export load_model_args="--load atom-7297 --load_epoch 2395" ;;
 esac
 
 export if_continue_args=1
@@ -24,7 +27,7 @@ export DATASET="gmtkn-diet100-def2"
 export basis_args="def2-QZVP(D)"
 select_molecule_profile gmtkn55
 
-setup_gpu_test_job 16000 15000
+setup_gpu_test_job 16000 8000
 # Arguments: PySCF memory (MiB); minimum free GPU memory (MiB).
 echo "NUMBER_OF_THREADS=${NUMBER_OF_THREADS}"
 
