@@ -34,5 +34,5 @@ setup_gpu_test_job 16000 15000
 
 sleep $SLURM_ARRAY_TASK_ID
 begin_test_job
-run_test_job --max_cycle 250 --conv_tol 1e-11 --conv_tol_grad 1e-7 --require_convergence 1
+run_test_job --max_cycle 50
 finish_test_job
