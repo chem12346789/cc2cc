@@ -84,6 +84,9 @@ select_molecule_profile() {
     nciblind10)
         name_mol_input_list=("molecule_NCIBLIND10")
         ;;
+    force)
+        name_mol_input_list=("molecule_Force")
+        ;;
     tmc)
         name_mol_input_list=("TMB28_C1" "TMB28_T1")
         ;;
@@ -121,6 +124,7 @@ run_test_job() {
         --name_mol "${name_mol_input}" \
         --if_continue "${if_continue_args}" \
         --if_grad "${IF_GRAD}" \
+        --grid_response "${GRID_RESPONSE:-0}" \
         "$@"
 }
 

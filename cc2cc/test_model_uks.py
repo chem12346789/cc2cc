@@ -54,8 +54,8 @@ def test_model_uks(
 
     mdft.verbose = VERBOSE
     mdft.mol.verbose = VERBOSE
-    mdft.conv_tol = 1e-7
-    mdft.conv_tol_grad = 1e-3
+    mdft.conv_tol = args.conv_tol
+    mdft.conv_tol_grad = args.conv_tol_grad
 
     if args.max_cycle == -1:
         mdft.max_cycle = -1
@@ -74,6 +74,8 @@ def test_model_uks(
             mdft.max_cycle = args.max_cycle * 5
             mdft.kernel()
     if mdft.converged is False:
+        if args.require_convergence:
+            raise RuntimeError(f"UKS did not converge for {name}")
         print("Error: UKS not converged!!! Just use the unconvergence output.")
 
     dm1_scf = mdft.make_rdm1()
@@ -102,6 +104,7 @@ def test_model_uks(
 
     if args.if_grad and args.max_cycle != -1:
         g = mdft.Gradients()
+        g.grid_response = bool(args.grid_response)
         g.xc = "b3lyp"
         g.grids = mdft.grids
         if torch.cuda.is_available() and not args.if_grad:

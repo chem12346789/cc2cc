@@ -1,0 +1,6250 @@
+{
+    "molecule": [
+        "Force-ch4-0.99",
+        "Force-ch4-0.999",
+        "Force-ch4-1.000",
+        "Force-ch4-1.001",
+        "Force-ch4-1.01",
+        "Force-ch4-center",
+        "Force-ch4-a0-x-h0.004-minus",
+        "Force-ch4-a0-x-h0.004-plus",
+        "Force-ch4-a0-y-h0.004-minus",
+        "Force-ch4-a0-y-h0.004-plus",
+        "Force-ch4-a0-z-h0.004-minus",
+        "Force-ch4-a0-z-h0.004-plus",
+        "Force-ch4-a1-x-h0.004-minus",
+        "Force-ch4-a1-x-h0.004-plus",
+        "Force-ch4-a1-y-h0.004-minus",
+        "Force-ch4-a1-y-h0.004-plus",
+        "Force-ch4-a1-z-h0.004-minus",
+        "Force-ch4-a1-z-h0.004-plus",
+        "Force-ch4-a2-x-h0.004-minus",
+        "Force-ch4-a2-x-h0.004-plus",
+        "Force-ch4-a2-y-h0.004-minus",
+        "Force-ch4-a2-y-h0.004-plus",
+        "Force-ch4-a2-z-h0.004-minus",
+        "Force-ch4-a2-z-h0.004-plus",
+        "Force-ch4-a3-x-h0.004-minus",
+        "Force-ch4-a3-x-h0.004-plus",
+        "Force-ch4-a3-y-h0.004-minus",
+        "Force-ch4-a3-y-h0.004-plus",
+        "Force-ch4-a3-z-h0.004-minus",
+        "Force-ch4-a3-z-h0.004-plus",
+        "Force-ch4-a4-x-h0.004-minus",
+        "Force-ch4-a4-x-h0.004-plus",
+        "Force-ch4-a4-y-h0.004-minus",
+        "Force-ch4-a4-y-h0.004-plus",
+        "Force-ch4-a4-z-h0.004-minus",
+        "Force-ch4-a4-z-h0.004-plus",
+        "Force-ch4-a0-x-h0.002-minus",
+        "Force-ch4-a0-x-h0.002-plus",
+        "Force-ch4-a0-y-h0.002-minus",
+        "Force-ch4-a0-y-h0.002-plus",
+        "Force-ch4-a0-z-h0.002-minus",
+        "Force-ch4-a0-z-h0.002-plus",
+        "Force-ch4-a1-x-h0.002-minus",
+        "Force-ch4-a1-x-h0.002-plus",
+        "Force-ch4-a1-y-h0.002-minus",
+        "Force-ch4-a1-y-h0.002-plus",
+        "Force-ch4-a1-z-h0.002-minus",
+        "Force-ch4-a1-z-h0.002-plus",
+        "Force-ch4-a2-x-h0.002-minus",
+        "Force-ch4-a2-x-h0.002-plus",
+        "Force-ch4-a2-y-h0.002-minus",
+        "Force-ch4-a2-y-h0.002-plus",
+        "Force-ch4-a2-z-h0.002-minus",
+        "Force-ch4-a2-z-h0.002-plus",
+        "Force-ch4-a3-x-h0.002-minus",
+        "Force-ch4-a3-x-h0.002-plus",
+        "Force-ch4-a3-y-h0.002-minus",
+        "Force-ch4-a3-y-h0.002-plus",
+        "Force-ch4-a3-z-h0.002-minus",
+        "Force-ch4-a3-z-h0.002-plus",
+        "Force-ch4-a4-x-h0.002-minus",
+        "Force-ch4-a4-x-h0.002-plus",
+        "Force-ch4-a4-y-h0.002-minus",
+        "Force-ch4-a4-y-h0.002-plus",
+        "Force-ch4-a4-z-h0.002-minus",
+        "Force-ch4-a4-z-h0.002-plus",
+        "Force-ch4-a0-x-h0.001-minus",
+        "Force-ch4-a0-x-h0.001-plus",
+        "Force-ch4-a0-y-h0.001-minus",
+        "Force-ch4-a0-y-h0.001-plus",
+        "Force-ch4-a0-z-h0.001-minus",
+        "Force-ch4-a0-z-h0.001-plus",
+        "Force-ch4-a1-x-h0.001-minus",
+        "Force-ch4-a1-x-h0.001-plus",
+        "Force-ch4-a1-y-h0.001-minus",
+        "Force-ch4-a1-y-h0.001-plus",
+        "Force-ch4-a1-z-h0.001-minus",
+        "Force-ch4-a1-z-h0.001-plus",
+        "Force-ch4-a2-x-h0.001-minus",
+        "Force-ch4-a2-x-h0.001-plus",
+        "Force-ch4-a2-y-h0.001-minus",
+        "Force-ch4-a2-y-h0.001-plus",
+        "Force-ch4-a2-z-h0.001-minus",
+        "Force-ch4-a2-z-h0.001-plus",
+        "Force-ch4-a3-x-h0.001-minus",
+        "Force-ch4-a3-x-h0.001-plus",
+        "Force-ch4-a3-y-h0.001-minus",
+        "Force-ch4-a3-y-h0.001-plus",
+        "Force-ch4-a3-z-h0.001-minus",
+        "Force-ch4-a3-z-h0.001-plus",
+        "Force-ch4-a4-x-h0.001-minus",
+        "Force-ch4-a4-x-h0.001-plus",
+        "Force-ch4-a4-y-h0.001-minus",
+        "Force-ch4-a4-y-h0.001-plus",
+        "Force-ch4-a4-z-h0.001-minus",
+        "Force-ch4-a4-z-h0.001-plus",
+        "Force-h2o-center",
+        "Force-h2o-a0-x-h0.004-minus",
+        "Force-h2o-a0-x-h0.004-plus",
+        "Force-h2o-a0-y-h0.004-minus",
+        "Force-h2o-a0-y-h0.004-plus",
+        "Force-h2o-a0-z-h0.004-minus",
+        "Force-h2o-a0-z-h0.004-plus",
+        "Force-h2o-a1-x-h0.004-minus",
+        "Force-h2o-a1-x-h0.004-plus",
+        "Force-h2o-a1-y-h0.004-minus",
+        "Force-h2o-a1-y-h0.004-plus",
+        "Force-h2o-a1-z-h0.004-minus",
+        "Force-h2o-a1-z-h0.004-plus",
+        "Force-h2o-a2-x-h0.004-minus",
+        "Force-h2o-a2-x-h0.004-plus",
+        "Force-h2o-a2-y-h0.004-minus",
+        "Force-h2o-a2-y-h0.004-plus",
+        "Force-h2o-a2-z-h0.004-minus",
+        "Force-h2o-a2-z-h0.004-plus",
+        "Force-h2o-a0-x-h0.002-minus",
+        "Force-h2o-a0-x-h0.002-plus",
+        "Force-h2o-a0-y-h0.002-minus",
+        "Force-h2o-a0-y-h0.002-plus",
+        "Force-h2o-a0-z-h0.002-minus",
+        "Force-h2o-a0-z-h0.002-plus",
+        "Force-h2o-a1-x-h0.002-minus",
+        "Force-h2o-a1-x-h0.002-plus",
+        "Force-h2o-a1-y-h0.002-minus",
+        "Force-h2o-a1-y-h0.002-plus",
+        "Force-h2o-a1-z-h0.002-minus",
+        "Force-h2o-a1-z-h0.002-plus",
+        "Force-h2o-a2-x-h0.002-minus",
+        "Force-h2o-a2-x-h0.002-plus",
+        "Force-h2o-a2-y-h0.002-minus",
+        "Force-h2o-a2-y-h0.002-plus",
+        "Force-h2o-a2-z-h0.002-minus",
+        "Force-h2o-a2-z-h0.002-plus",
+        "Force-h2o-a0-x-h0.001-minus",
+        "Force-h2o-a0-x-h0.001-plus",
+        "Force-h2o-a0-y-h0.001-minus",
+        "Force-h2o-a0-y-h0.001-plus",
+        "Force-h2o-a0-z-h0.001-minus",
+        "Force-h2o-a0-z-h0.001-plus",
+        "Force-h2o-a1-x-h0.001-minus",
+        "Force-h2o-a1-x-h0.001-plus",
+        "Force-h2o-a1-y-h0.001-minus",
+        "Force-h2o-a1-y-h0.001-plus",
+        "Force-h2o-a1-z-h0.001-minus",
+        "Force-h2o-a1-z-h0.001-plus",
+        "Force-h2o-a2-x-h0.001-minus",
+        "Force-h2o-a2-x-h0.001-plus",
+        "Force-h2o-a2-y-h0.001-minus",
+        "Force-h2o-a2-y-h0.001-plus",
+        "Force-h2o-a2-z-h0.001-minus",
+        "Force-h2o-a2-z-h0.001-plus",
+        "Force-oh-center",
+        "Force-oh-a0-x-h0.004-minus",
+        "Force-oh-a0-x-h0.004-plus",
+        "Force-oh-a0-y-h0.004-minus",
+        "Force-oh-a0-y-h0.004-plus",
+        "Force-oh-a0-z-h0.004-minus",
+        "Force-oh-a0-z-h0.004-plus",
+        "Force-oh-a1-x-h0.004-minus",
+        "Force-oh-a1-x-h0.004-plus",
+        "Force-oh-a1-y-h0.004-minus",
+        "Force-oh-a1-y-h0.004-plus",
+        "Force-oh-a1-z-h0.004-minus",
+        "Force-oh-a1-z-h0.004-plus",
+        "Force-oh-a0-x-h0.002-minus",
+        "Force-oh-a0-x-h0.002-plus",
+        "Force-oh-a0-y-h0.002-minus",
+        "Force-oh-a0-y-h0.002-plus",
+        "Force-oh-a0-z-h0.002-minus",
+        "Force-oh-a0-z-h0.002-plus",
+        "Force-oh-a1-x-h0.002-minus",
+        "Force-oh-a1-x-h0.002-plus",
+        "Force-oh-a1-y-h0.002-minus",
+        "Force-oh-a1-y-h0.002-plus",
+        "Force-oh-a1-z-h0.002-minus",
+        "Force-oh-a1-z-h0.002-plus",
+        "Force-oh-a0-x-h0.001-minus",
+        "Force-oh-a0-x-h0.001-plus",
+        "Force-oh-a0-y-h0.001-minus",
+        "Force-oh-a0-y-h0.001-plus",
+        "Force-oh-a0-z-h0.001-minus",
+        "Force-oh-a0-z-h0.001-plus",
+        "Force-oh-a1-x-h0.001-minus",
+        "Force-oh-a1-x-h0.001-plus",
+        "Force-oh-a1-y-h0.001-minus",
+        "Force-oh-a1-y-h0.001-plus",
+        "Force-oh-a1-z-h0.001-minus",
+        "Force-oh-a1-z-h0.001-plus"
+    ],
+    "spin": {
+        "Force-ch4-0.99": 0,
+        "Force-ch4-0.999": 0,
+        "Force-ch4-1.000": 0,
+        "Force-ch4-1.001": 0,
+        "Force-ch4-1.01": 0,
+        "Force-ch4-center": 0,
+        "Force-ch4-a0-x-h0.004-minus": 0,
+        "Force-ch4-a0-x-h0.004-plus": 0,
+        "Force-ch4-a0-y-h0.004-minus": 0,
+        "Force-ch4-a0-y-h0.004-plus": 0,
+        "Force-ch4-a0-z-h0.004-minus": 0,
+        "Force-ch4-a0-z-h0.004-plus": 0,
+        "Force-ch4-a1-x-h0.004-minus": 0,
+        "Force-ch4-a1-x-h0.004-plus": 0,
+        "Force-ch4-a1-y-h0.004-minus": 0,
+        "Force-ch4-a1-y-h0.004-plus": 0,
+        "Force-ch4-a1-z-h0.004-minus": 0,
+        "Force-ch4-a1-z-h0.004-plus": 0,
+        "Force-ch4-a2-x-h0.004-minus": 0,
+        "Force-ch4-a2-x-h0.004-plus": 0,
+        "Force-ch4-a2-y-h0.004-minus": 0,
+        "Force-ch4-a2-y-h0.004-plus": 0,
+        "Force-ch4-a2-z-h0.004-minus": 0,
+        "Force-ch4-a2-z-h0.004-plus": 0,
+        "Force-ch4-a3-x-h0.004-minus": 0,
+        "Force-ch4-a3-x-h0.004-plus": 0,
+        "Force-ch4-a3-y-h0.004-minus": 0,
+        "Force-ch4-a3-y-h0.004-plus": 0,
+        "Force-ch4-a3-z-h0.004-minus": 0,
+        "Force-ch4-a3-z-h0.004-plus": 0,
+        "Force-ch4-a4-x-h0.004-minus": 0,
+        "Force-ch4-a4-x-h0.004-plus": 0,
+        "Force-ch4-a4-y-h0.004-minus": 0,
+        "Force-ch4-a4-y-h0.004-plus": 0,
+        "Force-ch4-a4-z-h0.004-minus": 0,
+        "Force-ch4-a4-z-h0.004-plus": 0,
+        "Force-ch4-a0-x-h0.002-minus": 0,
+        "Force-ch4-a0-x-h0.002-plus": 0,
+        "Force-ch4-a0-y-h0.002-minus": 0,
+        "Force-ch4-a0-y-h0.002-plus": 0,
+        "Force-ch4-a0-z-h0.002-minus": 0,
+        "Force-ch4-a0-z-h0.002-plus": 0,
+        "Force-ch4-a1-x-h0.002-minus": 0,
+        "Force-ch4-a1-x-h0.002-plus": 0,
+        "Force-ch4-a1-y-h0.002-minus": 0,
+        "Force-ch4-a1-y-h0.002-plus": 0,
+        "Force-ch4-a1-z-h0.002-minus": 0,
+        "Force-ch4-a1-z-h0.002-plus": 0,
+        "Force-ch4-a2-x-h0.002-minus": 0,
+        "Force-ch4-a2-x-h0.002-plus": 0,
+        "Force-ch4-a2-y-h0.002-minus": 0,
+        "Force-ch4-a2-y-h0.002-plus": 0,
+        "Force-ch4-a2-z-h0.002-minus": 0,
+        "Force-ch4-a2-z-h0.002-plus": 0,
+        "Force-ch4-a3-x-h0.002-minus": 0,
+        "Force-ch4-a3-x-h0.002-plus": 0,
+        "Force-ch4-a3-y-h0.002-minus": 0,
+        "Force-ch4-a3-y-h0.002-plus": 0,
+        "Force-ch4-a3-z-h0.002-minus": 0,
+        "Force-ch4-a3-z-h0.002-plus": 0,
+        "Force-ch4-a4-x-h0.002-minus": 0,
+        "Force-ch4-a4-x-h0.002-plus": 0,
+        "Force-ch4-a4-y-h0.002-minus": 0,
+        "Force-ch4-a4-y-h0.002-plus": 0,
+        "Force-ch4-a4-z-h0.002-minus": 0,
+        "Force-ch4-a4-z-h0.002-plus": 0,
+        "Force-ch4-a0-x-h0.001-minus": 0,
+        "Force-ch4-a0-x-h0.001-plus": 0,
+        "Force-ch4-a0-y-h0.001-minus": 0,
+        "Force-ch4-a0-y-h0.001-plus": 0,
+        "Force-ch4-a0-z-h0.001-minus": 0,
+        "Force-ch4-a0-z-h0.001-plus": 0,
+        "Force-ch4-a1-x-h0.001-minus": 0,
+        "Force-ch4-a1-x-h0.001-plus": 0,
+        "Force-ch4-a1-y-h0.001-minus": 0,
+        "Force-ch4-a1-y-h0.001-plus": 0,
+        "Force-ch4-a1-z-h0.001-minus": 0,
+        "Force-ch4-a1-z-h0.001-plus": 0,
+        "Force-ch4-a2-x-h0.001-minus": 0,
+        "Force-ch4-a2-x-h0.001-plus": 0,
+        "Force-ch4-a2-y-h0.001-minus": 0,
+        "Force-ch4-a2-y-h0.001-plus": 0,
+        "Force-ch4-a2-z-h0.001-minus": 0,
+        "Force-ch4-a2-z-h0.001-plus": 0,
+        "Force-ch4-a3-x-h0.001-minus": 0,
+        "Force-ch4-a3-x-h0.001-plus": 0,
+        "Force-ch4-a3-y-h0.001-minus": 0,
+        "Force-ch4-a3-y-h0.001-plus": 0,
+        "Force-ch4-a3-z-h0.001-minus": 0,
+        "Force-ch4-a3-z-h0.001-plus": 0,
+        "Force-ch4-a4-x-h0.001-minus": 0,
+        "Force-ch4-a4-x-h0.001-plus": 0,
+        "Force-ch4-a4-y-h0.001-minus": 0,
+        "Force-ch4-a4-y-h0.001-plus": 0,
+        "Force-ch4-a4-z-h0.001-minus": 0,
+        "Force-ch4-a4-z-h0.001-plus": 0,
+        "Force-h2o-center": 0,
+        "Force-h2o-a0-x-h0.004-minus": 0,
+        "Force-h2o-a0-x-h0.004-plus": 0,
+        "Force-h2o-a0-y-h0.004-minus": 0,
+        "Force-h2o-a0-y-h0.004-plus": 0,
+        "Force-h2o-a0-z-h0.004-minus": 0,
+        "Force-h2o-a0-z-h0.004-plus": 0,
+        "Force-h2o-a1-x-h0.004-minus": 0,
+        "Force-h2o-a1-x-h0.004-plus": 0,
+        "Force-h2o-a1-y-h0.004-minus": 0,
+        "Force-h2o-a1-y-h0.004-plus": 0,
+        "Force-h2o-a1-z-h0.004-minus": 0,
+        "Force-h2o-a1-z-h0.004-plus": 0,
+        "Force-h2o-a2-x-h0.004-minus": 0,
+        "Force-h2o-a2-x-h0.004-plus": 0,
+        "Force-h2o-a2-y-h0.004-minus": 0,
+        "Force-h2o-a2-y-h0.004-plus": 0,
+        "Force-h2o-a2-z-h0.004-minus": 0,
+        "Force-h2o-a2-z-h0.004-plus": 0,
+        "Force-h2o-a0-x-h0.002-minus": 0,
+        "Force-h2o-a0-x-h0.002-plus": 0,
+        "Force-h2o-a0-y-h0.002-minus": 0,
+        "Force-h2o-a0-y-h0.002-plus": 0,
+        "Force-h2o-a0-z-h0.002-minus": 0,
+        "Force-h2o-a0-z-h0.002-plus": 0,
+        "Force-h2o-a1-x-h0.002-minus": 0,
+        "Force-h2o-a1-x-h0.002-plus": 0,
+        "Force-h2o-a1-y-h0.002-minus": 0,
+        "Force-h2o-a1-y-h0.002-plus": 0,
+        "Force-h2o-a1-z-h0.002-minus": 0,
+        "Force-h2o-a1-z-h0.002-plus": 0,
+        "Force-h2o-a2-x-h0.002-minus": 0,
+        "Force-h2o-a2-x-h0.002-plus": 0,
+        "Force-h2o-a2-y-h0.002-minus": 0,
+        "Force-h2o-a2-y-h0.002-plus": 0,
+        "Force-h2o-a2-z-h0.002-minus": 0,
+        "Force-h2o-a2-z-h0.002-plus": 0,
+        "Force-h2o-a0-x-h0.001-minus": 0,
+        "Force-h2o-a0-x-h0.001-plus": 0,
+        "Force-h2o-a0-y-h0.001-minus": 0,
+        "Force-h2o-a0-y-h0.001-plus": 0,
+        "Force-h2o-a0-z-h0.001-minus": 0,
+        "Force-h2o-a0-z-h0.001-plus": 0,
+        "Force-h2o-a1-x-h0.001-minus": 0,
+        "Force-h2o-a1-x-h0.001-plus": 0,
+        "Force-h2o-a1-y-h0.001-minus": 0,
+        "Force-h2o-a1-y-h0.001-plus": 0,
+        "Force-h2o-a1-z-h0.001-minus": 0,
+        "Force-h2o-a1-z-h0.001-plus": 0,
+        "Force-h2o-a2-x-h0.001-minus": 0,
+        "Force-h2o-a2-x-h0.001-plus": 0,
+        "Force-h2o-a2-y-h0.001-minus": 0,
+        "Force-h2o-a2-y-h0.001-plus": 0,
+        "Force-h2o-a2-z-h0.001-minus": 0,
+        "Force-h2o-a2-z-h0.001-plus": 0,
+        "Force-oh-center": 1,
+        "Force-oh-a0-x-h0.004-minus": 1,
+        "Force-oh-a0-x-h0.004-plus": 1,
+        "Force-oh-a0-y-h0.004-minus": 1,
+        "Force-oh-a0-y-h0.004-plus": 1,
+        "Force-oh-a0-z-h0.004-minus": 1,
+        "Force-oh-a0-z-h0.004-plus": 1,
+        "Force-oh-a1-x-h0.004-minus": 1,
+        "Force-oh-a1-x-h0.004-plus": 1,
+        "Force-oh-a1-y-h0.004-minus": 1,
+        "Force-oh-a1-y-h0.004-plus": 1,
+        "Force-oh-a1-z-h0.004-minus": 1,
+        "Force-oh-a1-z-h0.004-plus": 1,
+        "Force-oh-a0-x-h0.002-minus": 1,
+        "Force-oh-a0-x-h0.002-plus": 1,
+        "Force-oh-a0-y-h0.002-minus": 1,
+        "Force-oh-a0-y-h0.002-plus": 1,
+        "Force-oh-a0-z-h0.002-minus": 1,
+        "Force-oh-a0-z-h0.002-plus": 1,
+        "Force-oh-a1-x-h0.002-minus": 1,
+        "Force-oh-a1-x-h0.002-plus": 1,
+        "Force-oh-a1-y-h0.002-minus": 1,
+        "Force-oh-a1-y-h0.002-plus": 1,
+        "Force-oh-a1-z-h0.002-minus": 1,
+        "Force-oh-a1-z-h0.002-plus": 1,
+        "Force-oh-a0-x-h0.001-minus": 1,
+        "Force-oh-a0-x-h0.001-plus": 1,
+        "Force-oh-a0-y-h0.001-minus": 1,
+        "Force-oh-a0-y-h0.001-plus": 1,
+        "Force-oh-a0-z-h0.001-minus": 1,
+        "Force-oh-a0-z-h0.001-plus": 1,
+        "Force-oh-a1-x-h0.001-minus": 1,
+        "Force-oh-a1-x-h0.001-plus": 1,
+        "Force-oh-a1-y-h0.001-minus": 1,
+        "Force-oh-a1-y-h0.001-plus": 1,
+        "Force-oh-a1-z-h0.001-minus": 1,
+        "Force-oh-a1-z-h0.001-plus": 1
+    },
+    "charge": {
+        "Force-ch4-0.99": 0,
+        "Force-ch4-0.999": 0,
+        "Force-ch4-1.000": 0,
+        "Force-ch4-1.001": 0,
+        "Force-ch4-1.01": 0,
+        "Force-ch4-center": 0,
+        "Force-ch4-a0-x-h0.004-minus": 0,
+        "Force-ch4-a0-x-h0.004-plus": 0,
+        "Force-ch4-a0-y-h0.004-minus": 0,
+        "Force-ch4-a0-y-h0.004-plus": 0,
+        "Force-ch4-a0-z-h0.004-minus": 0,
+        "Force-ch4-a0-z-h0.004-plus": 0,
+        "Force-ch4-a1-x-h0.004-minus": 0,
+        "Force-ch4-a1-x-h0.004-plus": 0,
+        "Force-ch4-a1-y-h0.004-minus": 0,
+        "Force-ch4-a1-y-h0.004-plus": 0,
+        "Force-ch4-a1-z-h0.004-minus": 0,
+        "Force-ch4-a1-z-h0.004-plus": 0,
+        "Force-ch4-a2-x-h0.004-minus": 0,
+        "Force-ch4-a2-x-h0.004-plus": 0,
+        "Force-ch4-a2-y-h0.004-minus": 0,
+        "Force-ch4-a2-y-h0.004-plus": 0,
+        "Force-ch4-a2-z-h0.004-minus": 0,
+        "Force-ch4-a2-z-h0.004-plus": 0,
+        "Force-ch4-a3-x-h0.004-minus": 0,
+        "Force-ch4-a3-x-h0.004-plus": 0,
+        "Force-ch4-a3-y-h0.004-minus": 0,
+        "Force-ch4-a3-y-h0.004-plus": 0,
+        "Force-ch4-a3-z-h0.004-minus": 0,
+        "Force-ch4-a3-z-h0.004-plus": 0,
+        "Force-ch4-a4-x-h0.004-minus": 0,
+        "Force-ch4-a4-x-h0.004-plus": 0,
+        "Force-ch4-a4-y-h0.004-minus": 0,
+        "Force-ch4-a4-y-h0.004-plus": 0,
+        "Force-ch4-a4-z-h0.004-minus": 0,
+        "Force-ch4-a4-z-h0.004-plus": 0,
+        "Force-ch4-a0-x-h0.002-minus": 0,
+        "Force-ch4-a0-x-h0.002-plus": 0,
+        "Force-ch4-a0-y-h0.002-minus": 0,
+        "Force-ch4-a0-y-h0.002-plus": 0,
+        "Force-ch4-a0-z-h0.002-minus": 0,
+        "Force-ch4-a0-z-h0.002-plus": 0,
+        "Force-ch4-a1-x-h0.002-minus": 0,
+        "Force-ch4-a1-x-h0.002-plus": 0,
+        "Force-ch4-a1-y-h0.002-minus": 0,
+        "Force-ch4-a1-y-h0.002-plus": 0,
+        "Force-ch4-a1-z-h0.002-minus": 0,
+        "Force-ch4-a1-z-h0.002-plus": 0,
+        "Force-ch4-a2-x-h0.002-minus": 0,
+        "Force-ch4-a2-x-h0.002-plus": 0,
+        "Force-ch4-a2-y-h0.002-minus": 0,
+        "Force-ch4-a2-y-h0.002-plus": 0,
+        "Force-ch4-a2-z-h0.002-minus": 0,
+        "Force-ch4-a2-z-h0.002-plus": 0,
+        "Force-ch4-a3-x-h0.002-minus": 0,
+        "Force-ch4-a3-x-h0.002-plus": 0,
+        "Force-ch4-a3-y-h0.002-minus": 0,
+        "Force-ch4-a3-y-h0.002-plus": 0,
+        "Force-ch4-a3-z-h0.002-minus": 0,
+        "Force-ch4-a3-z-h0.002-plus": 0,
+        "Force-ch4-a4-x-h0.002-minus": 0,
+        "Force-ch4-a4-x-h0.002-plus": 0,
+        "Force-ch4-a4-y-h0.002-minus": 0,
+        "Force-ch4-a4-y-h0.002-plus": 0,
+        "Force-ch4-a4-z-h0.002-minus": 0,
+        "Force-ch4-a4-z-h0.002-plus": 0,
+        "Force-ch4-a0-x-h0.001-minus": 0,
+        "Force-ch4-a0-x-h0.001-plus": 0,
+        "Force-ch4-a0-y-h0.001-minus": 0,
+        "Force-ch4-a0-y-h0.001-plus": 0,
+        "Force-ch4-a0-z-h0.001-minus": 0,
+        "Force-ch4-a0-z-h0.001-plus": 0,
+        "Force-ch4-a1-x-h0.001-minus": 0,
+        "Force-ch4-a1-x-h0.001-plus": 0,
+        "Force-ch4-a1-y-h0.001-minus": 0,
+        "Force-ch4-a1-y-h0.001-plus": 0,
+        "Force-ch4-a1-z-h0.001-minus": 0,
+        "Force-ch4-a1-z-h0.001-plus": 0,
+        "Force-ch4-a2-x-h0.001-minus": 0,
+        "Force-ch4-a2-x-h0.001-plus": 0,
+        "Force-ch4-a2-y-h0.001-minus": 0,
+        "Force-ch4-a2-y-h0.001-plus": 0,
+        "Force-ch4-a2-z-h0.001-minus": 0,
+        "Force-ch4-a2-z-h0.001-plus": 0,
+        "Force-ch4-a3-x-h0.001-minus": 0,
+        "Force-ch4-a3-x-h0.001-plus": 0,
+        "Force-ch4-a3-y-h0.001-minus": 0,
+        "Force-ch4-a3-y-h0.001-plus": 0,
+        "Force-ch4-a3-z-h0.001-minus": 0,
+        "Force-ch4-a3-z-h0.001-plus": 0,
+        "Force-ch4-a4-x-h0.001-minus": 0,
+        "Force-ch4-a4-x-h0.001-plus": 0,
+        "Force-ch4-a4-y-h0.001-minus": 0,
+        "Force-ch4-a4-y-h0.001-plus": 0,
+        "Force-ch4-a4-z-h0.001-minus": 0,
+        "Force-ch4-a4-z-h0.001-plus": 0,
+        "Force-h2o-center": 0,
+        "Force-h2o-a0-x-h0.004-minus": 0,
+        "Force-h2o-a0-x-h0.004-plus": 0,
+        "Force-h2o-a0-y-h0.004-minus": 0,
+        "Force-h2o-a0-y-h0.004-plus": 0,
+        "Force-h2o-a0-z-h0.004-minus": 0,
+        "Force-h2o-a0-z-h0.004-plus": 0,
+        "Force-h2o-a1-x-h0.004-minus": 0,
+        "Force-h2o-a1-x-h0.004-plus": 0,
+        "Force-h2o-a1-y-h0.004-minus": 0,
+        "Force-h2o-a1-y-h0.004-plus": 0,
+        "Force-h2o-a1-z-h0.004-minus": 0,
+        "Force-h2o-a1-z-h0.004-plus": 0,
+        "Force-h2o-a2-x-h0.004-minus": 0,
+        "Force-h2o-a2-x-h0.004-plus": 0,
+        "Force-h2o-a2-y-h0.004-minus": 0,
+        "Force-h2o-a2-y-h0.004-plus": 0,
+        "Force-h2o-a2-z-h0.004-minus": 0,
+        "Force-h2o-a2-z-h0.004-plus": 0,
+        "Force-h2o-a0-x-h0.002-minus": 0,
+        "Force-h2o-a0-x-h0.002-plus": 0,
+        "Force-h2o-a0-y-h0.002-minus": 0,
+        "Force-h2o-a0-y-h0.002-plus": 0,
+        "Force-h2o-a0-z-h0.002-minus": 0,
+        "Force-h2o-a0-z-h0.002-plus": 0,
+        "Force-h2o-a1-x-h0.002-minus": 0,
+        "Force-h2o-a1-x-h0.002-plus": 0,
+        "Force-h2o-a1-y-h0.002-minus": 0,
+        "Force-h2o-a1-y-h0.002-plus": 0,
+        "Force-h2o-a1-z-h0.002-minus": 0,
+        "Force-h2o-a1-z-h0.002-plus": 0,
+        "Force-h2o-a2-x-h0.002-minus": 0,
+        "Force-h2o-a2-x-h0.002-plus": 0,
+        "Force-h2o-a2-y-h0.002-minus": 0,
+        "Force-h2o-a2-y-h0.002-plus": 0,
+        "Force-h2o-a2-z-h0.002-minus": 0,
+        "Force-h2o-a2-z-h0.002-plus": 0,
+        "Force-h2o-a0-x-h0.001-minus": 0,
+        "Force-h2o-a0-x-h0.001-plus": 0,
+        "Force-h2o-a0-y-h0.001-minus": 0,
+        "Force-h2o-a0-y-h0.001-plus": 0,
+        "Force-h2o-a0-z-h0.001-minus": 0,
+        "Force-h2o-a0-z-h0.001-plus": 0,
+        "Force-h2o-a1-x-h0.001-minus": 0,
+        "Force-h2o-a1-x-h0.001-plus": 0,
+        "Force-h2o-a1-y-h0.001-minus": 0,
+        "Force-h2o-a1-y-h0.001-plus": 0,
+        "Force-h2o-a1-z-h0.001-minus": 0,
+        "Force-h2o-a1-z-h0.001-plus": 0,
+        "Force-h2o-a2-x-h0.001-minus": 0,
+        "Force-h2o-a2-x-h0.001-plus": 0,
+        "Force-h2o-a2-y-h0.001-minus": 0,
+        "Force-h2o-a2-y-h0.001-plus": 0,
+        "Force-h2o-a2-z-h0.001-minus": 0,
+        "Force-h2o-a2-z-h0.001-plus": 0,
+        "Force-oh-center": 0,
+        "Force-oh-a0-x-h0.004-minus": 0,
+        "Force-oh-a0-x-h0.004-plus": 0,
+        "Force-oh-a0-y-h0.004-minus": 0,
+        "Force-oh-a0-y-h0.004-plus": 0,
+        "Force-oh-a0-z-h0.004-minus": 0,
+        "Force-oh-a0-z-h0.004-plus": 0,
+        "Force-oh-a1-x-h0.004-minus": 0,
+        "Force-oh-a1-x-h0.004-plus": 0,
+        "Force-oh-a1-y-h0.004-minus": 0,
+        "Force-oh-a1-y-h0.004-plus": 0,
+        "Force-oh-a1-z-h0.004-minus": 0,
+        "Force-oh-a1-z-h0.004-plus": 0,
+        "Force-oh-a0-x-h0.002-minus": 0,
+        "Force-oh-a0-x-h0.002-plus": 0,
+        "Force-oh-a0-y-h0.002-minus": 0,
+        "Force-oh-a0-y-h0.002-plus": 0,
+        "Force-oh-a0-z-h0.002-minus": 0,
+        "Force-oh-a0-z-h0.002-plus": 0,
+        "Force-oh-a1-x-h0.002-minus": 0,
+        "Force-oh-a1-x-h0.002-plus": 0,
+        "Force-oh-a1-y-h0.002-minus": 0,
+        "Force-oh-a1-y-h0.002-plus": 0,
+        "Force-oh-a1-z-h0.002-minus": 0,
+        "Force-oh-a1-z-h0.002-plus": 0,
+        "Force-oh-a0-x-h0.001-minus": 0,
+        "Force-oh-a0-x-h0.001-plus": 0,
+        "Force-oh-a0-y-h0.001-minus": 0,
+        "Force-oh-a0-y-h0.001-plus": 0,
+        "Force-oh-a0-z-h0.001-minus": 0,
+        "Force-oh-a0-z-h0.001-plus": 0,
+        "Force-oh-a1-x-h0.001-minus": 0,
+        "Force-oh-a1-x-h0.001-plus": 0,
+        "Force-oh-a1-y-h0.001-minus": 0,
+        "Force-oh-a1-y-h0.001-plus": 0,
+        "Force-oh-a1-z-h0.001-minus": 0,
+        "Force-oh-a1-z-h0.001-plus": 0
+    },
+    "molecule_Force_legacy": [
+        "Force-ch4-0.99",
+        "Force-ch4-0.999",
+        "Force-ch4-1.000",
+        "Force-ch4-1.001",
+        "Force-ch4-1.01"
+    ],
+    "Force-ch4-0.99": [
+        [
+            "H",
+            0.0,
+            -1.074869,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-0.999": [
+        [
+            "H",
+            0.0,
+            -1.084639,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-1.000": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-1.001": [
+        [
+            "H",
+            0.0,
+            -1.086811,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-1.01": [
+        [
+            "H",
+            0.0,
+            -1.096582,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-center": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-x-h0.004-minus": [
+        [
+            "H",
+            -0.00211670884368,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-x-h0.004-plus": [
+        [
+            "H",
+            0.00211670884368,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-y-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.08784170884368,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-y-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.08360829115632,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-z-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            -0.00211670884368
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-z-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.00211670884368
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-x-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            -0.00211670884368,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-x-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.00211670884368,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-y-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            -0.00211670884368,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-y-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.00211670884368,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-z-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.00211670884368
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-z-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.00211670884368
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-x-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.6809977088436799,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-x-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.67676429115632,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-y-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.36051629115632,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-y-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.36474970884367997,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-z-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.7667412911563201
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-z-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.77097470884368
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-x-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32852670884367996,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-x-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32429329115632,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-y-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.36051629115632,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-y-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.36474970884367997,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-z-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.97447370884368
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-z-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.97024029115632
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-x-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.00317429115632,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-x-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.00740770884368,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-y-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.36051629115632,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-y-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.36474970884367997,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-z-h0.004-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.20138229115632
+        ]
+    ],
+    "Force-ch4-a4-z-h0.004-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.20561570884368002
+        ]
+    ],
+    "Force-ch4-a0-x-h0.002-minus": [
+        [
+            "H",
+            -0.00105835442184,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-x-h0.002-plus": [
+        [
+            "H",
+            0.00105835442184,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-y-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.0867833544218402,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-y-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.08466664557816,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-z-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            -0.00105835442184
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-z-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.00105835442184
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-x-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            -0.00105835442184,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-x-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.00105835442184,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-y-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            -0.00105835442184,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-y-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.00105835442184,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-z-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.00105835442184
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-z-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.00105835442184
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-x-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.67993935442184,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-x-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.67782264557816,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-y-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.36157464557816,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-y-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.36369135442184,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-z-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.76779964557816
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-z-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.76991635442184
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-x-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32746835442183997,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-x-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32535164557816,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-y-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.36157464557816,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-y-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.36369135442184,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-z-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.97341535442184
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-z-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.97129864557816
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-x-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.0042326455781598,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-x-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.00634935442184,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-y-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.36157464557816,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-y-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.36369135442184,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-z-h0.002-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.20244064557816002
+        ]
+    ],
+    "Force-ch4-a4-z-h0.002-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.20455735442184
+        ]
+    ],
+    "Force-ch4-a0-x-h0.001-minus": [
+        [
+            "H",
+            -0.00052917721092,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-x-h0.001-plus": [
+        [
+            "H",
+            0.00052917721092,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-y-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.08625417721092,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-y-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.0851958227890801,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-z-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            -0.00052917721092
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a0-z-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.00052917721092
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-x-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            -0.00052917721092,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-x-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.00052917721092,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-y-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            -0.00052917721092,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-y-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.00052917721092,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-z-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            -0.00052917721092
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a1-z-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.00052917721092
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-x-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.67941017721092,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-x-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.6783518227890799,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-y-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.36210382278908,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-y-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.36316217721092,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-z-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.76832882278908
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a2-z-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.7693871772109201
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-x-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32693917721092,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-x-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32588082278908,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-y-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.36210382278908,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-y-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.36316217721092,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-z-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.9728861772109201
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a3-z-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.97182782278908
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-x-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.00476182278908,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-x-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.0058201772109199,
+            0.362633,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-y-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.36210382278908,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-y-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.36316217721092,
+            0.203499
+        ]
+    ],
+    "Force-ch4-a4-z-h0.001-minus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.20296982278908002
+        ]
+    ],
+    "Force-ch4-a4-z-h0.001-plus": [
+        [
+            "H",
+            0.0,
+            -1.085725,
+            0.0
+        ],
+        [
+            "C",
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            "H",
+            -0.678881,
+            0.362633,
+            0.768858
+        ],
+        [
+            "H",
+            -0.32641,
+            0.362633,
+            -0.972357
+        ],
+        [
+            "H",
+            1.005291,
+            0.362633,
+            0.20402817721092
+        ]
+    ],
+    "Force-h2o-center": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-x-h0.004-minus": [
+        [
+            "O",
+            -0.00211670884368,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-x-h0.004-plus": [
+        [
+            "O",
+            0.00211670884368,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-y-h0.004-minus": [
+        [
+            "O",
+            0.0,
+            -0.00211670884368,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-y-h0.004-plus": [
+        [
+            "O",
+            0.0,
+            0.00211670884368,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-z-h0.004-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11567329115632001
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-z-h0.004-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11990670884368
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-x-h0.004-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.12788329115632,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-x-h0.004-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13211670884368001,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-y-h0.004-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.83333629115632,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-y-h0.004-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.83756970884368,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-z-h0.004-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.43327770884368
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-z-h0.004-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.42904429115632003
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-x-h0.004-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            -0.00211670884368,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-x-h0.004-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.00211670884368,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-y-h0.004-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.75756970884368,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-y-h0.004-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.7533362911563201,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-z-h0.004-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.47327770884368
+        ]
+    ],
+    "Force-h2o-a2-z-h0.004-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.46904429115632
+        ]
+    ],
+    "Force-h2o-a0-x-h0.002-minus": [
+        [
+            "O",
+            -0.00105835442184,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-x-h0.002-plus": [
+        [
+            "O",
+            0.00105835442184,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-y-h0.002-minus": [
+        [
+            "O",
+            0.0,
+            -0.00105835442184,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-y-h0.002-plus": [
+        [
+            "O",
+            0.0,
+            0.00105835442184,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-z-h0.002-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11673164557816
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-z-h0.002-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11884835442184001
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-x-h0.002-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.12894164557816,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-x-h0.002-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13105835442184,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-y-h0.002-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.83439464557816,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-y-h0.002-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.83651135442184,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-z-h0.002-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.43221935442184
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-z-h0.002-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.43010264557816
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-x-h0.002-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            -0.00105835442184,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-x-h0.002-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.00105835442184,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-y-h0.002-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.75651135442184,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-y-h0.002-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.75439464557816,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-z-h0.002-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.47221935442184
+        ]
+    ],
+    "Force-h2o-a2-z-h0.002-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.47010264557816
+        ]
+    ],
+    "Force-h2o-a0-x-h0.001-minus": [
+        [
+            "O",
+            -0.00052917721092,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-x-h0.001-plus": [
+        [
+            "O",
+            0.00052917721092,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-y-h0.001-minus": [
+        [
+            "O",
+            0.0,
+            -0.00052917721092,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-y-h0.001-plus": [
+        [
+            "O",
+            0.0,
+            0.00052917721092,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-z-h0.001-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11726082278908001
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a0-z-h0.001-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11831917721092
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-x-h0.001-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.12947082278908,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-x-h0.001-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13052917721092,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-y-h0.001-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.83492382278908,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-y-h0.001-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.83598217721092,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-z-h0.001-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.43169017721092
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a1-z-h0.001-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.43063182278908
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-x-h0.001-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            -0.00052917721092,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-x-h0.001-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.00052917721092,
+            -0.755453,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-y-h0.001-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.7559821772109201,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-y-h0.001-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.75492382278908,
+            -0.471161
+        ]
+    ],
+    "Force-h2o-a2-z-h0.001-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.47169017721092
+        ]
+    ],
+    "Force-h2o-a2-z-h0.001-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.11779
+        ],
+        [
+            "H",
+            0.13,
+            0.835453,
+            -0.431161
+        ],
+        [
+            "H",
+            0.0,
+            -0.755453,
+            -0.47063182278908
+        ]
+    ],
+    "Force-oh-center": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-x-h0.004-minus": [
+        [
+            "O",
+            -0.00211670884368,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-x-h0.004-plus": [
+        [
+            "O",
+            0.00211670884368,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-y-h0.004-minus": [
+        [
+            "O",
+            0.0,
+            -0.00211670884368,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-y-h0.004-plus": [
+        [
+            "O",
+            0.0,
+            0.00211670884368,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-z-h0.004-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.10573429115632
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-z-h0.004-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.10996770884368
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-x-h0.004-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            -0.00211670884368,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-x-h0.004-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.00211670884368,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-y-h0.004-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            -0.00211670884368,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-y-h0.004-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.00211670884368,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-z-h0.004-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.86492570884368
+        ]
+    ],
+    "Force-oh-a1-z-h0.004-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.8606922911563201
+        ]
+    ],
+    "Force-oh-a0-x-h0.002-minus": [
+        [
+            "O",
+            -0.00105835442184,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-x-h0.002-plus": [
+        [
+            "O",
+            0.00105835442184,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-y-h0.002-minus": [
+        [
+            "O",
+            0.0,
+            -0.00105835442184,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-y-h0.002-plus": [
+        [
+            "O",
+            0.0,
+            0.00105835442184,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-z-h0.002-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.10679264557816
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-z-h0.002-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.10890935442184001
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-x-h0.002-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            -0.00105835442184,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-x-h0.002-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.00105835442184,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-y-h0.002-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            -0.00105835442184,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-y-h0.002-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.00105835442184,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-z-h0.002-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.86386735442184
+        ]
+    ],
+    "Force-oh-a1-z-h0.002-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.8617506455781601
+        ]
+    ],
+    "Force-oh-a0-x-h0.001-minus": [
+        [
+            "O",
+            -0.00052917721092,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-x-h0.001-plus": [
+        [
+            "O",
+            0.00052917721092,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-y-h0.001-minus": [
+        [
+            "O",
+            0.0,
+            -0.00052917721092,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-y-h0.001-plus": [
+        [
+            "O",
+            0.0,
+            0.00052917721092,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-z-h0.001-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.10732182278908001
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a0-z-h0.001-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.10838017721092
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-x-h0.001-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            -0.00052917721092,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-x-h0.001-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.00052917721092,
+            0.0,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-y-h0.001-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            -0.00052917721092,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-y-h0.001-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.00052917721092,
+            -0.862809
+        ]
+    ],
+    "Force-oh-a1-z-h0.001-minus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.8633381772109201
+        ]
+    ],
+    "Force-oh-a1-z-h0.001-plus": [
+        [
+            "O",
+            0.0,
+            0.0,
+            0.107851
+        ],
+        [
+            "H",
+            0.0,
+            0.0,
+            -0.86227982278908
+        ]
+    ],
+    "molecule_Force": [
+        "Force-ch4-0.99",
+        "Force-ch4-0.999",
+        "Force-ch4-1.000",
+        "Force-ch4-1.001",
+        "Force-ch4-1.01",
+        "Force-ch4-center",
+        "Force-ch4-a0-x-h0.004-minus",
+        "Force-ch4-a0-x-h0.004-plus",
+        "Force-ch4-a0-y-h0.004-minus",
+        "Force-ch4-a0-y-h0.004-plus",
+        "Force-ch4-a0-z-h0.004-minus",
+        "Force-ch4-a0-z-h0.004-plus",
+        "Force-ch4-a1-x-h0.004-minus",
+        "Force-ch4-a1-x-h0.004-plus",
+        "Force-ch4-a1-y-h0.004-minus",
+        "Force-ch4-a1-y-h0.004-plus",
+        "Force-ch4-a1-z-h0.004-minus",
+        "Force-ch4-a1-z-h0.004-plus",
+        "Force-ch4-a2-x-h0.004-minus",
+        "Force-ch4-a2-x-h0.004-plus",
+        "Force-ch4-a2-y-h0.004-minus",
+        "Force-ch4-a2-y-h0.004-plus",
+        "Force-ch4-a2-z-h0.004-minus",
+        "Force-ch4-a2-z-h0.004-plus",
+        "Force-ch4-a3-x-h0.004-minus",
+        "Force-ch4-a3-x-h0.004-plus",
+        "Force-ch4-a3-y-h0.004-minus",
+        "Force-ch4-a3-y-h0.004-plus",
+        "Force-ch4-a3-z-h0.004-minus",
+        "Force-ch4-a3-z-h0.004-plus",
+        "Force-ch4-a4-x-h0.004-minus",
+        "Force-ch4-a4-x-h0.004-plus",
+        "Force-ch4-a4-y-h0.004-minus",
+        "Force-ch4-a4-y-h0.004-plus",
+        "Force-ch4-a4-z-h0.004-minus",
+        "Force-ch4-a4-z-h0.004-plus",
+        "Force-ch4-a0-x-h0.002-minus",
+        "Force-ch4-a0-x-h0.002-plus",
+        "Force-ch4-a0-y-h0.002-minus",
+        "Force-ch4-a0-y-h0.002-plus",
+        "Force-ch4-a0-z-h0.002-minus",
+        "Force-ch4-a0-z-h0.002-plus",
+        "Force-ch4-a1-x-h0.002-minus",
+        "Force-ch4-a1-x-h0.002-plus",
+        "Force-ch4-a1-y-h0.002-minus",
+        "Force-ch4-a1-y-h0.002-plus",
+        "Force-ch4-a1-z-h0.002-minus",
+        "Force-ch4-a1-z-h0.002-plus",
+        "Force-ch4-a2-x-h0.002-minus",
+        "Force-ch4-a2-x-h0.002-plus",
+        "Force-ch4-a2-y-h0.002-minus",
+        "Force-ch4-a2-y-h0.002-plus",
+        "Force-ch4-a2-z-h0.002-minus",
+        "Force-ch4-a2-z-h0.002-plus",
+        "Force-ch4-a3-x-h0.002-minus",
+        "Force-ch4-a3-x-h0.002-plus",
+        "Force-ch4-a3-y-h0.002-minus",
+        "Force-ch4-a3-y-h0.002-plus",
+        "Force-ch4-a3-z-h0.002-minus",
+        "Force-ch4-a3-z-h0.002-plus",
+        "Force-ch4-a4-x-h0.002-minus",
+        "Force-ch4-a4-x-h0.002-plus",
+        "Force-ch4-a4-y-h0.002-minus",
+        "Force-ch4-a4-y-h0.002-plus",
+        "Force-ch4-a4-z-h0.002-minus",
+        "Force-ch4-a4-z-h0.002-plus",
+        "Force-ch4-a0-x-h0.001-minus",
+        "Force-ch4-a0-x-h0.001-plus",
+        "Force-ch4-a0-y-h0.001-minus",
+        "Force-ch4-a0-y-h0.001-plus",
+        "Force-ch4-a0-z-h0.001-minus",
+        "Force-ch4-a0-z-h0.001-plus",
+        "Force-ch4-a1-x-h0.001-minus",
+        "Force-ch4-a1-x-h0.001-plus",
+        "Force-ch4-a1-y-h0.001-minus",
+        "Force-ch4-a1-y-h0.001-plus",
+        "Force-ch4-a1-z-h0.001-minus",
+        "Force-ch4-a1-z-h0.001-plus",
+        "Force-ch4-a2-x-h0.001-minus",
+        "Force-ch4-a2-x-h0.001-plus",
+        "Force-ch4-a2-y-h0.001-minus",
+        "Force-ch4-a2-y-h0.001-plus",
+        "Force-ch4-a2-z-h0.001-minus",
+        "Force-ch4-a2-z-h0.001-plus",
+        "Force-ch4-a3-x-h0.001-minus",
+        "Force-ch4-a3-x-h0.001-plus",
+        "Force-ch4-a3-y-h0.001-minus",
+        "Force-ch4-a3-y-h0.001-plus",
+        "Force-ch4-a3-z-h0.001-minus",
+        "Force-ch4-a3-z-h0.001-plus",
+        "Force-ch4-a4-x-h0.001-minus",
+        "Force-ch4-a4-x-h0.001-plus",
+        "Force-ch4-a4-y-h0.001-minus",
+        "Force-ch4-a4-y-h0.001-plus",
+        "Force-ch4-a4-z-h0.001-minus",
+        "Force-ch4-a4-z-h0.001-plus",
+        "Force-h2o-center",
+        "Force-h2o-a0-x-h0.004-minus",
+        "Force-h2o-a0-x-h0.004-plus",
+        "Force-h2o-a0-y-h0.004-minus",
+        "Force-h2o-a0-y-h0.004-plus",
+        "Force-h2o-a0-z-h0.004-minus",
+        "Force-h2o-a0-z-h0.004-plus",
+        "Force-h2o-a1-x-h0.004-minus",
+        "Force-h2o-a1-x-h0.004-plus",
+        "Force-h2o-a1-y-h0.004-minus",
+        "Force-h2o-a1-y-h0.004-plus",
+        "Force-h2o-a1-z-h0.004-minus",
+        "Force-h2o-a1-z-h0.004-plus",
+        "Force-h2o-a2-x-h0.004-minus",
+        "Force-h2o-a2-x-h0.004-plus",
+        "Force-h2o-a2-y-h0.004-minus",
+        "Force-h2o-a2-y-h0.004-plus",
+        "Force-h2o-a2-z-h0.004-minus",
+        "Force-h2o-a2-z-h0.004-plus",
+        "Force-h2o-a0-x-h0.002-minus",
+        "Force-h2o-a0-x-h0.002-plus",
+        "Force-h2o-a0-y-h0.002-minus",
+        "Force-h2o-a0-y-h0.002-plus",
+        "Force-h2o-a0-z-h0.002-minus",
+        "Force-h2o-a0-z-h0.002-plus",
+        "Force-h2o-a1-x-h0.002-minus",
+        "Force-h2o-a1-x-h0.002-plus",
+        "Force-h2o-a1-y-h0.002-minus",
+        "Force-h2o-a1-y-h0.002-plus",
+        "Force-h2o-a1-z-h0.002-minus",
+        "Force-h2o-a1-z-h0.002-plus",
+        "Force-h2o-a2-x-h0.002-minus",
+        "Force-h2o-a2-x-h0.002-plus",
+        "Force-h2o-a2-y-h0.002-minus",
+        "Force-h2o-a2-y-h0.002-plus",
+        "Force-h2o-a2-z-h0.002-minus",
+        "Force-h2o-a2-z-h0.002-plus",
+        "Force-h2o-a0-x-h0.001-minus",
+        "Force-h2o-a0-x-h0.001-plus",
+        "Force-h2o-a0-y-h0.001-minus",
+        "Force-h2o-a0-y-h0.001-plus",
+        "Force-h2o-a0-z-h0.001-minus",
+        "Force-h2o-a0-z-h0.001-plus",
+        "Force-h2o-a1-x-h0.001-minus",
+        "Force-h2o-a1-x-h0.001-plus",
+        "Force-h2o-a1-y-h0.001-minus",
+        "Force-h2o-a1-y-h0.001-plus",
+        "Force-h2o-a1-z-h0.001-minus",
+        "Force-h2o-a1-z-h0.001-plus",
+        "Force-h2o-a2-x-h0.001-minus",
+        "Force-h2o-a2-x-h0.001-plus",
+        "Force-h2o-a2-y-h0.001-minus",
+        "Force-h2o-a2-y-h0.001-plus",
+        "Force-h2o-a2-z-h0.001-minus",
+        "Force-h2o-a2-z-h0.001-plus",
+        "Force-oh-center",
+        "Force-oh-a0-x-h0.004-minus",
+        "Force-oh-a0-x-h0.004-plus",
+        "Force-oh-a0-y-h0.004-minus",
+        "Force-oh-a0-y-h0.004-plus",
+        "Force-oh-a0-z-h0.004-minus",
+        "Force-oh-a0-z-h0.004-plus",
+        "Force-oh-a1-x-h0.004-minus",
+        "Force-oh-a1-x-h0.004-plus",
+        "Force-oh-a1-y-h0.004-minus",
+        "Force-oh-a1-y-h0.004-plus",
+        "Force-oh-a1-z-h0.004-minus",
+        "Force-oh-a1-z-h0.004-plus",
+        "Force-oh-a0-x-h0.002-minus",
+        "Force-oh-a0-x-h0.002-plus",
+        "Force-oh-a0-y-h0.002-minus",
+        "Force-oh-a0-y-h0.002-plus",
+        "Force-oh-a0-z-h0.002-minus",
+        "Force-oh-a0-z-h0.002-plus",
+        "Force-oh-a1-x-h0.002-minus",
+        "Force-oh-a1-x-h0.002-plus",
+        "Force-oh-a1-y-h0.002-minus",
+        "Force-oh-a1-y-h0.002-plus",
+        "Force-oh-a1-z-h0.002-minus",
+        "Force-oh-a1-z-h0.002-plus",
+        "Force-oh-a0-x-h0.001-minus",
+        "Force-oh-a0-x-h0.001-plus",
+        "Force-oh-a0-y-h0.001-minus",
+        "Force-oh-a0-y-h0.001-plus",
+        "Force-oh-a0-z-h0.001-minus",
+        "Force-oh-a0-z-h0.001-plus",
+        "Force-oh-a1-x-h0.001-minus",
+        "Force-oh-a1-x-h0.001-plus",
+        "Force-oh-a1-y-h0.001-minus",
+        "Force-oh-a1-y-h0.001-plus",
+        "Force-oh-a1-z-h0.001-minus",
+        "Force-oh-a1-z-h0.001-plus"
+    ],
+    "molecule_Force_centers": [
+        "Force-ch4-center",
+        "Force-h2o-center",
+        "Force-oh-center"
+    ],
+    "reaction-Force": {},
+    "molecule1-Force": [
+        "Force-ch4-0.99",
+        "Force-ch4-0.999",
+        "Force-ch4-1.000",
+        "Force-ch4-1.001",
+        "Force-ch4-1.01",
+        "Force-ch4-center",
+        "Force-ch4-a0-x-h0.004-minus",
+        "Force-ch4-a0-x-h0.004-plus",
+        "Force-ch4-a0-y-h0.004-minus",
+        "Force-ch4-a0-y-h0.004-plus",
+        "Force-ch4-a0-z-h0.004-minus",
+        "Force-ch4-a0-z-h0.004-plus",
+        "Force-ch4-a1-x-h0.004-minus",
+        "Force-ch4-a1-x-h0.004-plus",
+        "Force-ch4-a1-y-h0.004-minus",
+        "Force-ch4-a1-y-h0.004-plus",
+        "Force-ch4-a1-z-h0.004-minus",
+        "Force-ch4-a1-z-h0.004-plus",
+        "Force-ch4-a2-x-h0.004-minus",
+        "Force-ch4-a2-x-h0.004-plus",
+        "Force-ch4-a2-y-h0.004-minus",
+        "Force-ch4-a2-y-h0.004-plus",
+        "Force-ch4-a2-z-h0.004-minus",
+        "Force-ch4-a2-z-h0.004-plus",
+        "Force-ch4-a3-x-h0.004-minus",
+        "Force-ch4-a3-x-h0.004-plus",
+        "Force-ch4-a3-y-h0.004-minus",
+        "Force-ch4-a3-y-h0.004-plus",
+        "Force-ch4-a3-z-h0.004-minus",
+        "Force-ch4-a3-z-h0.004-plus",
+        "Force-ch4-a4-x-h0.004-minus",
+        "Force-ch4-a4-x-h0.004-plus",
+        "Force-ch4-a4-y-h0.004-minus",
+        "Force-ch4-a4-y-h0.004-plus",
+        "Force-ch4-a4-z-h0.004-minus",
+        "Force-ch4-a4-z-h0.004-plus",
+        "Force-ch4-a0-x-h0.002-minus",
+        "Force-ch4-a0-x-h0.002-plus",
+        "Force-ch4-a0-y-h0.002-minus",
+        "Force-ch4-a0-y-h0.002-plus",
+        "Force-ch4-a0-z-h0.002-minus",
+        "Force-ch4-a0-z-h0.002-plus",
+        "Force-ch4-a1-x-h0.002-minus",
+        "Force-ch4-a1-x-h0.002-plus",
+        "Force-ch4-a1-y-h0.002-minus",
+        "Force-ch4-a1-y-h0.002-plus",
+        "Force-ch4-a1-z-h0.002-minus",
+        "Force-ch4-a1-z-h0.002-plus",
+        "Force-ch4-a2-x-h0.002-minus",
+        "Force-ch4-a2-x-h0.002-plus",
+        "Force-ch4-a2-y-h0.002-minus",
+        "Force-ch4-a2-y-h0.002-plus",
+        "Force-ch4-a2-z-h0.002-minus",
+        "Force-ch4-a2-z-h0.002-plus",
+        "Force-ch4-a3-x-h0.002-minus",
+        "Force-ch4-a3-x-h0.002-plus",
+        "Force-ch4-a3-y-h0.002-minus",
+        "Force-ch4-a3-y-h0.002-plus",
+        "Force-ch4-a3-z-h0.002-minus",
+        "Force-ch4-a3-z-h0.002-plus",
+        "Force-ch4-a4-x-h0.002-minus",
+        "Force-ch4-a4-x-h0.002-plus",
+        "Force-ch4-a4-y-h0.002-minus",
+        "Force-ch4-a4-y-h0.002-plus",
+        "Force-ch4-a4-z-h0.002-minus",
+        "Force-ch4-a4-z-h0.002-plus",
+        "Force-ch4-a0-x-h0.001-minus",
+        "Force-ch4-a0-x-h0.001-plus",
+        "Force-ch4-a0-y-h0.001-minus",
+        "Force-ch4-a0-y-h0.001-plus",
+        "Force-ch4-a0-z-h0.001-minus",
+        "Force-ch4-a0-z-h0.001-plus",
+        "Force-ch4-a1-x-h0.001-minus",
+        "Force-ch4-a1-x-h0.001-plus",
+        "Force-ch4-a1-y-h0.001-minus",
+        "Force-ch4-a1-y-h0.001-plus",
+        "Force-ch4-a1-z-h0.001-minus",
+        "Force-ch4-a1-z-h0.001-plus",
+        "Force-ch4-a2-x-h0.001-minus",
+        "Force-ch4-a2-x-h0.001-plus",
+        "Force-ch4-a2-y-h0.001-minus",
+        "Force-ch4-a2-y-h0.001-plus",
+        "Force-ch4-a2-z-h0.001-minus",
+        "Force-ch4-a2-z-h0.001-plus",
+        "Force-ch4-a3-x-h0.001-minus",
+        "Force-ch4-a3-x-h0.001-plus",
+        "Force-ch4-a3-y-h0.001-minus",
+        "Force-ch4-a3-y-h0.001-plus",
+        "Force-ch4-a3-z-h0.001-minus",
+        "Force-ch4-a3-z-h0.001-plus",
+        "Force-ch4-a4-x-h0.001-minus",
+        "Force-ch4-a4-x-h0.001-plus",
+        "Force-ch4-a4-y-h0.001-minus",
+        "Force-ch4-a4-y-h0.001-plus",
+        "Force-ch4-a4-z-h0.001-minus",
+        "Force-ch4-a4-z-h0.001-plus",
+        "Force-h2o-center",
+        "Force-h2o-a0-x-h0.004-minus",
+        "Force-h2o-a0-x-h0.004-plus",
+        "Force-h2o-a0-y-h0.004-minus",
+        "Force-h2o-a0-y-h0.004-plus",
+        "Force-h2o-a0-z-h0.004-minus",
+        "Force-h2o-a0-z-h0.004-plus",
+        "Force-h2o-a1-x-h0.004-minus",
+        "Force-h2o-a1-x-h0.004-plus",
+        "Force-h2o-a1-y-h0.004-minus",
+        "Force-h2o-a1-y-h0.004-plus",
+        "Force-h2o-a1-z-h0.004-minus",
+        "Force-h2o-a1-z-h0.004-plus",
+        "Force-h2o-a2-x-h0.004-minus",
+        "Force-h2o-a2-x-h0.004-plus",
+        "Force-h2o-a2-y-h0.004-minus",
+        "Force-h2o-a2-y-h0.004-plus",
+        "Force-h2o-a2-z-h0.004-minus",
+        "Force-h2o-a2-z-h0.004-plus",
+        "Force-h2o-a0-x-h0.002-minus",
+        "Force-h2o-a0-x-h0.002-plus",
+        "Force-h2o-a0-y-h0.002-minus",
+        "Force-h2o-a0-y-h0.002-plus",
+        "Force-h2o-a0-z-h0.002-minus",
+        "Force-h2o-a0-z-h0.002-plus",
+        "Force-h2o-a1-x-h0.002-minus",
+        "Force-h2o-a1-x-h0.002-plus",
+        "Force-h2o-a1-y-h0.002-minus",
+        "Force-h2o-a1-y-h0.002-plus",
+        "Force-h2o-a1-z-h0.002-minus",
+        "Force-h2o-a1-z-h0.002-plus",
+        "Force-h2o-a2-x-h0.002-minus",
+        "Force-h2o-a2-x-h0.002-plus",
+        "Force-h2o-a2-y-h0.002-minus",
+        "Force-h2o-a2-y-h0.002-plus",
+        "Force-h2o-a2-z-h0.002-minus",
+        "Force-h2o-a2-z-h0.002-plus",
+        "Force-h2o-a0-x-h0.001-minus",
+        "Force-h2o-a0-x-h0.001-plus",
+        "Force-h2o-a0-y-h0.001-minus",
+        "Force-h2o-a0-y-h0.001-plus",
+        "Force-h2o-a0-z-h0.001-minus",
+        "Force-h2o-a0-z-h0.001-plus",
+        "Force-h2o-a1-x-h0.001-minus",
+        "Force-h2o-a1-x-h0.001-plus",
+        "Force-h2o-a1-y-h0.001-minus",
+        "Force-h2o-a1-y-h0.001-plus",
+        "Force-h2o-a1-z-h0.001-minus",
+        "Force-h2o-a1-z-h0.001-plus",
+        "Force-h2o-a2-x-h0.001-minus",
+        "Force-h2o-a2-x-h0.001-plus",
+        "Force-h2o-a2-y-h0.001-minus",
+        "Force-h2o-a2-y-h0.001-plus",
+        "Force-h2o-a2-z-h0.001-minus",
+        "Force-h2o-a2-z-h0.001-plus",
+        "Force-oh-center",
+        "Force-oh-a0-x-h0.004-minus",
+        "Force-oh-a0-x-h0.004-plus",
+        "Force-oh-a0-y-h0.004-minus",
+        "Force-oh-a0-y-h0.004-plus",
+        "Force-oh-a0-z-h0.004-minus",
+        "Force-oh-a0-z-h0.004-plus",
+        "Force-oh-a1-x-h0.004-minus",
+        "Force-oh-a1-x-h0.004-plus",
+        "Force-oh-a1-y-h0.004-minus",
+        "Force-oh-a1-y-h0.004-plus",
+        "Force-oh-a1-z-h0.004-minus",
+        "Force-oh-a1-z-h0.004-plus",
+        "Force-oh-a0-x-h0.002-minus",
+        "Force-oh-a0-x-h0.002-plus",
+        "Force-oh-a0-y-h0.002-minus",
+        "Force-oh-a0-y-h0.002-plus",
+        "Force-oh-a0-z-h0.002-minus",
+        "Force-oh-a0-z-h0.002-plus",
+        "Force-oh-a1-x-h0.002-minus",
+        "Force-oh-a1-x-h0.002-plus",
+        "Force-oh-a1-y-h0.002-minus",
+        "Force-oh-a1-y-h0.002-plus",
+        "Force-oh-a1-z-h0.002-minus",
+        "Force-oh-a1-z-h0.002-plus",
+        "Force-oh-a0-x-h0.001-minus",
+        "Force-oh-a0-x-h0.001-plus",
+        "Force-oh-a0-y-h0.001-minus",
+        "Force-oh-a0-y-h0.001-plus",
+        "Force-oh-a0-z-h0.001-minus",
+        "Force-oh-a0-z-h0.001-plus",
+        "Force-oh-a1-x-h0.001-minus",
+        "Force-oh-a1-x-h0.001-plus",
+        "Force-oh-a1-y-h0.001-minus",
+        "Force-oh-a1-y-h0.001-plus",
+        "Force-oh-a1-z-h0.001-minus",
+        "Force-oh-a1-z-h0.001-plus"
+    ],
+    "force_validation": {
+        "steps_bohr": [
+            0.004,
+            0.002,
+            0.001
+        ],
+        "cases": {
+            "ch4": {
+                "center": "Force-ch4-center",
+                "source": "Force-ch4-1.000",
+                "offsets_angstrom": [],
+                "pairs": {
+                    "0.004": [
+                        {
+                            "atom": 0,
+                            "axis": 0,
+                            "minus": "Force-ch4-a0-x-h0.004-minus",
+                            "plus": "Force-ch4-a0-x-h0.004-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 1,
+                            "minus": "Force-ch4-a0-y-h0.004-minus",
+                            "plus": "Force-ch4-a0-y-h0.004-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 2,
+                            "minus": "Force-ch4-a0-z-h0.004-minus",
+                            "plus": "Force-ch4-a0-z-h0.004-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 0,
+                            "minus": "Force-ch4-a1-x-h0.004-minus",
+                            "plus": "Force-ch4-a1-x-h0.004-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 1,
+                            "minus": "Force-ch4-a1-y-h0.004-minus",
+                            "plus": "Force-ch4-a1-y-h0.004-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 2,
+                            "minus": "Force-ch4-a1-z-h0.004-minus",
+                            "plus": "Force-ch4-a1-z-h0.004-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 0,
+                            "minus": "Force-ch4-a2-x-h0.004-minus",
+                            "plus": "Force-ch4-a2-x-h0.004-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 1,
+                            "minus": "Force-ch4-a2-y-h0.004-minus",
+                            "plus": "Force-ch4-a2-y-h0.004-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 2,
+                            "minus": "Force-ch4-a2-z-h0.004-minus",
+                            "plus": "Force-ch4-a2-z-h0.004-plus"
+                        },
+                        {
+                            "atom": 3,
+                            "axis": 0,
+                            "minus": "Force-ch4-a3-x-h0.004-minus",
+                            "plus": "Force-ch4-a3-x-h0.004-plus"
+                        },
+                        {
+                            "atom": 3,
+                            "axis": 1,
+                            "minus": "Force-ch4-a3-y-h0.004-minus",
+                            "plus": "Force-ch4-a3-y-h0.004-plus"
+                        },
+                        {
+                            "atom": 3,
+                            "axis": 2,
+                            "minus": "Force-ch4-a3-z-h0.004-minus",
+                            "plus": "Force-ch4-a3-z-h0.004-plus"
+                        },
+                        {
+                            "atom": 4,
+                            "axis": 0,
+                            "minus": "Force-ch4-a4-x-h0.004-minus",
+                            "plus": "Force-ch4-a4-x-h0.004-plus"
+                        },
+                        {
+                            "atom": 4,
+                            "axis": 1,
+                            "minus": "Force-ch4-a4-y-h0.004-minus",
+                            "plus": "Force-ch4-a4-y-h0.004-plus"
+                        },
+                        {
+                            "atom": 4,
+                            "axis": 2,
+                            "minus": "Force-ch4-a4-z-h0.004-minus",
+                            "plus": "Force-ch4-a4-z-h0.004-plus"
+                        }
+                    ],
+                    "0.002": [
+                        {
+                            "atom": 0,
+                            "axis": 0,
+                            "minus": "Force-ch4-a0-x-h0.002-minus",
+                            "plus": "Force-ch4-a0-x-h0.002-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 1,
+                            "minus": "Force-ch4-a0-y-h0.002-minus",
+                            "plus": "Force-ch4-a0-y-h0.002-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 2,
+                            "minus": "Force-ch4-a0-z-h0.002-minus",
+                            "plus": "Force-ch4-a0-z-h0.002-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 0,
+                            "minus": "Force-ch4-a1-x-h0.002-minus",
+                            "plus": "Force-ch4-a1-x-h0.002-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 1,
+                            "minus": "Force-ch4-a1-y-h0.002-minus",
+                            "plus": "Force-ch4-a1-y-h0.002-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 2,
+                            "minus": "Force-ch4-a1-z-h0.002-minus",
+                            "plus": "Force-ch4-a1-z-h0.002-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 0,
+                            "minus": "Force-ch4-a2-x-h0.002-minus",
+                            "plus": "Force-ch4-a2-x-h0.002-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 1,
+                            "minus": "Force-ch4-a2-y-h0.002-minus",
+                            "plus": "Force-ch4-a2-y-h0.002-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 2,
+                            "minus": "Force-ch4-a2-z-h0.002-minus",
+                            "plus": "Force-ch4-a2-z-h0.002-plus"
+                        },
+                        {
+                            "atom": 3,
+                            "axis": 0,
+                            "minus": "Force-ch4-a3-x-h0.002-minus",
+                            "plus": "Force-ch4-a3-x-h0.002-plus"
+                        },
+                        {
+                            "atom": 3,
+                            "axis": 1,
+                            "minus": "Force-ch4-a3-y-h0.002-minus",
+                            "plus": "Force-ch4-a3-y-h0.002-plus"
+                        },
+                        {
+                            "atom": 3,
+                            "axis": 2,
+                            "minus": "Force-ch4-a3-z-h0.002-minus",
+                            "plus": "Force-ch4-a3-z-h0.002-plus"
+                        },
+                        {
+                            "atom": 4,
+                            "axis": 0,
+                            "minus": "Force-ch4-a4-x-h0.002-minus",
+                            "plus": "Force-ch4-a4-x-h0.002-plus"
+                        },
+                        {
+                            "atom": 4,
+                            "axis": 1,
+                            "minus": "Force-ch4-a4-y-h0.002-minus",
+                            "plus": "Force-ch4-a4-y-h0.002-plus"
+                        },
+                        {
+                            "atom": 4,
+                            "axis": 2,
+                            "minus": "Force-ch4-a4-z-h0.002-minus",
+                            "plus": "Force-ch4-a4-z-h0.002-plus"
+                        }
+                    ],
+                    "0.001": [
+                        {
+                            "atom": 0,
+                            "axis": 0,
+                            "minus": "Force-ch4-a0-x-h0.001-minus",
+                            "plus": "Force-ch4-a0-x-h0.001-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 1,
+                            "minus": "Force-ch4-a0-y-h0.001-minus",
+                            "plus": "Force-ch4-a0-y-h0.001-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 2,
+                            "minus": "Force-ch4-a0-z-h0.001-minus",
+                            "plus": "Force-ch4-a0-z-h0.001-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 0,
+                            "minus": "Force-ch4-a1-x-h0.001-minus",
+                            "plus": "Force-ch4-a1-x-h0.001-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 1,
+                            "minus": "Force-ch4-a1-y-h0.001-minus",
+                            "plus": "Force-ch4-a1-y-h0.001-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 2,
+                            "minus": "Force-ch4-a1-z-h0.001-minus",
+                            "plus": "Force-ch4-a1-z-h0.001-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 0,
+                            "minus": "Force-ch4-a2-x-h0.001-minus",
+                            "plus": "Force-ch4-a2-x-h0.001-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 1,
+                            "minus": "Force-ch4-a2-y-h0.001-minus",
+                            "plus": "Force-ch4-a2-y-h0.001-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 2,
+                            "minus": "Force-ch4-a2-z-h0.001-minus",
+                            "plus": "Force-ch4-a2-z-h0.001-plus"
+                        },
+                        {
+                            "atom": 3,
+                            "axis": 0,
+                            "minus": "Force-ch4-a3-x-h0.001-minus",
+                            "plus": "Force-ch4-a3-x-h0.001-plus"
+                        },
+                        {
+                            "atom": 3,
+                            "axis": 1,
+                            "minus": "Force-ch4-a3-y-h0.001-minus",
+                            "plus": "Force-ch4-a3-y-h0.001-plus"
+                        },
+                        {
+                            "atom": 3,
+                            "axis": 2,
+                            "minus": "Force-ch4-a3-z-h0.001-minus",
+                            "plus": "Force-ch4-a3-z-h0.001-plus"
+                        },
+                        {
+                            "atom": 4,
+                            "axis": 0,
+                            "minus": "Force-ch4-a4-x-h0.001-minus",
+                            "plus": "Force-ch4-a4-x-h0.001-plus"
+                        },
+                        {
+                            "atom": 4,
+                            "axis": 1,
+                            "minus": "Force-ch4-a4-y-h0.001-minus",
+                            "plus": "Force-ch4-a4-y-h0.001-plus"
+                        },
+                        {
+                            "atom": 4,
+                            "axis": 2,
+                            "minus": "Force-ch4-a4-z-h0.001-minus",
+                            "plus": "Force-ch4-a4-z-h0.001-plus"
+                        }
+                    ]
+                }
+            },
+            "h2o": {
+                "center": "Force-h2o-center",
+                "source": "W4_11-h2o",
+                "offsets_angstrom": [
+                    [
+                        1,
+                        0.13,
+                        0.08,
+                        0.04
+                    ]
+                ],
+                "pairs": {
+                    "0.004": [
+                        {
+                            "atom": 0,
+                            "axis": 0,
+                            "minus": "Force-h2o-a0-x-h0.004-minus",
+                            "plus": "Force-h2o-a0-x-h0.004-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 1,
+                            "minus": "Force-h2o-a0-y-h0.004-minus",
+                            "plus": "Force-h2o-a0-y-h0.004-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 2,
+                            "minus": "Force-h2o-a0-z-h0.004-minus",
+                            "plus": "Force-h2o-a0-z-h0.004-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 0,
+                            "minus": "Force-h2o-a1-x-h0.004-minus",
+                            "plus": "Force-h2o-a1-x-h0.004-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 1,
+                            "minus": "Force-h2o-a1-y-h0.004-minus",
+                            "plus": "Force-h2o-a1-y-h0.004-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 2,
+                            "minus": "Force-h2o-a1-z-h0.004-minus",
+                            "plus": "Force-h2o-a1-z-h0.004-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 0,
+                            "minus": "Force-h2o-a2-x-h0.004-minus",
+                            "plus": "Force-h2o-a2-x-h0.004-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 1,
+                            "minus": "Force-h2o-a2-y-h0.004-minus",
+                            "plus": "Force-h2o-a2-y-h0.004-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 2,
+                            "minus": "Force-h2o-a2-z-h0.004-minus",
+                            "plus": "Force-h2o-a2-z-h0.004-plus"
+                        }
+                    ],
+                    "0.002": [
+                        {
+                            "atom": 0,
+                            "axis": 0,
+                            "minus": "Force-h2o-a0-x-h0.002-minus",
+                            "plus": "Force-h2o-a0-x-h0.002-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 1,
+                            "minus": "Force-h2o-a0-y-h0.002-minus",
+                            "plus": "Force-h2o-a0-y-h0.002-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 2,
+                            "minus": "Force-h2o-a0-z-h0.002-minus",
+                            "plus": "Force-h2o-a0-z-h0.002-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 0,
+                            "minus": "Force-h2o-a1-x-h0.002-minus",
+                            "plus": "Force-h2o-a1-x-h0.002-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 1,
+                            "minus": "Force-h2o-a1-y-h0.002-minus",
+                            "plus": "Force-h2o-a1-y-h0.002-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 2,
+                            "minus": "Force-h2o-a1-z-h0.002-minus",
+                            "plus": "Force-h2o-a1-z-h0.002-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 0,
+                            "minus": "Force-h2o-a2-x-h0.002-minus",
+                            "plus": "Force-h2o-a2-x-h0.002-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 1,
+                            "minus": "Force-h2o-a2-y-h0.002-minus",
+                            "plus": "Force-h2o-a2-y-h0.002-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 2,
+                            "minus": "Force-h2o-a2-z-h0.002-minus",
+                            "plus": "Force-h2o-a2-z-h0.002-plus"
+                        }
+                    ],
+                    "0.001": [
+                        {
+                            "atom": 0,
+                            "axis": 0,
+                            "minus": "Force-h2o-a0-x-h0.001-minus",
+                            "plus": "Force-h2o-a0-x-h0.001-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 1,
+                            "minus": "Force-h2o-a0-y-h0.001-minus",
+                            "plus": "Force-h2o-a0-y-h0.001-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 2,
+                            "minus": "Force-h2o-a0-z-h0.001-minus",
+                            "plus": "Force-h2o-a0-z-h0.001-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 0,
+                            "minus": "Force-h2o-a1-x-h0.001-minus",
+                            "plus": "Force-h2o-a1-x-h0.001-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 1,
+                            "minus": "Force-h2o-a1-y-h0.001-minus",
+                            "plus": "Force-h2o-a1-y-h0.001-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 2,
+                            "minus": "Force-h2o-a1-z-h0.001-minus",
+                            "plus": "Force-h2o-a1-z-h0.001-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 0,
+                            "minus": "Force-h2o-a2-x-h0.001-minus",
+                            "plus": "Force-h2o-a2-x-h0.001-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 1,
+                            "minus": "Force-h2o-a2-y-h0.001-minus",
+                            "plus": "Force-h2o-a2-y-h0.001-plus"
+                        },
+                        {
+                            "atom": 2,
+                            "axis": 2,
+                            "minus": "Force-h2o-a2-z-h0.001-minus",
+                            "plus": "Force-h2o-a2-z-h0.001-plus"
+                        }
+                    ]
+                }
+            },
+            "oh": {
+                "center": "Force-oh-center",
+                "source": "W4_11-oh",
+                "offsets_angstrom": [],
+                "pairs": {
+                    "0.004": [
+                        {
+                            "atom": 0,
+                            "axis": 0,
+                            "minus": "Force-oh-a0-x-h0.004-minus",
+                            "plus": "Force-oh-a0-x-h0.004-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 1,
+                            "minus": "Force-oh-a0-y-h0.004-minus",
+                            "plus": "Force-oh-a0-y-h0.004-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 2,
+                            "minus": "Force-oh-a0-z-h0.004-minus",
+                            "plus": "Force-oh-a0-z-h0.004-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 0,
+                            "minus": "Force-oh-a1-x-h0.004-minus",
+                            "plus": "Force-oh-a1-x-h0.004-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 1,
+                            "minus": "Force-oh-a1-y-h0.004-minus",
+                            "plus": "Force-oh-a1-y-h0.004-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 2,
+                            "minus": "Force-oh-a1-z-h0.004-minus",
+                            "plus": "Force-oh-a1-z-h0.004-plus"
+                        }
+                    ],
+                    "0.002": [
+                        {
+                            "atom": 0,
+                            "axis": 0,
+                            "minus": "Force-oh-a0-x-h0.002-minus",
+                            "plus": "Force-oh-a0-x-h0.002-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 1,
+                            "minus": "Force-oh-a0-y-h0.002-minus",
+                            "plus": "Force-oh-a0-y-h0.002-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 2,
+                            "minus": "Force-oh-a0-z-h0.002-minus",
+                            "plus": "Force-oh-a0-z-h0.002-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 0,
+                            "minus": "Force-oh-a1-x-h0.002-minus",
+                            "plus": "Force-oh-a1-x-h0.002-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 1,
+                            "minus": "Force-oh-a1-y-h0.002-minus",
+                            "plus": "Force-oh-a1-y-h0.002-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 2,
+                            "minus": "Force-oh-a1-z-h0.002-minus",
+                            "plus": "Force-oh-a1-z-h0.002-plus"
+                        }
+                    ],
+                    "0.001": [
+                        {
+                            "atom": 0,
+                            "axis": 0,
+                            "minus": "Force-oh-a0-x-h0.001-minus",
+                            "plus": "Force-oh-a0-x-h0.001-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 1,
+                            "minus": "Force-oh-a0-y-h0.001-minus",
+                            "plus": "Force-oh-a0-y-h0.001-plus"
+                        },
+                        {
+                            "atom": 0,
+                            "axis": 2,
+                            "minus": "Force-oh-a0-z-h0.001-minus",
+                            "plus": "Force-oh-a0-z-h0.001-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 0,
+                            "minus": "Force-oh-a1-x-h0.001-minus",
+                            "plus": "Force-oh-a1-x-h0.001-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 1,
+                            "minus": "Force-oh-a1-y-h0.001-minus",
+                            "plus": "Force-oh-a1-y-h0.001-plus"
+                        },
+                        {
+                            "atom": 1,
+                            "axis": 2,
+                            "minus": "Force-oh-a1-z-h0.001-minus",
+                            "plus": "Force-oh-a1-z-h0.001-plus"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

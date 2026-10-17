@@ -78,6 +78,34 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   by twice the sampling duration plus 10 seconds to allow queue/startup time;
   incomplete probes are rejected.
 
+- `scripts/direct_run_per_gpu.py`: background-by-default, single-host alternative without
+  Slurm. For example:
+  `python scripts/direct_run_per_gpu.py --script test/test_diet100.bash --gpus 0,1`.
+  Uses the script's array and CPU directives, supplies `MODEL_INDEX`,
+  `SLURM_ARRAY_TASK_ID`, and `SLURM_CPUS_PER_TASK` for the existing Bash helpers,
+  and binds each job to a GPU UUID. Runs at most one job per GPU; the array's
+  `%limit` caps total concurrency unless overridden with `--array-concurrency`.
+  Optional `--time-array` prioritizes longer tasks and skips zero runtimes.
+  Memory (default 15 GiB) and optional power filters are instantaneous checks
+  before dispatch, not reservations; coordinate GPU ownership with other users.
+  With no `--gpus`, respects `CUDA_VISIBLE_DEVICES` or discovers all local GPUs.
+  `--dry-run --gpus 0,1` previews without GPU access, file writes, or job execution.
+  Each run has separate stdout/stderr logs and per-job PySCF scratch directories
+  under `PYSCF_TMPDIR`, `TMPDIR`, or repository `tmp` (retained for inspection).
+  `--log-dir` must name a new directory. Job failures are logged and produce a
+  nonzero worker exit status, saved in `exit-code`. By default the command returns
+  after starting a detached launcher; its stdout/stderr go to `launcher.log`
+  and its PID is saved in `launcher.pid` inside the run's log directory.
+  Monitor with `tail -f <log-directory>/launcher.log`; stop with
+  `kill -TERM <launcher-pid>` (also terminates active job process groups).
+  The initial command's success means the launcher started, not that jobs passed.
+  Use `--foreground` to stay attached and receive the final job exit status directly.
+  For force testing, use `--script test/test_force.bash --gpus 0`;
+  its array runs one job with 20 CPU threads. The `force` molecule profile selects
+  `molecule_Force` and redirects calculation output to
+  `log/<checkpoint>/<epoch>/Force_0.out` and `.err`, like the other profiles.
+  Dry runs always stay foreground.
+
 ### Script directories (Slurm/HPC)
 `scripts/train/`, `scripts/test/`, and `scripts/work/` assume local paths
 (`~/anaconda3/envs/pyscf`, `~/backup-hd/tmp`, jemalloc). Keep those assumptions
