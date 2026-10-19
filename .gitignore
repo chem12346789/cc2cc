@@ -12,7 +12,6 @@ checkpoints
 validate
 /log_backup
 /tmp_mol
-/wandb/
 /wandb
 /tmp
 hkqai*.ipynb
