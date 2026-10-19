@@ -61,6 +61,14 @@ against tighter SCF and grid settings, particularly when decreasing the step.
 Energy uncertainty is amplified by division by the displacement.
 On/off logs must use the same model checkpoint, basis, grid, and precision.
 
+The notebook also supports checking an existing `Force_0.out` immediately:
+its default `ON_LOGS` selects that file and permits the historical SCF limits
+(1e-7 energy, 1e-3 orbital gradient), printing an explicit accuracy warning.
+Set `SCF_CONV_TOL=1e-11` and `SCF_CONV_TOL_GRAD=1e-7` after tighter reruns.
+The OFF log is optional: its absence skips only the on/off comparison, not the
+Cartesian, step-convergence, or invariance reports. All required ON energies
+must still exist and be converged.
+
 Regenerate the displacement dataset without running SCF:
 
 ```bash

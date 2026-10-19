@@ -93,6 +93,13 @@ class TestForceValidation(TestCase):
             if row["observed_order"] is not None:
                 self.assertAlmostEqual(row["observed_order"], 2, places=3)
 
+    def test_on_only_report(self):
+        records = self.synthetic_records()
+        reports = gradient_report(self.dataset, records, records)
+        self.assertEqual(len(reports), 9)
+        self.assertTrue(all(row["grid_response"] == "on" for row in reports))
+        self.assertTrue(all(row["max_error"] < 1e-10 for row in reports))
+
     def test_missing_results_and_mismatched_settings_are_rejected(self):
         records = self.synthetic_records()
         off = dict(records)

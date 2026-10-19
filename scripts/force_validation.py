@@ -124,18 +124,21 @@ def read_force_logs(paths, dataset, basis, grid_response, conv_tol=1e-11,
     return records
 
 
-def gradient_report(dataset, energies, gradients_on, gradients_off):
+def gradient_report(dataset, energies, gradients_on, gradients_off=None):
+    modes = [("on", gradients_on)]
+    if gradients_off is not None:
+        modes.append(("off", gradients_off))
     reports = []
     for label, case in dataset["force_validation"]["cases"].items():
         center = case["center"]
         settings = energies[center]["settings"]
-        for records in (energies, gradients_on, gradients_off):
+        for records in (energies, *(records for _, records in modes)):
             for name, record in records.items():
                 if record["settings"] != settings:
                     raise ValueError(f"{name}: inconsistent model/grid/precision settings")
         coords = np.array([a[1:] for a in dataset[center]], dtype=np.float64) / param.BOHR
         invariance = {}
-        for mode, records in (("on", gradients_on), ("off", gradients_off)):
+        for mode, records in modes:
             gradient = records[center]["gradient"]
             if gradient is None:
                 raise ValueError(f"{center}: missing grid-response-{mode} gradient")
@@ -164,7 +167,7 @@ def gradient_report(dataset, energies, gradients_on, gradients_off):
                 fd[atom, axis] = (db * ea / da - da * eb / db) / (db - da)
             if len(pairs) != coords.size or len({(p["atom"], p["axis"]) for p in pairs}) != coords.size:
                 raise ValueError(f"{label}: incomplete Cartesian coverage")
-            for mode, records in (("on", gradients_on), ("off", gradients_off)):
+            for mode, records in modes:
                 error = fd - records[center]["gradient"]
                 maximum = np.max(np.abs(error))
                 rms = np.sqrt(np.mean(error ** 2))
