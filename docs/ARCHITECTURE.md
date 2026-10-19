@@ -83,8 +83,9 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   `python scripts/direct_run_per_gpu.py --script test/test_diet100.bash --gpus 0,1`.
   Uses the script's array and CPU directives, supplies `MODEL_INDEX`,
   `SLURM_ARRAY_TASK_ID`, and `SLURM_CPUS_PER_TASK` for the existing Bash helpers,
-  and binds each job to a GPU UUID. Runs at most one job per GPU; the array's
-  `%limit` caps total concurrency unless overridden with `--array-concurrency`.
+  and binds each job to a GPU UUID. The array's `%limit` sets the maximum
+  concurrent jobs per GPU (`--array-concurrency` overrides it); without a limit,
+  one job runs per GPU.
   Optional `--time-array` prioritizes longer tasks and skips zero runtimes.
   Memory (default 15 GiB) and optional power filters are instantaneous checks
   before dispatch, not reservations; coordinate GPU ownership with other users.

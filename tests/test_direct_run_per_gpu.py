@@ -46,7 +46,7 @@ class DirectRunTests(unittest.TestCase):
             ]), 0)
         lines = [call.args[0] for call in output.call_args_list]
         self.assertIn("jobs=1", lines[0])
-        self.assertIn("concurrency=1 cpus/job=20", lines[0])
+        self.assertIn("concurrency=1/GPU total-concurrency=1 cpus/job=20", lines[0])
         self.assertEqual(lines[1], "[DRY-RUN] MODEL_INDEX=0 SLURM_ARRAY_TASK_ID=0")
 
     def test_background_launch_logging_and_shutdown(self):
@@ -140,9 +140,9 @@ class DirectRunTests(unittest.TestCase):
             query.assert_not_called()
             launch.assert_not_called()
             lines = [str(call.args[0]) for call in output.call_args_list]
-            self.assertIn("jobs=55", lines[0])
-            self.assertIn("concurrency=2 cpus/job=8", lines[0])
-            self.assertEqual(len([line for line in lines if "[DRY-RUN]" in line]), 55)
+            self.assertIn("jobs=220", lines[0])
+            self.assertIn("concurrency=3/GPU total-concurrency=6 cpus/job=8", lines[0])
+            self.assertEqual(len([line for line in lines if "[DRY-RUN]" in line]), 220)
             self.assertIn("SLURM_ARRAY_TASK_ID=54", lines[-1])
 
     def test_timing_order_zero_skip_models_and_concurrency_override(self):
@@ -156,7 +156,7 @@ class DirectRunTests(unittest.TestCase):
                     "--time-array", str(timings), "--dry-run",
                 ])
             lines = [str(call.args[0]) for call in output.call_args_list]
-            self.assertIn("concurrency=2", lines[0])
+            self.assertIn("concurrency=2/GPU total-concurrency=4", lines[0])
             self.assertEqual(lines[1:], [
                 "[DRY-RUN] MODEL_INDEX=0 SLURM_ARRAY_TASK_ID=2",
                 "[DRY-RUN] MODEL_INDEX=0 SLURM_ARRAY_TASK_ID=0",
@@ -235,25 +235,33 @@ class DirectRunTests(unittest.TestCase):
                     scratch_paths.add(scratch)
             self.assertEqual(len(scratch_paths), 6)
 
-    def check_scheduler(self, concurrency):
+    def check_scheduler(self, concurrency_per_gpu):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             processes = []
             clock = [0]
+            max_active_by_gpu = {}
 
             def advance(seconds):
                 clock[0] += 1
 
             def launch(*args, **kwargs):
-                for previous, gpu in processes:
-                    if gpu == kwargs["env"]["CUDA_VISIBLE_DEVICES"]:
-                        self.assertIsNotNone(previous.poll())
                 process = Mock()
                 end = clock[0] + 2
                 process.poll.side_effect = lambda: 0 if clock[0] >= end else None
                 processes.append((process, kwargs["env"]["CUDA_VISIBLE_DEVICES"]))
+                gpu_counts = {}
+                for active, gpu in processes:
+                    if active.poll() is None:
+                        gpu_counts[gpu] = gpu_counts.get(gpu, 0) + 1
+                for gpu, active_count in gpu_counts.items():
+                    max_active_by_gpu[gpu] = max(
+                        max_active_by_gpu.get(gpu, 0), active_count,
+                    )
+                self.assertLessEqual(max(gpu_counts.values()), concurrency_per_gpu)
                 self.assertLessEqual(
-                    sum(proc.poll() is None for proc, _ in processes), concurrency,
+                    sum(proc.poll() is None for proc, _ in processes),
+                    concurrency_per_gpu * 2,
                 )
                 return process
 
@@ -265,16 +273,17 @@ class DirectRunTests(unittest.TestCase):
             ):
                 status = direct.run_jobs(
                     root / "job.bash", [(0, task) for task in range(5)],
-                    {"0": "GPU-a", "1": "GPU-b"}, concurrency, 1, root,
+                    {"0": "GPU-a", "1": "GPU-b"}, concurrency_per_gpu, 1, root,
                     root / "scratch", 15, None, 0.01,
                 )
             self.assertEqual(status, 0)
             self.assertEqual(len(processes), 5)
+            self.assertEqual(max(max_active_by_gpu.values()), concurrency_per_gpu)
 
-    def test_scheduler_never_overlaps_jobs_on_a_gpu(self):
-        for concurrency in (1, 2):
-            with self.subTest(concurrency=concurrency):
-                self.check_scheduler(concurrency)
+    def test_scheduler_respects_concurrency_per_gpu(self):
+        for concurrency_per_gpu in (1, 2):
+            with self.subTest(concurrency_per_gpu=concurrency_per_gpu):
+                self.check_scheduler(concurrency_per_gpu)
 
     def test_scheduler_waits_for_gpu_to_meet_filters_again(self):
         with tempfile.TemporaryDirectory() as directory:

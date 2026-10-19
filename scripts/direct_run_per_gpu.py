@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run existing array job scripts locally, with one active job per GPU."""
+"""Run existing array job scripts locally, respecting array concurrency per GPU."""
 
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--array-concurrency", type=int,
-        help="Maximum simultaneous jobs; overrides the array's %%limit.",
+        help="Maximum simultaneous jobs per GPU; overrides the array's %%limit.",
     )
     parser.add_argument("--cpus-per-task", type=int, help="Override #SBATCH CPU count.")
     parser.add_argument("--model-indices", help="Comma-separated MODEL_INDEX values.")
@@ -113,6 +113,7 @@ def run_jobs(
     pending = deque(jobs)
     running: dict[subprocess.Popen, tuple[str, int, int]] = {}
     failures = 0
+    total_concurrency = concurrency * len(gpus)
     try:
         while pending or running:
             for process, (gpu, model, task) in list(running.items()):
@@ -124,39 +125,47 @@ def run_jobs(
                     f"[DONE] model={model} task={task} GPU={gpu} exit={returncode}",
                     flush=True,
                 )
-            busy = {gpu for gpu, _, _ in running.values()}
-            free = [gpu for gpu in gpus if gpu not in busy]
-            if pending and free and len(running) < concurrency:
+            active_by_gpu = {
+                gpu: sum(active_gpu == gpu for active_gpu, _, _ in running.values())
+                for gpu in gpus
+            }
+            available_gpus = [
+                gpu for gpu, active in active_by_gpu.items() if active < concurrency
+            ]
+            if pending and available_gpus and len(running) < total_concurrency:
                 available = query_gpus(list(gpus.values()), min_free_memory, max_power)
-                for gpu in free:
-                    if not pending or len(running) >= concurrency:
-                        break
-                    if gpu not in available:
-                        continue
-                    model, task = pending.popleft()
-                    stem = f"model-{model}-task-{task}"
-                    task_scratch = scratch_dir / stem
-                    task_scratch.mkdir(parents=True)
-                    env = os.environ.copy()
-                    env.update(
-                        MODEL_INDEX=str(model), SLURM_ARRAY_TASK_ID=str(task),
-                        SLURM_CPUS_PER_TASK=str(cpus),
-                        FORCE_CUDA_VISIBLE_DEVICES=gpus[gpu],
-                        CUDA_VISIBLE_DEVICES=gpus[gpu],
-                        PYSCF_TMPDIR=str(task_scratch),
-                    )
-                    with (log_dir / f"{stem}.out").open("w") as stdout, (
-                        log_dir / f"{stem}.err"
-                    ).open("w") as stderr:
-                        process = subprocess.Popen(
-                            ["bash", str(script)], cwd=submit.ROOT, env=env,
-                            stdout=stdout, stderr=stderr, start_new_session=True,
+                for gpu in available_gpus:
+                    while (
+                        pending and active_by_gpu[gpu] < concurrency
+                        and len(running) < total_concurrency
+                    ):
+                        if gpu not in available:
+                            break
+                        model, task = pending.popleft()
+                        stem = f"model-{model}-task-{task}"
+                        task_scratch = scratch_dir / stem
+                        task_scratch.mkdir(parents=True)
+                        env = os.environ.copy()
+                        env.update(
+                            MODEL_INDEX=str(model), SLURM_ARRAY_TASK_ID=str(task),
+                            SLURM_CPUS_PER_TASK=str(cpus),
+                            FORCE_CUDA_VISIBLE_DEVICES=gpus[gpu],
+                            CUDA_VISIBLE_DEVICES=gpus[gpu],
+                            PYSCF_TMPDIR=str(task_scratch),
                         )
-                    running[process] = (gpu, model, task)
-                    print(
-                        f"[START] model={model} task={task} GPU={gpu} PID={process.pid}",
-                        flush=True,
-                    )
+                        with (log_dir / f"{stem}.out").open("w") as stdout, (
+                            log_dir / f"{stem}.err"
+                        ).open("w") as stderr:
+                            process = subprocess.Popen(
+                                ["bash", str(script)], cwd=submit.ROOT, env=env,
+                                stdout=stdout, stderr=stderr, start_new_session=True,
+                            )
+                        running[process] = (gpu, model, task)
+                        active_by_gpu[gpu] += 1
+                        print(
+                            f"[START] model={model} task={task} GPU={gpu} PID={process.pid}",
+                            flush=True,
+                        )
             if pending or running:
                 time.sleep(poll_interval)
     finally:
@@ -226,7 +235,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     if not gpus:
         raise RuntimeError("No local GPUs satisfy the memory/power filters")
-    concurrency = min(concurrency or len(gpus), len(gpus))
+    concurrency = concurrency or 1
+    total_concurrency = concurrency * len(gpus)
     run_id = f"direct-{uuid.uuid4().hex[:12]}"
     log_dir = Path(args.log_dir).expanduser().resolve() if args.log_dir else (
         submit.ROOT / "log" / run_id
@@ -237,7 +247,8 @@ def main(argv: list[str] | None = None) -> int:
     scratch_dir = scratch_base / run_id
     print(
         f"[PLAN] script={script} jobs={len(jobs)} GPUs={','.join(gpus)} "
-        f"concurrency={concurrency} cpus/job={cpus} logs={log_dir}", flush=True,
+        f"concurrency={concurrency}/GPU total-concurrency={total_concurrency} "
+        f"cpus/job={cpus} logs={log_dir}", flush=True,
     )
     if args.dry_run:
         for model, task in jobs:
