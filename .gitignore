@@ -1,42 +1,42 @@
-# ignore python run file
+# Python
 *.pyc
 __pycache__
 
-# ignore large files
+# Data and generated artifacts
 data*/
-log
 data
+log
 checkpoint*/
-validate*/
 checkpoints
+validate*/
 validate
 /log_backup
 /tmp_mol
 /wandb
 /tmp
+out
+
+# Notebooks and datasets
 hkqai*.ipynb
 dgx1*.ipynb
 local*.ipynb
 data*.ipynb
+notebooks/new_dataset/sets
+notebooks/*.csv
+sets/
 
+# Generated files
 *.zip
 *map
 submit*
 !/scripts/submit_direct_array_per_gpu.py
-out
 *.egg-info/
 *.npz
 *.png
-tmp_mol/*
-notebooks/new_dataset/sets
-notebooks/*.csv
-
 PlotNeuralNet/
-
-# ignore backup files
 .history
 
-# ignore latex files
+# LaTeX
 *.aux
 *.log
 *.out
@@ -48,14 +48,13 @@ PlotNeuralNet/
 *.bbl
 *.Mainnote.bib
 
-# ignore jupyter notebook checkpoints
+# Jupyter
 .ipynb_checkpoints
 
-# ignore bash
+# Shell and cluster files
 bash*
-out_mkdir
 scripts/cluster.local.sh
+out_mkdir
 
-# wandb files
+# Weights & Biases
 wandb/*
-sets/
