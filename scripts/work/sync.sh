@@ -2,6 +2,14 @@ if [[ -n $SSH_CONNECTION ]]; then
     case "$(hostname)" in
     "manage.hkcorp.internal")
         echo "Syncing files from manage.hkqai"
+        for directory in validate validate_hkqai; do
+            echo "Syncing ${directory} from dgx1 to manage.hkqai"
+            rsync -Pauv "dgx1:/home/chenzihao/workspace/cc2cc_test5/${directory}/" \
+                "/home/chenzihao/workspace/cc2cc_test5/${directory}/"
+            echo "Syncing ${directory} from manage.hkqai to dgx1"
+            rsync -Pauv "/home/chenzihao/workspace/cc2cc_test5/${directory}/" \
+                "dgx1:/home/chenzihao/workspace/cc2cc_test5/${directory}/"
+        done
         rsync -Pauv --exclude 'trash' --exclude 'backup' --exclude 'saved' dgx1:/home/chenzihao/workspace/cc2cc_test5/checkpoints/ /home/chenzihao/workspace/cc2cc_test5/checkpoints
         rsync -Pauv --exclude 'trash' --exclude 'backup' --exclude 'saved' /home/chenzihao/workspace/cc2cc_test5/checkpoints/ dgx1:/home/chenzihao/workspace/cc2cc_test5/checkpoints
         echo "copy grids_dft from dgx1 to manage.hkqai"
@@ -19,6 +27,14 @@ if [[ -n $SSH_CONNECTION ]]; then
         ;;
     "dgxa100svr01")
         echo "Syncing files from dgxa100svr01"
+        for directory in validate validate_hkqai; do
+            echo "Syncing ${directory} from hkqai to dgx1"
+            rsync -Pauv "hkqai:/home/chenzihao/workspace/cc2cc_test5/${directory}/" \
+                "/home/chenzihao/workspace/cc2cc_test5/${directory}/"
+            echo "Syncing ${directory} from dgx1 to hkqai"
+            rsync -Pauv "/home/chenzihao/workspace/cc2cc_test5/${directory}/" \
+                "hkqai:/home/chenzihao/workspace/cc2cc_test5/${directory}/"
+        done
         echo "copy grids_dft from hkqai to dgxa100svr01"
         rsync -Pauv hkqai:/home/chenzihao/workspace/cc2cc_test5/data/grids_dft/ /home/chenzihao/workspace/cc2cc_test5/data/grids_dft/
         echo "copy grids_dft from data_generation to dgxa100svr01"
