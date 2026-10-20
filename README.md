@@ -16,6 +16,42 @@ cc2cc is a PyTorch + PySCF workflow for learning and evaluating DFT-inspired cor
 - `manuscript/`: manuscript and LaTeX sources.
 - `docs/`: architecture notes and project docs.
 
+## Installing PyTorch
+
+Use the Python interpreter of the environment you want to modify:
+
+```bash
+python scripts/install_torch.py --dry-run
+python scripts/install_torch.py
+python -m pip install -r requirements.txt
+```
+
+The installer pins torch 2.8.0, torchvision 0.23.0, and torchaudio 2.8.0,
+using the official CPU, CUDA 12.6, or CUDA 12.8 index. It installs only this
+stack and its dependencies, before the remaining project requirements.
+It supports Linux/Windows x86_64 with Python 3.9 through 3.13.
+Automatic selection reads `CUDA Version` from the standard `nvidia-smi` output:
+>= 12.8 selects cu128, and 12.6 through 12.7 selects cu126. Lower versions
+cause an error. This field describes driver CUDA support, not the installed
+system CUDA Toolkit. GPU compute capabilities are queried separately.
+Automatic GPU support is limited to compute capabilities 7.5 through 12.0;
+Blackwell GPUs require cu128. Unsupported hardware, old drivers, and failed
+queries cause an error rather than a silent CPU fallback.
+
+Without `nvidia-smi`, CPU is explicitly selected. On GPU-less login nodes,
+select for the intended compute node instead:
+
+```bash
+python scripts/install_torch.py --backend cu128 --dry-run
+python scripts/install_torch.py --backend cu128
+```
+
+`--backend cpu`, `cu126`, or `cu128` bypasses GPU detection; the caller must
+verify target hardware compatibility. `--dry-run` only prints the selection
+and install command: it does not invoke pip, download packages, or initialize
+CUDA. Driver probing does not account for GPU visibility masks or validate
+CUDA kernels; test the installed stack on the actual compute node.
+
 ## Typical workflow
 
 1. Generate or load grid data with the Python entry points in the repo root.

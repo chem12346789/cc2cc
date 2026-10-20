@@ -2,7 +2,20 @@
 name = "cc2cc"
 version = "0.1.0"
 description = "cc2cc: AI for density functional theory"
-dependencies = ["pytorch-optimizer==3.11.0", "openpyxl"]
+# Keep runtime dependencies in sync with requirements.txt.
+dependencies = [
+    "basis_set_exchange",
+    "opt_einsum",
+    "pyscf",
+    "pyscf-dispersion",
+    "wandb",
+    "numba",
+    "numpy",
+    "torchinfo==1.8.0",
+    "pandas",
+    "openpyxl",
+    "pytorch-optimizer==3.11.0",
+]
 
 [build-system]
 build-backend = "setuptools.build_meta"
