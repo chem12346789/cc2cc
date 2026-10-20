@@ -18,8 +18,8 @@ export RHO_INPUT="dft"
 # export RHO_INPUT="dft_d3bj"
 # export RHO_INPUT="dft_d3bj_vv10"
 
-# export SPLIT_CONFIG="mol1_add.json"
-export SPLIT_CONFIG="mol2_ex_add.json"
+export SPLIT_CONFIG="mol1_add.json"
+# export SPLIT_CONFIG="mol2_ex_add.json"
 # export SPLIT_CONFIG="test.json"
 # export SPLIT_CONFIG="mini.json"
 export MOL0_WEIGHTING=4
@@ -37,7 +37,8 @@ export IF_ATOMIC=1
 export IF_ABS=1
 
 export GRAD_ARG="--loss_multiplier_grad 1 --if_relative_weight_grad 0 --if_grad ${IF_GRAD} --grad_step 1"
-export ATOMIC_ARG="--loss_multiplier_atomic 1 --if_atomic ${IF_ATOMIC}"
+# Controlled comparison with 4114139: reduce the dominant atomization term only.
+export ATOMIC_ARG="--loss_multiplier_atomic 1e-2 --if_atomic ${IF_ATOMIC}"
 export ABS_ARG="--loss_multiplier_abs 1e-2 --if_relative_weight_abs 0 --if_abs ${IF_ABS}"
 export LOSS_ARGS="--normal_type L1Loss"
 # export LOSS_ARGS="--loss_type L1Loss --normal_type L1Loss"
@@ -61,7 +62,7 @@ export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${C
 # Hardware and environment
 # =========================
 export NUMBER_OF_GPU=1
-export CUDA_VISIBLE_DEVICES=1
+export CUDA_VISIBLE_DEVICES=3
 
 if [ ${NUMBER_OF_GPU} -gt 1 ]; then
 	export DISTRIBUTED="--distributed 1"
