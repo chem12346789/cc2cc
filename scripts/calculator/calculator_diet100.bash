@@ -7,12 +7,12 @@ export model_load_epoch_pairs=(
     "atom-7297:1115"
     "atom-7297:2395"
     "atom-7297:4955"
-    "atom-3260201:2395"
-    "atom-4114139:2395"
-    "atom-4113237:2395"
-    "atom-3260201:1115"
+    "atom-3259973:1115"
+    "atom-3259973:2395"
     "atom-4114139:1115"
+    "atom-4114139:2395"
     "atom-4113237:1115"
+    "atom-4113237:2395"
 )
 
 # find log folder with 4 days old files

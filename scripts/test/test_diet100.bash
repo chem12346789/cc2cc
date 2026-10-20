@@ -14,10 +14,10 @@ source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
 0) export load_model_args="--load atom-7297 --load_epoch 4955" ;;
-1) export load_model_args="--load atom-3260201 --load_epoch 2395" ;;
+1) export load_model_args="--load atom-3259973 --load_epoch 2395" ;;
 2) export load_model_args="--load atom-4114139 --load_epoch 2395" ;;
 3) export load_model_args="--load atom-4113237 --load_epoch 2395" ;;
-4) export load_model_args="--load atom-3260201 --load_epoch 1115" ;;
+4) export load_model_args="--load atom-3259973 --load_epoch 1115" ;;
 5) export load_model_args="--load atom-4114139 --load_epoch 1115" ;;
 6) export load_model_args="--load atom-4113237 --load_epoch 1115" ;;
 esac
