@@ -49,6 +49,13 @@ class DirectRunTests(unittest.TestCase):
         self.assertIn("concurrency=1/GPU total-concurrency=1 cpus/job=20", lines[0])
         self.assertEqual(lines[1], "[DRY-RUN] MODEL_INDEX=0 SLURM_ARRAY_TASK_ID=0")
 
+    def test_default_log_directory_uses_run_timestamp(self):
+        with patch.object(direct, "query_gpus", return_value={"0": ""}):
+            with patch("builtins.print") as output:
+                self.assertEqual(direct.main(["--gpus", "0", "--dry-run"]), 0)
+        plan = output.call_args_list[0].args[0]
+        self.assertRegex(plan, r"logs=.*/log/direct-\d{8}-\d{6}-\d{6}$")
+
     def test_background_launch_logging_and_shutdown(self):
         for job_status in (0, 7, None):
             with self.subTest(job_status=job_status), tempfile.TemporaryDirectory() as directory:
@@ -92,6 +99,7 @@ class DirectRunTests(unittest.TestCase):
                     text = (logs / "launcher.log").read_text()
                     self.assertIn("[PLAN]", text)
                     self.assertIn("[START]", text)
+                    self.assertIn(f"[STOP] kill -TERM {launcher_pid}", text)
                     self.assertIn("[STOP]" if job_status is None else "[SUMMARY]", text)
                     self.assertIn("job-output", (logs / "model-0-task-0.out").read_text())
                     self.assertIn("job-error", (logs / "model-0-task-0.err").read_text())

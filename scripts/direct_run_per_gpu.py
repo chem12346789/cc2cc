@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import json
 import math
 import os
@@ -11,7 +12,6 @@ import signal
 import subprocess
 import sys
 import time
-import uuid
 from collections import deque
 from pathlib import Path
 
@@ -72,7 +72,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-free-memory", type=float, default=15.0, help="GiB (default: 15).")
     parser.add_argument("--max-gpu-power", type=float, help="Maximum power in watts.")
     parser.add_argument("--poll-interval", type=float, default=5.0, help="Seconds (default: 5).")
-    parser.add_argument("--log-dir", help="Default: log/direct-<unique run ID>.")
+    parser.add_argument("--log-dir", help="Default: log/direct-<run timestamp>.")
     parser.add_argument(
         "--foreground", action="store_true",
         help="Stay attached to the terminal instead of starting a background launcher.",
@@ -237,7 +237,7 @@ def main(argv: list[str] | None = None) -> int:
         raise RuntimeError("No local GPUs satisfy the memory/power filters")
     concurrency = concurrency or 1
     total_concurrency = concurrency * len(gpus)
-    run_id = f"direct-{uuid.uuid4().hex[:12]}"
+    run_id = datetime.now().strftime("direct-%Y%m%d-%H%M%S-%f")
     log_dir = Path(args.log_dir).expanduser().resolve() if args.log_dir else (
         submit.ROOT / "log" / run_id
     )
@@ -268,6 +268,9 @@ def main(argv: list[str] | None = None) -> int:
                 command, stdin=subprocess.DEVNULL, stdout=output,
                 stderr=subprocess.STDOUT, start_new_session=True,
             )
+            stop_command = f"[STOP] kill -TERM {process.pid}\n"
+            output.write(stop_command)
+            output.flush()
         (log_dir / "launcher.pid").write_text(f"{process.pid}\n")
         time.sleep(0.2)
         if (

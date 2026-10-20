@@ -92,6 +92,7 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   before dispatch, not reservations; coordinate GPU ownership with other users.
   With no `--gpus`, respects `CUDA_VISIBLE_DEVICES` or discovers all local GPUs.
   `--dry-run --gpus 0,1` previews without GPU access, file writes, or job execution.
+  Default run log directories use the run's timestamp.
   Each run has separate stdout/stderr logs and per-job PySCF scratch directories
   under `PYSCF_TMPDIR`, `TMPDIR`, or repository `tmp` (retained for inspection).
   `--log-dir` must name a new directory. Job failures are logged and produce a
@@ -100,6 +101,7 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   and its PID is saved in `launcher.pid` inside the run's log directory.
   Monitor with `tail -f <log-directory>/launcher.log`; stop with
   `kill -TERM <launcher-pid>` (also terminates active job process groups).
+  The matching `[STOP] kill -TERM <launcher-pid>` command is recorded in `launcher.log`.
   The initial command's success means the launcher started, not that jobs passed.
   Use `--foreground` to stay attached and receive the final job exit status directly.
   For force testing, use `--script test/test_force.bash --gpus 0`;
