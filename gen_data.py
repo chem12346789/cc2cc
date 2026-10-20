@@ -381,11 +381,11 @@ if __name__ == "__main__":
                         f"(SCF-VV10 vs CCSD, electrons): {drho_scf_vv10_cc:.10e}\n"
                     )
 
-            # else:
-            #     if mol.spin == 0:
-            #         cc(mol, grids, name, args, evaluate=evaluate)
-            #     else:
-            #         ucc(mol, grids, name, args, evaluate=evaluate)
+            else:
+                if mol.spin == 0:
+                    cc(mol, grids, name, args, evaluate=evaluate)
+                else:
+                    ucc(mol, grids, name, args, evaluate=evaluate)
 
         except (KeyError, ValueError, RuntimeError) as e:
             print(f"ERROR: {name_mol} {args.md_number}")

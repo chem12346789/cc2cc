@@ -16,7 +16,7 @@ export basis_args="def2-QZVPPD"
 # export basis_args="cc-pVDZ"
 
 export MP_TOTAL=3
-export MD_NUMBER=0
+export MD_NUMBER=1
 # export GEN_CONFIG="gen_test.json"
 # export GEN_CONFIG="gen_mol2.json"
 export GEN_CONFIG="gen_val.json"
