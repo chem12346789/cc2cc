@@ -2,7 +2,7 @@ if [[ -n $SSH_CONNECTION ]]; then
     case "$(hostname)" in
     "manage.hkcorp.internal")
         echo "Syncing files from manage.hkqai"
-        for directory in validate validate_hkqai; do
+        for directory in validate validate_hkqai validate_hkqai_done; do
             echo "Syncing ${directory} from dgx1 to manage.hkqai"
             rsync -Pauv "dgx1:/home/chenzihao/workspace/cc2cc_test5/${directory}/" \
                 "/home/chenzihao/workspace/cc2cc_test5/${directory}/"
