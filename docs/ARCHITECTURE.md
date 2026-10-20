@@ -8,7 +8,8 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 ### `cc2cc/` — importable package
 - `gen_cc.py`, `gen_ucc.py`: closed-/open-shell CC data generation
 - `train_model.py`: training loop, W&B logging, distributed barriers
-- `test_model_rks.py`, `test_model_uks.py`: model-in-SCF validation
+- `test_model_rks.py`, `test_model_uks.py`: model-in-SCF validation, including
+  post-SCF VV10 energy corrections
 - `benchmark_rks.py`, `benchmark_uks.py`: benchmark helpers
 
 ### `cc2cc/utils/` — shared utilities and domain logic

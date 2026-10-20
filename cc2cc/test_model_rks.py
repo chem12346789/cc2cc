@@ -33,11 +33,13 @@ def test_model_rks(
     time_ai_start = timeit.default_timer()
     if torch.cuda.is_available() and (not args.if_grad):
         print("Use GPU for DFT calculation.")
+        use_gpu = True
         mdft = pyscf.dft.RKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
         utils.get_veff_modified_rks_gpu(mdft, modeldict, args.max_memory_gpu)
     else:
         print("Use CPU for DFT calculation.")
+        use_gpu = False
         mdft = pyscf.dft.RKS(mol).density_fit()
         Grid = utils.GridCPU
         utils.get_veff_modified_rks(mdft, modeldict)
@@ -79,6 +81,30 @@ def test_model_rks(
 
     dm1_scf = mdft.make_rdm1()
     e_scf = mdft.e_tot
+
+    if use_gpu:
+        nlcgrids = utils.GridCPU(
+            mol,
+            args.grid_level,
+            input_level=modeldict.input_level,
+            cube_type=modeldict.cube_type,
+            cube_size=modeldict.cube_size,
+        )
+        dm1_nlc = cp.asnumpy(dm1_scf)
+    else:
+        nlcgrids = mdft.grids
+        dm1_nlc = dm1_scf
+    exc_vv10 = utils.eval_nlc_exc_density(mol, nlcgrids, dm1_nlc, "vv10")
+    enlc_post = np.dot(exc_vv10, nlcgrids.weights)
+    _, enlc_post_check, _ = pyscf.dft.numint.NumInt().nr_nlc_vxc(
+        mol, nlcgrids, "vv10", dm1_nlc
+    )
+    if not np.isclose(enlc_post, enlc_post_check, rtol=1e-10, atol=1e-12):
+        raise RuntimeError(
+            f"Post-SCF VV10 grid integral disagrees with PySCF for {name}: "
+            f"{enlc_post} vs {enlc_post_check} Hartree"
+        )
+    e_post_scf_vv10 = e_scf + enlc_post
 
     if (
         args.s6 is None
@@ -129,6 +155,8 @@ def test_model_rks(
         "time_ai": time_ai,
         "scf_ene": e_scf,
         "scf_d3bj_ene": e_scf + d3_energy_force[0],
+        "post_scf_vv10_ene": e_post_scf_vv10,
+        "post_scf_vv10_d3bj_ene": e_post_scf_vv10 + d3_energy_force[0],
         "scf_dipole_x": scf_dipole[0],
         "scf_dipole_y": scf_dipole[1],
         "scf_dipole_z": scf_dipole[2],

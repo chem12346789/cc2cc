@@ -224,15 +224,10 @@ class Collect_info:
 
     def add_d3bj_correction(self):
         print(f"Current data columns: {self.data.columns.tolist()}")
-        if (
-            self.data.empty
-            or "scf_d3bj_ene" in self.data.columns
-            or "b3lyp-d3bj_ene" in self.data.columns
-        ):
+        if self.data.empty or "scf_d3bj_ene" in self.data.columns:
             if self.verbose > 3:
                 print("D3BJ correction already added.")
-            if not self.force_d3_b3lyp:
-                return
+            return
 
         if "name" not in self.data.columns:
             return
