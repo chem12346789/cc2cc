@@ -79,14 +79,13 @@ class Collect_info:
                 "verbose": self.verbose,
                 "pid": os.getpid(),
             }
-            import wandb
+            import swanlab
 
-            self.run = wandb.init(
+            self.run = swanlab.init(
                 project="DFT2CC_validation",
                 resume="allow",
-                name=(f"collect_{self.stamp}"),
+                experiment_name=f"collect_{self.stamp}",
                 config=experiment_dict,
-                allow_val_change=True,
                 mode="disabled" if self.verbose < 3 else "online",
             )
 

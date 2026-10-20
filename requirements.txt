@@ -2,7 +2,7 @@ basis_set_exchange
 opt_einsum
 pyscf
 pyscf-dispersion
-wandb
+swanlab
 numba
 numpy
 torchinfo==1.8.0

@@ -8,7 +8,7 @@ import torch
 from torch import distributed as dist
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
-import wandb
+import swanlab
 
 from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.computer_info import print_computer_info
@@ -92,14 +92,13 @@ class _Logger:
         }
         print(experiment_dict)
 
-        run = wandb.init(
+        run = swanlab.init(
             project="DFT2CC",
             resume="allow",
-            name="dft2cc",
+            experiment_name="dft2cc",
             config=experiment_dict,
-            allow_val_change=True,
         )
-        wandb.define_metric("*", step_metric="global_step")
+        swanlab.define_metric("*", x_axis="global_step")
         return cls(
             run,
             Timer(),
