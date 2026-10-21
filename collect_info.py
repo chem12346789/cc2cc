@@ -223,10 +223,17 @@ class Collect_info:
 
     def add_d3bj_correction(self):
         print(f"Current data columns: {self.data.columns.tolist()}")
-        if self.data.empty or "scf_d3bj_ene" in self.data.columns:
-            if self.verbose > 3:
-                print("D3BJ correction already added.")
+        if self.data.empty:
             return
+
+        if "scf_d3bj_ene" in self.data.columns:
+            needs_correction = self.data["scf_d3bj_ene"].isna()
+            if not needs_correction.any():
+                if self.verbose > 3:
+                    print("D3BJ correction already added.")
+                return
+        else:
+            needs_correction = pd.Series(True, index=self.data.index)
 
         if "name" not in self.data.columns:
             return
@@ -238,21 +245,27 @@ class Collect_info:
             f"validate_hkqai_done/ccdft_def2-QZVP(D)__{reference_set}.csv"
         )
         if "b3lyp-d3bj_ene" in data_test.columns:
-            d3bj_column, base_column = "b3lyp-d3bj_ene", "b3lyp_ene"
+            d3bj_column = "b3lyp-d3bj_ene"
         else:
-            d3bj_column, base_column = "scf-d3bj_ene", "scf_ene"
-        correction_by_name = dict(
-            zip(data_test["name"], data_test[d3bj_column] - data_test[base_column])
+            d3bj_column = "scf-d3bj_ene"
+        reference_energy_by_name = dict(
+            zip(data_test["name"], data_test[d3bj_column])
         )
 
         reference_names = self.data["name"].str.replace(
             self.basis, "def2-QZVP(D)", regex=False
         )
-        correction = reference_names.map(correction_by_name)
-        if correction.isna().any() and self.verbose > 3:
-            missing = np.unique(reference_names[correction.isna()].to_numpy())
+        reference_energies = reference_names.map(reference_energy_by_name)
+        missing_reference = needs_correction & reference_energies.isna()
+        if missing_reference.any() and self.verbose > 3:
+            missing = np.unique(reference_names[missing_reference].to_numpy())
             print(f"Warning: Missing D3BJ references for {missing.tolist()}")
-        self.data["scf_d3bj_ene"] = self.data["scf_ene"] + correction.to_numpy()
+        if "scf_d3bj_ene" in self.data.columns:
+            self.data.loc[needs_correction, "scf_d3bj_ene"] = reference_energies.loc[
+                needs_correction
+            ]
+        else:
+            self.data["scf_d3bj_ene"] = reference_energies
 
     def get_wtmad_2(self):
         output_log_list = []

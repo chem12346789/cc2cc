@@ -157,7 +157,6 @@ def test_model_uks(
         "scf_ene": e_scf,
         "scf_d3bj_ene": e_scf + d3_energy_force[0],
         "post_scf_vv10_ene": e_post_scf_vv10,
-        "post_scf_vv10_d3bj_ene": e_post_scf_vv10 + d3_energy_force[0],
         "scf_dipole_x": scf_dipole[0],
         "scf_dipole_y": scf_dipole[1],
         "scf_dipole_z": scf_dipole[2],
