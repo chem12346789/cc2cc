@@ -19,6 +19,7 @@ from cc2cc.utils.GridsGPU import (
     GridGPU as Grid, iterate_grid_segments, eval_xc_eff_gpu, get_cached_gdftopt,
 )
 from cc2cc.utils.env_var import MAX_GPU_JK_NAO
+from cc2cc.utils.xc_profile import XCStageProfiler
 
 
 def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
@@ -40,6 +41,7 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
         Get the effective potential for the RKS method.
         Modified from pyscf.dft.numint.nr_rks.
         """
+        profile = XCStageProfiler("RKS")
         xctype = ni._xc_type(xc_code)
 
         grids.opt = get_cached_gdftopt(grids, mol)
@@ -66,18 +68,24 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 max_memory=max_memory // (2 * modeldict.model.cube_size),
             ):
                 gridcube = grids.gen_cube(_sorted_mol, dms_sorted, coords_)
-                rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(ni, dms_sorted)
+                profile.mark("cube coordinates")
+                rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(
+                    ni, dms_sorted, profile=profile,
+                )
                 energy_den, middle_cube = eval_xc_eff_gpu(modeldict, rho_cube, weights_)
+                profile.mark("model + DLPack")
 
                 excsum[0] += cp.sum(energy_den)
                 wv = cp.einsum("ixgC,giC->xgC", vxc_mat, middle_cube, optimize=True)
                 wv = wv.reshape(4, len(gridcube.coords))  # xgC -> xG
+                profile.mark("XC contraction")
 
                 yield ao_value, wv
 
         nelec = cp.zeros(1)
         excsum = cp.zeros(1)
         vmat = cp.zeros((1, nao, nao))
+        profile.mark("setup")
 
         if xctype == "GGA":
             ao_deriv = 1
@@ -85,6 +93,7 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
                 aow = _scale_ao(ao, wv)
                 vmat[0] += cp.dot(ao[0], aow.T)
+                profile.mark("matrix assembly")
             vmat = transpose_sum(vmat)
         else:
             raise NotImplementedError(f"numint.nr_rks for functional {xc_code}")
@@ -98,6 +107,8 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
             vmat = grids.opt.unsort_orbitals(vmat, axis=[0, 1])
             grids.opt = None
 
+        profile.mark("symmetry + unsort")
+        profile.report(logger, ks)
         return nelec, excsum, vmat
 
     def get_veff(

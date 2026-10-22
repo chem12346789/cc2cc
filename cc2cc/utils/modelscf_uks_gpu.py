@@ -19,6 +19,7 @@ from cc2cc.utils.GridsGPU import (
     GridGPU as Grid, iterate_grid_segments, eval_xc_eff_gpu, get_cached_gdftopt,
 )
 from cc2cc.utils.env_var import MAX_GPU_JK_NAO
+from cc2cc.utils.xc_profile import XCStageProfiler
 
 
 def _hermi_sum(vmat):
@@ -43,6 +44,7 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
         """
         Obtain the nelec, excsum, and vmat.
         """
+        profile = XCStageProfiler("UKS")
         del hermi
         xctype = ni._xc_type(xc_code)
 
@@ -78,8 +80,12 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 max_memory=max_memory // (2 * modeldict.model.cube_size),
             ):
                 gridcube = grids.gen_cube(_sorted_mol, dms_sorted, coords_)
-                rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_uks(ni, dms_sorted)
+                profile.mark("cube coordinates")
+                rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_uks(
+                    ni, dms_sorted, profile=profile,
+                )
                 energy_den, middle_cube = eval_xc_eff_gpu(modeldict, rho_cube, weights_)
+                profile.mark("model + DLPack")
 
                 excsum[0] += cp.sum(energy_den)
                 wv = cp.einsum(
@@ -90,11 +96,13 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 )
 
                 wv = wv.reshape(2, 4, len(gridcube.coords))  # slpC -> slP
+                profile.mark("XC contraction")
                 yield ao_value, wv
 
         nelec = cp.zeros((2, 1))
         excsum = cp.zeros(1)
         vmat = cp.zeros((2, 1, nao, nao))
+        profile.mark("setup")
 
         if xctype == "GGA":
             ao_deriv = 1
@@ -107,6 +115,7 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 aowb = _scale_ao(ao, wvb)
                 vmat[0, 0] += cp.dot(ao[0], aowa.T)
                 vmat[1, 0] += cp.dot(ao[0], aowb.T)
+                profile.mark("matrix assembly")
 
             vmat = _hermi_sum(vmat.reshape((-1, nao, nao))).reshape(2, 1, nao, nao)
         else:
@@ -122,6 +131,8 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
             vmat[1] = grids.opt.unsort_orbitals(vmat[1], axis=[0, 1])
             grids.opt = None
 
+        profile.mark("symmetry + unsort")
+        profile.report(logger, ks)
         return nelec, excsum, vmat
 
     def get_veff(

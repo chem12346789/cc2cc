@@ -176,6 +176,7 @@ class GridCube:
         ni: numint.NumInt,
         dms,
         ao_deriv=1,
+        profile=None,
     ):
         """Generate RKS cube densities and XC inputs on the GPU."""
         input_mat = cp.zeros((self.input_level, len(self.coords)))
@@ -184,8 +185,12 @@ class GridCube:
         ao_value = numint.eval_ao(
             self.mol, self.coords, deriv=ao_deriv, transpose=False, gdftopt=self.opt
         )
+        if profile is not None:
+            profile.mark("AO evaluation")
         rho = rho_evaluator(ni, self.mol, ao_value[:4], dms, xctype="GGA")
         rho0 = rho[0]
+        if profile is not None:
+            profile.mark("density")
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho0, xctype="LDA")[:2]
         input_mat[0] = exc_lda.reshape(-1) * rho0
@@ -218,12 +223,16 @@ class GridCube:
             input_mat[6] = exc_tfk.reshape(-1) * rho0
             vxc_mat[6, :, :] = vxc_tfk
 
+        if profile is not None:
+            profile.mark("component XC")
         input_mat = input_mat.reshape(
             (self.input_level, self.number_of_cube, self.cube_size)
         ).transpose(1, 0, 2)
         vxc_mat = vxc_mat.reshape(
             (self.input_level, 4, self.number_of_cube, self.cube_size)
         )
+        if profile is not None:
+            profile.mark("cube reshape")
 
         return input_mat, vxc_mat, ao_value
 
@@ -232,6 +241,7 @@ class GridCube:
         ni: numint.NumInt,
         dms,
         ao_deriv=1,
+        profile=None,
     ):
         """Generate UKS cube densities and XC inputs on the GPU."""
         input_mat = cp.zeros((self.input_level, len(self.coords)))
@@ -242,6 +252,8 @@ class GridCube:
         ao_value = numint.eval_ao(
             self.mol, self.coords, deriv=ao_deriv, transpose=False, gdftopt=self.opt
         )
+        if profile is not None:
+            profile.mark("AO evaluation")
         rho_a = rho_evaluator(ni, self.mol, ao_value[:4], dma, xctype="GGA")
         rho_b = rho_evaluator(ni, self.mol, ao_value[:4], dmb, xctype="GGA")
         rho = cp.empty([2, 4, len(self.coords)])
@@ -251,6 +263,8 @@ class GridCube:
         rho_lda[0] = rho_a[0]
         rho_lda[1] = rho_b[0]
         rho0 = rho_a[0] + rho_b[0]
+        if profile is not None:
+            profile.mark("density")
 
         exc_lda, vxc_lda = ni.eval_xc_eff("LDA,", rho_lda, xctype="LDA")[:2]
         input_mat[0] = exc_lda.reshape(-1) * rho0
@@ -283,12 +297,16 @@ class GridCube:
             input_mat[6] = exc_tfk.reshape(-1) * rho0
             vxc_mat[6, :, :, :] = vxc_tfk
 
+        if profile is not None:
+            profile.mark("component XC")
         input_mat = input_mat.reshape(
             (self.input_level, self.number_of_cube, self.cube_size)
         ).transpose(1, 0, 2)
         vxc_mat = vxc_mat.reshape(
             (self.input_level, 2, 4, self.number_of_cube, self.cube_size)
         )
+        if profile is not None:
+            profile.mark("cube reshape")
 
         return input_mat, vxc_mat, ao_value
 

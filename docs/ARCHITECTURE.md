@@ -36,6 +36,26 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   `gmtkn-diet100-def2`, `dft-fitset-def2`)
 - PySCF CCSD(T) intermediate files: vendor-like scientific code — patch minimally
 
+### GPU SCF XC profiling
+
+Set `DFT2CC_PROFILE_XC=1` before the existing test command to log stage totals
+at INFO verbosity for every modified GPU RKS/UKS effective-potential evaluation.
+The default is `0` (no events, synchronization, or profiling output).
+This profiles SCF integration only, not the separate nuclear-gradient hooks.
+Stages cover setup, cube coordinates, AO evaluation (including input-buffer
+allocation), density, component XC functionals, cube reshaping, model
+forward/backward plus DLPack exchange, XC contraction, matrix assembly, and
+symmetrization/orbital unsorting. Counts for the per-block stages give the
+number of integration blocks; wall and GPU elapsed seconds are summed per stage.
+
+Profiling joins the current CuPy and PyTorch streams and synchronizes at every
+boundary. GPU elapsed time includes host launch gaps, not just kernel execution.
+This deliberately perturbs overlap and adds overhead: use it to locate expensive
+stages, then disable it for throughput comparisons. Compare warmed-up SCF
+iterations separately from the first call, which can include model compilation.
+Stage wall totals exclude profiler bookkeeping, logging, and the initial stream
+drain, so they need not equal the enclosing `vxc` timer exactly.
+
 ### Top-level entry points
 - `gen_data.py`: molecule selection → `gen_mole()` → optional MD/rotation →
   `Grid` → `cc()`/`ucc()` → `.npz` grid data
