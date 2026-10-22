@@ -66,6 +66,18 @@ def _gather_records(record, is_distributed):
     return record
 
 
+def _gather_rng_states(modeldict, is_distributed):
+    rng_state = modeldict.capture_rng_state()
+    if not is_distributed:
+        return rng_state
+
+    gathered_states = (
+        [None] * dist.get_world_size() if dist.get_rank() == 0 else None
+    )
+    dist.gather_object(rng_state, gathered_states, dst=0)
+    return gathered_states
+
+
 class _Logger:
     __slots__ = ("run", "timer", "best_loss", "loss_dir", "checkpoint_stride")
 
@@ -171,6 +183,7 @@ def train_model(train_list, eval_list, args):
 
     logger = _Logger.setup(modeldict, args)
     barrier()
+    modeldict.restore_rng_state()
 
     for epoch in range(args.epoch + 1):
         if modeldict.args.distributed:
@@ -202,12 +215,16 @@ def train_model(train_list, eval_list, args):
             eval_record = modeldict.eval_model()
             eval_record = _gather_records(eval_record, is_distributed)
             barrier()
+            modeldict.rng_state_for_save = _gather_rng_states(
+                modeldict, is_distributed
+            )
 
             if logger:
                 logger.log(
                     modeldict, train_record, eval_record, epoch,
                     force_checkpoint=cycle_end,
                 )
+            modeldict.rng_state_for_save = None
 
         barrier()
 

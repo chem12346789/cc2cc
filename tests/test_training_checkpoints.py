@@ -1,4 +1,5 @@
 import importlib
+import random
 from pathlib import Path
 from types import SimpleNamespace
 from tempfile import TemporaryDirectory
@@ -19,6 +20,35 @@ training = importlib.import_module("cc2cc.train_model")
 
 
 class TrainingCheckpointTests(unittest.TestCase):
+    def test_checkpoint_saves_rng_state(self):
+        module = importlib.import_module("cc2cc.utils.ModelClass")
+        args = SimpleNamespace(device="cpu", distributed=False, model="test")
+        wrapper = training.ModelClass(args)
+        wrapper.model = torch.nn.Linear(
+            1, 1, dtype=torch.float64, device="cpu"
+        )
+        wrapper.optimizer = torch.optim.AdamW(wrapper.model.parameters(), lr=0.001)
+
+        with TemporaryDirectory() as directory:
+            wrapper.dir_checkpoint = Path(directory) / "checkpoints"
+            wrapper.save_model(0)
+            checkpoint = torch.load(
+                wrapper.dir_checkpoint / "0.pth",
+                map_location="cpu",
+                weights_only=False,
+            )
+            rng_path = Path(directory) / "rng.pth"
+            torch.save(checkpoint["rng_state"], rng_path)
+            rng_state = torch.load(
+                rng_path,
+                map_location="cpu",
+                weights_only=True,
+            )
+
+        self.assertIn("python", rng_state)
+        self.assertIn("numpy_keys", rng_state)
+        self.assertIn("torch", rng_state)
+
     def test_resume_restores_model_optimizer_and_numeric_epoch(self):
         module = importlib.import_module("cc2cc.utils.ModelClass")
         model = torch.nn.Linear(1, 1, dtype=torch.float64, device="cpu")
@@ -27,12 +57,18 @@ class TrainingCheckpointTests(unittest.TestCase):
         optimizer = torch.optim.AdamW(model.parameters(), lr=0.0003)
         model(torch.ones(1, 1, dtype=torch.float64, device="cpu")).sum().backward()
         optimizer.step()
+        random.seed(1234)
+        np.random.seed(1234)
+        torch.manual_seed(1234)
+        rng_state = module.ModelClass.capture_rng_state()
+        expected_rng_values = (random.random(), np.random.random(), torch.rand(1).item())
         with TemporaryDirectory() as directory:
             path = Path(directory) / "checkpoint_source"
             path.mkdir()
             torch.save({
                 "state_dict": model.state_dict(), "model": "test",
                 "optimizer": optimizer.state_dict(),
+                "rng_state": rng_state,
             }, path / "2400.pth")
             args = SimpleNamespace(
                 device="cpu", distributed=False, load="source", load_epoch="2400",
@@ -63,6 +99,13 @@ class TrainingCheckpointTests(unittest.TestCase):
             database.data_gpu = [None] * 572
             with patch.object(module, "DataBase", return_value=database):
                 wrapper.init_database({}, {})
+            random.random()
+            np.random.random()
+            torch.rand(1)
+            wrapper.restore_rng_state()
+            self.assertEqual(random.random(), expected_rng_values[0])
+            self.assertEqual(np.random.random(), expected_rng_values[1])
+            self.assertEqual(torch.rand(1).item(), expected_rng_values[2])
             self.assertEqual(wrapper.scheduler.last_epoch, 2401 * 572)
             self.assertEqual(wrapper.optimizer.param_groups[0]["lr"], 1e-5)
             for parameter, loaded in zip(model.parameters(), restored.parameters()):

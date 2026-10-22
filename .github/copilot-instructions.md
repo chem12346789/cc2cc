@@ -33,7 +33,10 @@ UT   = unit test
 - After edit: git diff --stat  # scope check
 - Locate: rg first; read smallest relevant range only
 - Batch independent shell commands in one call
-- Changed .py: python -c "import <module>"  # syntax check
+- For Python commands and tests, use the interpreter selected in VS Code via
+  "Python: Select Interpreter"; do not substitute the system Python or guess an
+  environment. Resolve the selected executable through VS Code when needed.
+- Changed .py: <selected Python> -c "import <module>"  # syntax check
 - Modified behavior: run targeted tests if available
 - Report: validation performed + remaining limitation
 
