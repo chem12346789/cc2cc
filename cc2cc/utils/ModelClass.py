@@ -192,7 +192,8 @@ class ModelClass:
         if init_train:
             if self.args.if_resume:
                 self.print("Resuming training from checkpoint.")
-                self.start_step = self.args.load_epoch
+                # Checkpoints contain the updates from the named epoch.
+                self.start_step = int(self.args.load_epoch) + 1
 
             self.dir_checkpoint = (
                 CHECKPOINTS_PATH / f"checkpoint_{self.args.save_dir}"
@@ -241,6 +242,8 @@ class ModelClass:
 
     def load_model(self):
         if not self.args.load:
+            if getattr(self.args, "if_resume", False):
+                raise ValueError("Resuming training requires --load and --load_epoch.")
             self.print("No checkpoint specified, starting from scratch.")
             return
         load_checkpoint = (CHECKPOINTS_PATH / f"checkpoint_{self.args.load}").resolve()
@@ -256,8 +259,12 @@ class ModelClass:
             self.args.model = checkpoint["model"]
             if getattr(self.args, "if_resume", False):
                 self.optimizer_state_dict = checkpoint.get("optimizer")
+                if self.optimizer_state_dict is None:
+                    raise ValueError(f"Resume checkpoint has no optimizer state: {load_path}")
             self.print(f"Model loaded from {load_path} with model {self.args.model}")
         else:
+            if getattr(self.args, "if_resume", False):
+                raise FileNotFoundError(f"Resume checkpoint not found: {load_path}")
             self.print("Model not found, starting from scratch.")
 
     def init_train(self):

@@ -69,6 +69,16 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 - `benchmark_dft.py`: baseline DFT benchmarking
 - `d3_para.py`: D3 parameter fitting/testing
 - `collect_info.py`: collect validation CSV summaries
+  - Select the corrected model energy with
+    `--energy_column post_scf_vv10_ene` (Python:
+    `Collect_info(..., energy_column="post_scf_vv10_ene")`).
+    The default is `scf_d3bj_ene`, preserving automatic D3BJ correction.
+    Other columns must already be present and are reported under their own names;
+    no D3BJ correction is generated. Non-default selections use separate completion
+    cache entries and summary backups, but keep the same input CSV path.
+  - `scripts/calculator/calculator_diet100.bash` accepts
+    `model:epoch:energy_column` entries in `model_load_epoch_pairs`, for example
+    `atom-dft:1000:post_scf_vv10_ene`, and forwards the column to the collector.
 - `scripts/submit_direct_array_per_gpu.py`: per-GPU job dispatch helper. GPU probes
   sample roughly once per second for `--probe-timeout-sec` (default 60 seconds)
   after starting, with roughly up to two extra seconds for clock rounding and
@@ -127,6 +137,10 @@ out of importable Python modules.
 - Basis names: `def2-QZVPPD`, `def2-TZVPPD`, `def2-QZVP(D)`
 
 ### Training Logs and Loss Snapshots
+- `--load <save_dir> --load_epoch N --if_resume 1` restores the model and
+  optimizer after completed epoch N and starts training at N + 1. Scheduler
+  progress is reconstructed using N + 1 completed epochs and the current
+  schedule/data settings; those settings must match for schedule continuity.
 - `log/train-<run-id>.log`: startup arguments and dataset sizes, checkpoint path,
   and epoch-level train/eval loss, learning rate, and elapsed-time summaries.
 - `checkpoints/checkpoint_<save_dir>/loss/train-<epoch>.csv` and

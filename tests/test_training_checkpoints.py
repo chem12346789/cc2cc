@@ -3,7 +3,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
 import torch
@@ -19,6 +19,80 @@ training = importlib.import_module("cc2cc.train_model")
 
 
 class TrainingCheckpointTests(unittest.TestCase):
+    def test_resume_restores_model_optimizer_and_numeric_epoch(self):
+        module = importlib.import_module("cc2cc.utils.ModelClass")
+        model = torch.nn.Linear(1, 1, dtype=torch.float64, device="cpu")
+        restored = torch.nn.Linear(1, 1, dtype=torch.float64, device="cpu")
+        restored.cube_type, restored.cube_size, restored.input_level = "cube", 3, 1
+        optimizer = torch.optim.AdamW(model.parameters(), lr=0.0003)
+        model(torch.ones(1, 1, dtype=torch.float64, device="cpu")).sum().backward()
+        optimizer.step()
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "checkpoint_source"
+            path.mkdir()
+            torch.save({
+                "state_dict": model.state_dict(), "model": "test",
+                "optimizer": optimizer.state_dict(),
+            }, path / "2400.pth")
+            args = SimpleNamespace(
+                device="cpu", distributed=False, load="source", load_epoch="2400",
+                if_resume=True, precision="float64", save_dir="resumed",
+                optimizer="AdamW", lr=1e-5, weight_decay=1e-12, loss_type="MSELoss",
+                scheduler="constant",
+            )
+            wrapper = training.ModelClass(args)
+            with patch.object(module, "CHECKPOINTS_PATH", Path(directory)), \
+                    patch.object(Path, "exists", return_value=True), \
+                    patch.object(module, "__import__", return_value=SimpleNamespace(
+                        Model=lambda: restored), create=True), \
+                    patch.object(wrapper, "_maybe_compile_model"), \
+                    patch.object(torch.nn.MSELoss, "cuda", return_value=torch.nn.MSELoss()):
+                wrapper.init_model(init_train=True)
+            self.assertEqual(wrapper.start_step, 2401)
+            resumed, _, _, saved, updates = self.run_training(
+                "constant", start_step=wrapper.start_step, stride=1, end_epoch=2401,
+            )
+            self.assertEqual(resumed.train_model.call_count, 1)
+            self.assertEqual([entry[0] for entry in saved], [2401])
+            self.assertEqual(len(updates), 2)
+            self.assertIsNone(wrapper.state_dict)
+            self.assertIsNone(wrapper.optimizer_state_dict)
+            self.assertEqual(wrapper.optimizer.param_groups[0]["lr"], 0.0003)
+            database = MagicMock()
+            database.__len__.return_value = 572
+            database.data_gpu = [None] * 572
+            with patch.object(module, "DataBase", return_value=database):
+                wrapper.init_database({}, {})
+            self.assertEqual(wrapper.scheduler.last_epoch, 2401 * 572)
+            self.assertEqual(wrapper.optimizer.param_groups[0]["lr"], 1e-5)
+            for parameter, loaded in zip(model.parameters(), restored.parameters()):
+                self.assertTrue(torch.equal(parameter, loaded))
+                for key, value in optimizer.state[parameter].items():
+                    self.assertTrue(torch.equal(wrapper.optimizer.state[loaded][key], value))
+            for _ in range(3):
+                wrapper.optimizer.step()
+                wrapper.scheduler.step()
+                self.assertEqual(wrapper.optimizer.param_groups[0]["lr"], 1e-5)
+
+    def test_resume_requires_checkpoint_and_optimizer(self):
+        module = importlib.import_module("cc2cc.utils.ModelClass")
+        args = SimpleNamespace(
+            device="cpu", distributed=False, load="", load_epoch="2400", if_resume=True,
+        )
+        wrapper = training.ModelClass(args)
+        with self.assertRaisesRegex(ValueError, "requires --load"):
+            wrapper.load_model()
+        args.load = "source"
+        with TemporaryDirectory() as directory, \
+                patch.object(module, "CHECKPOINTS_PATH", Path(directory)):
+            with self.assertRaises(FileNotFoundError):
+                wrapper.load_model()
+            path = Path(directory) / "checkpoint_source"
+            path.mkdir()
+            torch.save({"state_dict": {}, "model": "test"}, path / "2400.pth")
+            with self.assertRaisesRegex(ValueError, "no optimizer state"):
+                wrapper.load_model()
+
     def run_training(
         self, scheduler_kind, start_step=0, stride=160, cycle_epochs=2, end_epoch=13
     ):

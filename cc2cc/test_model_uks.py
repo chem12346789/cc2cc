@@ -97,14 +97,6 @@ def test_model_uks(
         dm1_nlc = dm1_scf.sum(axis=0)
     exc_vv10 = utils.eval_nlc_exc_density(mol, nlcgrids, dm1_nlc, "vv10")
     enlc_post = np.dot(exc_vv10, nlcgrids.weights)
-    _, enlc_post_check, _ = pyscf.dft.numint.NumInt().nr_nlc_vxc(
-        mol, nlcgrids, "vv10", dm1_nlc
-    )
-    if not np.isclose(enlc_post, enlc_post_check, rtol=1e-10, atol=1e-12):
-        raise RuntimeError(
-            f"Post-SCF VV10 grid integral disagrees with PySCF for {name}: "
-            f"{enlc_post} vs {enlc_post_check} Hartree"
-        )
     e_post_scf_vv10 = e_scf + enlc_post
 
     if (

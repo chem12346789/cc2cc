@@ -2,6 +2,20 @@
 
 Density functional theory research codebase. PyTorch + PySCF. Surgical changes only.
 
+## Glossary
+PUB  = public/exported API
+PRIV = private/internal
+UT   = unit test
+
+## Tests
+- Default OFF. No test file/fixture/mock/dep unless message says "write tests".
+- Bugfix != add tests. Ship fix; leave tests to me.
+- When asked: <=1 file, <=5 cases. Cover PUB + critical branches only.
+- Never: PRIV, getters, trivial wrappers, config, constants, per-exception
+  cases, enumeration sweeps, "for completeness" cases.
+- Reuse existing runner/naming/assertions. No new patterns.
+- Never refactor prod code just to make it testable.
+
 ## DO NOT
 - No mass-format, recursive rewrite, unrelated cleanup
 - No whole-file rewrite for small change — targeted patches only
@@ -27,7 +41,7 @@ Density functional theory research codebase. PyTorch + PySCF. Surgical changes o
 - Code only, no explanation, unless asked
 - Bullets over paragraphs. No preamble, no recap
 - Describe changes in prose + file:line — no diff hunks
-- Rationale ≤ 3 short sentences
+- Rationale <= 3 short sentences
 - No filler ("let me know if...")
 
 ## Safety Net
@@ -43,4 +57,5 @@ Density functional theory research codebase. PyTorch + PySCF. Surgical changes o
 - [ ] Differentiable paths: no graph-breaking conversions
 - [ ] No cluster-specific paths in importable code
 - [ ] No prohibited long-running job launched
-- [ ] Response ≤ 15 lines
+- [ ] No unsolicited test files added
+- [ ] Response <= 15 lines

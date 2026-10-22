@@ -5,6 +5,7 @@
 # =========================
 export MODEL="--model transformer+dense_mix_e3nn_4_correct"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct_f"
+export LOAD_MODEL_ARGS="--load atom-3259973 --load_epoch 2400 --if_resume 1"
 
 # =========================
 # Data and targets
@@ -12,11 +13,10 @@ export MODEL="--model transformer+dense_mix_e3nn_4_correct"
 export DATASET="gmtkn-def2"
 export BASIS_ARGS="def2-QZVPPD"
 
-# Options: dft, dft_d3bj, zmp
+# dft_vv10 is the renamed dft_d3bj_vv10 target.
 # export RHO_INPUT="zmp"
-export RHO_INPUT="dft"
-# export RHO_INPUT="dft_d3bj"
-# export RHO_INPUT="dft_d3bj_vv10"
+export RHO_INPUT="dft_vv10"
+# export RHO_INPUT="dft"
 
 export SPLIT_CONFIG="mol1_add.json"
 # export SPLIT_CONFIG="mol2_ex_add.json"
@@ -37,9 +37,8 @@ export IF_ATOMIC=1
 export IF_ABS=1
 
 export GRAD_ARG="--loss_multiplier_grad 1 --if_relative_weight_grad 0 --if_grad ${IF_GRAD} --grad_step 1"
-# Controlled comparison with 4114139: reduce the dominant atomization term only.
-export ATOMIC_ARG="--loss_multiplier_atomic 1e-2 --if_atomic ${IF_ATOMIC}"
-export ABS_ARG="--loss_multiplier_abs 1e-2 --if_relative_weight_abs 0 --if_abs ${IF_ABS}"
+export ATOMIC_ARG="--loss_multiplier_atomic 1 --if_atomic ${IF_ATOMIC}"
+export ABS_ARG="--loss_multiplier_abs 0.01 --if_relative_weight_abs 0 --if_abs ${IF_ABS}"
 export LOSS_ARGS="--normal_type L1Loss"
 # export LOSS_ARGS="--loss_type L1Loss --normal_type L1Loss"
 
@@ -62,7 +61,7 @@ export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${C
 # Hardware and environment
 # =========================
 export NUMBER_OF_GPU=1
-export CUDA_VISIBLE_DEVICES=3
+export CUDA_VISIBLE_DEVICES=1
 
 if [ ${NUMBER_OF_GPU} -gt 1 ]; then
 	export DISTRIBUTED="--distributed 1"
@@ -107,6 +106,7 @@ train_run() {
 	local train_args=(
 		${DISTRIBUTED}
 		${MODEL}
+		${LOAD_MODEL_ARGS}
 		--save_dir "atom-${PID_THIS_RUN}"
 		--seed 1
 		--epoch 12500

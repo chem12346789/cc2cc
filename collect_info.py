@@ -48,6 +48,7 @@ class Collect_info:
         force_d3_b3lyp=False,
         verbose=4,
         data_set="gmtkn-def2",
+        energy_column="scf_d3bj_ene",
     ):
         self.model_load = model_load
         self.epoch = epoch
@@ -55,12 +56,15 @@ class Collect_info:
         self.force_d3_b3lyp = force_d3_b3lyp
         self.verbose = verbose
         self.data_set = data_set
+        self.energy_column = energy_column
         self.data_frame_name_list = DATA_FRAME_NAMES[self.data_set]
         self.data_frame_dict = {}
 
         dir_str = os.environ.get("VALIDATE_DIR", "validate_hkqai")
         self.stamp = f"{self.basis}_{self.model_load}_{self.epoch}_{self.data_set}"
         self.data_path = Path(dir_str) / f"ccdft_{self.stamp}.csv"
+        if self.energy_column != "scf_d3bj_ene":
+            self.stamp += f"_{self.energy_column}"
         self.done_cache_path = Path(dir_str) / "collect_done_cache.json"
         self.if_done = self.load_done_cache()
 
@@ -77,6 +81,7 @@ class Collect_info:
                 "epoch": self.epoch,
                 "basis": self.basis,
                 "verbose": self.verbose,
+                "energy_column": self.energy_column,
                 "pid": os.getpid(),
             }
             import swanlab
@@ -222,6 +227,8 @@ class Collect_info:
             ] = set_wtmad_2
 
     def add_d3bj_correction(self):
+        if self.energy_column != "scf_d3bj_ene":
+            return
         print(f"Current data columns: {self.data.columns.tolist()}")
         if self.data.empty:
             return
@@ -350,7 +357,7 @@ class Collect_info:
         dft_type_list = (
             ["b3lyp_ene", "b3lyp-d3bj_ene", "b3lyp-d3zero_ene"]
             if self.model_load == ""
-            else ["scf_ene", "scf_d3bj_ene", "modified_ai_d3bj"]
+            else list(dict.fromkeys(["scf_ene", self.energy_column, "modified_ai_d3bj"]))
         )
         header = dft_type_list + ["Processed"]
 
@@ -607,6 +614,14 @@ if __name__ == "__main__":
     parser.add_argument("--frequency", type=str, default="10s")
     parser.add_argument("--max_checks", type=int, default=0)
     parser.add_argument(
+        "--energy_column",
+        type=str,
+        default="scf_d3bj_ene",
+        help="Corrected model energy column to summarize, e.g. post_scf_vv10_ene. "
+        "Non-default columns must already exist in the input data; "
+        "automatic D3BJ correction is disabled for them.",
+    )
+    parser.add_argument(
         "--data_set", type=str, default="gmtkn-def2", choices=DATA_FRAME_NAMES
     )
     parser.add_argument(
@@ -632,6 +647,7 @@ if __name__ == "__main__":
         verbose=args.verbose,
         data_set=args.data_set,
         force_d3_b3lyp=args.force_d3_b3lyp,
+        energy_column=args.energy_column,
     )
     num_checks = 0
 
