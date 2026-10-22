@@ -26,7 +26,7 @@ export DFT2CC_MAX_GPU_JK_NAO=3500
 export basis_args="def2-QZVP(D)"
 select_molecule_profile gmtkn55
 
-setup_gpu_test_job 256000 8000
+setup_gpu_test_job 256000 16000
 # Arguments: PySCF memory (MiB); minimum free GPU memory (MiB).
 echo "NUMBER_OF_THREADS=${NUMBER_OF_THREADS}"
 

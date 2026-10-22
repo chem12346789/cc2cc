@@ -85,7 +85,7 @@ class DirectRunTests(unittest.TestCase):
                     self.assertIn("[BACKGROUND]", parent.stdout)
                     launcher_pid = int((logs / "launcher.pid").read_text())
                     deadline = time.monotonic() + 5
-                    while not (logs / "model-0-task-0.out").exists():
+                    while "[START]" not in (logs / "launcher.log").read_text():
                         self.assertLess(time.monotonic(), deadline)
                         time.sleep(0.01)
                     if job_status is None:
@@ -101,14 +101,53 @@ class DirectRunTests(unittest.TestCase):
                     self.assertIn("[START]", text)
                     self.assertIn(f"[STOP] kill -TERM {launcher_pid}", text)
                     self.assertIn("[STOP]" if job_status is None else "[SUMMARY]", text)
-                    self.assertIn("job-output", (logs / "model-0-task-0.out").read_text())
-                    self.assertIn("job-error", (logs / "model-0-task-0.err").read_text())
+                    self.assertIn("job-output", text)
+                    self.assertIn("job-error", text)
+                    self.assertEqual(list(logs.glob("model-0-task-0.*")), [])
                 finally:
                     if launcher_pid is not None and not (logs / "exit-code").exists():
                         try:
                             os.kill(launcher_pid, signal.SIGTERM)
                         except ProcessLookupError:
                             pass
+
+    def test_background_launcher_records_real_test_log_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            logs = root / "direct-logs"
+            helper = direct.submit.ROOT / "scripts" / "__lib__" / "test_job.sh"
+            script = root / "job.bash"
+            script.write_text(
+                f'source "{helper}"\n'
+                f'REPO_ROOT="{root}"\n'
+                'load_model_args="--load atom-test --load_epoch 1"\n'
+                'select_molecule_profile force\n'
+                'echo job-output\n'
+                'echo job-error >&2\n'
+            )
+            smi = root / "nvidia-smi"
+            smi.write_text("#!/bin/sh\nprintf '0, GPU-a, 24000, 10\\n'\n")
+            smi.chmod(0o755)
+            env = os.environ.copy()
+            env.update(PATH=f"{root}:{env['PATH']}", PYSCF_TMPDIR=str(root / "scratch"))
+            parent = subprocess.run(
+                [sys.executable, str(Path(direct.__file__).resolve()),
+                 "--script", str(script), "--gpus", "0", "--log-dir", str(logs),
+                 "--poll-interval", "0.01"],
+                env=env, text=True, capture_output=True, timeout=5,
+            )
+            self.assertEqual(parent.returncode, 0, parent.stdout + parent.stderr)
+            deadline = time.monotonic() + 5
+            while not (logs / "exit-code").exists():
+                self.assertLess(time.monotonic(), deadline)
+                time.sleep(0.01)
+            text = (logs / "launcher.log").read_text()
+            real_log = root / "log" / "atom-test" / "1" / "Force_0.out"
+            real_err = root / "log" / "atom-test" / "1" / "Force_0.err"
+            self.assertIn(f"log={real_log} err={real_err}", text)
+            self.assertEqual(real_log.read_text(), "array_index=0\njob-output\n")
+            self.assertEqual(real_err.read_text(), "job-error\n")
+            self.assertEqual(list(logs.glob("model-0-task-0.*")), [])
 
     def test_gpu_filters_and_uuid_selection(self):
         result = subprocess.CompletedProcess([], 0, stdout=(

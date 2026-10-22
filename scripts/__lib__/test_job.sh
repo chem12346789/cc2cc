@@ -109,8 +109,13 @@ select_molecule_profile() {
     local set_name="${name_mol_input#molecule_}"
     local log_dir="${REPO_ROOT}/log/${load_name}/${load_epoch}"
     mkdir -p "${log_dir}"
-    exec >"${log_dir}/${set_name}_${array_index}.out" \
-        2>"${log_dir}/${set_name}_${array_index}.err"
+    local log_file="${log_dir}/${set_name}_${array_index}.out"
+    local err_file="${log_dir}/${set_name}_${array_index}.err"
+    if [[ "${DIRECT_RUN_LOG_LINKS:-}" == "1" ]]; then
+        printf '[TASK-LOG] model=%s task=%s log=%s err=%s\n' \
+            "${MODEL_INDEX:-0}" "${array_index}" "${log_file}" "${err_file}"
+    fi
+    exec >"${log_file}" 2>"${err_file}"
     printf 'array_index=%s\n' "${array_index}"
 }
 

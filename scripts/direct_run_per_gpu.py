@@ -152,14 +152,12 @@ def run_jobs(
                             FORCE_CUDA_VISIBLE_DEVICES=gpus[gpu],
                             CUDA_VISIBLE_DEVICES=gpus[gpu],
                             PYSCF_TMPDIR=str(task_scratch),
+                            DIRECT_RUN_LOG_LINKS="1",
                         )
-                        with (log_dir / f"{stem}.out").open("w") as stdout, (
-                            log_dir / f"{stem}.err"
-                        ).open("w") as stderr:
-                            process = subprocess.Popen(
-                                ["bash", str(script)], cwd=submit.ROOT, env=env,
-                                stdout=stdout, stderr=stderr, start_new_session=True,
-                            )
+                        process = subprocess.Popen(
+                            ["bash", str(script)], cwd=submit.ROOT, env=env,
+                            start_new_session=True,
+                        )
                         running[process] = (gpu, model, task)
                         active_by_gpu[gpu] += 1
                         print(
