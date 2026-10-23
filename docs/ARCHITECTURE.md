@@ -44,9 +44,21 @@ The default is `0` (no events, synchronization, or profiling output).
 This profiles SCF integration only, not the separate nuclear-gradient hooks.
 Stages cover setup, cube coordinates, AO evaluation (including input-buffer
 allocation), density, component XC functionals, cube reshaping, model
-forward/backward plus DLPack exchange, XC contraction, matrix assembly, and
+forward/backward plus DLPack exchange, XC contraction, AO weighting, matrix GEMM, and
 symmetrization/orbital unsorting. Counts for the per-block stages give the
 number of integration blocks; wall and GPU elapsed seconds are summed per stage.
+Each report also lists every block's `base_grids` (integration centers) and
+`cube_points` (expanded AO evaluation points), including the final partial block.
+Block records are printed after timing, not inside the integration loop.
+The former matrix-assembly stage is now split into `AO weighting` and
+`matrix GEMM`; UKS totals include both spins. Both hooks use float64 cuBLAS GEMM
+with `beta=1` to accumulate directly into the potential matrices, avoiding a
+full matrix-product temporary and separate addition for each block.
+Weighted-AO scratch storage is reused across blocks, growing only when needed.
+UKS processes alpha then beta through the same scratch buffer; `AO weighting`
+and `matrix GEMM` therefore each have two calls per block in UKS (one in RKS).
+Their total times still include both spins. All scratch storage is local to one
+integration call; no AO cache or additional screening approximation is introduced.
 
 Profiling joins the current CuPy and PyTorch streams and synchronizes at every
 boundary. GPU elapsed time includes host launch gaps, not just kernel execution.
@@ -57,6 +69,17 @@ Stage wall totals exclude profiler bookkeeping, logging, and the initial stream
 drain, so they need not equal the enclosing `vxc` timer exactly.
 
 ### Top-level entry points
+
+Validation CSV cleanup: `python scripts/clean_validation_csv.py --dry-run`
+recursively previews removal of rows whose `scf_d3bj_ene` is empty or whitespace
+under `validate/def2-QZVP(D)_atom-*`. Use `--apply` to rewrite affected files;
+without either flag it only previews. Each removed row and a summary are printed.
+Missing-column files are reported and skipped; malformed rows raise an error.
+Nonempty values (including `0` and literal `NaN`) are retained. Retained CSV
+records keep their original formatting. Writes use atomic replacement and preserve
+permission bits; run only when validation writers are stopped. No backups are
+created, and failures may occur after earlier files have been updated.
+
 - `gen_data.py`: molecule selection → `gen_mole()` → optional MD/rotation →
   `Grid` → `cc()`/`ucc()` → `.npz` grid data
   - Existing-cache comparisons report B3LYP/post-DFT VV10 and SCF-VV10
@@ -97,8 +120,9 @@ drain, so they need not equal the enclosing `vxc` timer exactly.
     no D3BJ correction is generated. Non-default selections use separate completion
     cache entries and summary backups, but keep the same input CSV path.
   - `scripts/calculator/calculator_diet100.bash` accepts
-    `model:epoch:energy_column` entries in `model_load_epoch_pairs`, for example
-    `atom-dft:1000:post_scf_vv10_ene`, and forwards the column to the collector.
+    `model:epoch:energy_column[:note]` entries in `model_load_epoch_pairs`, for
+    example `atom-dft:1000:post_scf_vv10_ene`; it forwards the energy column to
+    the collector and displays an optional note in the results table.
 - `scripts/submit_direct_array_per_gpu.py`: per-GPU job dispatch helper. GPU probes
   sample roughly once per second for `--probe-timeout-sec` (default 60 seconds)
   after starting, with roughly up to two extra seconds for clock rounding and

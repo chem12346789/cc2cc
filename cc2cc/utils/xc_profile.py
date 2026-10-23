@@ -12,6 +12,7 @@ class XCStageProfiler:
         self.enabled = setting == "1"
         self.spin = spin
         self.totals = {}
+        self.blocks = []
         if not self.enabled:
             return
 
@@ -34,6 +35,10 @@ class XCStageProfiler:
         self.start.record(self.stream)
         self.torch_stream.wait_event(self.start)
         self.wall_start = perf_counter()
+
+    def record_block(self, base_grids, cube_points):
+        if self.enabled:
+            self.blocks.append((base_grids, cube_points))
 
     def mark(self, stage):
         """Accumulate work since the previous boundary under ``stage``."""

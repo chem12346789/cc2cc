@@ -51,10 +51,10 @@ class TestCalculatorDiet100(TestCase):
                         '    "atom-dft:1000:other_ene"',
                         1,
                     )
-                expected_pairs = re.findall(
-                    r'"([^"]+:[^"]+:[^"]+)"',
-                    script.split("export model_load_epoch_pairs=(", 1)[1].split(")", 1)[0],
-                )
+                array_body = script.split(
+                    "export model_load_epoch_pairs=(", 1
+                )[1].split(")", 1)[0]
+                expected_pairs = re.findall(r'^\s*"([^"]+)"\s*$', array_body, re.MULTILINE)
                 arg_log = root / "args"
                 result = subprocess.run(
                     ["bash"], input=script, text=True,
@@ -73,7 +73,7 @@ class TestCalculatorDiet100(TestCase):
                 ]
                 self.assertEqual(len(calls), len(expected_pairs))
                 for pair, call in zip(expected_pairs, calls):
-                    model, epoch, energy_column = pair.split(":")
+                    model, epoch, energy_column = pair.split(":", 3)[:3]
                     self.assertEqual(call[call.index("--model_load") + 1], model)
                     self.assertEqual(call[call.index("--epoch") + 1], epoch)
                     self.assertEqual(call[call.index("--energy_column") + 1], energy_column)
@@ -83,7 +83,7 @@ class TestCalculatorDiet100(TestCase):
                 expected_errors = []
                 if custom:
                     for pair in expected_pairs:
-                        model, epoch, _ = pair.split(":")
+                        model, epoch, _ = pair.split(":", 3)[:3]
                         expected_errors.append(
                             f"find: validate/def2-QZVP(D)_{model}/{epoch}: "
                             "No such file or directory"
@@ -91,7 +91,7 @@ class TestCalculatorDiet100(TestCase):
                 self.assertEqual(output_lines[len(table_lines):], expected_errors)
                 header = table_lines[0]
                 pipe_positions = [i for i, char in enumerate(header) if char == "|"]
-                self.assertEqual(len(pipe_positions), 8)
+                self.assertEqual(len(pipe_positions), 9)
                 for line in table_lines:
                     self.assertNotIn("\t", line)
                     self.assertEqual(
@@ -100,7 +100,7 @@ class TestCalculatorDiet100(TestCase):
                     )
                 self.assertEqual([cell.strip() for cell in header.split("|")[1:-1]], [
                     "Model", "Epoch", "AI", "Corrected", "Processed",
-                    "Converged", "Energy_column",
+                    "Converged", "Energy_column", "Note",
                 ])
                 self.assertNotIn("Basis", header)
                 separator = table_lines[1]
@@ -108,9 +108,11 @@ class TestCalculatorDiet100(TestCase):
                 rows = table_lines[2:]
                 self.assertEqual(len(rows), len(expected_pairs))
                 for pair, row in zip(expected_pairs, rows):
-                    model, epoch, energy_column = pair.split(":")
+                    fields = pair.split(":", 3)
+                    model, epoch, energy_column = fields[:3]
+                    note = fields[3] if len(fields) > 3 else ""
                     values = [cell.strip() for cell in row.split("|")[1:-1]]
-                    self.assertEqual(len(values), 7)
+                    self.assertEqual(len(values), 8)
                     self.assertEqual(values[:2], [model, epoch])
                     self.assertEqual(values[2:4], ["1.00", "2.00"])
                     self.assertEqual(values[4], "DONE")
@@ -119,7 +121,7 @@ class TestCalculatorDiet100(TestCase):
                         "scf_d3bj_ene": "d3bj",
                         "post_scf_vv10_ene": "post_vv10",
                     }.get(energy_column, energy_column)
-                    self.assertEqual(values[-1], energy_label)
+                    self.assertEqual(values[-2:], [energy_label, note])
                 self.assertIn("Corrected", result.stdout)
                 self.assertIn("d3bj", result.stdout)
                 self.assertTrue((root / "log/collect_info_atom-dft_1000_scf_d3bj_ene_cal_100.log").exists())

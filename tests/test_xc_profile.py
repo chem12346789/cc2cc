@@ -47,11 +47,13 @@ class TestXCStageProfiler(unittest.TestCase):
         with patch.dict(os.environ, {"DFT2CC_PROFILE_XC": "0"}):
             with patch("builtins.__import__", side_effect=AssertionError("import")):
                 profile = profiling.XCStageProfiler("RKS")
+                profile.record_block(2, 6)
                 profile.mark("AO evaluation")
                 logger = Mock()
                 profile.report(logger, object())
         logger.info.assert_not_called()
         self.assertEqual(profile.totals, {})
+        self.assertEqual(profile.blocks, [])
 
     def test_invalid_setting_is_explicit(self):
         with patch.dict(os.environ, {"DFT2CC_PROFILE_XC": "yes"}):
@@ -70,6 +72,8 @@ class TestXCStageProfiler(unittest.TestCase):
                 patch.dict("sys.modules", {"cupy": cp, "torch": torch}), \
                 patch.object(profiling, "perf_counter", side_effect=[0, 1, 2, 5, 6]):
             profile = profiling.XCStageProfiler("UKS")
+            profile.record_block(2, 6)
+            profile.record_block(1, 3)
             order.reset_mock()
             profile.mark("density")
             first_calls = [call[0] for call in order.mock_calls]
@@ -91,6 +95,8 @@ class TestXCStageProfiler(unittest.TestCase):
         profile.report(logger, owner)
         self.assertEqual(logger.info.call_args_list[1].args[2:],
                          ("density", 2, 4.0, 0.5))
+        self.assertEqual(logger.info.call_args_list[-2].args[2:], (1, 2, 6))
+        self.assertEqual(logger.info.call_args_list[-1].args[2:], (2, 1, 3))
 
 
 class TestProfiledIntegration(unittest.TestCase):
@@ -144,8 +150,24 @@ class TestProfiledIntegration(unittest.TestCase):
                         profiles.append(profile)
                         return profile
 
+                    def gemm(transa, transb, a, b, *, out, beta):
+                        self.assertEqual((transa, transb, beta), ("N", "T", 1.0))
+                        self.assertEqual(out.dtype, np.float64)
+                        self.assertTrue(out.flags.c_contiguous)
+                        out[:] = a @ b.T + beta * out
+                        return out
+
+                    buffers = []
+
+                    def scale_ao(ao, wv, *, out):
+                        buffers.append(out)
+                        result = out[:ao[0].size].reshape(ao[0].shape)
+                        np.einsum("xag,xg->ag", ao, wv, out=result)
+                        return result
+
                     ns = dict(
                         cp=np, ks=object(), logger=logger,
+                        gemm=Mock(side_effect=gemm),
                         XCStageProfiler=make_profile,
                         get_cached_gdftopt=lambda grid, mol: opt,
                         tag_array=lambda data, **kwargs: data,
@@ -155,7 +177,7 @@ class TestProfiledIntegration(unittest.TestCase):
                         ]),
                         eval_xc_eff_gpu=lambda model, rho, weights:
                         (rho.sum(axis=(1, 2)) * weights, np.ones_like(rho)),
-                        _scale_ao=lambda ao, wv: np.einsum("xag,xg->ag", ao, wv),
+                        _scale_ao=scale_ao,
                         transpose_sum=lambda mat: mat + mat.transpose(0, 2, 1),
                         _hermi_sum=lambda mat: mat + mat.transpose(0, 2, 1),
                     )
@@ -165,6 +187,15 @@ class TestProfiledIntegration(unittest.TestCase):
                             ni, mol, grid, "b3lyp", dm, 4000)
                     with patch.dict(os.environ, {"DFT2CC_PROFILE_XC": "0"}):
                         expected = ns[f"nr_{spin}"](*args)
+                    self.assertEqual(ns["gemm"].call_count, 2 if spin == "rks" else 4)
+                    self.assertEqual(len(buffers), 2 if spin == "rks" else 4)
+                    self.assertTrue(all(buf is buffers[0] for buf in buffers))
+                    # With these constant AO/rho fixtures the original dot-and-add
+                    # path gives this matrix after Hermitian symmetrization.
+                    expected_value = 9 * 2 * (0.5 * input_level + 3 * (input_level - 2))
+                    np.testing.assert_array_equal(expected[2], np.full(
+                        (2, 2) if spin == "rks" else (2, 2, 2), expected_value,
+                    ))
                     logger.info.assert_not_called()
                     cp, torch, *_ = fake_backends()
                     with patch.dict(os.environ, {"DFT2CC_PROFILE_XC": "1"}), \
@@ -176,11 +207,15 @@ class TestProfiledIntegration(unittest.TestCase):
                     self.assertEqual(list(stages), [
                         "setup", "cube coordinates", "AO evaluation", "density",
                         "component XC", "cube reshape", "model + DLPack",
-                        "XC contraction", "matrix assembly", "symmetry + unsort",
+                        "XC contraction", "AO weighting", "matrix GEMM",
+                        "symmetry + unsort",
                     ])
+                    self.assertEqual(profiles[-1].blocks, [(2, 6), (1, 3)])
                     for name, (count, _, _) in stages.items():
                         self.assertEqual(count, 1 if name in (
                             "setup", "symmetry + unsort",
+                        ) else 4 if spin == "uks" and name in (
+                            "AO weighting", "matrix GEMM",
                         ) else 2)
 
 
@@ -190,6 +225,103 @@ class TestProfiledIntegration(unittest.TestCase):
     "requires CuPy and PyTorch",
 )
 class TestCudaProfile(unittest.TestCase):
+    @unittest.skipUnless(
+        importlib.util.find_spec("gpu4pyscf") is not None, "requires GPU4PySCF",
+    )
+    def test_weighted_ao_scratch_reuse_matches_original_assembly(self):
+        import cupy as cp
+        from cupy.cublas import gemm
+        from gpu4pyscf.dft.numint import _scale_ao
+        import torch
+
+        if not torch.cuda.is_available():
+            self.skipTest("requires CUDA")
+        rng = np.random.default_rng(42)
+        device = cp.cuda.Device().id
+        with cp.cuda.Device(device), cp.cuda.Stream(non_blocking=True):
+            for spin, shape in (("rks", (1, 7, 7)), ("uks", (2, 1, 7, 7))):
+                path = UTILS / f"modelscf_{spin}_gpu.py"
+                assembly = next(node for node in ast.walk(ast.parse(path.read_text()))
+                                if isinstance(node, ast.For)
+                                and isinstance(node.iter, ast.Call)
+                                and isinstance(node.iter.func, ast.Name)
+                                and node.iter.func.id == "block_loop")
+                blocks = []
+                actual = cp.asarray(rng.normal(size=shape), dtype=cp.float64)
+                expected = actual.copy()
+                for points in (11, 5, 13):
+                    ao = cp.asarray(rng.normal(size=(4, 7, points)), dtype=cp.float64)
+                    wshape = (4, points) if spin == "rks" else (2, 4, points)
+                    wv = cp.asarray(rng.normal(size=wshape), dtype=cp.float64)
+                    blocks.append((ao, wv))
+                    weights = wv.copy()
+                    if spin == "rks":
+                        weights[0] *= 0.5
+                        expected[0] += cp.dot(ao[0], _scale_ao(ao, weights).T)
+                    else:
+                        weights[:, 0] *= 0.5
+                        for s in range(2):
+                            expected[s, 0] += cp.dot(
+                                ao[0], _scale_ao(ao, weights[s]).T,
+                            )
+                buffers = []
+
+                def scale_ao(ao, wv, *, out):
+                    buffers.append(out)
+                    weighted = _scale_ao(ao, wv, out=out)
+                    self.assertEqual(weighted.data.ptr, out.data.ptr)
+                    return weighted
+
+                ns = dict(
+                    cp=cp, gemm=gemm, _scale_ao=scale_ao, vmat=actual,
+                    block_loop=lambda deriv: iter(blocks), ao_deriv=1,
+                    aow_buffer=None, profile=Mock(),
+                )
+                load_nodes(path, [assembly], ns)
+                per_block = 1 if spin == "rks" else 2
+                self.assertEqual(len(buffers), 3 * per_block)
+                self.assertTrue(all(buf is buffers[0] for buf in buffers[:2 * per_block]))
+                self.assertIsNot(buffers[-1], buffers[0])
+                self.assertTrue(all(buf is buffers[-1] for buf in buffers[2 * per_block:]))
+                cp.testing.assert_allclose(actual, expected, rtol=1e-13, atol=1e-13)
+
+    def test_gemm_accumulates_into_rks_and_uks_views(self):
+        import cupy as cp
+        from cupy.cublas import gemm
+        import torch
+
+        if not torch.cuda.is_available():
+            self.skipTest("requires CUDA")
+        device = cp.cuda.Device().id
+        rng = np.random.default_rng(14)
+        with cp.cuda.Device(device), cp.cuda.Stream(non_blocking=True):
+            for spin, shape in (("rks", (1, 7, 7)), ("uks", (2, 1, 7, 7))):
+                path = UTILS / f"modelscf_{spin}_gpu.py"
+                calls = [node for node in ast.walk(ast.parse(path.read_text()))
+                         if isinstance(node, ast.Expr)
+                         and isinstance(node.value, ast.Call)
+                         and isinstance(node.value.func, ast.Name)
+                         and node.value.func.id == "gemm"]
+                self.assertEqual(len(calls), 1 if spin == "rks" else 2)
+                actual = cp.asarray(rng.normal(size=shape), dtype=cp.float64)
+                expected = actual.copy()
+                pointer = actual.data.ptr
+                for points in (11, 5, 13):
+                    ao = cp.asarray(rng.normal(size=(4, 7, points)), dtype=cp.float64)
+                    aowa = cp.asarray(rng.normal(size=(7, points)), dtype=cp.float64)
+                    aowb = cp.asarray(rng.normal(size=(7, points)), dtype=cp.float64)
+                    if spin == "rks":
+                        expected[0] += cp.dot(ao[0], aowa.T)
+                    else:
+                        expected[0, 0] += cp.dot(ao[0], aowa.T)
+                        expected[1, 0] += cp.dot(ao[0], aowb.T)
+                    load_nodes(path, calls, dict(
+                        gemm=gemm, ao=ao, aow=aowa, aowa=aowa, aowb=aowb,
+                        vmat=actual,
+                    ))
+                    self.assertEqual(actual.data.ptr, pointer)
+                    cp.testing.assert_allclose(actual, expected, rtol=1e-13, atol=1e-13)
+
     def test_nondefault_streams(self):
         import cupy as cp
         import torch

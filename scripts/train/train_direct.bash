@@ -5,7 +5,7 @@
 # =========================
 export MODEL="--model transformer+dense_mix_e3nn_4_correct"
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct_f"
-export LOAD_MODEL_ARGS="--load atom-3259973 --load_epoch 2400 --if_resume 1"
+# export LOAD_MODEL_ARGS="--load atom-3259973 --load_epoch 2400 --if_resume 1"
 
 # =========================
 # Data and targets
@@ -14,9 +14,9 @@ export DATASET="gmtkn-def2"
 export BASIS_ARGS="def2-QZVPPD"
 
 # dft_vv10 is the renamed dft_d3bj_vv10 target.
-# export RHO_INPUT="zmp"
-export RHO_INPUT="dft_vv10"
 # export RHO_INPUT="dft"
+# export RHO_INPUT="dft_vv10"
+export RHO_INPUT="zmp"
 
 export SPLIT_CONFIG="mol1_add.json"
 # export SPLIT_CONFIG="mol2_ex_add.json"
@@ -32,7 +32,7 @@ export OUTPUT_ARG="--output_target tol_delta_grids"
 # =========================
 # Loss terms
 # =========================
-export IF_GRAD=1
+export IF_GRAD=0
 export IF_ATOMIC=1
 export IF_ABS=1
 
@@ -61,7 +61,7 @@ export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${C
 # Hardware and environment
 # =========================
 export NUMBER_OF_GPU=1
-export CUDA_VISIBLE_DEVICES=1
+export CUDA_VISIBLE_DEVICES=0
 
 if [ ${NUMBER_OF_GPU} -gt 1 ]; then
 	export DISTRIBUTED="--distributed 1"

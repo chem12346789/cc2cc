@@ -3,32 +3,37 @@
 #SBATCH -p gpu
 #SBATCH --nodes 1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=8
 #SBATCH --time=2400:00:00
-#SBATCH -a [0-54]%2
+#SBATCH -a [0-54]%4
 #SBATCH -J validate-diet30
-###SBATCH --exclude=gpu[01-03,05-07]
 
 SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
-# export load_model_args="--load atom-2647768 --load_epoch 1265"
-export load_model_args="--load atom-2359049 --load_epoch 2395"
-# export load_model_args="--load atom-3232520 --load_epoch 2395"
-# export load_model_args="--load atom-3354597 --load_epoch 2395"
-# export load_model_args="--load atom-2359049 --load_epoch 1115"
+case "${MODEL_INDEX:-0}" in
+0) export load_model_args="--load atom-82794 --load_epoch 1115" ;;
+1) export load_model_args="--load atom-82794 --load_epoch 2395" ;;
+2) export load_model_args="--load atom-82794 --load_epoch 10005" ;;
+esac
 
-export if_continue_args=0
+export if_continue_args=1
 export IF_GRAD=0
 export name_mol_reverse=0
 export DATASET="gmtkn-diet30-def2"
+export DFT2CC_MAX_GPU_JK_NAO=3500
+export DFT2CC_PROFILE_XC=1
 
 export basis_args="def2-QZVP(D)"
 select_molecule_profile gmtkn55
 
-setup_gpu_test_job 16000 15000
+setup_gpu_test_job 256000 16000
 # Arguments: PySCF memory (MiB); minimum free GPU memory (MiB).
+echo "NUMBER_OF_THREADS=${NUMBER_OF_THREADS}"
+
+find "${PYSCF_TMPDIR}" -type f -mtime +4 -exec rm -f {} \;
+find "${PYSCF_TMPDIR}" -type d -empty -delete
 
 sleep $SLURM_ARRAY_TASK_ID
 begin_test_job

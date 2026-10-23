@@ -7,6 +7,7 @@ GPU4PySCF version of the modified RKS hooks used by cc2cc.
 import types
 
 import cupy as cp
+from cupy.cublas import gemm
 
 from gpu4pyscf import lib
 from gpu4pyscf.lib import logger
@@ -68,6 +69,7 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 max_memory=max_memory // (2 * modeldict.model.cube_size),
             ):
                 gridcube = grids.gen_cube(_sorted_mol, dms_sorted, coords_)
+                profile.record_block(len(coords_), len(gridcube.coords))
                 profile.mark("cube coordinates")
                 rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(
                     ni, dms_sorted, profile=profile,
@@ -84,16 +86,20 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
 
         nelec = cp.zeros(1)
         excsum = cp.zeros(1)
-        vmat = cp.zeros((1, nao, nao))
+        vmat = cp.zeros((1, nao, nao), dtype=cp.float64)
         profile.mark("setup")
 
         if xctype == "GGA":
             ao_deriv = 1
+            aow_buffer = None
             for ao, wv in block_loop(ao_deriv):
+                if aow_buffer is None or aow_buffer.size < ao[0].size:
+                    aow_buffer = cp.empty(ao[0].size, dtype=cp.float64)
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
-                aow = _scale_ao(ao, wv)
-                vmat[0] += cp.dot(ao[0], aow.T)
-                profile.mark("matrix assembly")
+                aow = _scale_ao(ao, wv, out=aow_buffer)
+                profile.mark("AO weighting")
+                gemm("N", "T", ao[0], aow, out=vmat[0], beta=1.0)
+                profile.mark("matrix GEMM")
             vmat = transpose_sum(vmat)
         else:
             raise NotImplementedError(f"numint.nr_rks for functional {xc_code}")
