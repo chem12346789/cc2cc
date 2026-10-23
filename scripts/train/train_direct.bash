@@ -32,7 +32,7 @@ export OUTPUT_ARG="--output_target tol_delta_grids"
 # =========================
 # Loss terms
 # =========================
-export IF_GRAD=0
+export IF_GRAD=1
 export IF_ATOMIC=1
 export IF_ABS=1
 
@@ -61,7 +61,7 @@ export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${C
 # Hardware and environment
 # =========================
 export NUMBER_OF_GPU=1
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=7
 
 if [ ${NUMBER_OF_GPU} -gt 1 ]; then
 	export DISTRIBUTED="--distributed 1"

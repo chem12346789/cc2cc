@@ -315,16 +315,19 @@ class DataBase:
                     scale_abs = 0
 
             if self.args.if_grad and len(data_dict["input"]) < MAX_GRAD_BATCH_SIZE:
-                grad2force = data["grad2force"]
                 if self.args.rho_input == "dft":
+                    grad2force = data["grad2force"]
                     grad_cc_train = data["grad_cc_train"]
                 elif self.args.rho_input in ["dft_d3bj", "dft_d3bj_1"]:
+                    grad2force = data["grad2force"]
                     grad_cc_train = (
                         data["grad_cc"] - data[f"grad_{self.args.rho_input}"]
                     )
                 elif self.args.rho_input == "dft_vv10":
+                    grad2force = data["grad2force"]
                     grad_cc_train = data["grad_cc"] - data["grad_post_vv10"]
                 elif self.args.rho_input == "zmp":
+                    grad2force = data["grad2force_zmp"]
                     grad_cc_train = data["grad_cc"] - data["grad_zmp"]
                 else:
                     raise ValueError(f"No grad in data: {self.args.rho_input}")
