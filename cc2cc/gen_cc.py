@@ -231,8 +231,7 @@ def cc(
         gdft_d3bj = mdft_d3bj.Gradients()
         grad_dft_d3bj = gdft_d3bj.kernel()
 
-        grad_zmp = mzmp.Gradients()
-        grad_zmp = grad_zmp.kernel()
+        grad_zmp = grad_dft.copy()
 
         data_dict["grad_cc_train"] = grad_cc - grad_dft
         data_dict["grad_hf"] = grad_hf

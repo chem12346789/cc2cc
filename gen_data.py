@@ -314,6 +314,8 @@ if __name__ == "__main__":
                             "DFT (B3LYP) analytical/FD gradient max difference "
                             f"(Hartree/Bohr): {grad_dft_error:.12e}"
                         )
+                else:
+                    grad_post_vv10 = None
 
                 addon_path = DATA_PATH / f"data_{name}_addon.npz"
                 if addon_path.exists():
@@ -330,7 +332,9 @@ if __name__ == "__main__":
                 data_dict_addon["coords"] = grids.coords
                 np.savez(addon_path, **data_dict_addon)
                 if not evaluate:
-                    print("Post-DFT VV10 gradient (Hartree/Bohr):\n" f"{grad_post_vv10}")
+                    print(
+                        "Post-DFT VV10 gradient (Hartree/Bohr):\n" f"{grad_post_vv10}"
+                    )
 
                 # 3. SCF-VV10 (VV10 in the SCF loop)
                 mf_scf = (
@@ -351,6 +355,8 @@ if __name__ == "__main__":
                     drho = diff_rho(mol, dm_dft, dm_scf_vv10, grids)
                     drho_dft_cc = diff_rho(mol, dm_dft, dm_cc, grids)
                     drho_scf_vv10_cc = diff_rho(mol, dm_scf_vv10, dm_cc, grids)
+                else:
+                    drho, drho_dft_cc, drho_scf_vv10_cc = None, None, None
 
                 comparison_label = "Energy" if evaluate else "Energy and density"
                 print(f"\n=== {comparison_label} comparison: {name} ===")
