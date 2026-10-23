@@ -10,6 +10,7 @@ import numpy as np
 import pyscf
 
 import gen_data
+from cc2cc.utils.b3lyp_reference import converged_b3lyp
 from cc2cc.utils import Grid
 from cc2cc.utils.nlc import post_dft_vv10_gradient
 
@@ -34,7 +35,7 @@ class TestPostDftVv10Gradient(unittest.TestCase):
                 mol = pyscf.M(
                     atom=atoms, basis="sto-3g", unit="Bohr", spin=spin, verbose=0
                 )
-                mf = gen_data._converged_b3lyp(mol)
+                mf = converged_b3lyp(mol)
                 coords = mol.atom_coords().copy()
                 dm = mf.make_rdm1().copy()
                 scf_grad = mf.nuc_grad_method()
@@ -52,7 +53,7 @@ class TestPostDftVv10Gradient(unittest.TestCase):
             atom="O 0 0 0; H 1.4 0 1.1; H -1.3 0 1.2",
             basis="sto-3g", unit="Bohr", verbose=0,
         )
-        mf = gen_data._converged_b3lyp(mol)
+        mf = converged_b3lyp(mol)
         grids = Grid(mol, 0, 7)
         reference = post_dft_vv10_gradient(mf, grids)
         hessian = mf.Hessian()
@@ -85,7 +86,7 @@ class TestPostDftVv10Gradient(unittest.TestCase):
             atom="O 0 0 0; H 1.4 0 1.1; H -1.3 0 1.2",
             basis="sto-3g", unit="Bohr", verbose=0,
         )
-        mf = gen_data._converged_b3lyp(mol)
+        mf = converged_b3lyp(mol)
         grids = Grid(mol, 0, 7)
         analytical = post_dft_vv10_gradient(mf, grids)
         hessian = mf.Hessian()
@@ -103,7 +104,7 @@ class TestPostDftVv10Gradient(unittest.TestCase):
 
     def test_rejects_nonconverged_or_self_consistent_nlc(self):
         mol = pyscf.M(atom="He 0 0 0", basis="sto-3g", verbose=0)
-        mf = gen_data._converged_b3lyp(mol)
+        mf = converged_b3lyp(mol)
         grids = Grid(mol, 0, 7)
         mf.converged = False
         with self.assertRaisesRegex(RuntimeError, "converged B3LYP"):
@@ -147,9 +148,9 @@ class TestPostDftVv10Gradient(unittest.TestCase):
                     name="test", args=SimpleNamespace(
                         check_post_vv10_gradient=enabled, grid_level=0,
                     ),
-                    _converged_b3lyp=lambda *args, **kwargs: object(),
+                    converged_b3lyp=lambda *args, **kwargs: object(),
                     post_dft_vv10_gradient=lambda *args: np.zeros((2, 3)),
-                    _post_vv10_finite_difference_gradient=finite_difference,
+                    post_vv10_finite_difference_gradient=finite_difference,
                 )
                 with contextlib.redirect_stdout(io.StringIO()):
                     if enabled and error > 5e-5:

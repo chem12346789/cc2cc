@@ -59,11 +59,16 @@ CUDA kernels; test the installed stack on the actual compute node.
 3. Validate or benchmark with scripts in `scripts/test/`.
 4. Inspect outputs in `validate*` and `checkpoints/`.
 
-When `gen_data.py --if_continue true --if_eval false` compares cached data for a multi-atom
-molecule, it reports analytical/central-finite-difference maximum gradient
-differences for both Post-DFT VV10 and DFT (B3LYP), in Hartree/Bohr.
-The B3LYP check uses a 0.001 Bohr displacement and six additional B3LYP
-calculations per atom.
+Direct calls to `cc()` and `ucc()` calculate Post-DFT VV10 and self-consistent
+SCF-VV10 energies and save `e_post_vv10`, `e_scf_vv10`, and `dm1_scf_vv10` in
+the main data archive. Training mode also saves `grad_post_vv10` and
+`grad_scf_vv10` in Hartree/Bohr; forces are their negatives.
+`gen_data.py --if_continue true` uses the same calculation for cached data,
+saving results in the addon archive.
+For multi-atom molecules, `--check_post_vv10_gradient` additionally reports
+analytical/central-finite-difference maximum gradient differences for Post-DFT
+VV10 and B3LYP and saves `grad_post_vv10_fd`. Each check uses a 0.001 Bohr
+displacement and six additional B3LYP calculations per atom.
 Evaluation (`--if_eval true`) skips gradient generation and checks, and does not
 add or update gradients in the addon archive; existing cached fields are preserved.
 It also skips electronic density difference calculations and reporting while

@@ -1,29 +1,27 @@
 # pylint: disable=W0212
 import gc
-from math import erf
 
 import numpy as np
-import opt_einsum as oe
-import torch
 
 import pyscf
-from pyscf import lib
 import pyscf.cc
 import pyscf.grad
 from pyscf.cc import uccsd_t
 from pyscf.cc import uccsd_rdm
-from pyscf.grad import uccsd as uccsd_grad
 
-from cc2cc.utils.pyscf_uccsd_t_lambda import kernel as uccsd_t_lambda_kernel
-from cc2cc.utils.pyscf_uccsd_t_u_gamma1_intermediates import u_gamma1_intermediates
+from cc2cc.utils.ccsd_t_target import (
+    make_ccsd,
+    ccsd_t_target_density,
+    ccsd_t_target_gradient,
+)
 from cc2cc.utils.pyscf_uccsd_t_u_gamma2_intermediates import u_gamma2_intermediates
 
 from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.get_dft_energy_uks import get_cc_energy, get_dft_energy, get_hf_energy
 from cc2cc.utils.get_dft_grad_uks import get_dft_grad, get_dft_input
-from cc2cc.utils.get_zmp import get_zmp_uks
-
+from cc2cc.utils.zmp_reference import get_zmp, zmp_finite_difference_gradient
+from cc2cc.utils.b3lyp_reference import get_vv10_data
 
 def ucc(mol, grids, name, args, evaluate=False):
     """
@@ -65,11 +63,8 @@ def ucc(mol, grids, name, args, evaluate=False):
     print(f"DFT-D3BJ correct energy: {e_dft_d3bj - e_dft}")
 
     # UCCSD calculation
-    mycc = pyscf.cc.UCCSD(mf)
+    mycc = make_ccsd(mf, unrestricted=True)
     mycc.verbose = 9
-    mycc.conv_tol = 1e-12
-    mycc.conv_tol_normt = 1e-8
-    mycc.max_cycle = 200
     _, t1, t2 = mycc.kernel()
     eris = mycc.ao2mo()
     e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
@@ -85,97 +80,18 @@ def ucc(mol, grids, name, args, evaluate=False):
         del t1, t2, eris, mycc
         gc.collect()
     else:
-        l1, l2 = uccsd_t_lambda_kernel(mycc, eris, t1, t2)[1:]
-        print("uccsd_t_lambda DONE", flush=True)
-        d1, (goo, gOO, gvv, gVV) = u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
-        print("u_gamma1_intermediates DONE", flush=True)
+        l1, l2, d1, d1_grad, dm1_cc_mo, dm1_cc = ccsd_t_target_density(
+            mycc, eris, unrestricted=True
+        )
         d2 = u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris)
         print("u_gamma2_intermediates DONE", flush=True)
-        nocca, noccb, nvira, nvirb = t2[1].shape
-        (doo, dOO), (dov, dOV), (dvo, dVO), (dvv, dVV) = d1
-        doo_grad, dvv_grad = doo.copy(), dvv.copy()
-        dOO_grad, dVV_grad = dOO.copy(), dVV.copy()
-        doo[np.diag_indices(nocca)] -= goo.diagonal()
-        dOO[np.diag_indices(noccb)] -= gOO.diagonal()
-        dvv[np.diag_indices(nvira)] += gvv.diagonal()
-        dVV[np.diag_indices(nvirb)] += gVV.diagonal()
-        d1 = ((doo, dOO), (dov, dOV), (dvo, dVO), (dvv, dVV))
-
-        # CC gradient
-        if mol.natm == 1:
-            grad_cc = np.zeros((mol.natm, 3))  # Fallback to zero gradients
-        elif mol.nelectron == 1:
-            ghf = pyscf.grad.uhf.Gradients(mf)
-            grad_cc = ghf.kernel()
-        else:
-            # gcc = uccsd_t_grad.Gradients(mycc)
-            # grad_cc = gcc.kernel(t1, t2, l1, l2, eris=eris)
-
-            doo_grad -= goo
-            dOO_grad -= gOO
-            dvv_grad += gvv
-            dVV_grad += gVV
-            d1_grad = (
-                (doo_grad, dOO_grad),
-                (dov, dOV),
-                (dvo, dVO),
-                (dvv_grad, dVV_grad),
-            )
-            (
-                (dovov, dovOV, dOVov, dOVOV),
-                (dvvvv, dvvVV, dVVvv, dVVVV),
-                (doooo, dooOO, dOOoo, dOOOO),
-                (doovv, dooVV, dOOvv, dOOVV),
-                (dovvo, dovVO, dOVvo, dOVVO),
-                (dvvov, dvvOV, dVVov, dVVOV),
-                (dovvv, dovVV, dOVvv, dOVVV),
-                (dooov, dooOV, dOOov, dOOOV),
-            ) = d2
-            idxa = np.tril_indices(nvira)
-            idxa = idxa[0] * nvira + idxa[1]
-            idxb = np.tril_indices(nvirb)
-            idxb = idxb[0] * nvirb + idxb[1]
-            dvvvv = dvvvv + dvvvv.transpose(1, 0, 2, 3)
-            dvvvv = lib.take_2d(dvvvv.reshape(nvira**2, nvira**2), idxa, idxa)
-            dvvvv *= 0.5
-            dvvVV = dvvVV + dvvVV.transpose(1, 0, 2, 3)
-            dvvVV = lib.take_2d(dvvVV.reshape(nvira**2, nvirb**2), idxa, idxb)
-            dVVVV = dVVVV + dVVVV.transpose(1, 0, 2, 3)
-            dVVVV = lib.take_2d(dVVVV.reshape(nvirb**2, nvirb**2), idxb, idxb)
-            dVVVV *= 0.5
-            d2_grad = (
-                (dovov, dovOV, dOVov, dOVOV),
-                (dvvvv, dvvVV, dVVvv, dVVVV),
-                (doooo, dooOO, dOOoo, dOOOO),
-                (doovv, dooVV, dOOvv, dOOVV),
-                (dovvo, dovVO, dOVvo, dOVVO),
-                (dvvov, dvvOV, dVVov, dVVOV),
-                (dovvv, dovVV, dOVvv, dOVVV),
-                (dooov, dooOV, dOOov, dOOOV),
-            )
-
-            cc_grad = uccsd_grad.Gradients(mycc)
-            de = uccsd_grad.grad_elec(
-                cc_grad, t1, t2, l1, l2, eris, d1=d1_grad, d2=d2_grad
-            )
-            cc_grad.de = de + cc_grad.grad_nuc(atmlst=cc_grad.atmlst)
-            if cc_grad.mol.symmetry:
-                cc_grad.de = cc_grad.symmetrize(cc_grad.de, cc_grad.atmlst)
-            cc_grad._finalize()
-            grad_cc = cc_grad.de
-        print("Grad done.", flush=True)
+        grad_cc = ccsd_t_target_gradient(
+            mycc, eris, l1, l2, d1_grad, d2, unrestricted=True
+        )
 
         del t1, t2, l1, l2
         gc.collect()
 
-        dm1_cc_mo = uccsd_rdm._make_rdm1(mycc, d1, with_frozen=True, ao_repr=False)
-        mo_a, mo_b = mycc.mo_coeff
-        dm1_cc = np.array(
-            [
-                np.einsum("pi,ij,qj->pq", mo_a, dm1_cc_mo[0], mo_a),
-                np.einsum("pi,ij,qj->pq", mo_b, dm1_cc_mo[1], mo_b),
-            ]
-        )
         print("DM1 done.", flush=True)
         dm2_cc = uccsd_rdm._make_rdm2(
             mycc, d1, d2, with_dm1=True, with_frozen=True, ao_repr=True
@@ -192,7 +108,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
-    mzmp, dm1_zmp = get_zmp_uks(mol, dm1_cc, dm1_dft, grids, max_l=20)
+    mzmp, dm1_zmp = get_zmp(mol, dm1_cc, dm1_dft, grids, max_l=20)
 
     # Generate input data
     data_dict = {}
@@ -229,16 +145,17 @@ def ucc(mol, grids, name, args, evaluate=False):
             data_dict["tol_cc_grids"] - data_dict["tol_dft_grids"]
         )
 
-    data_append_dict = get_dft_energy(
-        mol,
-        grids,
-        mzmp,
-        dm1_zmp,
-        evaluate=evaluate,
-    )
-    for key in data_append_dict:
-        key_zmp = key.replace("dft", "zmp")
-        data_dict[key_zmp] = data_append_dict[key]
+    if not evaluate:
+        data_append_dict = get_dft_energy(
+            mol,
+            grids,
+            mzmp,
+            dm1_zmp,
+            evaluate=evaluate,
+        )
+        for key in data_append_dict:
+            key_zmp = key.replace("dft", "zmp")
+            data_dict[key_zmp] = data_append_dict[key]
     if "tol_cc_grids" in data_dict and "tol_zmp_grids" in data_dict:
         data_dict["tol_delta_zmp_grids"] = (
             data_dict["tol_cc_grids"] - data_dict["tol_zmp_grids"]
@@ -266,8 +183,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         gdft_d3bj = mdft_d3bj.Gradients()
         grad_dft_d3bj = gdft_d3bj.kernel()
 
-        grad_zmp = mzmp.Gradients()
-        grad_zmp = grad_zmp.kernel()
+        grad_zmp = zmp_finite_difference_gradient(mol, grids.level)
 
         data_dict["grad_cc_train"] = grad_cc - grad_dft
         data_dict["grad_hf"] = grad_hf
@@ -353,5 +269,8 @@ def ucc(mol, grids, name, args, evaluate=False):
             "energy_train": energy_train,
             "weights": grids.weights,
         }
+    )
+    data_dict.update(
+        get_vv10_data(mol, grids, dm1_dft, e_dft, dm1_cc, args, evaluate)
     )
     np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)

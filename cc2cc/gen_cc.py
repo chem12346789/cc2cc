@@ -4,24 +4,25 @@ import gc
 import numpy as np
 
 import pyscf
-from pyscf import lib
 
 import pyscf.cc
 import pyscf.grad
-from pyscf.cc import ccsd_t_lambda
 from pyscf.cc import ccsd_t
 from pyscf.cc import ccsd_rdm
-from pyscf.grad import ccsd as ccsd_grad
 
-# from pyscf.cc.ccsd_t_rdm import _gamma1_intermediates
 from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
 
 from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
-from cc2cc.utils.pyscf_ccsd_t_rdm import _gamma1_intermediates
+from cc2cc.utils.ccsd_t_target import (
+    make_ccsd,
+    ccsd_t_target_density,
+    ccsd_t_target_gradient,
+)
 from cc2cc.utils.get_dft_energy_rks import get_cc_energy, get_dft_energy, get_hf_energy
 from cc2cc.utils.get_dft_grad_rks import get_dft_grad, get_dft_input
-from cc2cc.utils.get_zmp import get_zmp_rks
+from cc2cc.utils.zmp_reference import get_zmp, zmp_finite_difference_gradient
+from cc2cc.utils.b3lyp_reference import get_vv10_data
 
 
 def is_hermitian(matrix, tol=1e-8):
@@ -74,11 +75,9 @@ def cc(
     print(f"DFT-D3BJ correct energy: {e_dft_d3bj - e_dft}")
 
     # CCSD calculation
-    mycc = pyscf.cc.CCSD(mf)
+    mycc = make_ccsd(mf)
     mycc.verbose = 9  # to trace the usage of memory.
     mf.conv_tol = 1e-12
-    mycc.conv_tol_normt = 1e-8
-    mycc.max_cycle = 200
     _, t1, t2 = mycc.kernel()
     eris = mycc.ao2mo()
     e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
@@ -94,57 +93,15 @@ def cc(
         del t1, t2, eris, mycc
         gc.collect()
     else:
-        l1, l2 = ccsd_t_lambda.kernel(mycc, eris, t1, t2)[1:]
-        (doo, dov, dvo, dvv), goo, gvv = _gamma1_intermediates(
-            mycc, t1, t2, l1, l2, eris
+        l1, l2, d1, d1_grad, dm1_cc_mo, dm1_cc = ccsd_t_target_density(
+            mycc, eris
         )
-        doo_grad, dvv_grad = doo.copy(), dvv.copy()
-        nocc, nvir = t1.shape
-        doo[np.diag_indices(nocc)] -= goo.diagonal() * 0.5
-        dvv[np.diag_indices(nvir)] += gvv.diagonal() * 0.5
-        d1 = (doo, dov, dvo, dvv)
         d2 = _gamma2_intermediates(mycc, t1, t2, l1, l2, eris, compress_vvvv=False)
-        # CC gradient
-        if mol.natm == 1:
-            grad_cc = np.zeros((mol.natm, 3))  # Fallback to zero gradients
-        elif mol.nelectron == 1:
-            ghf = pyscf.grad.rhf.Gradients(mf)
-            grad_cc = ghf.kernel()
-        else:
-            # gcc = ccsd_t_grad.Gradients(mycc)
-            # grad_cc = gcc.kernel(t1, t2, l1, l2, eris=eris)
-
-            doo_grad -= goo * 0.5
-            dvv_grad += gvv * 0.5
-            d1_grad = (doo_grad, dov, dvo, dvv_grad)
-
-            dovov, dvvvv, doooo, doovv, dovvo, dvvov, dovvv, dooov = d2
-            nvir = mycc.nmo - mycc.nocc
-            idx = np.tril_indices(nvir)
-            vidx = idx[0] * nvir + idx[1]
-            dvvvv = dvvvv + dvvvv.transpose(1, 0, 2, 3)
-            dvvvv = dvvvv + dvvvv.transpose(0, 1, 3, 2)
-            dvvvv = lib.take_2d(dvvvv.reshape(nvir**2, nvir**2), vidx, vidx)
-            dvvvv *= 0.25
-            d2_grad = (dovov, dvvvv, doooo, doovv, dovvo, dvvov, dovvv, dooov)
-
-            cc_grad = ccsd_grad.Gradients(mycc)
-            de = ccsd_grad.grad_elec(
-                cc_grad, t1, t2, l1, l2, eris, d1=d1_grad, d2=d2_grad
-            )
-            cc_grad.de = de + cc_grad.grad_nuc(atmlst=cc_grad.atmlst)
-            if cc_grad.mol.symmetry:
-                cc_grad.de = cc_grad.symmetrize(cc_grad.de, cc_grad.atmlst)
-            cc_grad._finalize()
-            grad_cc = cc_grad.de
-        print("Grad done.", flush=True)
+        grad_cc = ccsd_t_target_gradient(mycc, eris, l1, l2, d1_grad, d2)
 
         del t1, t2, l1, l2
         gc.collect()
 
-        dm1_cc_mo = ccsd_rdm._make_rdm1(mycc, d1, with_frozen=True, ao_repr=False)
-        mo = mycc.mo_coeff
-        dm1_cc = np.einsum("pi,ij,qj->pq", mo, dm1_cc_mo, mo.conj())
         dm2_cc = ccsd_rdm._make_rdm2(
             mycc, d1, d2, with_dm1=True, with_frozen=True, ao_repr=True
         )
@@ -157,7 +114,7 @@ def cc(
         dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
-    mzmp, dm1_zmp = get_zmp_rks(mol, dm1_cc, dm1_dft, grids, max_l=20)
+    mzmp, dm1_zmp = get_zmp(mol, dm1_cc, dm1_dft, grids, max_l=20)
 
     # Generate input data
     data_dict = {}
@@ -231,7 +188,7 @@ def cc(
         gdft_d3bj = mdft_d3bj.Gradients()
         grad_dft_d3bj = gdft_d3bj.kernel()
 
-        grad_zmp = grad_dft.copy()
+        grad_zmp = zmp_finite_difference_gradient(mol, grids.level)
 
         data_dict["grad_cc_train"] = grad_cc - grad_dft
         data_dict["grad_hf"] = grad_hf
@@ -317,5 +274,8 @@ def cc(
             "energy_train": energy_train,
             "weights": grids.weights,
         }
+    )
+    data_dict.update(
+        get_vv10_data(mol, grids, dm1_dft, e_dft, dm1_cc, args, evaluate)
     )
     np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)

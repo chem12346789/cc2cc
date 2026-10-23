@@ -20,8 +20,18 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   default; keep GPU classes lazily imported
 - `modelscf_rks.py`, `modelscf_uks.py`, `_gpu` variants: custom effective-
   potential/gradient hooks for PySCF SCF
-- `get_dft_energy_*.py`, `get_dft_grad_*.py`, `get_zmp.py`, `zmp.py`: energy,
-  gradient, and ZMP helpers
+- `get_dft_energy_*.py`, `get_dft_grad_*.py`: energy and gradient helpers
+- `zmp_reference.py`: shared ZMP inversion, diagnostic prints, and numerical
+  nuclear-gradient reference; `get_zmp.py` forwards legacy entry points and
+  `zmp.py` implements the inversion SCF equations.
+- `ccsd_t_target.py`: shared CCSD solver settings, CCSD(T) lambda solving,
+  triples-corrected target density and CC-gradient one-particle intermediates.
+  `ccsd_t_target_gradient()` handles restricted/unrestricted two-particle
+  intermediate compression, electronic/nuclear gradient assembly, and symmetry
+  projection without modifying the density intermediates used for training.
+  Both generation entry points and displaced ZMP references use this helper;
+  generation/reference CC convergence settings are identical: energy `1e-12`,
+  amplitudes/lambda `1e-10`, and CC/lambda iteration limits of 200.
 - `DataBase.py`, `TestDataDFT.py`, `DataRecord.py`, `ModelClass.py`: data
   loading, record keeping, model init, checkpoints, losses
   - Dataset tensors remain on CPU; batch device transfers do not evict them.
@@ -82,7 +92,11 @@ created, and failures may occur after earlier files have been updated.
 
 - `gen_data.py`: molecule selection → `gen_mole()` → optional MD/rotation →
   `Grid` → `cc()`/`ucc()` → `.npz` grid data
-  - Existing-cache comparisons report B3LYP/post-DFT VV10 and SCF-VV10
+  - `cc()` and `ucc()` call the shared `get_vv10_data()` helper in
+    `utils/b3lyp_reference.py` and save Post-DFT VV10 and SCF-VV10 energies,
+    `dm1_scf_vv10`, and training-mode gradients in the main archive.
+    The existing-cache branch uses the same helper and saves to the addon.
+    Existing-cache comparisons report B3LYP/post-DFT VV10 and SCF-VV10
     integrated absolute density differences against cached `dm1_cc` (electrons).
     Post-DFT VV10 energy density uses the same `Grid` coordinates, ordering,
     and weights as the density comparisons. Weights are loaded from the cache
@@ -95,16 +109,20 @@ created, and failures may occur after earlier files have been updated.
     at tight tolerances, and PySCF's coupled-perturbed RKS/UKS solver supplies
     its orbital response. The VV10 and B3LYP atom-centered grid-motion terms
     are included. `grad_scf_vv10` uses PySCF's SCF-VV10 gradient.
-    Gradients have shape `(natm, 3)`, in Hartree/Bohr, and are saved to the addon
-    archive. `--check_post_vv10_gradient` also saves `grad_post_vv10_fd`,
+    SCF-VV10 uses tight SCF tolerances and moving-grid response; force
+    generation requires converged wavefunctions even when optional evaluation
+    convergence checks are disabled.
+    Gradients have shape `(natm, 3)`, in Hartree/Bohr; forces are their negatives.
+    `--check_post_vv10_gradient` also saves `grad_post_vv10_fd`,
     using central differences with a 0.001 Bohr step (six B3LYP single points
-    per atom); differences above 5e-5 Hartree/Bohr raise an error.
-    Its weighted integral is checked against PySCF `nr_nlc_vxc` on the same
+    per atom), and reports maximum errors for both Post-DFT VV10 and B3LYP.
+    The VV10 energy-density weighted integral is checked against PySCF
+    `nr_nlc_vxc` on the same
     density and grid (`rtol=1e-10`, `atol=1e-12` Hartree); mismatches are errors.
     After this check, `exc_post_vv10_grid` (VV10 energy per volume, in atomic
-    units) and its weighted integral, `enlc_post`, are saved to
-    `data_{name}_addon.npz`, preserving existing addon fields and removing the
-    legacy `exc_post_grid` field.
+    units), `e_post_vv10` (B3LYP plus the VV10 correction), and `e_scf_vv10`
+    are saved. Cached updates preserve existing addon fields while removing
+    legacy `exc_post_grid` and `enlc_post` fields.
     Caches missing `dm1_dft`, `e_dft`, `dm1_cc`, or `weights` are logged and skipped
     without recomputing DFT.
 - `train.py`: train/eval list setup → `train_model()`

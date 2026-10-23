@@ -20,74 +20,11 @@ from cc2cc.utils.rotate import rotate
 from cc2cc.utils import (
     Grid,
     DATA_PATH,
-    diff_rho,
-    AU2KCALMOL,
-    eval_nlc_exc_density,
 )
 from cc2cc.utils.parser import gen_name_args, str2bool
 from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc
-from cc2cc.utils.nlc import post_dft_vv10_gradient
-
-
-def _converged_b3lyp(mol, dm0=None):
-    mf = (
-        pyscf.dft.RKS(mol, xc="b3lyp")
-        if mol.spin == 0
-        else pyscf.dft.UKS(mol, xc="b3lyp")
-    )
-    mf.verbose = 0
-    mf.max_cycle = 200
-    mf.nlc = ""
-    mf.conv_tol = 1e-12
-    mf.conv_tol_grad = 1e-8
-    mf.conv_tol_cpscf = 1e-10
-    mf.kernel(dm0=dm0)
-    return mf
-
-
-def _post_vv10_total_energy(mol, grid_level):
-    mf = _converged_b3lyp(mol)
-    dm = mf.make_rdm1()
-    dm_tot = dm if mol.spin == 0 else dm[0] + dm[1]
-    grids = Grid(mol, grid_level, 7)
-    enlc = np.dot(
-        eval_nlc_exc_density(mol, grids, dm_tot, "vv10"),
-        np.asarray(grids.weights),
-    )
-    return float(mf.e_tot) + enlc
-
-
-def _post_vv10_finite_difference_gradient(mol, grid_level, step=1e-3):
-    """Central-difference reference gradient in Hartree/Bohr; step in Bohr."""
-    return _finite_difference_gradient(
-        mol, lambda displaced: _post_vv10_total_energy(displaced, grid_level), step
-    )
-
-
-def _b3lyp_finite_difference_gradient(mol, step=1e-3):
-    """Central-difference B3LYP gradient in Hartree/Bohr; step in Bohr."""
-    return _finite_difference_gradient(
-        mol, lambda displaced: _converged_b3lyp(displaced).e_tot, step
-    )
-
-
-def _finite_difference_gradient(mol, total_energy, step):
-    coords = mol.atom_coords()
-    gradient = np.empty_like(coords)
-    for atom in range(mol.natm):
-        for axis in range(3):
-            displaced_energies = []
-            for sign in (1, -1):
-                displaced_mol = mol.copy()
-                displaced_coords = coords.copy()
-                displaced_coords[atom, axis] += sign * step
-                displaced_mol.set_geom_(displaced_coords, unit="Bohr")
-                displaced_energies.append(total_energy(displaced_mol))
-            gradient[atom, axis] = (displaced_energies[0] - displaced_energies[1]) / (
-                2 * step
-            )
-    return gradient
+from cc2cc.utils.b3lyp_reference import get_vv10_data
 
 
 if __name__ == "__main__":
@@ -271,52 +208,9 @@ if __name__ == "__main__":
                     ), f"Cached weights do not match grid weights for {name}"
                     grids.weights = weights
 
-                # 2. Post-DFT VV10 (using standard DFT 1-RDM)
-                nlcgrids = grids
-                dm_dft_tot = dm_dft if mol.spin == 0 else (dm_dft[0] + dm_dft[1])
-                exc_post_vv10_grid = eval_nlc_exc_density(
-                    mol, nlcgrids, dm_dft_tot, "vv10"
+                vv10_data = get_vv10_data(
+                    mol, grids, dm_dft, e_dft, dm_cc, args, evaluate
                 )
-                e_post_vv10 = np.dot(exc_post_vv10_grid, nlcgrids.weights)
-                _, e_post_vv10_check, _ = pyscf.dft.numint.NumInt().nr_nlc_vxc(
-                    mol, nlcgrids, "vv10", dm_dft_tot
-                )
-                print(
-                    "NLC energy check (kcal/mol): difference = "
-                    f"{(e_post_vv10 - e_post_vv10_check) * AU2KCALMOL:.12e}"
-                )
-                if not np.isclose(
-                    e_post_vv10, e_post_vv10_check, rtol=1e-10, atol=1e-12
-                ):
-                    raise RuntimeError(
-                        "NLC grid integral disagrees with nr_nlc_vxc "
-                        f"for {name}: {e_post_vv10} vs {e_post_vv10_check} Hartree"
-                    )
-                e_post_vv10 = e_dft + e_post_vv10
-                if not evaluate:
-                    if mol.natm == 1:
-                        grad_post_vv10 = np.zeros((mol.natm, 3))
-                    else:
-                        mf_dft = _converged_b3lyp(mol, dm0=dm_dft)
-                        grad_post_vv10 = post_dft_vv10_gradient(mf_dft, nlcgrids)
-                        grad_post_vv10_fd = _post_vv10_finite_difference_gradient(
-                            mol, args.grid_level
-                        )
-                        grad_error = np.max(np.abs(grad_post_vv10 - grad_post_vv10_fd))
-                        print(
-                            "Post-DFT VV10 analytical/FD gradient max difference "
-                            f"(Hartree/Bohr): {grad_error:.12e}"
-                        )
-                        grad_dft = mf_dft.nuc_grad_method().kernel()
-                        grad_dft_fd = _b3lyp_finite_difference_gradient(mol)
-                        grad_dft_error = np.max(np.abs(grad_dft - grad_dft_fd))
-                        print(
-                            "DFT (B3LYP) analytical/FD gradient max difference "
-                            f"(Hartree/Bohr): {grad_dft_error:.12e}"
-                        )
-                else:
-                    grad_post_vv10 = None
-
                 addon_path = DATA_PATH / f"data_{name}_addon.npz"
                 if addon_path.exists():
                     with np.load(addon_path, allow_pickle=True) as data_addon:
@@ -325,67 +219,9 @@ if __name__ == "__main__":
                     data_dict_addon = {}
                 data_dict_addon.pop("exc_post_grid", None)
                 data_dict_addon.pop("enlc_post", None)
-                data_dict_addon["exc_post_vv10_grid"] = exc_post_vv10_grid
-                data_dict_addon["e_post_vv10"] = e_post_vv10
-                if not evaluate:
-                    data_dict_addon["grad_post_vv10"] = grad_post_vv10
+                data_dict_addon.update(vv10_data)
                 data_dict_addon["coords"] = grids.coords
                 np.savez(addon_path, **data_dict_addon)
-                if not evaluate:
-                    print(
-                        "Post-DFT VV10 gradient (Hartree/Bohr):\n" f"{grad_post_vv10}"
-                    )
-
-                # 3. SCF-VV10 (VV10 in the SCF loop)
-                mf_scf = (
-                    pyscf.dft.RKS(mol, xc="b3lyp")
-                    if mol.spin == 0
-                    else pyscf.dft.UKS(mol, xc="b3lyp")
-                )
-                mf_scf.nlc = "vv10"
-                mf_scf.verbose = 4
-                mf_scf.kernel(dm0=dm_dft)
-                if args.check_convergence and not mf_scf.converged:
-                    raise RuntimeError("SCF-VV10 did not converge.")
-                dm_scf_vv10 = mf_scf.make_rdm1()
-                e_scf_vv10 = float(mf_scf.e_tot)
-
-                # 4. Electronic density difference
-                if not evaluate:
-                    drho = diff_rho(mol, dm_dft, dm_scf_vv10, grids)
-                    drho_dft_cc = diff_rho(mol, dm_dft, dm_cc, grids)
-                    drho_scf_vv10_cc = diff_rho(mol, dm_scf_vv10, dm_cc, grids)
-                else:
-                    drho, drho_dft_cc, drho_scf_vv10_cc = None, None, None
-
-                comparison_label = "Energy" if evaluate else "Energy and density"
-                print(f"\n=== {comparison_label} comparison: {name} ===")
-                print("Energy relative to B3LYP total (kcal/mol):")
-                print("  B3LYP baseline:                      0.0")
-                print(
-                    "  Post-DFT VV10:                      "
-                    f"{(e_post_vv10 - e_dft) * AU2KCALMOL:>16.8f}"
-                )
-                print(
-                    "  Self-consistent SCF-VV10:            "
-                    f"{(e_scf_vv10 - e_dft) * AU2KCALMOL:>16.8f}"
-                )
-                print(
-                    "  SCF-VV10 minus post-DFT:             "
-                    f"{(e_scf_vv10 - e_post_vv10) * AU2KCALMOL:>16.8f}"
-                )
-                if not evaluate:
-                    print(
-                        f"Integrated absolute density difference (electrons): {drho:.10e}"
-                    )
-                    print(
-                        "Integrated absolute density difference "
-                        f"(B3LYP/post-DFT VV10 vs CCSD, electrons): {drho_dft_cc:.10e}"
-                    )
-                    print(
-                        "Integrated absolute density difference "
-                        f"(SCF-VV10 vs CCSD, electrons): {drho_scf_vv10_cc:.10e}\n"
-                    )
 
             else:
                 if mol.spin == 0:

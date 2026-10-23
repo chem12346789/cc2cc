@@ -3,8 +3,6 @@ from __future__ import annotations
 import numpy as np
 import pyscf
 import pyscf.dft
-import pyscf.hessian.rks
-import pyscf.hessian.uks
 from pyscf.grad import rks as rks_grad
 
 

@@ -2,6 +2,69 @@
 
 This directory contains reproducible evaluation and benchmark submission scripts.
 
+## ZMP energy-gradient reference
+
+Run the CPU-only RKS/UKS reference explicitly from the repository root:
+
+```bash
+python -m cc2cc.utils.zmp_reference \
+  --atom 'H 0 0 0; H 0 0 0.8' --basis sto-3g \
+  --steps 0.002 0.001 --max-l 20 --output zmp_reference.json
+```
+
+Use `--spin` for open-shell systems (alpha minus beta electron count).
+This reruns RHF/UHF, B3LYP, the same CCSD(T) target-density construction as
+`gen_cc.cc`/`gen_ucc.ucc`, and RZMP/UZMP at every displaced geometry. It does
+not generate training
+data or change the existing generation workflow. Every SCF, CC/lambda, and ZMP
+stage must converge; failures raise instead of returning a previous density.
+The reference tightens solver tolerances relative to data generation and keeps
+the full inversion schedule fixed across geometries.
+
+The JSON records displaced energies (minus, plus), gradients and forces for both
+ZMP-density B3LYP and self-consistent B3LYP, and their gradient difference.
+Steps/coordinates are in Bohr, energies in Hartree, gradients in Hartree/Bohr;
+forces are negative gradients. Output is written only after all calculations
+succeed. The cost is `6 * natm * nsteps` full energy pipelines.
+Compare gradients at successive step sizes and repeat with increased grid
+level and `--max-l` before treating results as converged. A low `--max-l` is
+only a smoke check, not the production inversion limit. Comparing with B3LYP
+does not eliminate ZMP orbital response. No analytical ZMP response is assumed.
+
+Training-mode `cc()` and `ucc()` also use this full-pipeline numerical method
+for `grad_zmp`, with a 0.001 Bohr central-difference step, the supplied grid's
+level, and a fixed inversion schedule through `max_l=20`. This costs six full
+energy pipelines per atom; isolated-atom gradients are zero by translation
+invariance. Evaluation mode still skips gradients. The reference requires at
+least two electrons for molecular CCSD(T) calculations.
+ZMP DIIS filters linearly dependent error-vector modes using the same
+eigenvalue threshold as PySCF DIIS, avoiding singular solves at displaced
+geometries without lowering the inversion limit.
+
+The shared inversion loop and informational output live in
+`cc2cc/utils/zmp_reference.py:get_zmp`. Both data generation and numerical
+references use it, including per-lambda density, I-value, dipole, Hartree-grid,
+and nuclear-grid comparisons. Strict numerical references retain tight
+tolerances and require every stage to converge; normal generation retains
+its divergence-stop behavior. `get_zmp.py` only forwards the legacy
+`get_zmp_rks`/`get_zmp_uks` entry points.
+
+CCSD solver settings, triples-corrected lambda solving, and target one-particle
+density construction are shared by `cc()`, `ucc()`, and displaced references
+through `cc2cc/utils/ccsd_t_target.py`. Change CC iteration/tolerance parameters
+and lambda iteration/tolerance parameters there. Generation and displaced
+references use identical CC settings: energy tolerance `1e-12`, amplitude and
+lambda tolerances `1e-10`, and 200 iterations for both CC and lambda solvers.
+Reference-mode convergence failure checks remain enabled.
+The helper also supplies the separate full-block triples corrections required
+by the CC nuclear gradient, without constructing a two-particle density for
+energy-only displaced references.
+`ccsd_t_target_gradient()` in the same module evaluates the generation-time CC
+nuclear gradient for both spin cases, including intermediate compression,
+nuclear contributions, symmetry projection, and isolated-atom/one-electron
+branches. The entry points retain construction of the two-particle density
+needed for training data.
+
 - `test_*.bash`: Slurm evaluation wrappers. Scheduler directives and experiment
   variables stay here; common setup and execution live in `lib/test_job.sh`.
 - `benchmark*.bash`: CPU and GPU benchmark jobs.

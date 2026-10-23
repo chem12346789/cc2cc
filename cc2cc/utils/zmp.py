@@ -4,6 +4,7 @@ It is based on the idea of minimizing the difference between the DFT and CC dens
 """
 
 from functools import reduce
+import logging
 
 import numpy as np
 
@@ -78,7 +79,16 @@ class DIIS:
         )
         A = np.zeros(nb + 1)
         A[nb] = -1.0
-        C = np.linalg.solve(B, A)
+        eigenvalues, eigenvectors = np.linalg.eigh(B)
+        independent = np.abs(eigenvalues) > 1e-14
+        if not np.all(independent):
+            logging.getLogger(__name__).debug(
+                "Linear dependence found in ZMP DIIS error vectors."
+            )
+            vectors = eigenvectors[:, independent]
+            C = (vectors / eigenvalues[independent]) @ (vectors.T @ A)
+        else:
+            C = np.linalg.solve(B, A)
 
         # form new extrapolated diis fock matrix
         newfock = np.zeros_like(fock)

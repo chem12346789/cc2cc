@@ -26,18 +26,18 @@ class TestGenDataEvaluation(unittest.TestCase):
                     namespace = dict(
                         evaluate=evaluate, mol=Mock(natm=natm), np=np,
                         dm_dft=Mock(), nlcgrids=Mock(), args=Mock(grid_level=0),
-                        _converged_b3lyp=Mock(return_value=mf),
+                        converged_b3lyp=Mock(return_value=mf),
                         post_dft_vv10_gradient=Mock(return_value=0.0),
-                        _post_vv10_finite_difference_gradient=Mock(return_value=0.0),
-                        _b3lyp_finite_difference_gradient=Mock(return_value=0.0),
+                        post_vv10_finite_difference_gradient=Mock(return_value=0.0),
+                        b3lyp_finite_difference_gradient=Mock(return_value=0.0),
                         data_dict_addon={}, print=Mock(),
                     )
                     exec(code, namespace)
                     expected_calls = int(not evaluate and natm > 1)
                     for name in (
-                        "_converged_b3lyp", "post_dft_vv10_gradient",
-                        "_post_vv10_finite_difference_gradient",
-                        "_b3lyp_finite_difference_gradient",
+                        "converged_b3lyp", "post_dft_vv10_gradient",
+                        "post_vv10_finite_difference_gradient",
+                        "b3lyp_finite_difference_gradient",
                     ):
                         self.assertEqual(namespace[name].call_count, expected_calls)
                     self.assertEqual(
