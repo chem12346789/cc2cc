@@ -6,7 +6,6 @@ import copy
 import numpy as np
 
 import pyscf
-import pyscf.dft
 import pyscf.md
 
 from cc2cc.utils import (
@@ -24,8 +23,6 @@ from cc2cc.utils import (
 from cc2cc.utils.parser import gen_name_args, str2bool
 from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc
-from cc2cc.utils.b3lyp_reference import get_vv10_data
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -178,51 +175,6 @@ if __name__ == "__main__":
 
             if args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
                 print(f"SKIP: {name} already exists.")
-                # 1. Standard DFT (B3LYP)
-                with np.load(
-                    DATA_PATH / f"data_{name}.npz", allow_pickle=True
-                ) as data_npz:
-                    missing_keys = [
-                        key
-                        for key in ("dm1_dft", "e_dft", "dm1_cc", "weights")
-                        if key not in data_npz
-                    ]
-                    if missing_keys:
-                        print(
-                            f"SKIP comparison: {name} missing cached fields: "
-                            f"{', '.join(missing_keys)}",
-                            flush=True,
-                        )
-                        continue
-                    dm_dft = data_npz["dm1_dft"]
-                    e_dft = float(data_npz["e_dft"])
-                    dm_cc = data_npz["dm1_cc"]
-                    weights = data_npz["weights"]
-                    if weights.shape != grids.weights.shape:
-                        raise ValueError(
-                            f"Cached weights shape {weights.shape} does not match "
-                            f"grid weights shape {grids.weights.shape} for {name}"
-                        )
-                    assert np.allclose(
-                        grids.weights, weights, rtol=1e-10, atol=1e-12
-                    ), f"Cached weights do not match grid weights for {name}"
-                    grids.weights = weights
-
-                vv10_data = get_vv10_data(
-                    mol, grids, dm_dft, e_dft, dm_cc, args, evaluate
-                )
-                addon_path = DATA_PATH / f"data_{name}_addon.npz"
-                if addon_path.exists():
-                    with np.load(addon_path, allow_pickle=True) as data_addon:
-                        data_dict_addon = dict(data_addon)
-                else:
-                    data_dict_addon = {}
-                data_dict_addon.pop("exc_post_grid", None)
-                data_dict_addon.pop("enlc_post", None)
-                data_dict_addon.update(vv10_data)
-                data_dict_addon["coords"] = grids.coords
-                np.savez(addon_path, **data_dict_addon)
-
             else:
                 if mol.spin == 0:
                     cc(mol, grids, name, args, evaluate=evaluate)
