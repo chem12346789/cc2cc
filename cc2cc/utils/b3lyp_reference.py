@@ -115,17 +115,7 @@ def get_post_vv10_data(
 
 def get_scf_vv10_data(mol, grids, dm_dft, dm_cc, args, evaluate=False):
     """Compute self-consistent B3LYP+VV10 data starting from an RKS or UKS density."""
-    mf_scf = (
-        pyscf.dft.RKS(mol, xc="b3lyp")
-        if mol.spin == 0
-        else pyscf.dft.UKS(mol, xc="b3lyp")
-    )
-    mf_scf.nlc = "vv10"
-    mf_scf.verbose = 4
-    mf_scf.max_cycle = 200
-    mf_scf.conv_tol = 1e-12
-    mf_scf.conv_tol_grad = 1e-8
-    mf_scf.kernel(dm0=dm_dft)
+    mf_scf = converged_b3lyp(mol, dm0=dm_dft, nlc="vv10", verbose=4)
     if not mf_scf.converged and (args.check_convergence or not evaluate):
         mf_scf.level_shift = 1
         mf_scf.kernel(dm0=dm_dft)
@@ -154,18 +144,17 @@ def get_scf_vv10_data(mol, grids, dm_dft, dm_cc, args, evaluate=False):
     return data
 
 
-def converged_b3lyp(mol, dm0=None):
+def converged_b3lyp(mol, dm0=None, *, nlc="", grids=None, verbose=0):
     mf = (
         pyscf.dft.RKS(mol, xc="b3lyp")
         if mol.spin == 0
         else pyscf.dft.UKS(mol, xc="b3lyp")
     )
-    mf.verbose = 0
+    if grids is not None:
+        mf.grids = grids
+    mf.verbose = verbose
     mf.max_cycle = 200
-    mf.nlc = ""
-    mf.conv_tol = 1e-12
-    mf.conv_tol_grad = 1e-8
-    mf.conv_tol_cpscf = 1e-10
+    mf.nlc = nlc
     mf.kernel(dm0=dm0)
     return mf
 

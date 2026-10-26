@@ -1,8 +1,8 @@
 import numpy as np
 
-import pyscf
 from pyscf import lib
 
+from cc2cc.utils.b3lyp_reference import converged_b3lyp
 from cc2cc.utils.modelscf_rks import get_veff_grad_modified_zeros
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
 
@@ -14,11 +14,7 @@ def get_dft_input(mol, grids, dm1_dft, max_memory=8000):
     if dm1_dft is None:
         return {}
 
-    mdft = pyscf.scf.UKS(mol)
-    mdft.grids = grids
-    mdft.xc = "b3lyp"
-    mdft.verbose = 4
-    mdft.kernel(dm1_dft)
+    mdft = converged_b3lyp(mol, dm0=dm1_dft, grids=grids, verbose=4)
 
     rho_cube_dft = np.zeros((len(grids.coords), grids.input_level, EDGE_SIZE**3))
 
@@ -53,11 +49,7 @@ def get_dft_grad(mol, grids, dm1_dft, max_memory=8000):
     if dm1_dft is None:
         return {}
 
-    mdft = pyscf.scf.UKS(mol)
-    mdft.grids = grids
-    mdft.xc = "b3lyp"
-    mdft.verbose = 4
-    mdft.kernel(dm1_dft)
+    mdft = converged_b3lyp(mol, dm0=dm1_dft, grids=grids, verbose=4)
     gdft = mdft.Gradients()
     grad_dft = gdft.kernel()
     get_veff_grad_modified_zeros(gdft)

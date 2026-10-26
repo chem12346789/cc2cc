@@ -22,7 +22,7 @@ from cc2cc.utils.ccsd_t_target import (
 from cc2cc.utils.get_dft_energy_rks import get_cc_energy, get_dft_energy, get_hf_energy
 from cc2cc.utils.get_dft_grad_rks import get_dft_grad, get_dft_input
 from cc2cc.utils.zmp_reference import get_zmp, zmp_finite_difference_gradient
-from cc2cc.utils.b3lyp_reference import get_vv10_data
+from cc2cc.utils.b3lyp_reference import converged_b3lyp, get_vv10_data
 
 
 def is_hermitian(matrix, tol=1e-8):
@@ -56,11 +56,7 @@ def cc(
     e_hf = mf.e_tot
 
     # DFT calculation
-    mdft = pyscf.scf.RKS(mol)
-    mdft.verbose = 4
-    mdft.max_cycle = 200
-    mdft.xc = "b3lyp"
-    mdft.kernel(mf.make_rdm1())
+    mdft = converged_b3lyp(mol, dm0=mf.make_rdm1(), verbose=4)
     if args.check_convergence and not mdft.converged:
         raise ValueError("RKS not converged.")
     dm1_dft = mdft.make_rdm1(ao_repr=True)
