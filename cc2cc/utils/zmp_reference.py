@@ -14,7 +14,7 @@ from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
 from cc2cc.utils.ccsd_t_target import make_ccsd, ccsd_t_target_density
 from cc2cc.utils.zmp import RZMP, UZMP
 
-LEVEL_SHIFT = 3
+LEVEL_SHIFT = 4
 MAX_CYCLE = 20000
 
 

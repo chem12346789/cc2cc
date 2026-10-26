@@ -20,6 +20,7 @@ from cc2cc.utils import (
     Grid,
     DATA_PATH,
 )
+from cc2cc.utils.b3lyp_reference import get_vv10_data
 from cc2cc.utils.parser import gen_name_args, str2bool
 from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc
@@ -51,12 +52,6 @@ if __name__ == "__main__":
         type=int,
         default=3,
         help="Total number of training cycles. Default is 3.",
-    )
-    parser.add_argument(
-        "--check_post_vv10_gradient",
-        action="store_true",
-        help="Check analytical Post-DFT VV10 gradients against finite differences "
-        "(six additional B3LYP calculations per atom).",
     )
     parser.add_argument(
         "--check_convergence",
@@ -170,7 +165,62 @@ if __name__ == "__main__":
             grids = Grid(mol, args.grid_level, 7)
 
             if args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
-                print(f"SKIP: {name} already exists.")
+                # print(f"SKIP: {name} already exists.")
+
+                print(f"Add zmp VV10 data for {name}")
+                cache_path = DATA_PATH / f"data_{name}.npz"
+                with np.load(cache_path, allow_pickle=True) as cached:
+                    required = ("dm1_dft", "e_dft", "dm1_cc", "weights")
+                    missing = [key for key in required if key not in cached]
+                    if missing:
+                        print(
+                            f"SKIP VV10 update for {name}: missing cached fields "
+                            f"{', '.join(missing)}."
+                        )
+                    else:
+                        cached_weights = cached["weights"]
+                        if cached_weights.shape != grids.weights.shape:
+                            raise RuntimeError(
+                                f"Cached grid weights for {name} have shape "
+                                f"{cached_weights.shape}, expected {grids.weights.shape}."
+                            )
+                        grids.weights = cached_weights
+                        vv10_data = get_vv10_data(
+                            mol,
+                            grids,
+                            cached["dm1_dft"],
+                            cached["e_dft"],
+                            cached["dm1_cc"],
+                            args,
+                        )
+                        if "dm1_zmp" in cached and "e_zmp" in cached:
+                            vv10_data.update(
+                                get_vv10_data(
+                                    mol,
+                                    grids,
+                                    cached["dm1_zmp"],
+                                    cached["e_zmp"],
+                                    cached["dm1_cc"],
+                                    args,
+                                    suffix="_zmp",
+                                )
+                            )
+                        else:
+                            print(
+                                f"SKIP ZMP-based VV10 update for {name}: missing "
+                                "cached dm1_zmp or e_zmp."
+                            )
+
+                        addon_path = DATA_PATH / f"data_{name}_addon.npz"
+                        if addon_path.exists():
+                            with np.load(addon_path, allow_pickle=True) as addon:
+                                data_dict_addon = dict(addon.items())
+                        else:
+                            data_dict_addon = {}
+                        data_dict_addon.pop("exc_post_grid", None)
+                        data_dict_addon.pop("enlc_post", None)
+                        data_dict_addon.update(vv10_data)
+                        np.savez(addon_path, **data_dict_addon)
             else:
                 if mol.spin == 0:
                     cc(mol, grids, name, args, evaluate=evaluate)

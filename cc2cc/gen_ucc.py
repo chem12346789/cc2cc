@@ -64,7 +64,8 @@ def ucc(mol, grids, name, args, evaluate=False):
 
     # UCCSD calculation
     mycc = make_ccsd(mf, unrestricted=True)
-    mycc.verbose = 9
+    mycc.verbose = 4
+    # To trace the usage of memory, set verbose as 9.
     _, t1, t2 = mycc.kernel()
     eris = mycc.ao2mo()
     e3ref = uccsd_t.kernel(mycc, eris, t1, t2)
@@ -109,6 +110,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
 
     mzmp, dm1_zmp = get_zmp(mol, dm1_cc, dm1_dft, grids, max_l=20)
+    e_zmp = mzmp.energy_tot(dm1_zmp)
 
     # Generate input data
     data_dict = {}
@@ -245,7 +247,6 @@ def ucc(mol, grids, name, args, evaluate=False):
         print(f"Error exc_lerf part: {AU2KCALMOL * error_exc_lerf}")
 
     if "tol_delta_zmp_grids" in data_dict:
-        e_zmp = mzmp.energy_tot(dm1_zmp)
         energy_train = e_cc - e_zmp
         error_zmp = (
             np.sum(data_dict["tol_delta_zmp_grids"] * grids.weights) - energy_train
@@ -271,6 +272,13 @@ def ucc(mol, grids, name, args, evaluate=False):
         }
     )
     data_dict.update(
-        get_vv10_data(mol, grids, dm1_dft, e_dft, dm1_cc, args, evaluate)
+        get_vv10_data(
+            mol, grids, dm1_dft, e_dft, dm1_cc, args,
+        )
+    )
+    data_dict.update(
+        get_vv10_data(
+            mol, grids, dm1_zmp, e_zmp, dm1_cc, args, suffix="_zmp",
+        )
     )
     np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)

@@ -94,17 +94,24 @@ created, and failures may occur after earlier files have been updated.
   `Grid` → `cc()`/`ucc()` → `.npz` grid data
   - `cc()` and `ucc()` call the shared `get_vv10_data()` helper in
     `utils/b3lyp_reference.py` and save Post-DFT VV10 and SCF-VV10 energies,
-    `dm1_scf_vv10`, and training-mode gradients in the main archive.
-    The existing-cache branch uses the same helper and saves to the addon.
+    `dm1_scf_vv10`, and gradients in the main archive. They also
+    save separate VV10 results based on `dm1_zmp` with `_zmp`-suffixed keys.
+    The helper separates `get_post_vv10_data()` and `get_scf_vv10_data()`.
+    `get_vv10_data()` derives its policy from `suffix`, not caller flags:
+    `"_zmp"` sets evaluation on, SCF-VV10 off, and gradient checks off;
+    the default `""` enables SCF-VV10, all gradients, and gradient checks.
+    Existing cached SCF-VV10 ZMP fields are preserved, not refreshed.
+    The existing-cache branch uses the same helper and saves to the addon,
+    including `_zmp`-suffixed results when cached ZMP density and energy exist.
     Existing-cache comparisons report B3LYP/post-DFT VV10 and SCF-VV10
     integrated absolute density differences against cached `dm1_cc` (electrons).
     Post-DFT VV10 energy density uses the same `Grid` coordinates, ordering,
     and weights as the density comparisons. Weights are loaded from the cache
     and must match the rebuilt grid's shape.
-  - Evaluation (`--if_eval true`) skips gradient generation, checks, and gradient
-    addon updates, preserving any previously cached gradients.
-    Electronic density difference calculations and reporting are also skipped
-    during evaluation; energy comparisons remain enabled.
+  - VV10 calculation policy is independent of `--if_eval`: unsuffixed results
+    include SCF-VV10 gradients, finite-difference checks, and density comparisons.
+    ZMP results include `grad_post_vv10_zmp` but omit SCF-VV10, finite-difference
+    checks, and density comparisons; energy comparisons remain enabled.
     `grad_post_vv10` is analytical: B3LYP is reconverged from the cached density
     at tight tolerances, and PySCF's coupled-perturbed RKS/UKS solver supplies
     its orbital response. The VV10 and B3LYP atom-centered grid-motion terms
@@ -113,7 +120,7 @@ created, and failures may occur after earlier files have been updated.
     generation requires converged wavefunctions even when optional evaluation
     convergence checks are disabled.
     Gradients have shape `(natm, 3)`, in Hartree/Bohr; forces are their negatives.
-    `--check_post_vv10_gradient` also saves `grad_post_vv10_fd`,
+    Unsuffixed results also save `grad_post_vv10_fd` for multi-atom molecules,
     using central differences with a 0.001 Bohr step (six B3LYP single points
     per atom), and reports maximum errors for both Post-DFT VV10 and B3LYP.
     The VV10 energy-density weighted integral is checked against PySCF

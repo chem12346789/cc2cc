@@ -11,7 +11,7 @@ from cc2cc.utils.pyscf_uccsd_t_u_gamma1_intermediates import u_gamma1_intermedia
 
 CC_MAX_CYCLE = 200
 CC_CONV_TOL = 1e-12
-CC_CONV_TOL_NORMT = 1e-10
+CC_CONV_TOL_NORMT = 1e-8
 LAMBDA_MAX_CYCLE = 200
 LAMBDA_TOL = 1e-10
 
