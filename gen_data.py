@@ -143,11 +143,7 @@ if __name__ == "__main__":
                     molecule = np.array(copy.deepcopy(mol.atom), dtype=object)
                     for i, pos in enumerate(frame_coords):
                         molecule[i][1:] = pos.tolist()
-                    molecule, _ = rotate(
-                        molecule,
-                        solve_symmetry=True,
-                        verbose=0,
-                    )
+                    molecule, _ = rotate(molecule, solve_symmetry=True, verbose=0)
                     traj_mole_pool.append(molecule.copy())
                     if len(traj_mole_pool) > args.md_number:
                         print(molecule)
