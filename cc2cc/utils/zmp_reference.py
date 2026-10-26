@@ -1,4 +1,4 @@
-"""Full-pipeline nuclear finite differences of B3LYP energy on ZMP orbitals."""
+"""ZMP inversion, projected analytic baseline gradients, and finite differences."""
 
 import argparse
 import json
@@ -19,8 +19,16 @@ MAX_CYCLE = 20000
 
 
 def get_zmp(
-    mol, dm_tar, dm_dft, grids, max_l=4, verbose=0, start_l=0,
-    max_cycle=MAX_CYCLE, *, strict=False,
+    mol,
+    dm_tar,
+    dm_dft,
+    grids,
+    max_l=4,
+    verbose=0,
+    start_l=0,
+    max_cycle=MAX_CYCLE,
+    *,
+    strict=False,
 ):
     """Invert a restricted/unrestricted density and print per-stage diagnostics.
 
@@ -105,6 +113,34 @@ def get_zmp(
     return mzmp, mzmp.make_rdm1()
 
 
+def zmp_baseline_gradient(mf, dm_zmp):
+    """Analytic baseline gradient at a supplied ZMP determinant, in Hartree/Bohr.
+
+    Use the baseline occupied Fock block for the energy-weighted density,
+    excluding response along rebuilt ZMP solutions. The learned correction
+    must supply its own explicit, Pulay, and grid contributions.
+    """
+    overlap = mf.get_ovlp()
+    density_energy, coeff = mf.eig(-overlap @ dm_zmp @ overlap, overlap)
+    occ = mf.get_occ(density_energy, coeff)
+    fock = mf.get_hcore() + mf.get_veff(mf.mol, dm_zmp)
+    energy = np.zeros_like(occ)
+    restricted = dm_zmp.ndim == 2
+    spin_coeffs = (coeff,) if restricted else coeff
+    spin_occs = (occ,) if restricted else occ
+    spin_focks = (fock,) if restricted else fock
+    spin_energies = (energy,) if restricted else energy
+    for c, n, f, e in zip(spin_coeffs, spin_occs, spin_focks, spin_energies):
+        occupied = n > 0
+        c_occ = c[:, occupied]
+        # Semicanonicalization gives W = P F P / occupation without inversion energies.
+        e[occupied], rotation = np.linalg.eigh(c_occ.conj().T @ f @ c_occ)
+        c[:, occupied] = c_occ @ rotation
+    grad = mf.nuc_grad_method()
+    grad.grid_response = True
+    return grad.kernel(mo_energy=energy, mo_coeff=coeff, mo_occ=occ)
+
+
 def zmp_reference_energy(mol, grid_level=3, max_l=20):
     """Return (ZMP-density B3LYP, self-consistent B3LYP) energies in Hartree.
 
@@ -141,102 +177,5 @@ def zmp_reference_energy(mol, grid_level=3, max_l=20):
     return energy, float(mdft.e_tot)
 
 
-def zmp_finite_difference(mol, steps=(0.002, 0.001), grid_level=3, max_l=20):
-    """Rebuild the complete pipeline at +/- each step (Bohr), for every atom.
-
-    Gradients/forces have shape (nsteps, natm, 3), in Hartree/Bohr.
-    Displaced energies have shape (nsteps, natm, 3, 2); sign order is (-, +).
-    """
-    steps = np.asarray(steps, dtype=np.float64)
-    if (
-        steps.ndim != 1
-        or steps.size == 0
-        or not np.all(np.isfinite(steps) & (steps > 0))
-    ):
-        raise ValueError(
-            "steps must be a nonempty sequence of positive finite Bohr steps."
-        )
-    coords = mol.atom_coords(unit="Bohr")
-    energies = np.empty((len(steps), mol.natm, 3, 2, 2), dtype=np.float64)
-    for index, step in enumerate(steps):
-        for atom in range(mol.natm):
-            for axis in range(3):
-                for side, sign in enumerate((-1, 1)):
-                    displaced = coords.copy()
-                    displaced[atom, axis] += sign * step
-                    geometry = mol.set_geom_(displaced, unit="Bohr", inplace=False)
-                    energies[index, atom, axis, side] = zmp_reference_energy(
-                        geometry, grid_level=grid_level, max_l=max_l
-                    )
-    gradients = (energies[..., 1, :] - energies[..., 0, :]) / (
-        2 * steps[:, None, None, None]
-    )
-    return {
-        "steps_bohr": steps.tolist(),
-        "coordinates_bohr": coords.tolist(),
-        "elements": [mol.atom_symbol(atom) for atom in range(mol.natm)],
-        "basis": mol.basis,
-        "charge": mol.charge,
-        "spin": mol.spin,
-        "grid_level": grid_level,
-        "max_l": max_l,
-        "energy_units": "Hartree",
-        "gradient_units": "Hartree/Bohr",
-        "energy_sign_order": ["minus", "plus"],
-        "zmp_energies": energies[..., 0].tolist(),
-        "b3lyp_energies": energies[..., 1].tolist(),
-        "grad_zmp": gradients[..., 0].tolist(),
-        "force_zmp": (-gradients[..., 0]).tolist(),
-        "grad_b3lyp": gradients[..., 1].tolist(),
-        "force_b3lyp": (-gradients[..., 1]).tolist(),
-        "grad_zmp_minus_b3lyp": (gradients[..., 0] - gradients[..., 1]).tolist(),
-    }
-
-
-def zmp_finite_difference_gradient(mol, grid_level, step=0.001, max_l=20):
-    """Return the full-pipeline nuclear gradient (natm, 3), in Hartree/Bohr.
-
-    Each sign/displacement rebuilds the CCSD(T) target and the ZMP inversion.
-    """
-    if not np.isfinite(step) or step <= 0:
-        raise ValueError("step must be positive and finite, in Bohr.")
-    if mol.natm == 1:
-        return np.zeros((1, 3), dtype=np.float64)
-    reference = zmp_finite_difference(
-        mol, steps=(step,), grid_level=grid_level, max_l=max_l
-    )
-    return np.asarray(reference["grad_zmp"][0], dtype=np.float64)
-
-
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--atom", required=True, help="PySCF geometry string or XYZ path")
-    parser.add_argument("--basis", required=True)
-    parser.add_argument("--unit", choices=("Angstrom", "Bohr"), default="Angstrom")
-    parser.add_argument("--charge", type=int, default=0)
-    parser.add_argument(
-        "--spin", type=int, default=0, help="Number of alpha minus beta electrons"
-    )
-    parser.add_argument("--grid-level", type=int, default=3)
-    parser.add_argument("--max-l", type=int, default=20)
-    parser.add_argument("--steps", type=float, nargs="+", default=[0.002, 0.001])
-    parser.add_argument("--threads", type=int, default=1)
-    parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
-    lib.num_threads(args.threads)
-    mol = gto.M(
-        atom=args.atom,
-        basis=args.basis,
-        unit=args.unit,
-        charge=args.charge,
-        spin=args.spin,
-        symmetry=False,
-        verbose=0,
-    )
-    result = zmp_finite_difference(mol, args.steps, args.grid_level, args.max_l)
-    args.output.write_text(json.dumps(result, indent=2) + "\n")
-    print(f"Saved finite-difference reference to {args.output}")
-
-
 if __name__ == "__main__":
-    main()
+    raise RuntimeError("This module is not intended to be run as a script.")

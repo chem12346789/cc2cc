@@ -22,8 +22,16 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   potential/gradient hooks for PySCF SCF
 - `get_dft_energy_*.py`, `get_dft_grad_*.py`: energy and gradient helpers
 - `zmp_reference.py`: shared ZMP inversion, diagnostic prints, and numerical
-  nuclear-gradient reference; `get_zmp.py` forwards legacy entry points and
-  `zmp.py` implements the inversion SCF equations.
+  nuclear-gradient reference. Generation stores `grad_zmp` using
+  `zmp_baseline_gradient(mdft, dm1_zmp)`: an analytic B3LYP baseline gradient
+  at the supplied ZMP determinant, with moving-grid response and a baseline
+  occupied-Fock-block energy-weighted density for the Pulay term. It excludes
+  rebuilt-ZMP orbital response; the learned correction must contribute its
+  explicit derivative, Pulay term, and grid response separately. Existing
+  cached `grad_zmp` values must be regenerated before using this convention.
+  Full-pipeline finite differences remain available as trajectory diagnostics.
+  `get_zmp.py` forwards legacy entry points and `zmp.py` implements the inversion
+  SCF equations.
 - `ccsd_t_target.py`: shared CCSD solver settings, CCSD(T) lambda solving,
   triples-corrected target density and CC-gradient one-particle intermediates.
   `ccsd_t_target_gradient()` handles restricted/unrestricted two-particle

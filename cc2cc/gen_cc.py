@@ -21,7 +21,7 @@ from cc2cc.utils.ccsd_t_target import (
 )
 from cc2cc.utils.get_dft_energy_rks import get_cc_energy, get_dft_energy, get_hf_energy
 from cc2cc.utils.get_dft_grad_rks import get_dft_grad, get_dft_input
-from cc2cc.utils.zmp_reference import get_zmp, zmp_finite_difference_gradient
+from cc2cc.utils.zmp_reference import get_zmp, zmp_baseline_gradient
 from cc2cc.utils.b3lyp_reference import converged_b3lyp, get_vv10_data
 
 
@@ -185,7 +185,7 @@ def cc(
         gdft_d3bj = mdft_d3bj.Gradients()
         grad_dft_d3bj = gdft_d3bj.kernel()
 
-        grad_zmp = zmp_finite_difference_gradient(mol, grids.level)
+        grad_zmp = zmp_baseline_gradient(mdft, dm1_zmp)
 
         data_dict["grad_cc_train"] = grad_cc - grad_dft
         data_dict["grad_hf"] = grad_hf

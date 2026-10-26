@@ -71,26 +71,29 @@ select_molecule_profile() {
     local array_index=${2:-${SLURM_ARRAY_TASK_ID}}
 
     case "${profile}" in
-    gmtkn55)
+    (gmtkn55)
         name_mol_input_list=(
             "molecule_PCONF21" "molecule_S66" "molecule_HEAVY28" "molecule_MCONF" "molecule_BSR36" "molecule_RG18" "molecule_HAL59" "molecule_Amino20x4" "molecule_BH76" "molecule_RSE43" "molecule_S22" "molecule_ISOL24" "molecule_UPU23" "molecule_PNICO23" "molecule_ADIM6" "molecule_BUT14DIOL" "molecule_SIE4x4" "molecule_ACONF" "molecule_IDISP" "molecule_FH51" "molecule_DARC" "molecule_CDIE20" "molecule_TAUT15" "molecule_MB16_43" "molecule_ISO34" "molecule_BHPERI" "molecule_PArel" "molecule_DC13" "molecule_YBDE18" "molecule_ICONF" "molecule_BH76RC" "molecule_SCONF" "molecule_G21EA" "molecule_NBPRC" "molecule_PX13" "molecule_W4_11" "molecule_BHROT27" "molecule_WATER27" "molecule_AL2X6" "molecule_INV24" "molecule_HEAVYSB11" "molecule_G2RC" "molecule_CARBHB12" "molecule_RC21" "molecule_ALK8" "molecule_AHB21" "molecule_WCPT18" "molecule_BHDIV10" "molecule_IL16" "molecule_G21IP" "molecule_ALKBDE10" "molecule_PA26" "molecule_CHB6" "molecule_C60ISO" "molecule_DIPCS10"
         )
         ;;
-    intermolecular)
+    (intermolecular)
         name_mol_input_list=(
             "molecule_S66x8-090" "molecule_S66x8-095" "molecule_S66x8-100" "molecule_S66x8-105" "molecule_S66x8-110" "molecule_S66x8-125" "molecule_S66x8-150" "molecule_S66x8-200" "molecule_S66x8-A" "molecule_S66x8-B" "molecule_S22x5-0.9" "molecule_S22x5-1.0" "molecule_S22x5-1.2" "molecule_S22x5-1.5" "molecule_S22x5-2.0" "molecule_S22x5-A" "molecule_S22x5-B" "molecule_NCIBLIND10"
         )
         ;;
-    nciblind10)
+    (nciblind10)
         name_mol_input_list=("molecule_NCIBLIND10")
         ;;
-    force)
+    (force)
         name_mol_input_list=("molecule_Force")
         ;;
-    tmc)
+    (tmc)
         name_mol_input_list=("TMB28_C1" "TMB28_T1")
         ;;
-    *)
+    (detail)
+        name_mol_input_list=("W4_11-ch4" "W4_11-clf" "W4_11-hcl" "W4_11-h2o" "W4_11-nh3" "W4_11-oh" "W4_11-f2" "W4_11-co" "W4_11-n2" "W4_11-o2" "W4_11-c2h2" "W4_11-c2h4" "W4_11-c2h6" "W4_11-c2")
+        ;;
+    (*)
         echo "Unknown molecule profile: ${profile}" >&2
         return 2
         ;;

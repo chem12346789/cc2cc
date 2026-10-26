@@ -20,7 +20,7 @@ from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.get_dft_energy_uks import get_cc_energy, get_dft_energy, get_hf_energy
 from cc2cc.utils.get_dft_grad_uks import get_dft_grad, get_dft_input
-from cc2cc.utils.zmp_reference import get_zmp, zmp_finite_difference_gradient
+from cc2cc.utils.zmp_reference import get_zmp, zmp_baseline_gradient
 from cc2cc.utils.b3lyp_reference import converged_b3lyp, get_vv10_data
 
 def ucc(mol, grids, name, args, evaluate=False):
@@ -181,7 +181,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         gdft_d3bj = mdft_d3bj.Gradients()
         grad_dft_d3bj = gdft_d3bj.kernel()
 
-        grad_zmp = zmp_finite_difference_gradient(mol, grids.level)
+        grad_zmp = zmp_baseline_gradient(mdft, dm1_zmp)
 
         data_dict["grad_cc_train"] = grad_cc - grad_dft
         data_dict["grad_hf"] = grad_hf

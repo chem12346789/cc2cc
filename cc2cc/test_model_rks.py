@@ -163,7 +163,10 @@ def test_model_rks(
 
     if (utils.DATA_PATH / f"data_{name}.npz").exists():
         data = np.load(utils.DATA_PATH / f"data_{name}.npz", allow_pickle=True)
+        print("\n\n" + "=" * 40)
+        print("Molecule from data:")
         print(data["mol"])
+        print("Molecule from PySCF:")
         print(mol.tostring(format="xyz"))
         print(
             f"energy (ai vs dft) {(e_scf - data['e_dft']) * utils.AU2KCALMOL} Kcal/mol"
