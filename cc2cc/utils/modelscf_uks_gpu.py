@@ -111,8 +111,11 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
             for ao, wv in block_loop(ao_deriv):
                 if aow_buffer is None or aow_buffer.size < ao[0].size:
                     aow_buffer = cp.empty(ao[0].size, dtype=cp.float64)
+                profile.mark("AO scratch")
                 wv[:, 0] *= 0.5
                 wva, wvb = wv
+                profile.record_ao_layout(ao, wva, aow_buffer)
+                profile.mark("AO weight preparation")
 
                 # ao shape in GPU4PySCF (transpose=False): (comp, nao, ngrids)
                 aowa = _scale_ao(ao, wva, out=aow_buffer)

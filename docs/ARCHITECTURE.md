@@ -73,6 +73,8 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     filtered centers can still use any original grid point as a neighbor.
     Center integration weights are unchanged. Existing archives need matching
     coordinates in the base or addon archive; missing coordinates are an error.
+    Loading prints each molecule's unweighted mean neighbor-center distance in
+    Bohr over the 26 neighbors of retained centers, excluding the center itself.
   - This mode does not eliminate cube generation from the existing generators;
     it reuses cube centers. Nearest-neighbor distances can vary strongly across
     atom-centered quadrature grids. No-cube checkpoints are distinct from cube
@@ -115,6 +117,13 @@ UKS processes alpha then beta through the same scratch buffer; `AO weighting`
 and `matrix GEMM` therefore each have two calls per block in UKS (one in RKS).
 Their total times still include both spins. All scratch storage is local to one
 integration call; no AO cache or additional screening approximation is introduced.
+The old `AO weighting` region is further separated into `AO scratch` (buffer
+allocation/checks), `AO weight preparation` (density-channel half weighting and
+layout bookkeeping), and `AO weighting` (the native `_scale_ao` call). Sum these
+three stages when comparing to older logs. Scratch and preparation each count
+once per block, including UKS. First-block AO/weight shapes, byte strides, dtypes,
+contiguity flags and scratch bytes are printed after timing. No layout copies,
+custom weighting kernels, or screening changes are enabled by this diagnostic.
 
 Profiling joins the current CuPy and PyTorch streams and synchronizes at every
 boundary. GPU elapsed time includes host launch gaps, not just kernel execution.

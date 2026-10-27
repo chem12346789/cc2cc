@@ -8,9 +8,7 @@ export model_load_epoch_pairs=(
     "atom-82794:10005:scf_d3bj_ene:best before"
     "atom-3259973:2395:scf_d3bj_ene:vv10"
     "atom-3259973:2395:post_scf_vv10_ene:vv10"
-    "atom-3259973:4940:scf_d3bj_ene:vv10"
-    "atom-3259973:4940:post_scf_vv10_ene:vv10"
-    "atom-4114139:2395:scf_d3bj_ene:L1 mol2"
+    "atom-3259973-vv10:2395:scf_d3bj_ene:vv10"
     "atom-35580:1115:scf_d3bj_ene:zmp"
     "atom-35580:2395:scf_d3bj_ene:zmp"
 )

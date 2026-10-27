@@ -316,6 +316,16 @@ class DataBase:
             data_dict["relative_positions"] = (
                 coords[indices] - coords[filter_idx, None, :]
             )
+            if len(indices):
+                mean_distance = np.linalg.norm(
+                    data_dict["relative_positions"][:, 1:, :], axis=-1
+                ).mean()
+                print(
+                    f"{name}: mean neighbor-center distance "
+                    f"(26 neighbors, retained centers): {mean_distance:.8f} Bohr"
+                )
+            else:
+                print(f"{name}: no retained centers for neighbor-distance statistics")
         elif self.if_eval:
             filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 0
         else:

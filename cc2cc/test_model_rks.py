@@ -44,7 +44,12 @@ def test_model_rks(
         Grid = utils.GridCPU
         utils.get_veff_modified_rks(mdft, modeldict)
 
-    mdft.xc = "b3lyp"
+    if args.baseline == "b3lyp-vv10":
+        mdft.xc = "b3lyp"
+        mdft.nlc = "vv10"
+    else:
+        mdft.xc = "b3lyp"
+
     mdft.grids = Grid(
         mol,
         args.grid_level,
@@ -153,17 +158,6 @@ def test_model_rks(
         "scf_dipole_z": scf_dipole[2],
         "converged": mdft.converged,
     }
-
-    if args.baseline == "b3lyp-vv10":
-        baseline = utils.TestDataDFT(mol, name, xc_code="b3lyp", disp="vv10")
-        dict_.update(
-            {
-                "b3lyp-vv10_ene": baseline.e_dft,
-                "b3lyp-vv10_dipole_x": baseline.dft_dipole[0],
-                "b3lyp-vv10_dipole_y": baseline.dft_dipole[1],
-                "b3lyp-vv10_dipole_z": baseline.dft_dipole[2],
-            }
-        )
 
     if args.if_grad:
         if grad_mdft is not None:

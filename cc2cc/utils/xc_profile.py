@@ -13,6 +13,7 @@ class XCStageProfiler:
         self.spin = spin
         self.totals = {}
         self.blocks = []
+        self.ao_layout = None
         if not self.enabled:
             return
 
@@ -39,6 +40,14 @@ class XCStageProfiler:
     def record_block(self, base_grids, cube_points):
         if self.enabled:
             self.blocks.append((base_grids, cube_points))
+
+    def record_ao_layout(self, ao, weights, buffer):
+        if self.enabled and self.ao_layout is None:
+            self.ao_layout = (
+                ao.shape, ao.strides, str(ao.dtype), ao[0].flags.c_contiguous,
+                weights.shape, weights.strides, str(weights.dtype),
+                weights.flags.c_contiguous, buffer.nbytes,
+            )
 
     def mark(self, stage):
         """Accumulate work since the previous boundary under ``stage``."""
@@ -70,3 +79,11 @@ class XCStageProfiler:
                 stage, count, wall, gpu,
             )
         logger.info(owner, "XC profile total staged wall=%.6f s", wall_sum)
+        if self.ao_layout is not None:
+            logger.info(
+                owner,
+                "XC profile first block: AO shape=%s strides=%s dtype=%s "
+                "row_contiguous=%s; weights shape=%s strides=%s dtype=%s "
+                "contiguous=%s; scratch_bytes=%d",
+                *self.ao_layout,
+            )

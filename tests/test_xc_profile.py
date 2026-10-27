@@ -198,7 +198,8 @@ class TestProfiledIntegration(unittest.TestCase):
                     self.assertEqual(list(stages), [
                         "setup", "cube coordinates", "AO evaluation", "density",
                         "component XC", "cube reshape", "model + DLPack",
-                        "XC contraction", "AO weighting", "matrix GEMM",
+                        "XC contraction", "AO scratch", "AO weight preparation",
+                        "AO weighting", "matrix GEMM",
                         "symmetry + unsort",
                     ])
                     self.assertEqual(profiles[-1].blocks, [(2, 6), (1, 3)])

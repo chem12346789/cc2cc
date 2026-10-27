@@ -94,7 +94,10 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
             for ao, wv in block_loop(ao_deriv):
                 if aow_buffer is None or aow_buffer.size < ao[0].size:
                     aow_buffer = cp.empty(ao[0].size, dtype=cp.float64)
+                profile.mark("AO scratch")
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
+                profile.record_ao_layout(ao, wv, aow_buffer)
+                profile.mark("AO weight preparation")
                 aow = _scale_ao(ao, wv, out=aow_buffer)
                 profile.mark("AO weighting")
                 vmat[0] += cp.dot(ao[0], aow.T)
