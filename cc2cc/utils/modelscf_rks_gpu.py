@@ -158,6 +158,18 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
             )
             logger.info(ks_, "nelec by numeric integration = %s", n)
             t0 = logger.timer(ks_, "vxc", *t0)
+            if ks_.do_nlc():
+                ks_.initialize_grids(mol, dm)
+                nlc_code = ks_.xc if ni.libxc.is_nlc(ks_.xc) else ks_.nlc
+                _, enlc, vnlc = ni.nr_nlc_vxc(
+                    mol,
+                    ks_.nlcgrids,
+                    nlc_code,
+                    dm,
+                    max_memory=max_memory_gpu,
+                )
+                exc += enlc
+                vxc += vnlc
 
         if mol.nao > MAX_GPU_JK_NAO:
             logger.info(

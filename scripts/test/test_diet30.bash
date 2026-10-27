@@ -37,5 +37,5 @@ find "${PYSCF_TMPDIR}" -type d -empty -delete
 
 sleep $SLURM_ARRAY_TASK_ID
 begin_test_job
-run_test_job --max_cycle 50 --s6 1.0 --a1 0.8 --s8 -1.0725 --a2 0.15 --alp 14.0 --s9 1.0
+run_test_job --max_memory_gpu 16000 --max_cycle 50 --s6 1.0 --a1 0.8 --s8 -1.0725 --a2 0.15 --alp 14.0 --s9 1.0
 finish_test_job
