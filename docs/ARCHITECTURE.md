@@ -95,6 +95,13 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 
 ### GPU SCF XC profiling
 
+`setup_gpu_test_job CPU_MEMORY GPU_MEMORY [USE_NUMBA]` exports its second
+argument as `MAX_MEMORY_GPU` as well as using it for the free-GPU-memory
+selection threshold. `run_test_job` forwards it as `--max_memory_gpu` (MB),
+defaulting to 4000 without GPU setup. An explicit `--max_memory_gpu` in
+`run_test_job` arguments comes last and overrides this value; GPU selection
+still uses its original threshold in MiB.
+
 Set `DFT2CC_PROFILE_XC=1` before the existing test command to log stage totals
 at INFO verbosity for every modified GPU RKS/UKS effective-potential evaluation.
 The default is `0` (no events, synchronization, or profiling output).

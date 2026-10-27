@@ -3,9 +3,8 @@
 # =========================
 # Model and checkpoint
 # =========================
-export MODEL="--model transformer+dense_mix_e3nn_4_correct"
-# export MODEL="--model transformer+dense_mix_e3nn_4_correct_f"
-# export LOAD_MODEL_ARGS="--load atom-3259973 --load_epoch 2400 --if_resume 1"
+# export MODEL="--model transformer+dense_mix_e3nn_4_correct"
+export MODEL="--model transformer+dense_mix_e3nn_4_no_cube"
 
 # =========================
 # Data and targets
@@ -32,7 +31,7 @@ export OUTPUT_ARG="--output_target tol_delta_grids"
 # =========================
 # Loss terms
 # =========================
-export IF_GRAD=1
+export IF_GRAD=0
 export IF_ATOMIC=1
 export IF_ABS=1
 
@@ -61,7 +60,7 @@ export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${C
 # Hardware and environment
 # =========================
 export NUMBER_OF_GPU=1
-export CUDA_VISIBLE_DEVICES=7
+export CUDA_VISIBLE_DEVICES=6
 
 if [ ${NUMBER_OF_GPU} -gt 1 ]; then
 	export DISTRIBUTED="--distributed 1"

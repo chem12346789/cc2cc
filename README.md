@@ -112,6 +112,21 @@ For Slurm jobs:
 sbatch scripts/test/test_diet30.bash
 ```
 
+### VV10 model validation
+
+Pass `--baseline b3lyp-vv10` to `test.py` to include VV10 energy and potential
+in the model SCF on CPU or GPU. The log reports `NLC (vv10) energy` during
+integration. With this baseline, `scf_ene` already includes VV10 and is also
+saved as `scf_vv10_ene`. Without VV10 in the SCF, `scf_vv10_ene` is blank.
+Without this baseline, the runners calculate and save `post_scf_vv10_ene`.
+With `--baseline b3lyp-vv10`, they skip the post-SCF VV10 calculation and
+leave `post_scf_vv10_ene` blank.
+
+When switching an existing validation run to this baseline, pass
+`--if_continue 0` (or set `if_continue_args=0` in the launch script).
+Resume checks molecule names, not baseline settings, so otherwise saved
+results can be skipped without any new SCF calculation.
+
 ### Two-stage cosine warm restarts
 
 Use `--scheduler cosine_warm2 --cosine_restart_step 160 --cosine_restart_lr 1e-4`

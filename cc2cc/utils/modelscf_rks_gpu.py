@@ -170,6 +170,7 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 )
                 exc += enlc
                 vxc += vnlc
+                logger.info(ks_, "NLC (%s) energy = %.12g Ha", nlc_code, enlc)
 
         if mol.nao > MAX_GPU_JK_NAO:
             logger.info(

@@ -72,7 +72,8 @@ def main():
         "--baseline",
         choices=("b3lyp-vv10",),
         default=None,
-        help="Add a B3LYP+VV10 reference baseline to the test results.",
+        help="Include self-consistent VV10 in the model's B3LYP baseline. "
+        "Use --if_continue 0 to recompute previously saved results.",
     )
     parser.add_argument(
         "--max_memory_gpu",

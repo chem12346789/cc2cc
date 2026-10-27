@@ -36,6 +36,7 @@ setup_gpu_test_job() {
     local min_free_memory_mb=$2
     local use_numba=${3:-0}
 
+    export MAX_MEMORY_GPU="${min_free_memory_mb}"
     setup_test_job "${max_memory_mb}" "${use_numba}"
     select_gpu "${min_free_memory_mb}"
 }
@@ -133,6 +134,7 @@ run_test_job() {
         --if_continue "${if_continue_args}" \
         --if_grad "${IF_GRAD}" \
         --grid_response "${GRID_RESPONSE:-0}" \
+        --max_memory_gpu "${MAX_MEMORY_GPU:-4000}" \
         "$@"
 }
 

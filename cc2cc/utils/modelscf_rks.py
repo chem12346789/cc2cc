@@ -14,6 +14,7 @@ from pyscf import lib
 from pyscf.lib import logger
 from pyscf.dft.numint import NumInt, _scale_ao, _dot_ao_ao_dense
 from pyscf.grad.rks import _gga_grad_sum_
+from pyscf.grad import rks as rks_grad
 
 from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.Grids import (
@@ -139,6 +140,15 @@ def get_veff_modified_rks(ks, modeldict):
                 hermi=hermi,
             )
             logger.debug(ks_, "nelec by numeric integration = %s", n)
+            if ks_.do_nlc():
+                ks_.initialize_grids(mol, dm)
+                nlc_code = ks_.xc if ni.libxc.is_nlc(ks_.xc) else ks_.nlc
+                _, enlc, vnlc = ni.nr_nlc_vxc(
+                    mol, ks_.nlcgrids, nlc_code, dm, max_memory=max_memory,
+                )
+                exc += enlc
+                vxc += vnlc
+                logger.info(ks_, "NLC (%s) energy = %.12g Ha", nlc_code, enlc)
             t0 = logger.timer(ks_, "vxc", *t0)
 
         incremental_jk = (
@@ -294,6 +304,20 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
             max_memory,
             verbose=ks_grad_.verbose,
         )
+        if mf.do_nlc():
+            mf.initialize_grids(mol, dm)
+            nlc_code = mf.xc if ni.libxc.is_nlc(mf.xc) else mf.nlc
+            nlc_vxc = (
+                rks_grad.get_nlc_vxc_full_response
+                if ks_grad_.grid_response else rks_grad.get_nlc_vxc
+            )
+            enlc, vnlc = nlc_vxc(
+                ni, mol, mf.nlcgrids, nlc_code, dm,
+                max_memory=max_memory, verbose=ks_grad_.verbose,
+            )
+            vxc += vnlc
+            if ks_grad_.grid_response:
+                exc += enlc
         t0 = logger.timer(ks_grad_, "vxc", *t0)
 
         if not ni.libxc.is_hybrid_xc(mf.xc):
