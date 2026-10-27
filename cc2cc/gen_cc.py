@@ -269,6 +269,7 @@ def cc(
             "dm1_dft": dm1_dft,
             "energy_train": energy_train,
             "weights": grids.weights,
+            "coords": grids.coords,
         }
     )
     data_dict.update(

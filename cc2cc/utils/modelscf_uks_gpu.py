@@ -7,7 +7,6 @@ GPU4PySCF version of the modified UKS hooks used by cc2cc.
 import types
 
 import cupy as cp
-from cupy.cublas import gemm
 
 from gpu4pyscf import lib
 from gpu4pyscf.lib import logger
@@ -118,11 +117,11 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 # ao shape in GPU4PySCF (transpose=False): (comp, nao, ngrids)
                 aowa = _scale_ao(ao, wva, out=aow_buffer)
                 profile.mark("AO weighting")
-                gemm("N", "T", ao[0], aowa, out=vmat[0, 0], beta=1.0)
+                vmat[0, 0] += cp.dot(ao[0], aowa.T)
                 profile.mark("matrix GEMM")
                 aowb = _scale_ao(ao, wvb, out=aow_buffer)
                 profile.mark("AO weighting")
-                gemm("N", "T", ao[0], aowb, out=vmat[1, 0], beta=1.0)
+                vmat[1, 0] += cp.dot(ao[0], aowb.T)
                 profile.mark("matrix GEMM")
 
             vmat = _hermi_sum(vmat.reshape((-1, nao, nao))).reshape(2, 1, nao, nao)

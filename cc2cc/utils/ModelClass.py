@@ -183,6 +183,11 @@ class ModelClass:
         self.cube_type = self.model.cube_type
         self.cube_size = self.model.cube_size
         self.input_level = self.model.input_level
+        if self.cube_type == "neighbors" and self.args.if_grad:
+            raise ValueError(
+                "The no-cube model currently supports energy training only; "
+                "neighbor geometry derivatives are not implemented."
+            )
         for name in ("cube_type", "cube_size", "input_level"):
             self.print(f"{name}: {getattr(self, name)}")
 
@@ -376,6 +381,7 @@ class ModelClass:
             process_input=process_input,
             process_grad2force=process_grad2force,
             verbose=self.verbose,
+            input_mode=self.cube_type,
         )
         self.database_eval = DataBase(
             eval_str_dict,
@@ -387,6 +393,7 @@ class ModelClass:
             process_input=process_input,
             process_grad2force=process_grad2force,
             verbose=self.verbose,
+            input_mode=self.cube_type,
         )
 
         self.print(f"Training on {len(self.database_train)} systems.")
@@ -604,10 +611,15 @@ class ModelClass:
     def eval(self):
         self.model.eval()
 
-    def model_output(self, input_, weight):
+    def model_output(self, input_, weight, relative_positions=None):
         if self.model.before_weight:
             input_ = torch.einsum("p...,pi->p...", input_, weight)
-        output = self.model(input_)
+        if self.model.cube_type == "neighbors":
+            if relative_positions is None:
+                raise ValueError("Neighbor model requires relative_positions.")
+            output = self.model(input_, relative_positions)
+        else:
+            output = self.model(input_)
         return input_, output if self.model.before_weight else output * weight
 
     def loss(self, batch, if_train=True, if_grad=True):
@@ -652,7 +664,9 @@ class ModelClass:
         else:
             input_ = input_.detach()
 
-        input_, output = self.model_output(input_, weight)
+        input_, output = self.model_output(
+            input_, weight, batch.get("relative_positions")
+        )
         if not if_train:
             output = output.detach()
 
@@ -719,11 +733,16 @@ class ModelClass:
                     break
                 atomic_batch = self.database_train.dataset.get_from_name(name_atom)
                 atomic_batch = self.database_train.process_batch(
-                    {key: atomic_batch[key] for key in ("input", "weight")},
+                    {
+                        key: atomic_batch[key]
+                        for key in ("input", "weight", "neighbor_indices", "relative_positions")
+                        if key in atomic_batch
+                    },
                     device=self.local_rank,
                 )
                 _, atomic_output = self.model_output(
-                    atomic_batch["input"], atomic_batch["weight"]
+                    atomic_batch["input"], atomic_batch["weight"],
+                    atomic_batch.get("relative_positions"),
                 )
                 atomic_output = torch.sum(atomic_output)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
@@ -838,6 +857,11 @@ class ModelClass:
         self, rho_cube, weights_, weight_response=False, *, return_tensors=False
     ):
         """Optionally return weight derivatives and detached on-device tensors."""
+        if self.cube_type == "neighbors":
+            raise NotImplementedError(
+                "No-cube SCF integration is not implemented; use energy training "
+                "with cached dataset neighborhoods, not Cartesian cube XC hooks."
+            )
         input_mat = torch.as_tensor(rho_cube, dtype=self.dtype, device=self.device)
         weights_mat = torch.as_tensor(
             weights_.reshape((-1, 1)), dtype=self.dtype, device=self.device

@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader
 from cc2cc.utils.mol import gen_mole
 from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import AU2KCALMOL
+from cc2cc.utils.grid_neighbors import grid_neighborhoods
 
 MAX_ERROR_ENERGY = 0.01  # kcal/mol per atom, if the error energy is larger than this value, we set the absolute loss multiplier to 0 to avoid the numerical instability in training.
 MAX_GRAD_BATCH_SIZE = 250000  # if the number of gradients is larger than this value, we split the batch into smaller batches to avoid the memory overflow in training.
@@ -67,6 +68,8 @@ class BasicDataset(Dataset):
 class DataBase:
     """Documentation for a class."""
 
+    input_mode = "cube"
+
     def __init__(
         self,
         molecule_list,
@@ -78,6 +81,7 @@ class DataBase:
         process_input=lambda x: x,
         process_grad2force=lambda x: x,
         verbose=False,
+        input_mode="cube",
     ):
         """
         Initialize the DataBase with a list of molecules and arguments.
@@ -87,6 +91,12 @@ class DataBase:
             shuffle (bool): Whether to shuffle the dataset.
         """
         self.args = args
+        self.input_mode = input_mode
+        if input_mode == "neighbors" and args.if_grad:
+            raise ValueError(
+                "Neighbor inputs currently support energy training only; "
+                "cube grad2force tensors omit neighbor geometry derivatives."
+            )
         if args.precision == "float64":
             self.dtype = torch.float64
         else:
@@ -104,6 +114,8 @@ class DataBase:
             "grad2force",
             "grad_cc_train",
         )
+        if input_mode == "neighbors":
+            self.gpu_key += ("relative_positions",)
 
         loss_func_dict = {
             "none": lambda x: 1.0,
@@ -214,6 +226,8 @@ class DataBase:
         batch_gpu = {}
         for key, val in batch.items():
             if key in self.gpu_key:
+                if key == "input" and self.input_mode == "neighbors":
+                    val = val[batch["neighbor_indices"]].permute(0, 2, 1).contiguous()
                 batch_gpu[key] = val.to(device=device, non_blocking=True)
             else:
                 batch_gpu[key] = val
@@ -261,20 +275,53 @@ class DataBase:
         else:
             raise ValueError(f"No input_mat in data: {self.args.rho_input}")
 
-        data_dict = {
-            "input": self.process_input(input_mat),
-            "weight": weight_mat.reshape((-1, 1)),
-        }
+        if self.input_mode == "neighbors":
+            if "coords" not in data:
+                raise ValueError(
+                    f"{name}: neighbor inputs require matching grid coords in Bohr; "
+                    "regenerate the archive or provide a matching addon."
+                )
+            coords = np.asarray(data["coords"], dtype=np.float64)
+            center = np.ascontiguousarray(
+                input_mat[
+                    (slice(None), slice(0, 4))
+                    + tuple(size // 2 for size in input_mat.shape[2:])
+                ]
+            )
+            if center.shape != (len(coords), 4) or len(weight_mat) != len(coords):
+                raise ValueError(f"{name}: features, grid coordinates and weights differ.")
+            indices = grid_neighborhoods(coords)
+            data_dict = {
+                "input": center,
+                "weight": weight_mat.reshape((-1, 1)),
+                "neighbor_indices": indices,
+            }
+        else:
+            data_dict = {
+                "input": self.process_input(input_mat),
+                "weight": weight_mat.reshape((-1, 1)),
+            }
         print(np.std(data_dict["input"]))
 
         # if the input_mat is too large, we filter the columns with small values to avoid the numrical instability in training. We keep the columns with the sum of absolute values larger than 1e-15.
         # if you want to keep all the data, you can set the threshold to 0.
         # if you want to save more memory, you can set the threshold to a larger value.
-        if self.if_eval:
+        if self.input_mode == "neighbors":
+            nonzero = np.any(np.abs(center) > 0, axis=1)
+            filter_idx = np.any(nonzero[indices], axis=1)
+            indices = indices[filter_idx]
+            data_dict["neighbor_indices"] = torch.as_tensor(
+                indices, dtype=torch.int64, device="cpu"
+            )
+            data_dict["relative_positions"] = (
+                coords[indices] - coords[filter_idx, None, :]
+            )
+        elif self.if_eval:
             filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 0
         else:
             filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 0
-        data_dict["input"] = data_dict["input"][filter_idx]
+        if self.input_mode != "neighbors":
+            data_dict["input"] = data_dict["input"][filter_idx]
         data_dict["weight"] = data_dict["weight"][filter_idx]
         del input_mat, weight_mat
 

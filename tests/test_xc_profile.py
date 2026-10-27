@@ -150,13 +150,6 @@ class TestProfiledIntegration(unittest.TestCase):
                         profiles.append(profile)
                         return profile
 
-                    def gemm(transa, transb, a, b, *, out, beta):
-                        self.assertEqual((transa, transb, beta), ("N", "T", 1.0))
-                        self.assertEqual(out.dtype, np.float64)
-                        self.assertTrue(out.flags.c_contiguous)
-                        out[:] = a @ b.T + beta * out
-                        return out
-
                     buffers = []
 
                     def scale_ao(ao, wv, *, out):
@@ -167,7 +160,6 @@ class TestProfiledIntegration(unittest.TestCase):
 
                     ns = dict(
                         cp=np, ks=object(), logger=logger,
-                        gemm=Mock(side_effect=gemm),
                         XCStageProfiler=make_profile,
                         get_cached_gdftopt=lambda grid, mol: opt,
                         tag_array=lambda data, **kwargs: data,
@@ -187,7 +179,6 @@ class TestProfiledIntegration(unittest.TestCase):
                             ni, mol, grid, "b3lyp", dm, 4000)
                     with patch.dict(os.environ, {"DFT2CC_PROFILE_XC": "0"}):
                         expected = ns[f"nr_{spin}"](*args)
-                    self.assertEqual(ns["gemm"].call_count, 2 if spin == "rks" else 4)
                     self.assertEqual(len(buffers), 2 if spin == "rks" else 4)
                     self.assertTrue(all(buf is buffers[0] for buf in buffers))
                     # With these constant AO/rho fixtures the original dot-and-add
@@ -230,7 +221,6 @@ class TestCudaProfile(unittest.TestCase):
     )
     def test_weighted_ao_scratch_reuse_matches_original_assembly(self):
         import cupy as cp
-        from cupy.cublas import gemm
         from gpu4pyscf.dft.numint import _scale_ao
         import torch
 
@@ -273,7 +263,7 @@ class TestCudaProfile(unittest.TestCase):
                     return weighted
 
                 ns = dict(
-                    cp=cp, gemm=gemm, _scale_ao=scale_ao, vmat=actual,
+                    cp=cp, _scale_ao=scale_ao, vmat=actual,
                     block_loop=lambda deriv: iter(blocks), ao_deriv=1,
                     aow_buffer=None, profile=Mock(),
                 )
@@ -285,9 +275,8 @@ class TestCudaProfile(unittest.TestCase):
                 self.assertTrue(all(buf is buffers[-1] for buf in buffers[2 * per_block:]))
                 cp.testing.assert_allclose(actual, expected, rtol=1e-13, atol=1e-13)
 
-    def test_gemm_accumulates_into_rks_and_uks_views(self):
+    def test_dot_accumulates_into_rks_and_uks_views(self):
         import cupy as cp
-        from cupy.cublas import gemm
         import torch
 
         if not torch.cuda.is_available():
@@ -298,10 +287,10 @@ class TestCudaProfile(unittest.TestCase):
             for spin, shape in (("rks", (1, 7, 7)), ("uks", (2, 1, 7, 7))):
                 path = UTILS / f"modelscf_{spin}_gpu.py"
                 calls = [node for node in ast.walk(ast.parse(path.read_text()))
-                         if isinstance(node, ast.Expr)
+                         if isinstance(node, ast.AugAssign)
                          and isinstance(node.value, ast.Call)
-                         and isinstance(node.value.func, ast.Name)
-                         and node.value.func.id == "gemm"]
+                         and isinstance(node.value.func, ast.Attribute)
+                         and node.value.func.attr == "dot"]
                 self.assertEqual(len(calls), 1 if spin == "rks" else 2)
                 actual = cp.asarray(rng.normal(size=shape), dtype=cp.float64)
                 expected = actual.copy()
@@ -316,7 +305,7 @@ class TestCudaProfile(unittest.TestCase):
                         expected[0, 0] += cp.dot(ao[0], aowa.T)
                         expected[1, 0] += cp.dot(ao[0], aowb.T)
                     load_nodes(path, calls, dict(
-                        gemm=gemm, ao=ao, aow=aowa, aowa=aowa, aowb=aowb,
+                        cp=cp, ao=ao, aow=aowa, aowa=aowa, aowb=aowb,
                         vmat=actual,
                     ))
                     self.assertEqual(actual.data.ptr, pointer)

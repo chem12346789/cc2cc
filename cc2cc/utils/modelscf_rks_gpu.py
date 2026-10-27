@@ -7,7 +7,6 @@ GPU4PySCF version of the modified RKS hooks used by cc2cc.
 import types
 
 import cupy as cp
-from cupy.cublas import gemm
 
 from gpu4pyscf import lib
 from gpu4pyscf.lib import logger
@@ -98,7 +97,7 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
                 aow = _scale_ao(ao, wv, out=aow_buffer)
                 profile.mark("AO weighting")
-                gemm("N", "T", ao[0], aow, out=vmat[0], beta=1.0)
+                vmat[0] += cp.dot(ao[0], aow.T)
                 profile.mark("matrix GEMM")
             vmat = transpose_sum(vmat)
         else:

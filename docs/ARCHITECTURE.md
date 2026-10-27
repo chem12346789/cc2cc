@@ -31,9 +31,8 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   weight for energy integration, not the sum of its neighbors' weights.
   Coincident grid entries are retained; equal-distance ordering is unspecified.
   These irregular neighborhoods are not Cartesian cubes and are not compatible
-  with existing cube checkpoints. A future model must handle relative geometry,
-  rotations, and neighbor permutation consistently. Force derivatives must also
-  include moving-grid effects; neighbor exchanges introduce discrete boundaries.
+  with existing cube checkpoints. Force derivatives must include moving-grid
+  effects; neighbor exchanges introduce discrete boundaries.
 - `zmp_reference.py`: shared ZMP inversion, diagnostic prints, and numerical
   nuclear-gradient reference. Generation stores `grad_zmp` using
   `zmp_baseline_gradient(mdft, dm1_zmp)`: an analytic B3LYP baseline gradient
@@ -55,10 +54,35 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   amplitudes/lambda `1e-10`, and CC/lambda iteration limits of 200.
 - `DataBase.py`, `TestDataDFT.py`, `DataRecord.py`, `ModelClass.py`: data
   loading, record keeping, model init, checkpoints, losses
+  - Select `--model transformer+dense_mix_e3nn_4_no_cube` for opt-in
+    nearest-grid **energy training** (`--if_grad 0`). Its density input remains
+    `(N_centers, 4, 27)` and output `(N_centers, 1)`, with a separate
+    `relative_positions` tensor `(N_centers, 27, 3)` in Bohr. Slot zero is the
+    center. Four `model_e3nn_correct_no_cube.E3nn` experts use the
+    `model_e3nn_correct` radial tensor-product/readout architecture, accepting
+    per-input `edge_vec` instead of fixed cube geometry. Radii are normalized
+    by `EDGE_LEN`, with `lmax=0` matching the corrected cube model.
+    Mean pooling makes neighbor order irrelevant when features and positions
+    are permuted together. This replaces the initial no-cube moment encoder;
+    its earlier checkpoints are incompatible.
+  - Both generators now save `coords` in Bohr aligned with their `weights` and
+    feature grid (not a separately reconstructed B3LYP SCF grid). The dataset
+    extracts central features from existing cubes and builds/caches 27-neighbor
+    indices once per loaded molecule, before center filtering. It keeps all
+    central features on CPU and gathers neighborhood inputs on batch transfer;
+    filtered centers can still use any original grid point as a neighbor.
+    Center integration weights are unchanged. Existing archives need matching
+    coordinates in the base or addon archive; missing coordinates are an error.
+  - This mode does not eliminate cube generation from the existing generators;
+    it reuses cube centers. Nearest-neighbor distances can vary strongly across
+    atom-centered quadrature grids. No-cube checkpoints are distinct from cube
+    checkpoints. Force training and SCF XC integration are not implemented for
+    this mode and are explicitly unsupported; cube Jacobians are not reused.
   - Dataset tensors remain on CPU; batch device transfers do not evict them.
     Base/addon NPZ arrays are read lazily, with addon keys taking precedence,
     and both archives close after loading each system. Grid targets are retained
-    only for absolute loss. Atomic forwards transfer only inputs and weights.
+    only for absolute loss. Atomic forwards transfer model inputs, weights,
+    and optional neighborhood geometry.
   - Loaded checkpoint references are released after model/optimizer restoration.
     Checkpoint-size checks stream serialization into a byte counter rather than
     retaining a full serialized checkpoint in RAM.
@@ -82,9 +106,10 @@ Each report also lists every block's `base_grids` (integration centers) and
 `cube_points` (expanded AO evaluation points), including the final partial block.
 Block records are printed after timing, not inside the integration loop.
 The former matrix-assembly stage is now split into `AO weighting` and
-`matrix GEMM`; UKS totals include both spins. Both hooks use float64 cuBLAS GEMM
-with `beta=1` to accumulate directly into the potential matrices, avoiding a
-full matrix-product temporary and separate addition for each block.
+`matrix GEMM`; UKS totals include both spins. Both hooks use the original
+float64 `cp.dot` followed by addition into the potential matrices. The
+`matrix GEMM` timer includes both the matrix product and this addition;
+direct cuBLAS accumulation has been rolled back.
 Weighted-AO scratch storage is reused across blocks, growing only when needed.
 UKS processes alpha then beta through the same scratch buffer; `AO weighting`
 and `matrix GEMM` therefore each have two calls per block in UKS (one in RKS).
