@@ -13,12 +13,8 @@ source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
-    (0) export load_model_args="--load atom-82794 --load_epoch 1115" ;;
-    (1) export load_model_args="--load atom-82794 --load_epoch 2395" ;;
-    (2) export load_model_args="--load atom-82794 --load_epoch 4940" ;;
-    (3) export load_model_args="--load atom-82794 --load_epoch 10005" ;;
-    # (0) export load_model_args="--load atom-3259973 --load_epoch 4940" ;;
-    # (1) export load_model_args="--load atom-3259973 --load_epoch 4940" ;;
+    (0) export load_model_args="--load atom-3259973-vv10 --load_epoch 4940 --baseline b3lyp-vv10" ;;
+    (1) export load_model_args="--load atom-3259973 --load_epoch 4940" ;;
 esac
 
 export if_continue_args=1

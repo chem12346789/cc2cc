@@ -21,6 +21,19 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 - `modelscf_rks.py`, `modelscf_uks.py`, `_gpu` variants: custom effective-
   potential/gradient hooks for PySCF SCF
 - `get_dft_energy_*.py`, `get_dft_grad_*.py`: energy and gradient helpers
+- `grid_neighbors.py`: opt-in, data-only nearest-grid prototype. Run
+  `python -m cc2cc.utils.grid_neighbors input.npz --coords-key coords --output neighbors.npz`
+  using the selected project interpreter and coordinates exported from the actual
+  B3LYP `mdft.grids`. Saves coordinates and center-first indices for 26 nearest
+  other entries, without changing training or generating electronic-structure data.
+  Gather features by these indices; reconstruct relative positions as
+  `coords[indices] - coords[:, None, :]` in blocks. Keep the center's quadrature
+  weight for energy integration, not the sum of its neighbors' weights.
+  Coincident grid entries are retained; equal-distance ordering is unspecified.
+  These irregular neighborhoods are not Cartesian cubes and are not compatible
+  with existing cube checkpoints. A future model must handle relative geometry,
+  rotations, and neighbor permutation consistently. Force derivatives must also
+  include moving-grid effects; neighbor exchanges introduce discrete boundaries.
 - `zmp_reference.py`: shared ZMP inversion, diagnostic prints, and numerical
   nuclear-gradient reference. Generation stores `grad_zmp` using
   `zmp_baseline_gradient(mdft, dm1_zmp)`: an analytic B3LYP baseline gradient

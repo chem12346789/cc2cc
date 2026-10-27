@@ -69,6 +69,12 @@ def main():
         help="Reject unconverged SCF results. Default is False.",
     )
     parser.add_argument(
+        "--baseline",
+        choices=("b3lyp-vv10",),
+        default=None,
+        help="Add a B3LYP+VV10 reference baseline to the test results.",
+    )
+    parser.add_argument(
         "--max_memory_gpu",
         type=int,
         default=4000,

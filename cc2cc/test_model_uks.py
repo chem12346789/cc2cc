@@ -155,6 +155,17 @@ def test_model_uks(
         "converged": mdft.converged,
     }
 
+    if args.baseline == "b3lyp-vv10":
+        baseline = utils.TestDataDFT(mol, name, xc_code="b3lyp", disp="vv10")
+        dict_.update(
+            {
+                "b3lyp-vv10_ene": baseline.e_dft,
+                "b3lyp-vv10_dipole_x": baseline.dft_dipole[0],
+                "b3lyp-vv10_dipole_y": baseline.dft_dipole[1],
+                "b3lyp-vv10_dipole_z": baseline.dft_dipole[2],
+            }
+        )
+
     if args.if_grad:
         if grad_mdft is not None:
             dict_.update({"scf_grad": grad_mdft})
