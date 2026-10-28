@@ -31,12 +31,13 @@ export OUTPUT_ARG="--output_target tol_delta_grids"
 # =========================
 # Loss terms
 # =========================
-export IF_GRAD=0
 export IF_ATOMIC=1
+export IF_GRAD=0
 export IF_ABS=1
 
+export ENE_ARG="--loss_multiplier_ene 1 --if_relative_weight_ene 1"
+export ATOMIC_ARG="--loss_multiplier_atomic 1 --if_relative_weight_atomic 1 --if_atomic ${IF_ATOMIC}"
 export GRAD_ARG="--loss_multiplier_grad 1 --if_relative_weight_grad 0 --if_grad ${IF_GRAD} --grad_step 1"
-export ATOMIC_ARG="--loss_multiplier_atomic 1 --if_atomic ${IF_ATOMIC}"
 export ABS_ARG="--loss_multiplier_abs 0.01 --if_relative_weight_abs 0 --if_abs ${IF_ABS}"
 export LOSS_ARGS="--normal_type L1Loss"
 # export LOSS_ARGS="--loss_type L1Loss --normal_type L1Loss"
@@ -123,7 +124,6 @@ train_run() {
 		--mol0_weighting "${MOL0_WEIGHTING}"
 		--append_mol0 "${APPEND_MOL0}"
 		--relative_weight_epsilon "${RELATIVE_WEIGHT_EPSILON}"
-		--if_relative_weight 1
 		${LOSS_ARGS}
 		${GRAD_ARG}
 		${ATOMIC_ARG}

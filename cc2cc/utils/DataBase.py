@@ -317,12 +317,18 @@ class DataBase:
                 coords[indices] - coords[filter_idx, None, :]
             )
             if len(indices):
-                mean_distance = np.linalg.norm(
+                distances = np.linalg.norm(
                     data_dict["relative_positions"][:, 1:, :], axis=-1
-                ).mean()
+                )
+                mean_distance = distances.mean()
                 print(
                     f"{name}: mean neighbor-center distance "
                     f"(26 neighbors, retained centers): {mean_distance:.8f} Bohr"
+                )
+                print(
+                    f"{name}: std neighbor-center distance "
+                    f"(26 neighbors, retained centers, ddof=0): "
+                    f"{distances.std():.8f} Bohr"
                 )
             else:
                 print(f"{name}: no retained centers for neighbor-distance statistics")
@@ -442,6 +448,7 @@ class DataBase:
 
         if self.args.if_relative_weight:
             scale /= self.normalise(energy_target) + self.args.relative_weight_epsilon
+        if self.args.if_atomic and self.args.if_relative_weight_atomic:
             scale_atomic /= (
                 self.normalise(ae_target) + self.args.relative_weight_epsilon
             )

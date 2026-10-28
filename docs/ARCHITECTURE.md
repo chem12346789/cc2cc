@@ -77,7 +77,8 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     Center integration weights are unchanged. Existing archives need matching
     coordinates in the base or addon archive; missing coordinates are an error.
     Loading prints each molecule's unweighted mean neighbor-center distance in
-    Bohr over the 26 neighbors of retained centers, excluding the center itself.
+    Bohr and population standard deviation (`ddof=0`) in Bohr over the 26 neighbors
+    of retained centers, excluding the center itself.
   - This mode does not eliminate cube generation from the existing generators;
     it reuses cube centers. Nearest-neighbor distances can vary strongly across
     atom-centered quadrature grids. No-cube checkpoints are distinct from cube

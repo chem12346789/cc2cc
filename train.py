@@ -146,9 +146,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--if_relative_weight",
+        "--if_relative_weight_ene",
         type=str2bool,
         default=False,
-        help="Whether to use relative weight for the loss function. Default is False.",
+        help="Whether to use relative weight for the integrated energy loss only. Default is False.",
     )
     parser.add_argument(
         "--if_relative_weight_abs",
@@ -160,7 +161,7 @@ if __name__ == "__main__":
         "--if_relative_weight_atomic",
         type=str2bool,
         default=False,
-        help="Whether to use relative weight for the atomic loss function. Default is False.",
+        help="Whether to use relative weight for the atomic loss, independently of --if_relative_weight. Default is False.",
     )
     parser.add_argument(
         "--if_relative_weight_grad",
@@ -189,9 +190,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--loss_multiplier",
+        "--loss_multiplier_ene",
         type=float,
         default=1.0,
-        help="Lambda for the loss function. Default is 1.0.",
+        help="Lambda for the integrated energy loss. Default is 1.0.",
     )
     parser.add_argument(
         "--loss_multiplier_abs",
