@@ -60,10 +60,10 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     `relative_positions` tensor `(N_centers, 27, 3)` in Bohr. Slot zero is the
     center. Four `model_e3nn_correct_no_cube.E3nn` experts use the
     `model_e3nn_correct` radial tensor-product/readout architecture, accepting
-    per-input `edge_vec` instead of fixed cube geometry. Expert `i=1..4`
-    normalizes radii by its fixed `distance=0.5*i` Bohr (0.5, 1, 1.5, 2),
-    not `EDGE_LEN`, with `lmax=0` matching the corrected cube model.
-    This changes normalization for existing no-cube checkpoints; start a fresh
+    per-input `edge_vec` instead of fixed cube geometry. Each expert uses
+    raw neighbor-center radii in Bohr, without `EDGE_LEN` or per-expert
+    distance normalization, with `lmax=0` matching the corrected cube model.
+    This changes normalization for older no-cube checkpoints; start a fresh
     run rather than treating old optimizer/checkpoint state as an exact resume.
     Mean pooling makes neighbor order irrelevant when features and positions
     are permuted together. This replaces the initial no-cube moment encoder;
@@ -81,22 +81,50 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     For training-data generation, `grad_zmp_no_cube` stores the same analytic
     baseline nuclear gradient `(N_atoms, 3)` as `grad_zmp`; it is not a neighbor
     feature Jacobian and does not enable no-cube force training.
-    RKS/UKS `get_dft_grad` also returns `grad2force_no_cube`, a compact copy
-    of the cube-center feature Jacobian `(N_atoms, N_channels, N_grid, 3)`.
+    RKS/UKS `get_dft_grad` also returns `grad2force_no_cube`, a neighborhood
+    feature Jacobian `(N_atoms, N_channels, N_centers, 27, 3)`. Slot `k`
+    uses the central-point derivative of grid entry `neighbor_indices[center,k]`.
+    Both generators compute indices once and reuse them for DFT/ZMP Jacobians
+    and archive metadata, ensuring identical neighborhood membership.
     Both generators save it directly for DFT and as `grad2force_no_cube_zmp`
-    for ZMP. Gather grid entries with `neighbor_indices` on demand rather than
-    caching 27 copies. This fixed-AO-density, fixed-grid derivative excludes
+    for ZMP. Contract with energy derivatives over channels, centers and neighbor
+    slots; shared grid entries contribute through every model neighborhood
+    containing them. Model-dependent derivatives and center quadrature weights
+    are not baked into this Jacobian. The expanded array uses 27 times the storage
+    of the former center-only field; regenerate old archives.
+    This fixed-AO-density, fixed-grid derivative excludes
     moving-grid and relative-position response; it does not enable force
     training for the geometry-dependent no-cube model.
+    Generators also save PySCF `grid_atom_indices` (parent atom per quadrature
+    entry; -1 is fixed padding). The dataset optionally gathers these into
+    integer `neighbor_atom_indices`. Under the fixed-coordinate convention used
+    by the feature Jacobian, relative positions have zero nuclear derivative;
+    the loss therefore contracts only feature derivatives and does not require
+    grid ownership. This does not implement a moving-grid nuclear gradient.
+    The no-cube force-training guard remains: feature grid-motion, quadrature
+    weight response and correction Pulay contributions still need consistent
+    implementation. Neighbor membership is held fixed; neighbor swaps are
+    nondifferentiable boundaries.
     Loading prints each molecule's unweighted mean neighbor-center distance in
     Bohr and population standard deviation (`ddof=0`) in Bohr over the 26 neighbors
     of all centers, excluding the center itself.
   - This mode does not eliminate cube generation from the existing generators;
     it reuses cube centers. Nearest-neighbor distances can vary strongly across
     atom-centered quadrature grids. No-cube checkpoints are distinct from cube
-    checkpoints. Force training and SCF XC integration are not implemented for
-    this mode and are explicitly unsupported; cube Jacobians are not reused.
+    checkpoints. Force training and nuclear-gradient evaluation remain
+    explicitly unsupported; cube Jacobians are not reused.
+  - No-cube RKS/UKS SCF uses CPU PySCF quadrature, with the network on its
+    selected device. Each SCF iteration computes central features on the full
+    grid, evaluates gathered neighborhoods in bounded batches, and scatter-adds
+    feature derivatives from every neighborhood before blocked AO contraction.
+    Neighborhood indices are cached until grid coordinates change. The
+    semilocal B3LYP baseline and existing hybrid J/K and NLC handling are retained.
+    Evaluation scripts select the CPU integration backend for these models;
+    direct GPU integration hooks reject them. No nuclear-force support is implied.
   - Dataset tensors remain on CPU; batch device transfers do not evict them.
+    Model XC evaluation returns energy and feature derivatives only, treating
+    quadrature weights as fixed. Model nuclear-gradient hooks require
+    `grid_response=False`; moving-grid weight response is unsupported.
     Base/addon NPZ arrays are read lazily, with addon keys taking precedence,
     and both archives close after loading each system. Grid targets are retained
     only for absolute loss. Atomic forwards transfer model inputs, weights,

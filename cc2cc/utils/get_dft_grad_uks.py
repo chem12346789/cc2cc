@@ -5,6 +5,7 @@ from pyscf import lib
 from cc2cc.utils.b3lyp_reference import converged_b3lyp
 from cc2cc.utils.modelscf_rks import get_veff_grad_modified_zeros
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
+from cc2cc.utils.grid_neighbors import grid_neighborhoods
 
 
 def get_dft_input(mol, grids, dm1_dft, max_memory=8000):
@@ -41,7 +42,7 @@ def get_dft_input(mol, grids, dm1_dft, max_memory=8000):
     }
 
 
-def get_dft_grad(mol, grids, dm1_dft, max_memory=8000):
+def get_dft_grad(mol, grids, dm1_dft, max_memory=8000, *, neighbor_indices=None):
     """
     Calculate the gradient of (exchange-correlation energy - DFT energy) on the grids.
     Note the max_memory is hard to predict (a large memory usage is due to grad2force and grad_mat), so just set it to a relative small value to avoid OOM.
@@ -149,12 +150,15 @@ def get_dft_grad(mol, grids, dm1_dft, max_memory=8000):
     )
     print("Error force DFT: ", np.linalg.norm(force - (grad_dft - grad_dft_zeros)))
 
+    if neighbor_indices is None:
+        neighbor_indices = grid_neighborhoods(grids.coords)
+    central_jacobian = grad2force[
+        :, :, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE, :
+    ]
     return {
         "rho_cube_dft": rho_cube_dft.reshape(
             len(grids.coords), grids.input_level, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
         ),
         "grad2force": grad2force,
-        "grad2force_no_cube": grad2force[
-            :, :, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE, :
-        ].copy(),
+        "grad2force_no_cube": central_jacobian[:, :, neighbor_indices, :],
     }

@@ -42,6 +42,9 @@ def get_veff_modified_rks(ks, modeldict):
         Note the max_memory=2000 use around 8GB gpu memory.
         Modified from pyscf.dft.numint.nr_rks (https://github.com/pyscf/pyscf/blob/v2.9.0/pyscf/dft/numint.py)
         """
+        if modeldict.cube_type == "neighbors":
+            from cc2cc.utils.modelscf_no_cube import nr_neighbors
+            return nr_neighbors(modeldict, ni, mol, grids, dms, max_memory)
         xctype = ni._xc_type(xc_code)
 
         nset = 1
@@ -211,6 +214,9 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
     Get the method of "Get the effective potential for the RKS Gradients method".
     """
 
+    if getattr(modeldict, "cube_type", None) == "neighbors":
+        raise NotImplementedError("No-cube nuclear gradients are not yet complete.")
+
     def get_vxc(
         ni: NumInt,
         mol,
@@ -251,13 +257,7 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
                     rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(
                         ni, dms, ao_deriv=ao_deriv
                     )
-                    if ks_grad.grid_response:
-                        _, middle_cube, weight_derivative = modeldict.eval_xc_eff(
-                            rho_cube, weights_, weight_response=True
-                        )
-                        exc += np.einsum("p,axp->ax", weight_derivative, weight1)
-                    else:
-                        _, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
+                    _, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
 
                     wv = np.einsum(
                         "ilpC,piC->lpC",
@@ -285,6 +285,8 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
         Args:
             ks_grad_ : grad.uhf.Gradients or grad.uks.Gradients object
         """
+        if ks_grad_.grid_response:
+            raise NotImplementedError("Model gradients require fixed quadrature weights; use grid_response=False.")
         if mol is None:
             mol = ks_grad_.mol
         if dm is None:

@@ -31,7 +31,12 @@ def test_model_rks(
     """
     # 2.0 Prepare
     time_ai_start = timeit.default_timer()
-    if torch.cuda.is_available() and (not args.if_grad):
+    if modeldict.cube_type == "neighbors" and args.if_grad:
+        raise NotImplementedError("No-cube SCF supports energies, not nuclear forces.")
+    if (
+        torch.cuda.is_available() and not args.if_grad
+        and modeldict.cube_type != "neighbors"
+    ):
         print("Use GPU for DFT calculation.")
         use_gpu = True
         mdft = pyscf.dft.RKS(mol).to_gpu().density_fit()
@@ -144,7 +149,7 @@ def test_model_rks(
 
     # 3.0 Collect data
 
-    if torch.cuda.is_available():
+    if use_gpu:
         dm1_scf = cp.asnumpy(dm1_scf)
 
     scf_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_scf, unit="A.U.")

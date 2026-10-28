@@ -94,7 +94,8 @@ class DataBase:
         if input_mode == "neighbors" and args.if_grad:
             raise ValueError(
                 "Neighbor inputs currently support energy training only; "
-                "cube grad2force tensors omit neighbor geometry derivatives."
+                "complete feature-grid, weight-response and correction Pulay "
+                "terms are not implemented."
             )
         if args.precision == "float64":
             self.dtype = torch.float64
@@ -224,7 +225,7 @@ class DataBase:
         """
         batch_gpu = {}
         for key, val in batch.items():
-            if key in self.gpu_key:
+            if key in self.gpu_key or key == "neighbor_atom_indices":
                 if key == "input" and self.input_mode == "neighbors":
                     val = val[batch["neighbor_indices"]].permute(0, 2, 1).contiguous()
                 batch_gpu[key] = val.to(device=device, non_blocking=True)
@@ -310,6 +311,18 @@ class DataBase:
                 indices, dtype=torch.int64, device="cpu"
             )
             data_dict["relative_positions"] = coords[indices] - coords[:, None, :]
+            if "grid_atom_indices" in data:
+                owners = np.asarray(data["grid_atom_indices"])
+                if (
+                    owners.shape != (len(coords),)
+                    or not np.issubdtype(owners.dtype, np.integer)
+                    or np.any(owners < -1)
+                    or np.any(owners >= mol_info["natm"])
+                ):
+                    raise ValueError(f"{name}: invalid grid_atom_indices.")
+                data_dict["neighbor_atom_indices"] = torch.as_tensor(
+                    owners[indices], dtype=torch.int64, device="cpu"
+                )
             if len(indices):
                 distances = np.linalg.norm(
                     data_dict["relative_positions"][:, 1:, :], axis=-1

@@ -186,7 +186,8 @@ class ModelClass:
         if self.cube_type == "neighbors" and self.args.if_grad:
             raise ValueError(
                 "The no-cube model currently supports energy training only; "
-                "neighbor geometry derivatives are not implemented."
+                "complete feature-grid, weight-response and correction Pulay "
+                "terms are not implemented."
             )
         for name in ("cube_type", "cube_size", "input_level"):
             self.print(f"{name}: {getattr(self, name)}")
@@ -664,8 +665,9 @@ class ModelClass:
         else:
             input_ = input_.detach()
 
+        relative_positions = batch.get("relative_positions")
         input_, output = self.model_output(
-            input_, weight, batch.get("relative_positions")
+            input_, weight, relative_positions
         )
         if not if_train:
             output = output.detach()
@@ -847,6 +849,8 @@ class ModelClass:
     def get_b3lyp_ene(self, rho_cube):
         if self.cube_type == "center_4":
             rho = rho_cube[:, :4]
+        elif self.cube_type == "neighbors":
+            rho = rho_cube[:, :4, 0]
         elif self.cube_type in ("cube", "cube5"):
             rho = rho_cube[:, :4, self.model.cube_middle]
         else:
@@ -854,32 +858,29 @@ class ModelClass:
         return (rho * self.b3lyp_weights(rho)).sum(-1)
 
     def eval_xc_eff(
-        self, rho_cube, weights_, weight_response=False, *, return_tensors=False
+        self, rho_cube, weights_, *, return_tensors=False,
+        relative_positions=None,
     ):
-        """Optionally return weight derivatives and detached on-device tensors."""
-        if self.cube_type == "neighbors":
-            raise NotImplementedError(
-                "No-cube SCF integration is not implemented; use energy training "
-                "with cached dataset neighborhoods, not Cartesian cube XC hooks."
-            )
+        """Return energies and feature derivatives with fixed quadrature weights."""
+        if getattr(self, "cube_type", None) == "neighbors" and relative_positions is None:
+            raise ValueError("No-cube XC evaluation requires relative_positions.")
         input_mat = torch.as_tensor(rho_cube, dtype=self.dtype, device=self.device)
         weights_mat = torch.as_tensor(
             weights_.reshape((-1, 1)), dtype=self.dtype, device=self.device
         )
         input_mat.requires_grad = True
-        density_input = input_mat
-        weights_mat.requires_grad = weight_response
-        input_mat, exc_cube = self.model_output(input_mat, weights_mat)
-        exc_cube += torch.einsum("i,ij->ij", self.get_b3lyp_ene(input_mat), weights_mat)
-        if weight_response:
-            middle_cube, weight_derivative = torch.autograd.grad(
-                torch.sum(exc_cube), (density_input, weights_mat)
+        if relative_positions is not None:
+            relative_positions = torch.as_tensor(
+                relative_positions, dtype=self.dtype, device=self.device
+            )
+            input_mat, exc_cube = self.model_output(
+                input_mat, weights_mat, relative_positions
             )
         else:
-            middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
+            input_mat, exc_cube = self.model_output(input_mat, weights_mat)
+        exc_cube += torch.einsum("i,ij->ij", self.get_b3lyp_ene(input_mat), weights_mat)
+        middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
         outputs = (exc_cube.detach().squeeze(-1), middle_cube.detach())
-        if weight_response:
-            outputs += (weight_derivative.detach().reshape(-1),)
         if return_tensors:
             return outputs
         return tuple(output.cpu().numpy() for output in outputs)

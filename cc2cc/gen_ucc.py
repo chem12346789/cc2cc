@@ -111,6 +111,7 @@ def ucc(mol, grids, name, args, evaluate=False):
 
     # Generate input data
     data_dict = {}
+    neighbor_indices = grid_neighborhoods(grids.coords)
 
     # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
     data_append_dict = get_cc_energy(
@@ -161,9 +162,13 @@ def ucc(mol, grids, name, args, evaluate=False):
         )
 
     if not evaluate:
-        data_append_dict = get_dft_grad(mol, grids, dm1_dft)
+        data_append_dict = get_dft_grad(
+            mol, grids, dm1_dft, neighbor_indices=neighbor_indices
+        )
         data_dict.update(data_append_dict)
-        data_append_dict = get_dft_grad(mol, grids, dm1_zmp)
+        data_append_dict = get_dft_grad(
+            mol, grids, dm1_zmp, neighbor_indices=neighbor_indices
+        )
         for key in data_append_dict:
             if "dft" in key:
                 key_zmp = key.replace("dft", "zmp")
@@ -268,7 +273,8 @@ def ucc(mol, grids, name, args, evaluate=False):
             "energy_train": energy_train,
             "weights": grids.weights,
             "coords": grids.coords,
-            "neighbor_indices": grid_neighborhoods(grids.coords),
+            "neighbor_indices": neighbor_indices,
+            "grid_atom_indices": grids.atm_idx,
         }
     )
     data_dict.update(

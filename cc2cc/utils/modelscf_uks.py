@@ -36,6 +36,11 @@ def get_veff_modified_uks(ks, modeldict: ModelClass):
         """
         Obtain the nelec, excsum, and vmat.
         """
+        if modeldict.cube_type == "neighbors":
+            from cc2cc.utils.modelscf_no_cube import nr_neighbors
+            return nr_neighbors(
+                modeldict, ni, mol, grids, dms, max_memory, unrestricted=True
+            )
         xctype = ni._xc_type(xc_code)
 
         dma, dmb = dms
@@ -212,6 +217,9 @@ def get_veff_grad_modified_uks(ks_grad, modeldict: ModelClass):
     Get the method of "Get the effective potential for the UKS Gradients method".
     """
 
+    if getattr(modeldict, "cube_type", None) == "neighbors":
+        raise NotImplementedError("No-cube nuclear gradients are not yet complete.")
+
     def get_vxc(
         ni: NumInt,
         mol,
@@ -249,13 +257,7 @@ def get_veff_grad_modified_uks(ks_grad, modeldict: ModelClass):
                 rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_uks(
                     ni, dms, ao_deriv=ao_deriv
                 )
-                if ks_grad.grid_response:
-                    _, middle_cube, weight_derivative = modeldict.eval_xc_eff(
-                        rho_cube, weights_, weight_response=True
-                    )
-                    exc += np.einsum("p,axp->ax", weight_derivative, weight1)
-                else:
-                    _, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
+                _, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
                 wv = np.einsum(
                     "islpC,piC->slpC",
                     vxc_mat,
@@ -277,6 +279,8 @@ def get_veff_grad_modified_uks(ks_grad, modeldict: ModelClass):
 
     def get_veff(ks_grad_, mol=None, dm=None):
         """Coulomb + XC functional"""
+        if ks_grad_.grid_response:
+            raise NotImplementedError("Model gradients require fixed quadrature weights; use grid_response=False.")
         if mol is None:
             mol = ks_grad_.mol
         if dm is None:
