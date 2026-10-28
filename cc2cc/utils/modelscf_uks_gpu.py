@@ -99,6 +99,8 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 wv = wv.reshape(2, 4, len(gridcube.coords))  # slpC -> slP
                 profile.mark("XC contraction")
                 yield ao_value, wv
+                del ao_value, wv, rho_cube, vxc_mat, energy_den, middle_cube, gridcube
+                profile.mark("generator release")
 
         nelec = cp.zeros((2, 1))
         excsum = cp.zeros(1)
@@ -109,9 +111,11 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
             ao_deriv = 1
             aow_buffer = None
             for ao, wv in block_loop(ao_deriv):
+                profile.mark("block handoff")
                 if aow_buffer is None or aow_buffer.size < ao[0].size:
                     aow_buffer = cp.empty(ao[0].size, dtype=cp.float64)
-                profile.mark("AO scratch")
+                    profile.mark("AO scratch allocation")
+                profile.mark("AO scratch check")
                 wv[:, 0] *= 0.5
                 wva, wvb = wv
                 profile.record_ao_layout(ao, wva, aow_buffer)
@@ -126,6 +130,8 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 profile.mark("AO weighting")
                 vmat[1, 0] += cp.dot(ao[0], aowb.T)
                 profile.mark("matrix GEMM")
+                del ao, wv, wva, wvb, aowa, aowb
+                profile.mark("caller release")
 
             vmat = _hermi_sum(vmat.reshape((-1, nao, nao))).reshape(2, 1, nao, nao)
         else:

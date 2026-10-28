@@ -82,6 +82,8 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 profile.mark("XC contraction")
 
                 yield ao_value, wv
+                del ao_value, wv, rho_cube, vxc_mat, energy_den, middle_cube, gridcube
+                profile.mark("generator release")
 
         nelec = cp.zeros(1)
         excsum = cp.zeros(1)
@@ -92,9 +94,11 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
             ao_deriv = 1
             aow_buffer = None
             for ao, wv in block_loop(ao_deriv):
+                profile.mark("block handoff")
                 if aow_buffer is None or aow_buffer.size < ao[0].size:
                     aow_buffer = cp.empty(ao[0].size, dtype=cp.float64)
-                profile.mark("AO scratch")
+                    profile.mark("AO scratch allocation")
+                profile.mark("AO scratch check")
                 wv[0] *= 0.5  # *.5 because vmat + vmat.T at the end
                 profile.record_ao_layout(ao, wv, aow_buffer)
                 profile.mark("AO weight preparation")
@@ -102,6 +106,8 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
                 profile.mark("AO weighting")
                 vmat[0] += cp.dot(ao[0], aow.T)
                 profile.mark("matrix GEMM")
+                del ao, wv, aow
+                profile.mark("caller release")
             vmat = transpose_sum(vmat)
         else:
             raise NotImplementedError(f"numint.nr_rks for functional {xc_code}")

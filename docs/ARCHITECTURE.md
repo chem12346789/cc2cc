@@ -60,8 +60,11 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     `relative_positions` tensor `(N_centers, 27, 3)` in Bohr. Slot zero is the
     center. Four `model_e3nn_correct_no_cube.E3nn` experts use the
     `model_e3nn_correct` radial tensor-product/readout architecture, accepting
-    per-input `edge_vec` instead of fixed cube geometry. Radii are normalized
-    by `EDGE_LEN`, with `lmax=0` matching the corrected cube model.
+    per-input `edge_vec` instead of fixed cube geometry. Expert `i=1..4`
+    normalizes radii by its fixed `distance=0.5*i` Bohr (0.5, 1, 1.5, 2),
+    not `EDGE_LEN`, with `lmax=0` matching the corrected cube model.
+    This changes normalization for existing no-cube checkpoints; start a fresh
+    run rather than treating old optimizer/checkpoint state as an exact resume.
     Mean pooling makes neighbor order irrelevant when features and positions
     are permuted together. This replaces the initial no-cube moment encoder;
     its earlier checkpoints are incompatible.
@@ -124,11 +127,16 @@ UKS processes alpha then beta through the same scratch buffer; `AO weighting`
 and `matrix GEMM` therefore each have two calls per block in UKS (one in RKS).
 Their total times still include both spins. All scratch storage is local to one
 integration call; no AO cache or additional screening approximation is introduced.
-The old `AO weighting` region is further separated into `AO scratch` (buffer
-allocation/checks), `AO weight preparation` (density-channel half weighting and
-layout bookkeeping), and `AO weighting` (the native `_scale_ao` call). Sum these
-three stages when comparing to older logs. Scratch and preparation each count
-once per block, including UKS. First-block AO/weight shapes, byte strides, dtypes,
+The previous `AO scratch` interval is split into `block handoff`,
+`AO scratch allocation`, and `AO scratch check`. Allocation timing is emitted
+only when storage is actually allocated or grown, so its call count records the
+allocation count. `AO weight preparation` covers density-channel half weighting
+and layout bookkeeping; `AO weighting` covers the native `_scale_ao` call.
+After matrix assembly, caller AO/weight views are explicitly released and timed
+as `caller release`. When the generator resumes, it releases its retained block
+arrays under `generator release` before constructing the next block. Deleting
+references does not guarantee immediate device-memory reclamation; CuPy's memory
+pool and stream ordering still apply. First-block AO/weight shapes, byte strides, dtypes,
 contiguity flags and scratch bytes are printed after timing. No layout copies,
 custom weighting kernels, or screening changes are enabled by this diagnostic.
 
