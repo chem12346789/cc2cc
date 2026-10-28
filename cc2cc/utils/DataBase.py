@@ -14,7 +14,6 @@ from torch.utils.data import DataLoader
 from cc2cc.utils.mol import gen_mole
 from cc2cc.utils.env_var import DATA_PATH
 from cc2cc.utils.mol import AU2KCALMOL
-from cc2cc.utils.grid_neighbors import grid_neighborhoods
 
 MAX_ERROR_ENERGY = 0.01  # kcal/mol per atom, if the error energy is larger than this value, we set the absolute loss multiplier to 0 to avoid the numerical instability in training.
 MAX_GRAD_BATCH_SIZE = 250000  # if the number of gradients is larger than this value, we split the batch into smaller batches to avoid the memory overflow in training.
@@ -276,9 +275,9 @@ class DataBase:
             raise ValueError(f"No input_mat in data: {self.args.rho_input}")
 
         if self.input_mode == "neighbors":
-            if "coords" not in data:
+            if "coords" not in data or "neighbor_indices" not in data:
                 raise ValueError(
-                    f"{name}: neighbor inputs require matching grid coords in Bohr; "
+                    f"{name}: neighbor inputs require coords and neighbor_indices; "
                     "regenerate the archive or provide a matching addon."
                 )
             coords = np.asarray(data["coords"], dtype=np.float64)
@@ -289,33 +288,28 @@ class DataBase:
                 ]
             )
             if center.shape != (len(coords), 4) or len(weight_mat) != len(coords):
-                raise ValueError(f"{name}: features, grid coordinates and weights differ.")
-            indices = grid_neighborhoods(coords)
+                raise ValueError(
+                    f"{name}: features, grid coordinates and weights differ."
+                )
+            indices = np.asarray(data["neighbor_indices"])
+            if (
+                indices.shape != (len(coords), 27)
+                or not np.issubdtype(indices.dtype, np.integer)
+                or np.any(indices < 0)
+                or np.any(indices >= len(coords))
+                or not np.array_equal(indices[:, 0], np.arange(len(coords)))
+            ):
+                raise ValueError(f"{name}: invalid center-first neighbor_indices.")
             data_dict = {
                 "input": center,
                 "weight": weight_mat.reshape((-1, 1)),
                 "neighbor_indices": indices,
             }
-        else:
-            data_dict = {
-                "input": self.process_input(input_mat),
-                "weight": weight_mat.reshape((-1, 1)),
-            }
-        print(np.std(data_dict["input"]))
 
-        # if the input_mat is too large, we filter the columns with small values to avoid the numrical instability in training. We keep the columns with the sum of absolute values larger than 1e-15.
-        # if you want to keep all the data, you can set the threshold to 0.
-        # if you want to save more memory, you can set the threshold to a larger value.
-        if self.input_mode == "neighbors":
-            nonzero = np.any(np.abs(center) > 0, axis=1)
-            filter_idx = np.any(nonzero[indices], axis=1)
-            indices = indices[filter_idx]
             data_dict["neighbor_indices"] = torch.as_tensor(
                 indices, dtype=torch.int64, device="cpu"
             )
-            data_dict["relative_positions"] = (
-                coords[indices] - coords[filter_idx, None, :]
-            )
+            data_dict["relative_positions"] = coords[indices] - coords[:, None, :]
             if len(indices):
                 distances = np.linalg.norm(
                     data_dict["relative_positions"][:, 1:, :], axis=-1
@@ -323,22 +317,22 @@ class DataBase:
                 mean_distance = distances.mean()
                 print(
                     f"{name}: mean neighbor-center distance "
-                    f"(26 neighbors, retained centers): {mean_distance:.8f} Bohr"
+                    f"(26 neighbors, all centers): {mean_distance:.8f} Bohr"
                 )
                 print(
                     f"{name}: std neighbor-center distance "
-                    f"(26 neighbors, retained centers, ddof=0): "
+                    f"(26 neighbors, all centers, ddof=0): "
                     f"{distances.std():.8f} Bohr"
                 )
             else:
-                print(f"{name}: no retained centers for neighbor-distance statistics")
-        elif self.if_eval:
-            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 0
+                print(f"{name}: no centers for neighbor-distance statistics")
         else:
-            filter_idx = np.sum(np.abs(data_dict["input"]), axis=(1, 2)) > 0
-        if self.input_mode != "neighbors":
-            data_dict["input"] = data_dict["input"][filter_idx]
-        data_dict["weight"] = data_dict["weight"][filter_idx]
+            data_dict = {
+                "input": self.process_input(input_mat),
+                "weight": weight_mat.reshape((-1, 1)),
+            }
+        print(np.std(data_dict["input"]))
+
         del input_mat, weight_mat
 
         if self.if_eval:
@@ -352,14 +346,18 @@ class DataBase:
                     if self.args.rho_input in ("dft", "dft_d3bj", "dft_d3bj_1"):
                         output_mat = data["tol_delta_grids"]
                     elif self.args.rho_input == "dft_vv10":
-                        output_mat = data["tol_delta_grids"] - data["exc_post_vv10_grid"]
+                        output_mat = (
+                            data["tol_delta_grids"] - data["exc_post_vv10_grid"]
+                        )
                     elif self.args.rho_input == "zmp":
                         output_mat = data["tol_delta_zmp_grids"]
                     else:
-                        raise ValueError(f"No output_mat in data: {self.args.rho_input}")
+                        raise ValueError(
+                            f"No output_mat in data: {self.args.rho_input}"
+                        )
                 else:
                     raise ValueError(f"No output_target: {self.args.output_target}")
-                data_dict["output"] = output_mat.reshape((-1, 1))[filter_idx]
+                data_dict["output"] = output_mat.reshape((-1, 1))
                 del output_mat
 
                 if self.args.if_relative_weight_abs:
@@ -394,9 +392,7 @@ class DataBase:
                     grad_cc_train = data["grad_cc"] - data["grad_zmp"]
                 else:
                     raise ValueError(f"No grad in data: {self.args.rho_input}")
-                data_dict["grad2force"] = self.process_grad2force(grad2force)[
-                    filter_idx
-                ]
+                data_dict["grad2force"] = self.process_grad2force(grad2force)
                 data_dict["grad_cc_train"] = grad_cc_train.reshape(-1)
                 if mol_info["natm"] > 1 and self.args.if_relative_weight_grad:
                     scale_grad /= (

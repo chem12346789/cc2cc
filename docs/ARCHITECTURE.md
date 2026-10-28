@@ -70,15 +70,27 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     its earlier checkpoints are incompatible.
   - Both generators now save `coords` in Bohr aligned with their `weights` and
     feature grid (not a separately reconstructed B3LYP SCF grid). The dataset
-    extracts central features from existing cubes and builds/caches 27-neighbor
-    indices once per loaded molecule, before center filtering. It keeps all
-    central features on CPU and gathers neighborhood inputs on batch transfer;
-    filtered centers can still use any original grid point as a neighbor.
-    Center integration weights are unchanged. Existing archives need matching
-    coordinates in the base or addon archive; missing coordinates are an error.
+    extracts central features from existing cubes and loads center-first
+    `neighbor_indices` of shape `(N_grid, 27)` precomputed by both generators.
+    It keeps all central features on CPU and gathers neighborhoods on batch
+    transfer; no nearest-neighbor search occurs in the dataset.
+    Point filtering is disabled for all input modes: zero-feature centers,
+    weights, grid targets and cube force Jacobians retain their original order.
+    Existing archives need matching coordinates and indices in the base or addon
+    archive; missing fields are errors. No-cube indices are unchanged by density.
+    For training-data generation, `grad_zmp_no_cube` stores the same analytic
+    baseline nuclear gradient `(N_atoms, 3)` as `grad_zmp`; it is not a neighbor
+    feature Jacobian and does not enable no-cube force training.
+    RKS/UKS `get_dft_grad` also returns `grad2force_no_cube`, a compact copy
+    of the cube-center feature Jacobian `(N_atoms, N_channels, N_grid, 3)`.
+    Both generators save it directly for DFT and as `grad2force_no_cube_zmp`
+    for ZMP. Gather grid entries with `neighbor_indices` on demand rather than
+    caching 27 copies. This fixed-AO-density, fixed-grid derivative excludes
+    moving-grid and relative-position response; it does not enable force
+    training for the geometry-dependent no-cube model.
     Loading prints each molecule's unweighted mean neighbor-center distance in
     Bohr and population standard deviation (`ddof=0`) in Bohr over the 26 neighbors
-    of retained centers, excluding the center itself.
+    of all centers, excluding the center itself.
   - This mode does not eliminate cube generation from the existing generators;
     it reuses cube centers. Nearest-neighbor distances can vary strongly across
     atom-centered quadrature grids. No-cube checkpoints are distinct from cube

@@ -22,6 +22,7 @@ from cc2cc.utils.ccsd_t_target import (
 from cc2cc.utils.get_dft_energy_rks import get_cc_energy, get_dft_energy, get_hf_energy
 from cc2cc.utils.get_dft_grad_rks import get_dft_grad, get_dft_input
 from cc2cc.utils.zmp_reference import get_zmp, zmp_baseline_gradient
+from cc2cc.utils.grid_neighbors import grid_neighborhoods
 from cc2cc.utils.b3lyp_reference import converged_b3lyp, get_vv10_data
 
 
@@ -193,6 +194,7 @@ def cc(
         data_dict["grad_dft"] = grad_dft
         data_dict["grad_dft_d3bj"] = grad_dft_d3bj
         data_dict["grad_zmp"] = grad_zmp
+        data_dict["grad_zmp_no_cube"] = grad_zmp
     else:
         data_append_dict = get_dft_input(mol, grids, dm1_dft)
         data_dict.update(data_append_dict)
@@ -270,6 +272,7 @@ def cc(
             "energy_train": energy_train,
             "weights": grids.weights,
             "coords": grids.coords,
+            "neighbor_indices": grid_neighborhoods(grids.coords),
         }
     )
     data_dict.update(

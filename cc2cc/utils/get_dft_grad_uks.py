@@ -154,4 +154,7 @@ def get_dft_grad(mol, grids, dm1_dft, max_memory=8000):
             len(grids.coords), grids.input_level, EDGE_SIZE, EDGE_SIZE, EDGE_SIZE
         ),
         "grad2force": grad2force,
+        "grad2force_no_cube": grad2force[
+            :, :, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE, :
+        ].copy(),
     }
