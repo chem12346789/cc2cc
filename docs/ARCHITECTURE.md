@@ -55,7 +55,9 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 - `DataBase.py`, `TestDataDFT.py`, `DataRecord.py`, `ModelClass.py`: data
   loading, record keeping, model init, checkpoints, losses
   - Select `--model transformer+dense_mix_e3nn_4_no_cube` for opt-in
-    nearest-grid **energy training** (`--if_grad 0`). Its density input remains
+    nearest-grid training. Enable the fixed-grid gradient-loss path with
+    `--if_grad 1 --precision float64`; `--if_grad 0` selects energy-only training.
+    Its density input remains
     `(N_centers, 4, 27)` and output `(N_centers, 1)`, with a separate
     `relative_positions` tensor `(N_centers, 27, 3)` in Bohr. Slot zero is the
     center. Four `model_e3nn_correct_no_cube.E3nn` experts use the
@@ -80,39 +82,62 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     archive; missing fields are errors. No-cube indices are unchanged by density.
     For training-data generation, `grad_zmp_no_cube` stores the same analytic
     baseline nuclear gradient `(N_atoms, 3)` as `grad_zmp`; it is not a neighbor
-    feature Jacobian and does not enable no-cube force training.
-    RKS/UKS `get_dft_grad` also returns `grad2force_no_cube`, a neighborhood
-    feature Jacobian `(N_atoms, N_channels, N_centers, 27, 3)`. Slot `k`
-    uses the central-point derivative of grid entry `neighbor_indices[center,k]`.
-    Both generators compute indices once and reuse them for DFT/ZMP Jacobians
-    and archive metadata, ensuring identical neighborhood membership.
-    Both generators save it directly for DFT and as `grad2force_no_cube_zmp`
-    for ZMP. Contract with energy derivatives over channels, centers and neighbor
-    slots; shared grid entries contribute through every model neighborhood
-    containing them. Model-dependent derivatives and center quadrature weights
-    are not baked into this Jacobian. The expanded array uses 27 times the storage
-    of the former center-only field; regenerate old archives.
-    This fixed-AO-density, fixed-grid derivative excludes
-    moving-grid and relative-position response; it does not enable force
-    training for the geometry-dependent no-cube model.
+    feature Jacobian.
+    No-cube training reads the existing `grad2force` (DFT) or `grad2force_zmp`
+    (ZMP) cube Jacobian and copies only its central slot into a compact
+    `(N_atoms, N_channels, N_grid, 3)` array before tensor/GPU transfer.
+    RKS/UKS generators no longer return or save redundant `grad2force_no_cube`
+    fields. The optional `neighbor_indices` argument remains accepted but
+    no longer affects Jacobian generation. Both generators save neighborhood
+    indices separately as archive metadata.
+    Dataset transfer retains `x_center` with shape `(N_grid, 4)`. Inside the
+    differentiable model forward, indexing constructs
+    `X[p,c,k] = x_center[neighbor_indices[p,k],c]`. This is the sparse selection
+    operation `X = TRANS * x_center`, without materializing a selection matrix.
+    Autograd directly returns `G = dE/dx_center`, implicitly summing contributions
+    from every `(center, neighbor slot)` onto their unique grid indices:
+    `G[i,c] = sum_{p,k: neighbor_indices[p,k]=i} dE/dX[p,c,k]`.
+    Then contract `G[i,c] * J[A,c,i,alpha]` over grid points and channels.
+    This is exact, including shared-neighbor effects and parameter gradients;
+    it does not approximate the model as center-only. Model derivatives and
+    quadrature weights are not baked into the stored Jacobian.
+    Its element count is exactly 27 times smaller than the expanded neighbor
+    Jacobian, not necessarily total training memory or archive size.
+    Existing archives with the cube Jacobians and matching neighborhood metadata
+    work without regeneration; any older `grad2force_no_cube` fields are ignored.
+    The full cube is still generated, stored, and temporarily loaded on CPU;
+    only compact central derivatives are retained in the dataset and sent to GPU.
+    Training differentiates the weighted model energy with respect to unique
+    center features with `create_graph=True`, contracts
+    the compact Jacobian, and backpropagates the gradient loss into model parameters.
+    There is no manual derivative scatter in the loss. Neighborhood activations
+    and their higher-order autograd graph are still needed inside the model;
+    this is not a guarantee of 27 times lower total peak GPU memory.
+    Neighbor indices remain int64 on CPU and GPU. No-cube gradient targets are
+    not silently disabled by the legacy cube grid-count threshold; the complete
+    molecule is used, so available GPU memory still limits molecule size.
     Generators also save PySCF `grid_atom_indices` (parent atom per quadrature
     entry; -1 is fixed padding). The dataset optionally gathers these into
     integer `neighbor_atom_indices`. Under the fixed-coordinate convention used
     by the feature Jacobian, relative positions have zero nuclear derivative;
     the loss therefore contracts only feature derivatives and does not require
     grid ownership. This does not implement a moving-grid nuclear gradient.
-    The no-cube force-training guard remains: feature grid-motion, quadrature
-    weight response and correction Pulay contributions still need consistent
-    implementation. Neighbor membership is held fixed; neighbor swaps are
-    nondifferentiable boundaries.
+    This enables the existing cached, fixed-AO-density/fixed-grid gradient-loss
+    objective, not a complete analytic nuclear gradient of the total functional.
+    Correction Pulay and density-response terms are not supplied by this Jacobian;
+    baseline targets are unchanged (in particular, the ZMP baseline includes its
+    own Pulay and grid response). Fixed weights/coordinates remove explicit
+    weight/geometry response only, not those other terms. Do not interpret this
+    training objective as a consistent moving-grid or MD force implementation.
+    Neighbor membership is held fixed; neighbor swaps are nondifferentiable boundaries.
     Loading prints each molecule's unweighted mean neighbor-center distance in
     Bohr and population standard deviation (`ddof=0`) in Bohr over the 26 neighbors
     of all centers, excluding the center itself.
   - This mode does not eliminate cube generation from the existing generators;
     it reuses cube centers. Nearest-neighbor distances can vary strongly across
     atom-centered quadrature grids. No-cube checkpoints are distinct from cube
-    checkpoints. Force training and nuclear-gradient evaluation remain
-    explicitly unsupported; cube Jacobians are not reused.
+    checkpoints. Nuclear-gradient evaluation remains explicitly unsupported;
+    training uses compact no-cube Jacobians, not expanded cube Jacobians.
   - No-cube RKS/UKS SCF uses CPU PySCF quadrature, with the network on its
     selected device. Each SCF iteration computes central features on the full
     grid, evaluates gathered neighborhoods in bounded batches, and scatter-adds
@@ -136,6 +161,26 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 - `*.json`: dataset/split definitions (`gmtkn-def2`, `gmtkn-diet30-def2`,
   `gmtkn-diet100-def2`, `dft-fitset-def2`)
 - PySCF CCSD(T) intermediate files: vendor-like scientific code — patch minimally
+
+### Training peak GPU memory
+
+Set `DFT2CC_PROFILE_TRAIN_MEMORY=1` in the training job environment to log one
+`[train-memory]` line per local training step, on every rank. Default is `0`;
+other values are rejected, and enabling it requires a CUDA model.
+Measurement starts before batch transfer and ends after backward, gradient
+clipping, optimizer/scheduler updates and gradient clearing. CUDA synchronization
+and peak-counter reset delimit each step; profiling adds synchronization overhead.
+Logs include device, local step, molecule, whether force loss is active, initial
+allocated MiB, peak allocated/reserved MiB, and the batch Jacobian's logical MiB.
+These are process-local PyTorch allocator statistics, not total device usage or
+memory allocated by other libraries. Reserved memory includes cached blocks from
+earlier steps; no cache is emptied. The allocated peak includes resident model
+and optimizer state, not just allocations made during the step.
+Compare identical molecules, precision, model, and force-loss settings; report
+the first-step peak separately from warmed-up steps because optimizer state is
+initialized lazily. The compact Jacobian is 27 times smaller, but total measured
+peak memory need not be. Profiling works with the fixed-grid no-cube gradient loss;
+it does not enable nuclear-gradient evaluation.
 
 ### GPU SCF XC profiling
 

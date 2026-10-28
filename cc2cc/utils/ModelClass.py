@@ -184,10 +184,11 @@ class ModelClass:
         self.cube_size = self.model.cube_size
         self.input_level = self.model.input_level
         if self.cube_type == "neighbors" and self.args.if_grad:
-            raise ValueError(
-                "The no-cube model currently supports energy training only; "
-                "complete feature-grid, weight-response and correction Pulay "
-                "terms are not implemented."
+            if self.dtype != torch.float64:
+                raise ValueError("No-cube force training requires --precision float64.")
+            self.print(
+                "No-cube force training uses cached fixed-grid feature derivatives, "
+                "not a complete analytic total nuclear gradient."
             )
         for name in ("cube_type", "cube_size", "input_level"):
             self.print(f"{name}: {getattr(self, name)}")
@@ -345,6 +346,15 @@ class ModelClass:
             raise ValueError(f"Unknown cube type: {self.cube_type}")
 
         def process_grad2force(x):
+            if self.cube_type == "neighbors":
+                if x.ndim != 4 or x.shape[-1] != 3:
+                    raise ValueError(
+                        "Expected compact no-cube Jacobian (atoms, channels, grids, 3); "
+                        "regenerate expanded archives."
+                    )
+                return x[:, : self.input_level].transpose(2, 1, 0, 3).reshape(
+                    x.shape[2], self.input_level, -1
+                )
             # tipabcx -> tipCx -> piCtx
             if self.cube_type == "center_4":
                 x = x[
@@ -612,16 +622,28 @@ class ModelClass:
     def eval(self):
         self.model.eval()
 
-    def model_output(self, input_, weight, relative_positions=None):
-        if self.model.before_weight:
+    def model_output(self, input_, weight, relative_positions=None, *, neighbor_indices=None):
+        model = (
+            self.model.module
+            if isinstance(self.model, DistributedDataParallel) else self.model
+        )
+        center_input = input_
+        if model.cube_type == "neighbors" and neighbor_indices is not None:
+            input_ = input_[neighbor_indices].permute(0, 2, 1).contiguous()
+        if model.before_weight:
             input_ = torch.einsum("p...,pi->p...", input_, weight)
-        if self.model.cube_type == "neighbors":
+        if model.cube_type == "neighbors":
             if relative_positions is None:
                 raise ValueError("Neighbor model requires relative_positions.")
             output = self.model(input_, relative_positions)
         else:
             output = self.model(input_)
-        return input_, output if self.model.before_weight else output * weight
+        derivative_input = (
+            center_input
+            if model.cube_type == "neighbors" and neighbor_indices is not None
+            else input_
+        )
+        return derivative_input, output if model.before_weight else output * weight
 
     def loss(self, batch, if_train=True, if_grad=True):
         input_ = batch["input"]
@@ -667,7 +689,8 @@ class ModelClass:
 
         relative_positions = batch.get("relative_positions")
         input_, output = self.model_output(
-            input_, weight, relative_positions
+            input_, weight, relative_positions,
+            neighbor_indices=batch.get("neighbor_indices"),
         )
         if not if_train:
             output = output.detach()
@@ -703,7 +726,14 @@ class ModelClass:
                         inputs=input_,
                         create_graph=True,
                     )[0]
-                    force = torch.einsum("piC,piCx->x", middle_, grad2force)
+                    model = (
+                        self.model.module
+                        if isinstance(self.model, DistributedDataParallel) else self.model
+                    )
+                    if model.cube_type == "neighbors":
+                        force = torch.einsum("pi,pix->x", middle_, grad2force)
+                    else:
+                        force = torch.einsum("piC,piCx->x", middle_, grad2force)
 
                     loss_grad = scale_grad * self.loss_fun(grad_cc_train, force)
                     tot_loss = tot_loss + loss_grad
@@ -745,6 +775,7 @@ class ModelClass:
                 _, atomic_output = self.model_output(
                     atomic_batch["input"], atomic_batch["weight"],
                     atomic_batch.get("relative_positions"),
+                    neighbor_indices=atomic_batch.get("neighbor_indices"),
                 )
                 atomic_output = torch.sum(atomic_output)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
@@ -783,12 +814,24 @@ class ModelClass:
         return tot_loss, data_record, event
 
     def train_model(self, if_grad=True):
+        memory_setting = os.environ.get("DFT2CC_PROFILE_TRAIN_MEMORY", "0")
+        if memory_setting not in ("0", "1"):
+            raise ValueError("DFT2CC_PROFILE_TRAIN_MEMORY must be 0 or 1")
+        profile_memory = memory_setting == "1"
+        if profile_memory:
+            memory_device = next(self.model.parameters()).device
+            if memory_device.type != "cuda":
+                raise ValueError("Training GPU memory profiling requires a CUDA model.")
         self.train()
         self.optimizer.zero_grad(set_to_none=True)
         data_record_l = DataRecordList(len(self.database_train))
         pending_records = deque()
 
-        for batch in self.database_train.data_gpu:
+        for step, batch in enumerate(self.database_train.data_gpu):
+            if profile_memory:
+                torch.cuda.synchronize(memory_device)
+                torch.cuda.reset_peak_memory_stats(memory_device)
+                start_allocated = torch.cuda.memory_allocated(memory_device)
             batch = self.database_train.process_batch(batch, device=self.local_rank)
             tot_loss, data_record, event = self.loss(batch, if_grad=if_grad)
             tot_loss.backward()
@@ -796,6 +839,26 @@ class ModelClass:
             self.optimizer.step()
             self.scheduler.step()
             self.optimizer.zero_grad(set_to_none=True)
+            if profile_memory:
+                torch.cuda.synchronize(memory_device)
+                peak_allocated = torch.cuda.max_memory_allocated(memory_device)
+                peak_reserved = torch.cuda.max_memory_reserved(memory_device)
+                jacobian = batch["grad2force"]
+                jacobian_bytes = jacobian.numel() * jacobian.element_size()
+                force_loss = bool(
+                    self.args.if_grad and if_grad
+                    and batch["grad_cc_train"].ndim != 0
+                )
+                mib = 1024**2
+                print(
+                    f"[train-memory] device={memory_device} step={step} "
+                    f"name={batch['name']} force_loss={force_loss} "
+                    f"start_allocated_MiB={start_allocated / mib:.3f} "
+                    f"peak_allocated_MiB={peak_allocated / mib:.3f} "
+                    f"peak_reserved_MiB={peak_reserved / mib:.3f} "
+                    f"grad2force_MiB={jacobian_bytes / mib:.3f}",
+                    flush=True,
+                )
             if event is None:
                 data_record_l.add_data_record(data_record)
                 continue

@@ -12,7 +12,7 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
 from cc2cc.utils.mol import gen_mole
-from cc2cc.utils.env_var import DATA_PATH
+from cc2cc.utils.env_var import CUBE_MIDDLE, DATA_PATH, EDGE_SIZE
 from cc2cc.utils.mol import AU2KCALMOL
 
 MAX_ERROR_ENERGY = 0.01  # kcal/mol per atom, if the error energy is larger than this value, we set the absolute loss multiplier to 0 to avoid the numerical instability in training.
@@ -91,11 +91,9 @@ class DataBase:
         """
         self.args = args
         self.input_mode = input_mode
-        if input_mode == "neighbors" and args.if_grad:
+        if input_mode == "neighbors" and args.if_grad and args.precision != "float64":
             raise ValueError(
-                "Neighbor inputs currently support energy training only; "
-                "complete feature-grid, weight-response and correction Pulay "
-                "terms are not implemented."
+                "No-cube force training requires --precision float64."
             )
         if args.precision == "float64":
             self.dtype = torch.float64
@@ -115,7 +113,7 @@ class DataBase:
             "grad_cc_train",
         )
         if input_mode == "neighbors":
-            self.gpu_key += ("relative_positions",)
+            self.gpu_key += ("relative_positions", "neighbor_indices")
 
         loss_func_dict = {
             "none": lambda x: 1.0,
@@ -226,8 +224,6 @@ class DataBase:
         batch_gpu = {}
         for key, val in batch.items():
             if key in self.gpu_key or key == "neighbor_atom_indices":
-                if key == "input" and self.input_mode == "neighbors":
-                    val = val[batch["neighbor_indices"]].permute(0, 2, 1).contiguous()
                 batch_gpu[key] = val.to(device=device, non_blocking=True)
             else:
                 batch_gpu[key] = val
@@ -388,7 +384,10 @@ class DataBase:
                     )
                     scale_abs = 0
 
-            if self.args.if_grad and len(data_dict["input"]) < MAX_GRAD_BATCH_SIZE:
+            if self.args.if_grad and (
+                self.input_mode == "neighbors"
+                or len(data_dict["input"]) < MAX_GRAD_BATCH_SIZE
+            ):
                 if self.args.rho_input == "dft":
                     grad2force = data["grad2force"]
                     grad_cc_train = data["grad_cc_train"]
@@ -405,6 +404,24 @@ class DataBase:
                     grad_cc_train = data["grad_cc"] - data["grad_zmp"]
                 else:
                     raise ValueError(f"No grad in data: {self.args.rho_input}")
+                if self.input_mode == "neighbors":
+                    if (
+                        grad2force.ndim != 7
+                        or grad2force.shape[0] != mol_info["natm"]
+                        or grad2force.shape[1] < data_dict["input"].shape[1]
+                        or grad2force.shape[2:] != (
+                            len(data_dict["input"]), EDGE_SIZE, EDGE_SIZE, EDGE_SIZE, 3
+                        )
+                    ):
+                        raise ValueError(
+                            f"{name}: expected cube grad2force aligned with the input; "
+                            "regenerate the archive."
+                        )
+                    # Copy only centers so the CPU tensor does not retain the full cube.
+                    grad2force = grad2force[
+                        :, : data_dict["input"].shape[1], :,
+                        CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE, :,
+                    ].copy()
                 data_dict["grad2force"] = self.process_grad2force(grad2force)
                 data_dict["grad_cc_train"] = grad_cc_train.reshape(-1)
                 if mol_info["natm"] > 1 and self.args.if_relative_weight_grad:
@@ -483,7 +500,9 @@ class DataBase:
             if isinstance(data_dict[key], np.ndarray):
                 self.print(f"key: {key}, shape: {data_dict[key].shape}")
             data_dict[key] = torch.as_tensor(
-                data_dict[key], dtype=self.dtype, device="cpu"
+                data_dict[key],
+                dtype=torch.int64 if key == "neighbor_indices" else self.dtype,
+                device="cpu",
             )
 
         return num_data_used, data_dict
