@@ -390,14 +390,16 @@ created, and failures may occur after earlier files have been updated.
     `dm1_scf_vv10` with the B3LYP+VV10 baseline. Neither mode runs model SCF;
     `--max_cycle` is ignored for model evaluation.
     The default `--test_mode scf` preserves model SCF.
-  - References are read from `data_${name}_addon.npz`, then `data_${name}.npz`
-    in `DATA_PATH`. B3LYP can also use `dm1_dft-b3lyp` or `dm1_dft` in
-    `${name}_cc.npz` in `DATA_TEST_PATH`. Missing B3LYP densities raise an error.
-    If no VV10 cache contains both `dm1_scf_vv10` and `e_scf_vv10`, a plain
+  - Both modes read and write only `${name}_dft.npz` in `DATA_TEST_PATH`
+    (default `data/test/`), never training-data or addon caches.
+    If the file or requested density/energy pair is missing, plain B3LYP or
     B3LYP+VV10 reference SCF runs with the requested grid level (RKS or UKS).
-    Both fields are saved atomically to `data_${name}_addon.npz`, preserving
-    existing addon fields, and reused on later runs. Unconverged references
-    raise an error without being cached.
+    Reference SCF uses GPU when CUDA is available, respecting `--cpu`; otherwise
+    it uses CPU. Cached density matrices remain NumPy arrays on disk.
+    The directory and file are created as needed. B3LYP saves `dm1_dft-b3lyp`,
+    `dm1_dft`, and `e_dft-b3lyp`; VV10 saves `dm1_scf_vv10` and `e_scf_vv10`.
+    Updates are atomic, preserve existing fields, and are reused on later runs.
+    Unconverged references raise an error without being cached.
     These energy-only modes require the cached molecular orientation and reject
     nuclear gradients and rotation options.
   - Post-SCF CSVs retain the existing energy columns, add `test_mode`, and leave

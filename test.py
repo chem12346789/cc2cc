@@ -73,7 +73,7 @@ def main():
         choices=("scf", "post-scf-b3lyp", "post-scf-b3lyp-vv10"),
         default="scf",
         help="Run model SCF (default), or evaluate once on a cached B3LYP or "
-        "self-consistent B3LYP-VV10 density without model SCF. Missing VV10 references "
+        "self-consistent B3LYP-VV10 density without model SCF. Missing references "
         "are computed by reference SCF and cached. Post-SCF modes are energy-only.",
     )
     parser.add_argument(

@@ -82,7 +82,9 @@ def test_model_rks(
     mdft.conv_tol_grad = args.conv_tol_grad
 
     if post_scf:
-        dm1_scf = load_post_scf_density(mol, name, test_mode, grid_level=args.grid_level)
+        dm1_scf = load_post_scf_density(
+            mol, name, test_mode, grid_level=args.grid_level, use_gpu=use_gpu,
+        )
         if use_gpu:
             dm1_scf = cp.asarray(dm1_scf)
         e_scf = mdft.energy_tot(dm=dm1_scf)
