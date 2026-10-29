@@ -70,12 +70,34 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     Mean pooling makes neighbor order irrelevant when features and positions
     are permuted together. This replaces the initial no-cube moment encoder;
     its earlier checkpoints are incompatible.
+  - For the separate smooth-radius experiment, select
+    `--model transformer+dense_mix_e3nn_4_no_cube_100` and start a fresh training
+    run. Despite the historical `_100` name, 100 now specifies the latent
+    encoder/readout width, not a point-count limit. Every grid point within
+    **0.1 Bohr** is included. Per-edge encoded features are weighted by
+    `max(0, 1 - r² / r_c²)³` before summation and divided by the sum of these
+    weights, including the center (weight one). The taper and its first two
+    derivatives vanish at the boundary, so changing radius membership does not
+    introduce hard nearest-neighbor energy jumps. This changes the model
+    function even though parameter shapes still match the earlier 100-point
+    experiment: do not resume its checkpoints as an equivalent model.
+    Existing archives supply coordinates and central features, without being
+    modified. A lazy KD-tree queries variable-length neighborhoods in bounded
+    padded batches; padding contributes zero weight. Training checkpoints
+    those batches to recompute gathered activations during backward, retaining
+    feature and model-parameter derivatives without a full expanded edge list.
+    A single neighborhood larger than the batch budget is still included
+    completely. CPU RKS/UKS gradients and CPU/GPU SCF use the same radius and
+    taper; GPU gradients remain unsupported. Total compute can remain large
+    on dense near-nuclear grids. The original model and generator defaults
+    stay at 27 points.
   - Both generators now save `coords` in Bohr aligned with their `weights` and
     feature grid (not a separately reconstructed B3LYP SCF grid). The dataset
     extracts central features from existing cubes and loads center-first
     `neighbor_indices` of shape `(N_grid, 27)` precomputed by both generators.
     It keeps all central features on CPU and gathers neighborhoods on batch
-    transfer; no nearest-neighbor search occurs in the dataset.
+    transfer; the original 27-point path does not search for neighbors in the
+    dataset. The radius experiment instead queries neighborhoods lazily.
     Point filtering is disabled for all input modes: zero-feature centers,
     weights, grid targets and cube force Jacobians retain their original order.
     Existing archives need matching coordinates and indices in the base or addon
@@ -363,6 +385,32 @@ created, and failures may occur after earlier files have been updated.
     without recomputing DFT.
 - `train.py`: train/eval list setup → `train_model()`
 - `test.py`: checkpoint loading and RKS/UKS model validation
+  - `--test_mode post-scf-b3lyp` evaluates the model once on cached `dm1_dft`,
+    using the B3LYP baseline. `--test_mode post-scf-b3lyp-vv10` uses cached
+    `dm1_scf_vv10` with the B3LYP+VV10 baseline. Neither mode runs model SCF;
+    `--max_cycle` is ignored for model evaluation.
+    The default `--test_mode scf` preserves model SCF.
+  - References are read from `data_${name}_addon.npz`, then `data_${name}.npz`
+    in `DATA_PATH`. B3LYP can also use `dm1_dft-b3lyp` or `dm1_dft` in
+    `${name}_cc.npz` in `DATA_TEST_PATH`. Missing B3LYP densities raise an error.
+    If no VV10 cache contains both `dm1_scf_vv10` and `e_scf_vv10`, a plain
+    B3LYP+VV10 reference SCF runs with the requested grid level (RKS or UKS).
+    Both fields are saved atomically to `data_${name}_addon.npz`, preserving
+    existing addon fields, and reused on later runs. Unconverged references
+    raise an error without being cached.
+    These energy-only modes require the cached molecular orientation and reject
+    nuclear gradients and rotation options.
+  - Post-SCF CSVs retain the existing energy columns, add `test_mode`, and leave
+    `converged` empty (no model SCF was attempted). The output model label is
+    `${load}-${test_mode}`, isolating CSVs and continuation from model SCF.
+    Use that label as `collect_info.py --model_load`; checkpoint loading still
+    uses the original `--load`. For example, `--load atom-393567 --load_epoch 1115
+    --test_mode post-scf-b3lyp` writes under
+    `validate/${basis}_atom-393567-post-scf-b3lyp/1115/`.
+  - `scripts/test/test_diet100.bash` accepts `TEST_MODE=post-scf-b3lyp` or
+    `TEST_MODE=post-scf-b3lyp-vv10` (default `scf`), with separate log directories.
+    The DIET100 calculator includes the launcher's post-SCF runs at epoch 2395:
+    `atom-3259973-scf-b3` and `atom-3259973-scf-b3-vv10`, respectively.
 - `benchmark_dft.py`: baseline DFT benchmarking
 - `d3_para.py`: D3 parameter fitting/testing
 - `collect_info.py`: collect validation CSV summaries

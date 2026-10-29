@@ -12,11 +12,13 @@ import torch
 import torch.distributed as dist
 import torch.optim as optim
 from torch.nn.parallel import DistributedDataParallel
+from torch.utils.checkpoint import checkpoint
 
 from cc2cc.utils.DataBase import DataBase
 from cc2cc.utils.env_var import CHECKPOINTS_PATH, CUBE_MIDDLE, MAIN_PATH
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.schedulers import CosineAnnealingWarmRestarts2
+from cc2cc.utils.grid_neighbors import RadiusNeighborhoods
 
 CUBE_INDEX = {
     "cube5": np.array(
@@ -182,6 +184,7 @@ class ModelClass:
         self.device, self.dtype = param.device, param.dtype
         self.cube_type = self.model.cube_type
         self.cube_size = self.model.cube_size
+        self.radius_cutoff = getattr(self.model, "radius_cutoff", None)
         self.input_level = self.model.input_level
         if self.cube_type == "neighbors" and self.args.if_grad:
             if self.dtype != torch.float64:
@@ -192,6 +195,11 @@ class ModelClass:
             )
         for name in ("cube_type", "cube_size", "input_level"):
             self.print(f"{name}: {getattr(self, name)}")
+        if self.radius_cutoff is not None:
+            self.print(
+                f"radius_cutoff: {self.radius_cutoff} Bohr "
+                "(all points; cube_size is the latent width)"
+            )
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=True)
@@ -397,6 +405,8 @@ class ModelClass:
             process_grad2force=process_grad2force,
             verbose=self.verbose,
             input_mode=self.cube_type,
+            neighborhood_size=self.cube_size,
+            radius_cutoff=self.radius_cutoff,
         )
         self.database_eval = DataBase(
             eval_str_dict,
@@ -409,6 +419,8 @@ class ModelClass:
             process_grad2force=process_grad2force,
             verbose=self.verbose,
             input_mode=self.cube_type,
+            neighborhood_size=self.cube_size,
+            radius_cutoff=self.radius_cutoff,
         )
 
         self.print(f"Training on {len(self.database_train)} systems.")
@@ -638,6 +650,28 @@ class ModelClass:
             else self.model
         )
         center_input = input_
+        if isinstance(neighbor_indices, RadiusNeighborhoods):
+            if relative_positions is None:
+                raise ValueError("Radius neighborhoods require grid coordinates.")
+            outputs = []
+            for start, stop in neighbor_indices.ranges(32768):
+                def evaluate(features, coords, start=start, stop=stop):
+                    indices = torch.as_tensor(
+                        neighbor_indices.query(start, stop),
+                        dtype=torch.int64, device=features.device,
+                    )
+                    edges = coords[indices] - coords[start:stop, None, :]
+                    padding = indices == indices[:, :1]
+                    padding[:, 0] = False
+                    outside = edges.new_tensor((2 * neighbor_indices.radius, 0, 0))
+                    edges = torch.where(padding[..., None], outside, edges)
+                    return self.model(
+                        features[indices].permute(0, 2, 1).contiguous(), edges
+                    )
+                outputs.append(checkpoint(
+                    evaluate, input_, relative_positions, use_reentrant=False
+                ))
+            return input_, torch.cat(outputs) * weight
         if model.cube_type == "neighbors" and neighbor_indices is not None:
             input_ = input_[neighbor_indices].permute(0, 2, 1).contiguous()
         if model.before_weight:

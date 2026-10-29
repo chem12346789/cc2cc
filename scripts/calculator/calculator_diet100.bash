@@ -8,6 +8,9 @@ export model_load_epoch_pairs=(
     "atom-82794:10005:scf_d3bj_ene:best before"
     "atom-3259973:2395:scf_d3bj_ene:vv10"
     "atom-3259973:2395:post_scf_vv10_ene:vv10"
+    "atom-3259973-vv10:2395:scf_d3bj_ene:vv10"
+    "atom-3259973-scf-b3-post-scf-b3lyp:2395:scf_d3bj_ene:direct B3LYP"
+    "atom-3259973-scf-b3-vv10-post-scf-b3lyp-vv10:2395:scf_vv10_ene:direct VV10"
     "atom-35580:1115:scf_d3bj_ene:zmp"
     "atom-35580:2395:scf_d3bj_ene:zmp"
     "atom-393567:1115:scf_d3bj_ene:zmp_no_cube"
@@ -20,10 +23,10 @@ find log -type f -mtime +4 -name "*.out" -exec rm -f {} \;
 # clean up empty folders in log folder
 find log -type d -empty -delete
 
-header_format='| %-18s | %8s | %8s | %9s | %-9s | %-9s | %-13s | %-13s |\n'
-table_format='| %-18s | %8s | %8.2f | %9.2f | %-9s | %-9s | %-13s | %-13s |\n'
+header_format='| %-44s | %8s | %8s | %9s | %-9s | %-9s | %-13s | %-13s |\n'
+table_format='| %-44s | %8s | %8.2f | %9.2f | %-9s | %-9s | %-13s | %-13s |\n'
 printf "$header_format" 'Model' 'Epoch' 'AI' 'Corrected' 'Processed' 'Converged' 'Energy_column' 'Note'
-printf '%s\n' '|--------------------|----------|----------|-----------|-----------|-----------|---------------|---------------|'
+printf '%s\n' '|----------------------------------------------|----------|----------|-----------|-----------|-----------|---------------|---------------|'
 find_messages=()
 for pair in "${model_load_epoch_pairs[@]}"; do
     IFS=: read -r model_load load_epoch energy_column note <<< "$pair"

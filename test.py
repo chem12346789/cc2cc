@@ -69,6 +69,14 @@ def main():
         help="Reject unconverged SCF results. Default is False.",
     )
     parser.add_argument(
+        "--test_mode",
+        choices=("scf", "post-scf-b3lyp", "post-scf-b3lyp-vv10"),
+        default="scf",
+        help="Run model SCF (default), or evaluate once on a cached B3LYP or "
+        "self-consistent B3LYP-VV10 density without model SCF. Missing VV10 references "
+        "are computed by reference SCF and cached. Post-SCF modes are energy-only.",
+    )
+    parser.add_argument(
         "--baseline",
         choices=("b3lyp-vv10",),
         default=None,
@@ -136,6 +144,13 @@ def main():
         help="The alp parameter for the D3 dispersion correction. Default is None, which means it is the DEFAULT value.",
     )
     args = add_args(parser)
+    if args.test_mode != "scf":
+        if args.if_grad:
+            parser.error("Post-SCF density modes do not support nuclear gradients.")
+        if args.if_rotate or args.if_rotate_random:
+            parser.error("Post-SCF density modes require the cached molecular orientation.")
+        if args.test_mode == "post-scf-b3lyp" and args.baseline is not None:
+            parser.error("Use post-scf-b3lyp-vv10 for the B3LYP-VV10 baseline.")
 
     print_computer_info(args.device)
     modeldict = ModelClass(args)

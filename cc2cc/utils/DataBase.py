@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader
 from cc2cc.utils.mol import gen_mole
 from cc2cc.utils.env_var import CUBE_MIDDLE, DATA_PATH, EDGE_SIZE
 from cc2cc.utils.mol import AU2KCALMOL
+from cc2cc.utils.grid_neighbors import RadiusNeighborhoods, grid_neighborhoods
 
 MAX_ERROR_ENERGY = 0.01  # kcal/mol per atom, if the error energy is larger than this value, we set the absolute loss multiplier to 0 to avoid the numerical instability in training.
 MAX_GRAD_BATCH_SIZE = 250000  # if the number of gradients is larger than this value, we split the batch into smaller batches to avoid the memory overflow in training.
@@ -81,6 +82,8 @@ class DataBase:
         process_grad2force=lambda x: x,
         verbose=False,
         input_mode="cube",
+        neighborhood_size=27,
+        radius_cutoff=None,
     ):
         """
         Initialize the DataBase with a list of molecules and arguments.
@@ -91,6 +94,8 @@ class DataBase:
         """
         self.args = args
         self.input_mode = input_mode
+        self.neighborhood_size = neighborhood_size
+        self.radius_cutoff = radius_cutoff
         if input_mode == "neighbors" and args.if_grad and args.precision != "float64":
             raise ValueError(
                 "No-cube force training requires --precision float64."
@@ -223,7 +228,9 @@ class DataBase:
         """
         batch_gpu = {}
         for key, val in batch.items():
-            if key in self.gpu_key or key == "neighbor_atom_indices":
+            if isinstance(val, RadiusNeighborhoods):
+                batch_gpu[key] = val
+            elif key in self.gpu_key or key == "neighbor_atom_indices":
                 batch_gpu[key] = val.to(device=device, non_blocking=True)
             else:
                 batch_gpu[key] = val
@@ -290,24 +297,44 @@ class DataBase:
                 )
             indices = np.asarray(data["neighbor_indices"])
             if (
-                indices.shape != (len(coords), 27)
+                indices.ndim != 2
+                or indices.shape[0] != len(coords)
+                or indices.shape[1] not in (27, self.neighborhood_size)
                 or not np.issubdtype(indices.dtype, np.integer)
                 or np.any(indices < 0)
                 or np.any(indices >= len(coords))
                 or not np.array_equal(indices[:, 0], np.arange(len(coords)))
             ):
                 raise ValueError(f"{name}: invalid center-first neighbor_indices.")
+            if self.radius_cutoff is not None:
+                indices = RadiusNeighborhoods(coords, self.radius_cutoff)
+            elif indices.shape[1] != self.neighborhood_size:
+                print(
+                    f"{name}: rebuilding archived {indices.shape[1]}-point "
+                    f"neighborhoods as {self.neighborhood_size}-point neighborhoods."
+                )
+                indices = grid_neighborhoods(
+                    coords, neighborhood_size=self.neighborhood_size
+                )
             data_dict = {
                 "input": center,
                 "weight": weight_mat.reshape((-1, 1)),
                 "neighbor_indices": indices,
             }
 
-            data_dict["neighbor_indices"] = torch.as_tensor(
-                indices, dtype=torch.int64, device="cpu"
-            )
-            data_dict["relative_positions"] = coords[indices] - coords[:, None, :]
-            if "grid_atom_indices" in data:
+            if isinstance(indices, RadiusNeighborhoods):
+                data_dict["relative_positions"] = coords
+                print(
+                    f"{name}: all points within {indices.radius} Bohr; "
+                    f"mean/max count including center: "
+                    f"{indices.counts.mean():.2f}/{indices.counts.max()}."
+                )
+            else:
+                data_dict["neighbor_indices"] = torch.as_tensor(
+                    indices, dtype=torch.int64, device="cpu"
+                )
+                data_dict["relative_positions"] = coords[indices] - coords[:, None, :]
+            if "grid_atom_indices" in data and not isinstance(indices, RadiusNeighborhoods):
                 owners = np.asarray(data["grid_atom_indices"])
                 if (
                     owners.shape != (len(coords),)
@@ -319,21 +346,22 @@ class DataBase:
                 data_dict["neighbor_atom_indices"] = torch.as_tensor(
                     owners[indices], dtype=torch.int64, device="cpu"
                 )
-            if len(indices):
+            if not isinstance(indices, RadiusNeighborhoods) and len(indices):
                 distances = np.linalg.norm(
                     data_dict["relative_positions"][:, 1:, :], axis=-1
                 )
                 mean_distance = distances.mean()
                 print(
                     f"{name}: mean neighbor-center distance "
-                    f"(26 neighbors, all centers): {mean_distance:.8f} Bohr"
+                    f"({self.neighborhood_size - 1} neighbors, all centers): "
+                    f"{mean_distance:.8f} Bohr"
                 )
                 print(
                     f"{name}: std neighbor-center distance "
-                    f"(26 neighbors, all centers, ddof=0): "
+                    f"({self.neighborhood_size - 1} neighbors, all centers, ddof=0): "
                     f"{distances.std():.8f} Bohr"
                 )
-            else:
+            elif not isinstance(indices, RadiusNeighborhoods):
                 print(f"{name}: no centers for neighbor-distance statistics")
         else:
             data_dict = {
@@ -497,6 +525,8 @@ class DataBase:
         )
 
         for key in self.gpu_key:
+            if isinstance(data_dict[key], RadiusNeighborhoods):
+                continue
             if isinstance(data_dict[key], np.ndarray):
                 self.print(f"key: {key}, shape: {data_dict[key].shape}")
             data_dict[key] = torch.as_tensor(

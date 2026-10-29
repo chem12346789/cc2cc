@@ -4,7 +4,7 @@
 # Model and checkpoint
 # =========================
 # export MODEL="--model transformer+dense_mix_e3nn_4_correct"
-export MODEL="--model transformer+dense_mix_e3nn_4_no_cube"
+export MODEL="--model transformer+dense_mix_e3nn_4_no_cube_100"
 
 # =========================
 # Data and targets

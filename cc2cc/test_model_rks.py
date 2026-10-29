@@ -14,6 +14,7 @@ import pyscf
 import pyscf.dft
 
 import cc2cc.utils as utils
+from cc2cc.utils.run_helpers import load_post_scf_density
 
 pyscf.lib.logger.TIMER_LEVEL = 4
 VERBOSE = 4
@@ -31,6 +32,10 @@ def test_model_rks(
     """
     # 2.0 Prepare
     time_ai_start = timeit.default_timer()
+    test_mode = getattr(args, "test_mode", "scf")
+    post_scf = test_mode != "scf"
+    if post_scf and args.if_grad:
+        raise ValueError("Post-SCF density modes do not support nuclear gradients.")
     if torch.cuda.is_available() and not args.if_grad and not args.cpu:
         print("Use GPU for DFT calculation.")
         use_gpu = True
@@ -56,7 +61,7 @@ def test_model_rks(
 
             get_veff_modified_rks(mdft, modeldict)
 
-    if args.baseline == "b3lyp-vv10":
+    if args.baseline == "b3lyp-vv10" or test_mode == "post-scf-b3lyp-vv10":
         mdft.xc = "b3lyp"
         mdft.nlc = "vv10"
     else:
@@ -76,31 +81,37 @@ def test_model_rks(
     mdft.conv_tol = args.conv_tol
     mdft.conv_tol_grad = args.conv_tol_grad
 
-    if args.max_cycle == -1:
-        mdft.max_cycle = -1
-        if_retry = False
-        test_data = utils.TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
-        mdft.kernel(dm0=test_data.dm1_dft)
+    if post_scf:
+        dm1_scf = load_post_scf_density(mol, name, test_mode, grid_level=args.grid_level)
+        if use_gpu:
+            dm1_scf = cp.asarray(dm1_scf)
+        e_scf = mdft.energy_tot(dm=dm1_scf)
     else:
-        mdft.max_cycle = args.max_cycle
-        if_retry = True
-        mdft.kernel()
-
-    for factor in [1.0]:
-        if mdft.converged is False and if_retry:
-            print(f"RKS not converged. Add level shift with factor {factor}.")
-            mdft.level_shift = factor
+        if args.max_cycle == -1:
+            mdft.max_cycle = -1
+            if_retry = False
+            test_data = utils.TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
+            mdft.kernel(dm0=test_data.dm1_dft)
+        else:
+            mdft.max_cycle = args.max_cycle
+            if_retry = True
             mdft.kernel()
-    if mdft.converged is False:
-        if args.require_convergence:
-            raise RuntimeError(f"RKS did not converge for {name}")
-        print("Error: RKS not converged!!! Just use the unconvergence output.")
 
-    dm1_scf = mdft.make_rdm1()
-    e_scf = mdft.e_tot
+        for factor in [1.0]:
+            if mdft.converged is False and if_retry:
+                print(f"RKS not converged. Add level shift with factor {factor}.")
+                mdft.level_shift = factor
+                mdft.kernel()
+        if mdft.converged is False:
+            if args.require_convergence:
+                raise RuntimeError(f"RKS did not converge for {name}")
+            print("Error: RKS not converged!!! Just use the unconvergence output.")
+
+        dm1_scf = mdft.make_rdm1()
+        e_scf = mdft.e_tot
 
     e_post_scf_vv10 = None
-    if args.baseline != "b3lyp-vv10":
+    if not mdft.do_nlc():
         if use_gpu:
             nlcgrids = utils.GridCPU(
                 mol,
@@ -175,7 +186,8 @@ def test_model_rks(
         "scf_dipole_x": scf_dipole[0],
         "scf_dipole_y": scf_dipole[1],
         "scf_dipole_z": scf_dipole[2],
-        "converged": mdft.converged,
+        "converged": None if post_scf else mdft.converged,
+        "test_mode": test_mode,
     }
 
     if args.if_grad:
