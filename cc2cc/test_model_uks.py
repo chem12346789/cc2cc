@@ -31,11 +31,14 @@ def test_model_uks(
     """
     # 2.0 Prepare
     time_ai_start = timeit.default_timer()
-    if modeldict.cube_type == "neighbors" and args.if_grad:
-        raise NotImplementedError("No-cube SCF supports energies, not nuclear forces.")
+    if modeldict.cube_type == "neighbors" and args.if_grad and args.grid_response:
+        raise NotImplementedError("No-cube nuclear gradients require --grid_response 0.")
     if (
         torch.cuda.is_available() and mol.nao < 2000 and not args.if_grad
-        and modeldict.cube_type != "neighbors"
+        and (
+            modeldict.cube_type != "neighbors"
+            or torch.device(modeldict.device).type == "cuda"
+        )
     ):
         print("Use GPU for DFT calculation.")
         use_gpu = True

@@ -214,9 +214,6 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
     Get the method of "Get the effective potential for the RKS Gradients method".
     """
 
-    if getattr(modeldict, "cube_type", None) == "neighbors":
-        raise NotImplementedError("No-cube nuclear gradients are not yet complete.")
-
     def get_vxc(
         ni: NumInt,
         mol,
@@ -231,6 +228,11 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
         xctype = ni._xc_type(xc_code)
         ao_loc = mol.ao_loc_nr()
 
+        if getattr(modeldict, "cube_type", None) == "neighbors":
+            from cc2cc.utils.modelscf_no_cube import nr_neighbors
+            return nr_neighbors(
+                modeldict, ni, mol, grids, dms, max_memory, nuclear_gradient=True
+            )
         nset = 1
         nao = mol.nao
 
@@ -295,12 +297,13 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
 
         mf = ks_grad_.base
         ni = mf._numint
+        auxbasis_response = getattr(ks_grad_, "auxbasis_response", False)
 
         max_memory = ks_grad_.max_memory * 0.9 - lib.current_memory()[0]
         exc, vxc = get_vxc(
             ni,
             mol,
-            ks_grad_.grids,
+            ks_grad_.grids if ks_grad_.grids is not None else mf.grids,
             mf.xc,
             dm,
             max_memory,
@@ -325,12 +328,12 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
         if not ni.libxc.is_hybrid_xc(mf.xc):
             vj = ks_grad_.get_j(mol, dm)
             vxc += vj
-            if ks_grad_.auxbasis_response:
+            if auxbasis_response:
                 e1_aux = vj.aux.sum((0, 1))
         else:
             omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mf.xc, spin=mol.spin)
             vj, vk = ks_grad_.get_jk(mol, dm)
-            if ks_grad_.auxbasis_response:
+            if auxbasis_response:
                 vk.aux *= hyb
             vk[:] *= hyb  # Don't erase the .aux tags!
             if omega != 0:  # For range separated Coulomb operator
@@ -338,13 +341,13 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
                 # inv(int2c2e)
                 vk_lr = ks_grad_.get_k(mol, dm, omega=omega)
                 vk[:] += vk_lr * (alpha - hyb)
-                if ks_grad_.auxbasis_response:
+                if auxbasis_response:
                     vk.aux[:] += vk_lr.aux * (alpha - hyb)
             vxc += vj - vk * 0.5
-            if ks_grad_.auxbasis_response:
+            if auxbasis_response:
                 e1_aux = (vj.aux - vk.aux * 0.5).sum((0, 1))
 
-        if ks_grad_.auxbasis_response:
+        if auxbasis_response:
             logger.debug1(ks_grad_, "sum(auxbasis response) %s", e1_aux.sum(axis=0))
             vxc = lib.tag_array(vxc, exc1_grid=exc, aux=e1_aux)
         else:

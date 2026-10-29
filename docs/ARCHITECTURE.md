@@ -136,16 +136,71 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   - This mode does not eliminate cube generation from the existing generators;
     it reuses cube centers. Nearest-neighbor distances can vary strongly across
     atom-centered quadrature grids. No-cube checkpoints are distinct from cube
-    checkpoints. Nuclear-gradient evaluation remains explicitly unsupported;
+    checkpoints. CPU nuclear-gradient evaluation supports fixed grids;
     training uses compact no-cube Jacobians, not expanded cube Jacobians.
   - No-cube RKS/UKS SCF uses CPU PySCF quadrature, with the network on its
     selected device. Each SCF iteration computes central features on the full
-    grid, evaluates gathered neighborhoods in bounded batches, and scatter-adds
-    feature derivatives from every neighborhood before blocked AO contraction.
+    grid, then partitions output centers into bounded batches. Each batch uses
+    a cluster containing all unique entries in those centers' global neighborhoods,
+    including neighbors outside the batch. Local integer indices gather model
+    inputs inside autograd, which returns derivatives directly for unique cluster
+    features. Only batch centers contribute weighted energy and B3LYP baseline;
+    cluster halo points do not add extra energy terms. Cluster derivatives are
+    accumulated at global indices before blocked AO contraction. Global neighbor
+    membership is unchanged, and overlaps between clusters are accumulated.
+    `eval_xc_eff(..., neighbor_indices=local_indices)` accepts `(N_unique, 4)`
+    features and returns `(N_centers,)` energies and `(N_unique, 4)` derivatives.
+    Omitting indices preserves the expanded-input interface. This avoids
+    duplicated feature transfers, not the network's neighborhood activations;
+    ordinary SCF does not build a higher-order derivative graph.
     Neighborhood indices are cached until grid coordinates change. The
     semilocal B3LYP baseline and existing hybrid J/K and NLC handling are retained.
-    Evaluation scripts select the CPU integration backend for these models;
-    direct GPU integration hooks reject them. No nuclear-force support is implied.
+    Energy-only evaluation selects GPU4PySCF when CUDA is available and the
+    no-cube network is on CUDA (UKS retains the existing AO-count limit).
+    CPU models and nuclear-gradient evaluation use CPU PySCF quadrature.
+  - GPU4PySCF RKS/UKS hooks dispatch to `modelscf_no_cube_gpu.nr_neighbors_gpu`.
+    AO evaluation, semilocal feature construction, unique-cluster indexing,
+    feature-derivative accumulation, and Fock contraction use CuPy/GPU4PySCF.
+    Features, local indices, geometry and derivatives cross the CuPy/PyTorch
+    boundary using stream-aware DLPack, without host feature/Fock staging.
+    Only neighborhood construction transfers coordinates to the CPU KD-tree
+    when coordinates change; indices are then cached on the GPU. AO sorting,
+    padding and final unsorting follow GPU4PySCF's integration optimizer.
+    Existing GPU hybrid J/K, density fitting and NLC handling are retained.
+    The model must be on the active CUDA device. GPU nuclear-gradient assembly
+    remains unsupported; the fixed-grid CPU nuclear-gradient path is unchanged.
+    The existing cube-specific `DFT2CC_PROFILE_XC` stage report is not emitted
+    by this new no-cube GPU quadrature path.
+    Actual GPU4PySCF validation covered RKS/UKS CPU/GPU quadrature agreement,
+    STO-3G and cc-pVDZ AO sorting/padding, Hermiticity, cluster-size independence,
+    cache reuse/invalidation, B3LYP baseline limits, density-fitted SCF,
+    self-consistent VV10, and user-facing GPU evaluation with post-SCF VV10/D3.
+    GPU energy/Fock finite-difference errors were below `1.2e-10`.
+    The selected Python environment needed `gpu4pyscf-cuda12x` (1.9.0) and its
+    CuPy dependency for these checks; repository dependency manifests were unchanged.
+  - CPU no-cube RKS/UKS nuclear gradients are enabled with
+    `--if_grad 1 --grid_response 0`. Cluster feature derivatives are contracted
+    with second-order AO derivatives via the existing GGA gradient assembly.
+    The existing total-SCF energy-weighted density supplies overlap/Pulay terms;
+    Coulomb, hybrid exchange, and density-fitting auxiliary-basis response retain
+    their existing handling. Physical forces are the negative nuclear gradients.
+    This is the derivative with grid coordinates, weights, and neighborhood
+    membership fixed in the laboratory frame. For energy finite differences,
+    displace nuclei and reconverge SCF while reusing the reference grid arrays.
+    Rebuilding atom-centered grids is a different derivative: moving-grid
+    gradients, translational invariance with frozen quadrature, and MD force
+    support are not promised. `grid_response=True` remains explicitly rejected.
+    A CUDA network is supported with CPU quadrature and CPU nuclear assembly;
+    it does not select GPU4PySCF numerical integration.
+    Validation on tiny STO-3G systems covered real CPU/CUDA network parity,
+    batching, RKS/UKS converged SCF, and frozen-grid nuclear-energy finite
+    differences. Density-fitted nuclear-gradient errors were about
+    `2.3e-9` Hartree/Bohr, also with self-consistent VV10 when both semilocal
+    and NLC grids were frozen. Conventional (non-density-fitted) full
+    two-atom gradients agreed within `4.3e-9` Hartree/Bohr. Both user-facing
+    evaluators ran with a real CUDA network, CPU gradients, D3 and post-SCF VV10.
+    A bounded CUDA check peaked near 112.25 MiB allocated
+    by PyTorch; this is not a production benchmark or a 27-times memory claim.
   - Dataset tensors remain on CPU; batch device transfers do not evict them.
     Model XC evaluation returns energy and feature derivatives only, treating
     quadrature weights as fixed. Model nuclear-gradient hooks require

@@ -5,13 +5,17 @@ import copy
 import numpy as np
 from pyscf import lib
 from pyscf.dft.numint import _dot_ao_ao_dense, _scale_ao
+from pyscf.grad.rks import _gga_grad_sum_
 
 from cc2cc.utils.Grids import GridCube, iterate_grid_segments
 from cc2cc.utils.grid_neighbors import grid_neighborhoods
 
 
-def nr_neighbors(modeldict, ni, mol, grids, dm, max_memory, *, unrestricted=False):
-    """Evaluate semilocal baseline + nonlocal neighborhood correction once per grid."""
+def nr_neighbors(
+    modeldict, ni, mol, grids, dm, max_memory, *, unrestricted=False,
+    nuclear_gradient=False,
+):
+    """Evaluate XC potential or its fixed-grid AO-center derivative."""
     dm = np.asarray(dm)
     if dm.shape != ((2, mol.nao, mol.nao) if unrestricted else (mol.nao, mol.nao)):
         raise ValueError("No-cube SCF requires one real RKS or spin-resolved UKS density.")
@@ -32,15 +36,15 @@ def nr_neighbors(modeldict, ni, mol, grids, dm, max_memory, *, unrestricted=Fals
     nelec = np.zeros(2 if unrestricted else 1, dtype=np.float64)
     memory = max(1, max_memory)
 
-    def blocks():
+    def blocks(ao_deriv=1):
         start = 0
         for _, weights, coords in iterate_grid_segments(
-            mol, grids, mol.nao, 1, max_memory=memory
+            mol, grids, mol.nao, ao_deriv, max_memory=memory
         ):
             stop = start + len(coords)
             cube = GridCube(coords[:, None, :], center_grid)
             generate = cube.gen_cube_rho_uks if unrestricted else cube.gen_cube_rho_rks
-            yield start, stop, weights, generate(ni, dm, ao_deriv=1)
+            yield start, stop, weights, generate(ni, dm, ao_deriv=ao_deriv)
             start = stop
 
     for start, stop, weights, (values, _, ao) in blocks():
@@ -57,19 +61,25 @@ def nr_neighbors(modeldict, ni, mol, grids, dm, max_memory, *, unrestricted=Fals
     for start in range(0, len(features), batch_size):
         stop = min(start + batch_size, len(features))
         neighbors = indices[start:stop]
-        values = features[neighbors].transpose(0, 2, 1)
+        unique, local_indices = np.unique(neighbors, return_inverse=True)
+        local_indices = local_indices.reshape(neighbors.shape)
+        values = features[unique]
         edges = grids.coords[neighbors] - grids.coords[start:stop, None, :]
         energies, derivative = modeldict.eval_xc_eff(
-            values, grids.weights[start:stop], relative_positions=edges
+            values, grids.weights[start:stop], relative_positions=edges,
+            neighbor_indices=local_indices,
         )
         energy += energies.sum()
-        np.add.at(
-            feature_gradient, neighbors.reshape(-1),
-            derivative.transpose(0, 2, 1).reshape(-1, modeldict.input_level),
-        )
+        # Unique within this cluster; overlapping clusters still accumulate.
+        feature_gradient[unique] += derivative
 
-    potential = np.zeros((2 if unrestricted else 1, mol.nao, mol.nao), dtype=np.float64)
-    for start, stop, _, (_, vxc, ao) in blocks():
+    nspin = 2 if unrestricted else 1
+    shape = (
+        (nspin, 3, mol.nao, mol.nao) if nuclear_gradient
+        else (nspin, mol.nao, mol.nao)
+    )
+    potential = np.zeros(shape, dtype=np.float64)
+    for start, stop, _, (_, vxc, ao) in blocks(2 if nuclear_gradient else 1):
         middle = feature_gradient[start:stop]
         if unrestricted:
             weighted = np.einsum("islpC,pi->slp", vxc, middle, optimize=True)
@@ -77,7 +87,14 @@ def nr_neighbors(modeldict, ni, mol, grids, dm, max_memory, *, unrestricted=Fals
             weighted = np.einsum("ixpC,pi->xp", vxc, middle, optimize=True)[None]
         for spin, wv in enumerate(weighted):
             wv[0] *= 0.5
-            _dot_ao_ao_dense(ao[0], _scale_ao(ao, wv), None, potential[spin])
+            if nuclear_gradient:
+                _gga_grad_sum_(potential[spin], mol, ao, wv, None, mol.ao_loc_nr())
+            else:
+                _dot_ao_ao_dense(ao[0], _scale_ao(ao, wv), None, potential[spin])
+    if nuclear_gradient:
+        if unrestricted:
+            return np.zeros((mol.natm, 3)), -potential
+        return None, -potential[0]
     potential = lib.hermi_sum(potential, axes=(0, 2, 1))
     if unrestricted:
         return nelec, energy, potential

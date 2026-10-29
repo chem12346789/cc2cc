@@ -217,9 +217,6 @@ def get_veff_grad_modified_uks(ks_grad, modeldict: ModelClass):
     Get the method of "Get the effective potential for the UKS Gradients method".
     """
 
-    if getattr(modeldict, "cube_type", None) == "neighbors":
-        raise NotImplementedError("No-cube nuclear gradients are not yet complete.")
-
     def get_vxc(
         ni: NumInt,
         mol,
@@ -234,6 +231,12 @@ def get_veff_grad_modified_uks(ks_grad, modeldict: ModelClass):
         xctype = ni._xc_type(xc_code)
         ao_loc = mol.ao_loc_nr()
 
+        if getattr(modeldict, "cube_type", None) == "neighbors":
+            from cc2cc.utils.modelscf_no_cube import nr_neighbors
+            return nr_neighbors(
+                modeldict, ni, mol, grids, dms, max_memory,
+                unrestricted=True, nuclear_gradient=True,
+            )
         nao = mol.nao
 
         vmat = np.zeros((2, 3, nao, nao))
@@ -289,12 +292,13 @@ def get_veff_grad_modified_uks(ks_grad, modeldict: ModelClass):
 
         mf = ks_grad_.base
         ni = mf._numint
+        auxbasis_response = getattr(ks_grad_, "auxbasis_response", False)
 
         max_memory = ks_grad_.max_memory * 0.9 - lib.current_memory()[0]
         exc, vxc = get_vxc(
             ni,
             mol,
-            ks_grad_.grids,
+            ks_grad_.grids if ks_grad_.grids is not None else mf.grids,
             mf.xc,
             dm,
             max_memory,
@@ -319,25 +323,25 @@ def get_veff_grad_modified_uks(ks_grad, modeldict: ModelClass):
         if not ni.libxc.is_hybrid_xc(mf.xc):
             vj = ks_grad.get_j(mol, dm)
             vxc += vj[0] + vj[1]
-            if ks_grad.auxbasis_response:
+            if auxbasis_response:
                 e1_aux = vj.aux.sum((0, 1))
         else:
             omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mf.xc, spin=mol.spin)
             vj, vk = ks_grad.get_jk(mol, dm)
-            if ks_grad.auxbasis_response:
+            if auxbasis_response:
                 vk.aux = vk.aux * hyb
             vk[:] *= hyb  # inplace * for vk[:] to keep the .aux tag
             if omega != 0:  # For range separated Coulomb operator
                 vk_lr = ks_grad.get_k(mol, dm, omega=omega)
                 vk[:] += vk_lr * (alpha - hyb)
-                if ks_grad.auxbasis_response:
+                if auxbasis_response:
                     vk.aux[:] += vk_lr.aux * (alpha - hyb)
             vxc += vj[0] + vj[1] - vk
-            if ks_grad.auxbasis_response:
+            if auxbasis_response:
                 e1_aux = vj.aux.sum((0, 1))
                 e1_aux -= np.trace(vk.aux, axis1=0, axis2=1)
 
-        if ks_grad.auxbasis_response:
+        if auxbasis_response:
             logger.debug1(ks_grad, "sum(auxbasis response) %s", e1_aux.sum(axis=0))
             vxc = lib.tag_array(vxc, exc1_grid=exc, aux=e1_aux)
         else:

@@ -27,9 +27,6 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
     Get the method of "Get the effective potential for the RKS method".
     """
 
-    if modeldict.cube_type == "neighbors":
-        raise NotImplementedError("Use CPU PySCF integration for no-cube SCF.")
-
     def nr_rks(
         modeldict: ModelClass,
         ni: NumInt,
@@ -44,6 +41,9 @@ def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
         Get the effective potential for the RKS method.
         Modified from pyscf.dft.numint.nr_rks.
         """
+        if modeldict.cube_type == "neighbors":
+            from cc2cc.utils.modelscf_no_cube_gpu import nr_neighbors_gpu
+            return nr_neighbors_gpu(modeldict, ni, mol, grids, dms, max_memory)
         profile = XCStageProfiler("RKS")
         xctype = ni._xc_type(xc_code)
 

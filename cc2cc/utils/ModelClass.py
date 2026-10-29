@@ -922,9 +922,11 @@ class ModelClass:
 
     def eval_xc_eff(
         self, rho_cube, weights_, *, return_tensors=False,
-        relative_positions=None,
+        relative_positions=None, neighbor_indices=None,
     ):
-        """Return energies and feature derivatives with fixed quadrature weights."""
+        """Return energies and feature derivatives; indices select unique cluster inputs."""
+        if neighbor_indices is not None and self.cube_type != "neighbors":
+            raise ValueError("Cluster indices require a no-cube model.")
         if getattr(self, "cube_type", None) == "neighbors" and relative_positions is None:
             raise ValueError("No-cube XC evaluation requires relative_positions.")
         input_mat = torch.as_tensor(rho_cube, dtype=self.dtype, device=self.device)
@@ -932,16 +934,26 @@ class ModelClass:
             weights_.reshape((-1, 1)), dtype=self.dtype, device=self.device
         )
         input_mat.requires_grad = True
+        if neighbor_indices is not None:
+            neighbor_indices = torch.as_tensor(
+                neighbor_indices, dtype=torch.int64, device=self.device
+            )
         if relative_positions is not None:
             relative_positions = torch.as_tensor(
                 relative_positions, dtype=self.dtype, device=self.device
             )
             input_mat, exc_cube = self.model_output(
-                input_mat, weights_mat, relative_positions
+                input_mat, weights_mat, relative_positions,
+                neighbor_indices=neighbor_indices,
             )
         else:
             input_mat, exc_cube = self.model_output(input_mat, weights_mat)
-        exc_cube += torch.einsum("i,ij->ij", self.get_b3lyp_ene(input_mat), weights_mat)
+        if neighbor_indices is None:
+            baseline = self.get_b3lyp_ene(input_mat)
+        else:
+            center_features = input_mat[neighbor_indices[:, 0], :4]
+            baseline = (center_features * self.b3lyp_weights(center_features)).sum(-1)
+        exc_cube += torch.einsum("i,ij->ij", baseline, weights_mat)
         middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
         outputs = (exc_cube.detach().squeeze(-1), middle_cube.detach())
         if return_tensors:
