@@ -1,7 +1,8 @@
 # Meaning of `grid_response`
 
 In this project, `grid_response=1` means **standard PySCF grid response**.
-It does not enable a custom moving-grid derivative of the learned model.
+For no-cube models, this flag now also enables the corresponding learned-model
+response, including explicit relative-position dependence.
 
 ## Standard PySCF response
 
@@ -16,30 +17,42 @@ relative-position inputs, and does not automatically differentiate them.
 ## Current CPU model implementation
 
 The CPU RKS/UKS gradient hooks pass the standard PySCF gradient object's
-`grid_response` flag through the model gradient evaluators. Both legacy
-cube models and no-cube models use the shared
-[baseline_grid_response](../cc2cc/utils/modelscf_no_cube.py) calculation.
+`grid_response` flag through the model gradient evaluators.
+The no-cube entry modules are
+[modelscf_rks_no_cube.py](../cc2cc/utils/modelscf_rks_no_cube.py) and
+[modelscf_uks_no_cube.py](../cc2cc/utils/modelscf_uks_no_cube.py).
+Each contains its own clustered quadrature and grid-response implementation;
+neither imports the shared no-cube module or the other spin module.
+Both reuse standard PySCF J/K, hybrid, NLC and total-gradient assembly.
+The original cube RKS/UKS modules are unchanged.
 
 - **Off (`0`):** baseline and learned correction use fixed quadrature
   coordinates and weights.
-- **On (`1`):** the baseline uses PySCF's standard `get_vxc_full_response`;
-  the learned correction still uses fixed coordinates, weights and (for
-  no-cube models) neighbor membership. No learned weight, grid-motion or relative-position response
-  is added. Existing NLC response follows the standard PySCF flag as well.
+- **On (`1`), no-cube:** both baseline and learned correction include weight
+  and grid-sampling response. Explicit edge-vector response is included too.
+  Shared-neighbor derivatives are summed at their original grid points, and
+  sampling/edge motion is assigned to each point's owning atom. Existing NLC
+  response follows the standard PySCF flag as well.
 
-To avoid double counting, the implementation adds the difference between
-PySCF's moving-grid and fixed-grid baseline XC derivatives to the existing
-fixed-grid model XC derivative. Baseline coefficients are taken from
-`modeldict.b3lyp_weights`. The usual core, nuclear, J/K and Pulay contributions
-remain in PySCF's total-gradient assembly.
+The standard semilocal XC derivative is replaced by the full model XC
+derivative, without double counting. Core, nuclear, J/K, Pulay, NLC and
+density-fitting auxiliary response remain in PySCF's assembly.
 
-Use `--if_grad 1 --grid_response 1` for this baseline-only standard response.
+Use `--if_grad 1 --grid_response 1` for full no-cube moving-grid response.
 Use `--grid_response 0` for entirely fixed-grid XC derivatives.
 
 ## Interpretation and validation
 
-This is an intentional mixed convention: with a nonzero learned correction,
-the result is **not the full derivative of the model energy on rebuilt
-atom-centered grids**. Such finite differences include learned grid/geometry
-response that this convention deliberately omits. For fully fixed-grid
-finite differences, keep reference grid coordinates and weights unchanged.
+This replaces the earlier baseline-only mixed convention for no-cube models.
+Neighbor membership and pruning selections are discrete and held fixed locally.
+Derivatives are valid on smooth branches, not at neighbor/pruning changes.
+For moving-grid finite differences, rebuild grids while retaining the same
+selection branch. For fixed-grid checks, preserve reference coordinates,
+weights and neighbor indices, including relevant NLC quadrature.
+Unmatched active response points, coincident physical points and inconsistent
+weights are explicitly rejected rather than silently assigning wrong owners.
+PySCF's zero-weight alignment padding at `(1e-4, 1e-4, 1e-4)` is an exception:
+these points remain fixed in the laboratory frame. If used as neighbor halo
+inputs, their AO/feature derivatives are retained, but they receive no
+atom-owned sampling motion or weight response. Edge motion at their physical
+neighbors is still included. Padding is not removed or silently ignored.

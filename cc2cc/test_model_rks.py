@@ -31,24 +31,30 @@ def test_model_rks(
     """
     # 2.0 Prepare
     time_ai_start = timeit.default_timer()
-    if (
-        torch.cuda.is_available() and not args.if_grad
-        and (
-            modeldict.cube_type != "neighbors"
-            or torch.device(modeldict.device).type == "cuda"
-        )
-    ):
+    if torch.cuda.is_available() and not args.if_grad and not args.cpu:
         print("Use GPU for DFT calculation.")
         use_gpu = True
         mdft = pyscf.dft.RKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
-        utils.get_veff_modified_rks_gpu(mdft, modeldict, args.max_memory_gpu)
+        if modeldict.cube_type == "neighbors":
+            from cc2cc.utils.modelscf_rks_no_cube_gpu import get_veff_modified_rks_gpu
+
+            get_veff_modified_rks_gpu(mdft, modeldict, args.max_memory_gpu)
+        else:
+            utils.get_veff_modified_rks_gpu(mdft, modeldict, args.max_memory_gpu)
     else:
         print("Use CPU for DFT calculation.")
         use_gpu = False
         mdft = pyscf.dft.RKS(mol).density_fit()
         Grid = utils.GridCPU
-        utils.get_veff_modified_rks(mdft, modeldict)
+        if modeldict.cube_type == "neighbors":
+            from cc2cc.utils.modelscf_rks_no_cube import get_veff_modified_rks
+
+            get_veff_modified_rks(mdft, modeldict)
+        else:
+            from cc2cc.utils.modelscf_rks import get_veff_modified_rks
+
+            get_veff_modified_rks(mdft, modeldict)
 
     if args.baseline == "b3lyp-vv10":
         mdft.xc = "b3lyp"
@@ -139,6 +145,10 @@ def test_model_rks(
         g.grids = mdft.grids
         if torch.cuda.is_available() and (not args.if_grad):
             utils.get_veff_grad_modified_rks_gpu(g, modeldict)
+        elif modeldict.cube_type == "neighbors":
+            from cc2cc.utils.modelscf_rks_no_cube import get_veff_grad_modified_rks
+
+            get_veff_grad_modified_rks(g, modeldict)
         else:
             utils.get_veff_grad_modified_rks(g, modeldict)
         grad_mdft = np.array(g.kernel())

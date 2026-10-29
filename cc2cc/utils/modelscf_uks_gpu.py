@@ -44,11 +44,6 @@ def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
         """
         Obtain the nelec, excsum, and vmat.
         """
-        if modeldict.cube_type == "neighbors":
-            from cc2cc.utils.modelscf_no_cube_gpu import nr_neighbors_gpu
-            return nr_neighbors_gpu(
-                modeldict, ni, mol, grids, dms, max_memory, unrestricted=True
-            )
         profile = XCStageProfiler("UKS")
         del hermi
         xctype = ni._xc_type(xc_code)

@@ -18,7 +18,7 @@ case "${MODEL_INDEX:-0}" in
     # (1) export load_model_args="--load atom-35580 --load_epoch 10075" ;;
 esac
 
-export if_continue_args=1
+export if_continue_args=0
 export IF_GRAD=0
 export name_mol_reverse=0
 export DATASET="gmtkn-diet100-def2"
@@ -37,5 +37,5 @@ find "${PYSCF_TMPDIR}" -type d -empty -delete
 
 sleep $SLURM_ARRAY_TASK_ID
 begin_test_job
-run_test_job --max_memory_gpu 8000 --max_cycle 50 --s6 1.0 --a1 0.8 --s8 -1.0725 --a2 0.15 --alp 14.0 --s9 1.0
+run_test_job --max_memory_gpu 8000 --max_cycle 50 --s6 1.0 --a1 0.8 --s8 -1.0725 --a2 0.15 --alp 14.0 --s9 1.0 --cpu 1
 finish_test_job

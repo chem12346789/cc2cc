@@ -31,24 +31,30 @@ def test_model_uks(
     """
     # 2.0 Prepare
     time_ai_start = timeit.default_timer()
-    if (
-        torch.cuda.is_available() and mol.nao < 2000 and not args.if_grad
-        and (
-            modeldict.cube_type != "neighbors"
-            or torch.device(modeldict.device).type == "cuda"
-        )
-    ):
+    if torch.cuda.is_available() and not args.if_grad and not args.cpu:
         print("Use GPU for DFT calculation.")
         use_gpu = True
         mdft = pyscf.dft.UKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
-        utils.get_veff_modified_uks_gpu(mdft, modeldict, args.max_memory_gpu)
+        if modeldict.cube_type == "neighbors":
+            from cc2cc.utils.modelscf_uks_no_cube_gpu import get_veff_modified_uks_gpu
+
+            get_veff_modified_uks_gpu(mdft, modeldict, args.max_memory_gpu)
+        else:
+            utils.get_veff_modified_uks_gpu(mdft, modeldict, args.max_memory_gpu)
     else:
         print("Use CPU for DFT calculation.")
         use_gpu = False
         mdft = pyscf.dft.UKS(mol).density_fit()
         Grid = utils.GridCPU
-        utils.get_veff_modified_uks(mdft, modeldict)
+        if modeldict.cube_type == "neighbors":
+            from cc2cc.utils.modelscf_uks_no_cube import get_veff_modified_uks
+
+            get_veff_modified_uks(mdft, modeldict)
+        else:
+            from cc2cc.utils.modelscf_uks import get_veff_modified_uks
+
+            get_veff_modified_uks(mdft, modeldict)
 
     if args.baseline == "b3lyp-vv10":
         mdft.xc = "b3lyp"
@@ -139,6 +145,10 @@ def test_model_uks(
         g.grids = mdft.grids
         if torch.cuda.is_available() and not args.if_grad:
             utils.get_veff_grad_modified_uks_gpu(g, modeldict)
+        elif modeldict.cube_type == "neighbors":
+            from cc2cc.utils.modelscf_uks_no_cube import get_veff_grad_modified_uks
+
+            get_veff_grad_modified_uks(g, modeldict)
         else:
             utils.get_veff_grad_modified_uks(g, modeldict)
         grad_mdft = g.kernel()

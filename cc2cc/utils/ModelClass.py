@@ -939,14 +939,16 @@ class ModelClass:
         return (rho * self.b3lyp_weights(rho)).sum(-1)
 
     def eval_xc_eff(
-        self, rho_cube, weights_, weight_response=False, *, return_tensors=False
+        self, rho_cube, weights_, weight_response=False, *, return_tensors=False,
+        relative_positions=None, neighbor_indices=None, position_response=False,
     ):
         """Optionally return weight derivatives and detached on-device tensors."""
-        if self.cube_type == "neighbors":
-            raise NotImplementedError(
-                "No-cube SCF integration is not implemented; use energy training "
-                "with cached dataset neighborhoods, not Cartesian cube XC hooks."
-            )
+        if self.cube_type == "neighbors" and relative_positions is None:
+            raise ValueError("Neighbor XC evaluation requires relative_positions.")
+        if neighbor_indices is not None and self.cube_type != "neighbors":
+            raise ValueError("Neighbor indices require a neighbors model.")
+        if position_response and (relative_positions is None or not weight_response):
+            raise ValueError("Position response requires positions and weight_response=True.")
         input_mat = torch.as_tensor(rho_cube, dtype=self.dtype, device=self.device)
         weights_mat = torch.as_tensor(
             weights_.reshape((-1, 1)), dtype=self.dtype, device=self.device
@@ -954,18 +956,47 @@ class ModelClass:
         input_mat.requires_grad = True
         density_input = input_mat
         weights_mat.requires_grad = weight_response
-        input_mat, exc_cube = self.model_output(input_mat, weights_mat)
-        exc_cube += torch.einsum("i,ij->ij", self.get_b3lyp_ene(input_mat), weights_mat)
-        if weight_response:
+        if relative_positions is not None:
+            relative_positions = torch.as_tensor(
+                relative_positions, dtype=self.dtype, device=self.device
+            )
+            if position_response:
+                relative_positions.requires_grad_(True)
+            if neighbor_indices is not None:
+                neighbor_indices = torch.as_tensor(
+                    neighbor_indices, dtype=torch.int64, device=self.device
+                )
+            input_mat, exc_cube = self.model_output(
+                input_mat, weights_mat, relative_positions,
+                neighbor_indices=neighbor_indices,
+            )
+        else:
+            input_mat, exc_cube = self.model_output(input_mat, weights_mat)
+        if neighbor_indices is None:
+            baseline_input = density_input if self.cube_type == "neighbors" else input_mat
+            baseline = self.get_b3lyp_ene(baseline_input)
+        else:
+            centers = density_input[neighbor_indices[:, 0], :4]
+            baseline = (centers * self.b3lyp_weights(centers)).sum(-1)
+        exc_cube += torch.einsum("i,ij->ij", baseline, weights_mat)
+        if position_response:
+            middle_cube, weight_derivative, edge_derivative = torch.autograd.grad(
+                exc_cube.sum(), (density_input, weights_mat, relative_positions),
+                materialize_grads=True,
+            )
+        elif weight_response:
             middle_cube, weight_derivative = torch.autograd.grad(
                 torch.sum(exc_cube), (density_input, weights_mat)
             )
         else:
-            middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
+            derivative_input = density_input if self.cube_type == "neighbors" else input_mat
+            middle_cube = torch.autograd.grad(torch.sum(exc_cube), derivative_input)[0]
             weight_derivative = None
         outputs = (exc_cube.detach().squeeze(-1), middle_cube.detach())
         if weight_response:
             outputs += (weight_derivative.detach().reshape(-1),)
+        if position_response:
+            outputs += (edge_derivative.detach(),)
         if return_tensors:
             return outputs
         return tuple(output.cpu().numpy() for output in outputs)

@@ -82,6 +82,12 @@ def main():
         help="Maximum memory for GPU calculation in MB. Default is 4000.",
     )
     parser.add_argument(
+        "--cpu",
+        type=str2bool,
+        default=False,
+        help="Force the use of CPU even if GPU is available. Default is False.",
+    )
+    parser.add_argument(
         "--if_rotate",
         type=str2bool,
         default=False,

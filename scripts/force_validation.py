@@ -68,7 +68,7 @@ def build_dataset(source):
 
 
 def read_force_logs(paths, dataset, basis, grid_response, conv_tol=1e-11,
-                    conv_tol_grad=1e-7):
+                    conv_tol_grad=1e-7, completed_only=False):
     records = {}
     for path in paths:
         text = Path(path).read_text()
@@ -90,6 +90,18 @@ def read_force_logs(paths, dataset, basis, grid_response, conv_tol=1e-11,
             name = run.removesuffix("_" + basis)
             if name not in dataset["molecule"]:
                 continue
+            converged = list(re.finditer(
+                rf"^converged SCF energy =\s*({NUMBER})", block, re.M
+            ))
+            if not converged:
+                if completed_only:
+                    continue
+                raise ValueError(f"{name}: SCF is not converged")
+            energy = converged[-1]
+            if re.search(r"SCF not converged|not converged!!!", block[energy.end():]):
+                if completed_only:
+                    continue
+                raise ValueError(f"{name}: final SCF is not converged")
             if name in records:
                 raise ValueError(f"Duplicate run: {name}")
             for key, limit in (("SCF conv_tol", conv_tol),
@@ -101,14 +113,6 @@ def read_force_logs(paths, dataset, basis, grid_response, conv_tol=1e-11,
                     match = re.search(rf"^{argument}:\s*({NUMBER})\s*$", text, re.M)
                 if match is None or float(match.group(1)) > limit:
                     raise ValueError(f"{name}: require {key} <= {limit}")
-            converged = list(re.finditer(
-                rf"^converged SCF energy =\s*({NUMBER})", block, re.M
-            ))
-            if not converged:
-                raise ValueError(f"{name}: SCF is not converged")
-            energy = converged[-1]
-            if re.search(r"SCF not converged|not converged!!!", block[energy.end():]):
-                raise ValueError(f"{name}: final SCF is not converged")
             rows = re.findall(
                 rf"^\s*(\d+)\s+([A-Z][a-z]?)\s+({NUMBER})\s+({NUMBER})\s+({NUMBER})\s*$",
                 block, re.M,
@@ -128,13 +132,31 @@ def read_force_logs(paths, dataset, basis, grid_response, conv_tol=1e-11,
     return records
 
 
-def gradient_report(dataset, energies, gradients_on, gradients_off=None):
+def gradient_report(dataset, energies, gradients_on, gradients_off=None,
+                    completed_only=False):
     modes = [("on", gradients_on)]
     if gradients_off is not None:
         modes.append(("off", gradients_off))
     reports = []
     for label, case in dataset["force_validation"]["cases"].items():
         center = case["center"]
+        if completed_only:
+            if (center not in energies or center not in gradients_on
+                    or gradients_on[center]["gradient"] is None):
+                continue
+            if gradients_off is not None and (
+                    center not in gradients_off
+                    or gradients_off[center]["gradient"] is None):
+                continue
+            pairs_by_step = {
+                step: pairs for step, pairs in case["pairs"].items()
+                if all(pair[side] in energies
+                       for pair in pairs for side in ("minus", "plus"))
+            }
+            if not pairs_by_step:
+                continue
+        else:
+            pairs_by_step = case["pairs"]
         settings = energies[center]["settings"]
         for records in (energies, *(records for _, records in modes)):
             for name, record in records.items():
@@ -151,7 +173,7 @@ def gradient_report(dataset, energies, gradients_on, gradients_off=None):
                 torque=np.cross(coords - coords.mean(axis=0), gradient).sum(axis=0),
             )
         previous = {}
-        for step, pairs in case["pairs"].items():
+        for step, pairs in pairs_by_step.items():
             fd = np.empty_like(coords)
             for pair in pairs:
                 atom, axis = pair["atom"], pair["axis"]
