@@ -6,16 +6,35 @@ import numpy as np
 from pyscf import lib
 from pyscf.dft.numint import _dot_ao_ao_dense, _scale_ao
 from pyscf.grad.rks import _gga_grad_sum_
+from pyscf.grad import rks as rks_grad, uks as uks_grad
 
 from cc2cc.utils.Grids import GridCube, iterate_grid_segments
 from cc2cc.utils.grid_neighbors import grid_neighborhoods
 
 
+def baseline_grid_response(modeldict, ni, mol, grids, dm, max_memory, *, unrestricted=False):
+    """Return standard PySCF baseline response and its AO-derivative correction."""
+    lda, vwn, b88, lyp = modeldict.b3lyp_weights(np.empty(0, dtype=np.float64))
+    baseline = f"{lda}*LDA + {b88}*B88, {vwn}*VWN3 + {lyp}*LYP"
+    grad = uks_grad if unrestricted else rks_grad
+    response, moving = grad.get_vxc_full_response(
+        ni, mol, grids, baseline, dm, max_memory=max_memory
+    )
+    _, fixed = grad.get_vxc(ni, mol, grids, baseline, dm, max_memory=max_memory)
+    return response, moving - fixed
+
+
 def nr_neighbors(
     modeldict, ni, mol, grids, dm, max_memory, *, unrestricted=False,
-    nuclear_gradient=False,
+    nuclear_gradient=False, grid_response=False,
 ):
-    """Evaluate XC potential or its fixed-grid AO-center derivative."""
+    """Evaluate XC potentials or nuclear terms with baseline-only grid response.
+
+    The learned correction always uses fixed coordinates and weights.
+    PySCF assembles these XC terms with core, J/K, nuclear and Pulay terms.
+    """
+    if grid_response and not nuclear_gradient:
+        raise ValueError("Grid response requires nuclear_gradient=True.")
     dm = np.asarray(dm)
     if dm.shape != ((2, mol.nao, mol.nao) if unrestricted else (mol.nao, mol.nao)):
         raise ValueError("No-cube SCF requires one real RKS or spin-resolved UKS density.")
@@ -92,6 +111,13 @@ def nr_neighbors(
             else:
                 _dot_ao_ao_dense(ao[0], _scale_ao(ao, wv), None, potential[spin])
     if nuclear_gradient:
+        if grid_response:
+            response, correction = baseline_grid_response(
+                modeldict, ni, mol, grids, dm, memory, unrestricted=unrestricted
+            )
+            # Replace only the baseline's fixed-grid XC derivative.
+            model_fixed = -potential if unrestricted else -potential[0]
+            return response, model_fixed + correction
         if unrestricted:
             return np.zeros((mol.natm, 3)), -potential
         return None, -potential[0]

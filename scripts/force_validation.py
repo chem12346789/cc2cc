@@ -95,6 +95,10 @@ def read_force_logs(paths, dataset, basis, grid_response, conv_tol=1e-11,
             for key, limit in (("SCF conv_tol", conv_tol),
                                ("SCF conv_tol_grad", conv_tol_grad)):
                 match = re.search(rf"^{key} =\s*({NUMBER})", block, re.M)
+                if match is None:
+                    # GPU4PySCF UKS may omit the per-run SCF settings banner.
+                    argument = key.removeprefix("SCF ")
+                    match = re.search(rf"^{argument}:\s*({NUMBER})\s*$", text, re.M)
                 if match is None or float(match.group(1)) > limit:
                     raise ValueError(f"{name}: require {key} <= {limit}")
             converged = list(re.finditer(

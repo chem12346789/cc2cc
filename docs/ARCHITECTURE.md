@@ -168,7 +168,7 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     padding and final unsorting follow GPU4PySCF's integration optimizer.
     Existing GPU hybrid J/K, density fitting and NLC handling are retained.
     The model must be on the active CUDA device. GPU nuclear-gradient assembly
-    remains unsupported; the fixed-grid CPU nuclear-gradient path is unchanged.
+    remains unsupported; nuclear gradients use CPU quadrature/assembly.
     The existing cube-specific `DFT2CC_PROFILE_XC` stage report is not emitted
     by this new no-cube GPU quadrature path.
     Actual GPU4PySCF validation covered RKS/UKS CPU/GPU quadrature agreement,
@@ -178,18 +178,30 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     GPU energy/Fock finite-difference errors were below `1.2e-10`.
     The selected Python environment needed `gpu4pyscf-cuda12x` (1.9.0) and its
     CuPy dependency for these checks; repository dependency manifests were unchanged.
-  - CPU no-cube RKS/UKS nuclear gradients are enabled with
-    `--if_grad 1 --grid_response 0`. Cluster feature derivatives are contracted
+  - CPU no-cube RKS/UKS total nuclear gradients use the standard PySCF
+    gradient hooks, with `--if_grad 1 --grid_response 1` for standard PySCF
+    baseline grid response or `--grid_response 0` for entirely frozen grids.
+    Cluster feature derivatives are contracted
     with second-order AO derivatives via the existing GGA gradient assembly.
     The existing total-SCF energy-weighted density supplies overlap/Pulay terms;
     Coulomb, hybrid exchange, and density-fitting auxiliary-basis response retain
     their existing handling. Physical forces are the negative nuclear gradients.
-    This is the derivative with grid coordinates, weights, and neighborhood
-    membership fixed in the laboratory frame. For energy finite differences,
-    displace nuclei and reconverge SCF while reusing the reference grid arrays.
-    Rebuilding atom-centered grids is a different derivative: moving-grid
-    gradients, translational invariance with frozen quadrature, and MD force
-    support are not promised. `grid_response=True` remains explicitly rejected.
+    With grid response enabled, the baseline semilocal XC derivative is replaced
+    by PySCF's standard `get_vxc_full_response` result, subtracting its
+    `get_vxc` fixed-grid contribution to avoid double counting. Baseline
+    coefficients match `modeldict.b3lyp_weights`. The learned correction keeps
+    fixed coordinates, weights and neighborhood membership: no learned
+    weight/edge-vector response is computed. Existing NLC grid response follows
+    PySCF as before. This mixed convention is intentional and is not the full
+    moving-grid derivative of the model energy; rebuilt-grid total-energy finite
+    differences need not match when the learned correction is nonzero.
+    For entirely frozen-grid finite differences, displace nuclei and reconverge
+    SCF with reference coordinates and weights. No separate `nuclear_gradient`
+    wrapper or custom moving-grid assembly is used. The default two-result
+    model evaluator API and force-training loss conventions are unchanged.
+    Legacy cube-model CPU RKS/UKS gradients use the same baseline-only PySCF
+    response convention and accept `grid_response=1`; the learned cube
+    correction is evaluated on the fixed SCF grid in either mode.
     A CUDA network is supported with CPU quadrature and CPU nuclear assembly;
     it does not select GPU4PySCF numerical integration.
     Validation on tiny STO-3G systems covered real CPU/CUDA network parity,
@@ -398,6 +410,27 @@ created, and failures may occur after earlier files have been updated.
   its array runs one job with 20 CPU threads. The `force` molecule profile selects
   `molecule_Force` and redirects calculation output to
   `log/<checkpoint>/<epoch>/Force_0.out` and `.err`, like the other profiles.
+  For rotation checks, use `--script test/test_rotate.bash --gpus 0`.
+  The `rotate` profile selects `molecule_Rotation` from `rotation-def2.json`:
+  the CH4, H2O and open-shell OH center geometries from `force-def2.json`,
+  each in its reference orientation, rotated 45 degrees about y, and rotated
+  30 degrees about x followed by 45 degrees about z (active rotations about
+  the origin, coordinates in Angstrom). Charges, spins and atom order are
+  preserved. Distinct molecule names keep results for all nine geometries.
+  The script defaults to energy-only evaluation (`IF_GRAD=0`); optionally use
+  `IF_GRAD=1 GRID_RESPONSE=1` for baseline-only PySCF grid response, or
+  `GRID_RESPONSE=0` for fixed-grid CPU gradient evaluation.
+  `ROTATION_SET` overrides the selected molecule/group. No extra runtime
+  rotation is applied. Rotations rebuild atom-centered quadrature grids;
+  numerical energy differences therefore include grid discretization effects.
+  Matching rotation energies/forces are not asserted automatically.
+  `notebooks/dgx1_test_rotate.ipynb` reads the rotation log, reports energy
+  differences and optional gradient covariance (`g_rotated = g_reference @ R.T`).
+  `notebooks/dgx1_test_force.ipynb` uses `force-def2` and checks Cartesian
+  finite differences only when all required converged runs are available.
+  Both are analysis-only: missing runs are reported as PENDING and neither
+  notebook launches SCF. The shared log parser accepts explicitly logged CLI
+  convergence settings when GPU4PySCF UKS omits its per-run SCF banner.
   Dry runs always stay foreground.
 
 ### Script directories (Slurm/HPC)

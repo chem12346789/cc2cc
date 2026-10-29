@@ -42,9 +42,6 @@ def get_veff_modified_rks(ks, modeldict):
         Note the max_memory=2000 use around 8GB gpu memory.
         Modified from pyscf.dft.numint.nr_rks (https://github.com/pyscf/pyscf/blob/v2.9.0/pyscf/dft/numint.py)
         """
-        if modeldict.cube_type == "neighbors":
-            from cc2cc.utils.modelscf_no_cube import nr_neighbors
-            return nr_neighbors(modeldict, ni, mol, grids, dms, max_memory)
         xctype = ni._xc_type(xc_code)
 
         nset = 1
@@ -228,11 +225,6 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
         xctype = ni._xc_type(xc_code)
         ao_loc = mol.ao_loc_nr()
 
-        if getattr(modeldict, "cube_type", None) == "neighbors":
-            from cc2cc.utils.modelscf_no_cube import nr_neighbors
-            return nr_neighbors(
-                modeldict, ni, mol, grids, dms, max_memory, nuclear_gradient=True
-            )
         nset = 1
         nao = mol.nao
 
@@ -259,7 +251,13 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
                     rho_cube, vxc_mat, ao_value = gridcube.gen_cube_rho_rks(
                         ni, dms, ao_deriv=ao_deriv
                     )
-                    _, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
+                    if ks_grad.grid_response:
+                        _, middle_cube, weight_derivative = modeldict.eval_xc_eff(
+                            rho_cube, weights_, weight_response=True
+                        )
+                        exc += np.einsum("p,axp->ax", weight_derivative, weight1)
+                    else:
+                        _, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
 
                     wv = np.einsum(
                         "ilpC,piC->lpC",
@@ -287,8 +285,6 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
         Args:
             ks_grad_ : grad.uhf.Gradients or grad.uks.Gradients object
         """
-        if ks_grad_.grid_response:
-            raise NotImplementedError("Model gradients require fixed quadrature weights; use grid_response=False.")
         if mol is None:
             mol = ks_grad_.mol
         if dm is None:
@@ -297,13 +293,12 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
 
         mf = ks_grad_.base
         ni = mf._numint
-        auxbasis_response = getattr(ks_grad_, "auxbasis_response", False)
 
         max_memory = ks_grad_.max_memory * 0.9 - lib.current_memory()[0]
         exc, vxc = get_vxc(
             ni,
             mol,
-            ks_grad_.grids if ks_grad_.grids is not None else mf.grids,
+            ks_grad_.grids,
             mf.xc,
             dm,
             max_memory,
@@ -328,12 +323,12 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
         if not ni.libxc.is_hybrid_xc(mf.xc):
             vj = ks_grad_.get_j(mol, dm)
             vxc += vj
-            if auxbasis_response:
+            if ks_grad_.auxbasis_response:
                 e1_aux = vj.aux.sum((0, 1))
         else:
             omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mf.xc, spin=mol.spin)
             vj, vk = ks_grad_.get_jk(mol, dm)
-            if auxbasis_response:
+            if ks_grad_.auxbasis_response:
                 vk.aux *= hyb
             vk[:] *= hyb  # Don't erase the .aux tags!
             if omega != 0:  # For range separated Coulomb operator
@@ -341,13 +336,13 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
                 # inv(int2c2e)
                 vk_lr = ks_grad_.get_k(mol, dm, omega=omega)
                 vk[:] += vk_lr * (alpha - hyb)
-                if auxbasis_response:
+                if ks_grad_.auxbasis_response:
                     vk.aux[:] += vk_lr.aux * (alpha - hyb)
             vxc += vj - vk * 0.5
-            if auxbasis_response:
+            if ks_grad_.auxbasis_response:
                 e1_aux = (vj.aux - vk.aux * 0.5).sum((0, 1))
 
-        if auxbasis_response:
+        if ks_grad_.auxbasis_response:
             logger.debug1(ks_grad_, "sum(auxbasis response) %s", e1_aux.sum(axis=0))
             vxc = lib.tag_array(vxc, exc1_grid=exc, aux=e1_aux)
         else:

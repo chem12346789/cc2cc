@@ -270,7 +270,9 @@ class ModelClass:
             if getattr(self.args, "if_resume", False):
                 self.optimizer_state_dict = checkpoint.get("optimizer")
                 if self.optimizer_state_dict is None:
-                    raise ValueError(f"Resume checkpoint has no optimizer state: {load_path}")
+                    raise ValueError(
+                        f"Resume checkpoint has no optimizer state: {load_path}"
+                    )
                 self.rng_state_dict = checkpoint.get("rng_state")
             self.print(f"Model loaded from {load_path} with model {self.args.model}")
         else:
@@ -352,8 +354,10 @@ class ModelClass:
                         "Expected compact no-cube Jacobian (atoms, channels, grids, 3); "
                         "regenerate expanded archives."
                     )
-                return x[:, : self.input_level].transpose(2, 1, 0, 3).reshape(
-                    x.shape[2], self.input_level, -1
+                return (
+                    x[:, : self.input_level]
+                    .transpose(2, 1, 0, 3)
+                    .reshape(x.shape[2], self.input_level, -1)
                 )
             # tipabcx -> tipCx -> piCtx
             if self.cube_type == "center_4":
@@ -454,7 +458,10 @@ class ModelClass:
                 last_epoch=start_update - 1,
             )
         elif self.args.scheduler == "cosine_warm2":
-            if self.args.cosine_restart_lr is None or self.args.cosine_restart_step is None:
+            if (
+                self.args.cosine_restart_lr is None
+                or self.args.cosine_restart_step is None
+            ):
                 raise ValueError(
                     "cosine_warm2 requires --cosine_restart_lr and --cosine_restart_step"
                 )
@@ -622,10 +629,13 @@ class ModelClass:
     def eval(self):
         self.model.eval()
 
-    def model_output(self, input_, weight, relative_positions=None, *, neighbor_indices=None):
+    def model_output(
+        self, input_, weight, relative_positions=None, *, neighbor_indices=None
+    ):
         model = (
             self.model.module
-            if isinstance(self.model, DistributedDataParallel) else self.model
+            if isinstance(self.model, DistributedDataParallel)
+            else self.model
         )
         center_input = input_
         if model.cube_type == "neighbors" and neighbor_indices is not None:
@@ -689,7 +699,9 @@ class ModelClass:
 
         relative_positions = batch.get("relative_positions")
         input_, output = self.model_output(
-            input_, weight, relative_positions,
+            input_,
+            weight,
+            relative_positions,
             neighbor_indices=batch.get("neighbor_indices"),
         )
         if not if_train:
@@ -728,7 +740,8 @@ class ModelClass:
                     )[0]
                     model = (
                         self.model.module
-                        if isinstance(self.model, DistributedDataParallel) else self.model
+                        if isinstance(self.model, DistributedDataParallel)
+                        else self.model
                     )
                     if model.cube_type == "neighbors":
                         force = torch.einsum("pi,pix->x", middle_, grad2force)
@@ -767,13 +780,19 @@ class ModelClass:
                 atomic_batch = self.database_train.process_batch(
                     {
                         key: atomic_batch[key]
-                        for key in ("input", "weight", "neighbor_indices", "relative_positions")
+                        for key in (
+                            "input",
+                            "weight",
+                            "neighbor_indices",
+                            "relative_positions",
+                        )
                         if key in atomic_batch
                     },
                     device=self.local_rank,
                 )
                 _, atomic_output = self.model_output(
-                    atomic_batch["input"], atomic_batch["weight"],
+                    atomic_batch["input"],
+                    atomic_batch["weight"],
                     atomic_batch.get("relative_positions"),
                     neighbor_indices=atomic_batch.get("neighbor_indices"),
                 )
@@ -846,8 +865,7 @@ class ModelClass:
                 jacobian = batch["grad2force"]
                 jacobian_bytes = jacobian.numel() * jacobian.element_size()
                 force_loss = bool(
-                    self.args.if_grad and if_grad
-                    and batch["grad_cc_train"].ndim != 0
+                    self.args.if_grad and if_grad and batch["grad_cc_train"].ndim != 0
                 )
                 mib = 1024**2
                 print(
@@ -921,41 +939,33 @@ class ModelClass:
         return (rho * self.b3lyp_weights(rho)).sum(-1)
 
     def eval_xc_eff(
-        self, rho_cube, weights_, *, return_tensors=False,
-        relative_positions=None, neighbor_indices=None,
+        self, rho_cube, weights_, weight_response=False, *, return_tensors=False
     ):
-        """Return energies and feature derivatives; indices select unique cluster inputs."""
-        if neighbor_indices is not None and self.cube_type != "neighbors":
-            raise ValueError("Cluster indices require a no-cube model.")
-        if getattr(self, "cube_type", None) == "neighbors" and relative_positions is None:
-            raise ValueError("No-cube XC evaluation requires relative_positions.")
+        """Optionally return weight derivatives and detached on-device tensors."""
+        if self.cube_type == "neighbors":
+            raise NotImplementedError(
+                "No-cube SCF integration is not implemented; use energy training "
+                "with cached dataset neighborhoods, not Cartesian cube XC hooks."
+            )
         input_mat = torch.as_tensor(rho_cube, dtype=self.dtype, device=self.device)
         weights_mat = torch.as_tensor(
             weights_.reshape((-1, 1)), dtype=self.dtype, device=self.device
         )
         input_mat.requires_grad = True
-        if neighbor_indices is not None:
-            neighbor_indices = torch.as_tensor(
-                neighbor_indices, dtype=torch.int64, device=self.device
-            )
-        if relative_positions is not None:
-            relative_positions = torch.as_tensor(
-                relative_positions, dtype=self.dtype, device=self.device
-            )
-            input_mat, exc_cube = self.model_output(
-                input_mat, weights_mat, relative_positions,
-                neighbor_indices=neighbor_indices,
+        density_input = input_mat
+        weights_mat.requires_grad = weight_response
+        input_mat, exc_cube = self.model_output(input_mat, weights_mat)
+        exc_cube += torch.einsum("i,ij->ij", self.get_b3lyp_ene(input_mat), weights_mat)
+        if weight_response:
+            middle_cube, weight_derivative = torch.autograd.grad(
+                torch.sum(exc_cube), (density_input, weights_mat)
             )
         else:
-            input_mat, exc_cube = self.model_output(input_mat, weights_mat)
-        if neighbor_indices is None:
-            baseline = self.get_b3lyp_ene(input_mat)
-        else:
-            center_features = input_mat[neighbor_indices[:, 0], :4]
-            baseline = (center_features * self.b3lyp_weights(center_features)).sum(-1)
-        exc_cube += torch.einsum("i,ij->ij", baseline, weights_mat)
-        middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
+            middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
+            weight_derivative = None
         outputs = (exc_cube.detach().squeeze(-1), middle_cube.detach())
+        if weight_response:
+            outputs += (weight_derivative.detach().reshape(-1),)
         if return_tensors:
             return outputs
         return tuple(output.cpu().numpy() for output in outputs)

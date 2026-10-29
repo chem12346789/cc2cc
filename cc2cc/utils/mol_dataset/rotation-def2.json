@@ -1,0 +1,46 @@
+{
+    "molecule": [
+        "Rotation-ch4-reference", "Rotation-ch4-y45", "Rotation-ch4-x30-z45",
+        "Rotation-h2o-reference", "Rotation-h2o-y45", "Rotation-h2o-x30-z45",
+        "Rotation-oh-reference", "Rotation-oh-y45", "Rotation-oh-x30-z45"
+    ],
+    "molecule_Rotation": [
+        "Rotation-ch4-reference", "Rotation-ch4-y45", "Rotation-ch4-x30-z45",
+        "Rotation-h2o-reference", "Rotation-h2o-y45", "Rotation-h2o-x30-z45",
+        "Rotation-oh-reference", "Rotation-oh-y45", "Rotation-oh-x30-z45"
+    ],
+    "charge": {
+        "Rotation-ch4-reference": 0, "Rotation-ch4-y45": 0, "Rotation-ch4-x30-z45": 0,
+        "Rotation-h2o-reference": 0, "Rotation-h2o-y45": 0, "Rotation-h2o-x30-z45": 0,
+        "Rotation-oh-reference": 0, "Rotation-oh-y45": 0, "Rotation-oh-x30-z45": 0
+    },
+    "spin": {
+        "Rotation-ch4-reference": 0, "Rotation-ch4-y45": 0, "Rotation-ch4-x30-z45": 0,
+        "Rotation-h2o-reference": 0, "Rotation-h2o-y45": 0, "Rotation-h2o-x30-z45": 0,
+        "Rotation-oh-reference": 1, "Rotation-oh-y45": 1, "Rotation-oh-x30-z45": 1
+    },
+    "Rotation-ch4-reference": [["H", 0.0, -1.085725, 0.0], ["C", 0.0, 0.0, 0.0], ["H", -0.678881, 0.362633, 0.768858], ["H", -0.32641, 0.362633, -0.972357], ["H", 1.005291, 0.362633, 0.203499]],
+    "Rotation-ch4-y45": [["H", 0.0, -1.085725, 0.0], ["C", 0.0, 0.0, 0.0], ["H", 0.063623346851, 0.362633, 1.023706064288], ["H", -0.918366952881, 0.362633, -0.456753503987], ["H", 0.85474360603, 0.362633, -0.566952560301]],
+    "Rotation-ch4-x30-z45": [["H", 0.664868062746, -0.664868062746, -0.5428625], ["C", 0.0, 0.0, 0.0], ["H", -0.430275459408, -0.52980725803, 0.847167059903], ["H", -0.796653292138, 0.335039843244, -0.660769363548], ["H", 0.560729391124, 0.860966775207, 0.357551803645]],
+    "Rotation-h2o-reference": [["O", 0.0, 0.0, 0.11779], ["H", 0.13, 0.835453, -0.431161], ["H", 0.0, -0.755453, -0.471161]],
+    "Rotation-h2o-y45": [["O", 0.083290107756, 0.0, 0.083290107756], ["H", -0.212952985329, 0.835453, -0.396800748437], ["H", -0.333161138131, -0.755453, -0.333161138131]],
+    "Rotation-h2o-x30-z45": [["O", 0.041645053878, -0.041645053878, 0.102009132312], ["H", -0.572122940407, 0.755970703515, 0.044330120879], ["H", 0.296038024598, -0.296038024598, -0.785763895272]],
+    "Rotation-oh-reference": [["O", 0.0, 0.0, 0.107851], ["H", 0.0, 0.0, -0.862809]],
+    "Rotation-oh-y45": [["O", 0.076262173458, 0.0, 0.076262173458], ["H", -0.610098094769, 0.0, -0.610098094769]],
+    "Rotation-oh-x30-z45": [["O", 0.038131086729, -0.038131086729, 0.093401705824], ["H", -0.305049047384, 0.305049047384, -0.747214512614]],
+    "rotation_validation": {
+        "source_dataset": "force-def2",
+        "coordinate_unit": "Angstrom",
+        "convention": "Active right-handed rotations about the origin; column coordinates transform as R @ r.",
+        "orientations": {
+            "reference": [],
+            "y45": [["y", 45]],
+            "x30-z45": [["x", 30], ["z", 45]]
+        },
+        "sources": {
+            "ch4": "Force-ch4-center",
+            "h2o": "Force-h2o-center",
+            "oh": "Force-oh-center"
+        }
+    }
+}

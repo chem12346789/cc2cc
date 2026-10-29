@@ -88,6 +88,9 @@ select_molecule_profile() {
     (force)
         name_mol_input_list=("molecule_Force")
         ;;
+    (rotate)
+        name_mol_input_list=("molecule_Rotation")
+        ;;
     (tmc)
         name_mol_input_list=("TMB28_C1" "TMB28_T1")
         ;;

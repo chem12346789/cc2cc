@@ -14,6 +14,12 @@ unless explicitly asked otherwise.
 - No speculative abstractions, compatibility layers, or unrelated refactors.
 - Trust valid inputs; no redundant assertions, broad try/except, or fallbacks.
 
+## Questions and User Responses
+
+- Whenever you ask the user a question, explicitly notify them that their answer is needed.
+- Pause until the user replies, even if the question tool reports that they are unavailable.
+- Do not choose an option or proceed on the user's behalf while awaiting their answer.
+
 ## Commit Approval
 
 - Complete requested changes and report validation results before asking for commit approval.
