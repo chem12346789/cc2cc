@@ -22,6 +22,7 @@ from cc2cc.utils.ccsd_t_target import (
 from cc2cc.utils.get_dft_energy_rks import get_cc_energy, get_dft_energy, get_hf_energy
 from cc2cc.utils.get_dft_grad_rks import get_dft_grad, get_dft_input
 from cc2cc.utils.zmp_reference import get_zmp, zmp_baseline_gradient
+from cc2cc.utils.zmp_constraints import get_zmp_constraint_data
 from cc2cc.utils.b3lyp_reference import converged_b3lyp, get_vv10_data
 
 
@@ -284,4 +285,7 @@ def cc(
             mol, grids, dm1_zmp, e_zmp, dm1_cc, args, suffix="_zmp",
         )
     )
+    data_dict.update(get_zmp_constraint_data(
+        mdft, grids, dm1_zmp, dm1_cc, DATA_PATH / f"data_{name}_zmp", args,
+    ))
     np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)

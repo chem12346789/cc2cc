@@ -20,15 +20,24 @@ class E3nn(torch.nn.Module):
     from each grid point to the cube center, divided by EDGE_LEN.
     """
 
-    def __init__(self, cube_type: str, cube_size: int, input_level: int, lmax: int):
+    def __init__(
+        self,
+        cube_type: str,
+        cube_size: int,
+        input_level: int,
+        lmax: int,
+        point_indices: torch.Tensor | None = None,
+    ):
         super().__init__()
         self.input_level = input_level
         self.cube_type = cube_type
         self.cube_size = cube_size
         self.lmax = lmax
 
-        if self.cube_type != "cube":
-            raise NotImplementedError("Only cube type is implemented.")
+        if self.cube_type not in ("cube", "cube5"):
+            raise NotImplementedError("Only cube and cube5 types are implemented.")
+        if self.cube_type == "cube5" and point_indices is None:
+            raise ValueError("cube5 requires explicit point indices.")
 
         axis = (
             torch.arange(EDGE_SIZE, dtype=torch.float64, device="cpu") - CUBE_MIDDLE
@@ -36,6 +45,8 @@ class E3nn(torch.nn.Module):
         edge_vec = torch.stack(
             torch.meshgrid(axis, axis, axis, indexing="ij"), dim=-1
         ).reshape(EDGE_SIZE**3, 3)
+        if point_indices is not None:
+            edge_vec = edge_vec.index_select(0, point_indices)
         radii = torch.linalg.vector_norm(edge_vec, dim=-1, keepdim=True) / EDGE_LEN
 
         irreps_input = o3.Irreps(f"{self.input_level}x0e")
@@ -71,7 +82,10 @@ class E3nn(torch.nn.Module):
         self.register_buffer("sh", sh, persistent=False)
 
     def forward(self, f_in: torch.Tensor) -> torch.Tensor:
-        """Map [..., EDGE_SIZE**3, input_level] to [..., 1, cube_size]."""
+        """Map [..., points, input_level] to [..., 1, cube_size].
+
+        Inputs must follow point_indices order when a subset is selected.
+        """
         weights = self.radial(self.radii)
         f_hidden = self.tp1(f_in, self.sh, weights)
         f_hidden = f_hidden.mean(dim=-2, keepdim=True)

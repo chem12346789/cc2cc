@@ -44,6 +44,59 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   Full-pipeline finite differences remain available as trajectory diagnostics.
   `get_zmp.py` forwards legacy entry points and `zmp.py` implements the inversion
   SCF equations.
+- `zmp_constraints.py`: generation only; training is unchanged.
+  Both `--zmp_feature_ov` and `--zmp_observable_response` default to `true`;
+  pass `false` explicitly to disable either option.
+  `gen_data.py --zmp_feature_ov true` streams float64
+  `(center, feature, cube_sample, virtual, occupied)` Jacobians to per-spin
+  `.npy` sidecars beside the normal dataset. Load with `np.load(..., mmap_mode="r")`.
+  The derivative is `J = dx/dkappa_ai`, with
+  `dP = n*(Cv*kappa*Co.T + Co*kappa.T*Cv.T)`, `n=2` (RKS) or `1` (UKS).
+  Thus `F_correction_ai = sum_x (dE_correction/dx)*J_xai/(2*n)`;
+  use the derivative of the complete quadrature-weighted model energy.
+  Accumulate all grid blocks before forming a nonlinear stationarity loss.
+  A full AO-pair Jacobian is never constructed.
+  `--zmp_observable_response true` also/instead saves three total dipoles,
+  six raw electronic second moments (`xx,xy,xz,yy,yz,zz`, not traceless
+  quadrupoles), and one electronic Gaussian projection per atom
+  (`exp(-|r-R_atom|^2/(1 Bohr)^2)`). Dipoles include the nuclear contribution;
+  moments/projections are positive-electron-number observables. The origin is
+  zero; dipoles are in e*Bohr and second moments in electrons*Bohr^2.
+  Dipole/moment AO operators are analytic; atom projections use the saved grid.
+  The compact local potential basis consists of these same electronic operators.
+  Its coefficient units are Hartree divided by the corresponding operator unit.
+  At fixed ZMP density both baseline Fock diagonal blocks are diagonalized;
+  saved energies/gaps are not inversion eigenvalues. The response Hamiltonian
+  is this block-diagonal baseline, with independent-particle response only:
+  no induced Hartree/XC coupling, SCF reconstruction, or stability guarantee.
+  `R_mk = -2*n*sum_ai O_mai*B_kai/max(gap_ai,gap_floor)`.
+  Nonpositive gaps are errors; small positive gaps use
+  `--zmp_response_gap_floor` (default `1e-3` Hartree). Raw gaps are retained.
+  Each `zmp_potential_feature_file_s*` stores
+  `T_kx = pinv(B.T)_k,ai * J_xai/(2*n)` in
+  `(center, feature, cube_sample, potential)` order. This defines an unweighted
+  OV least-squares projection with pseudoinverse cutoff `1e-10`; dependent
+  potential directions use the minimum-norm solution.
+  Contract model energy derivatives with `T`, add
+  `zmp_baseline_potential_coeff_s*`, and multiply by `zmp_observable_response_s*`
+  to approximate the change from `zmp_observable_reference` toward
+  `zmp_observable_target` (the CC density). Sum the UKS spin contributions;
+  a common scalar potential uses the same coefficients for both spins.
+  This compact constraint misses density errors outside the selected subspace.
+  Metadata includes the determinant, MO basis/occupations, baseline Fock,
+  overlap, serialized molecule/basis/ECP and density-fitting auxiliary molecule,
+  both quadrature grids and cube layout.
+  Sidecar filenames are relative to the dataset directory; keep them together.
+  With `--if_continue true` and either new flag, cached ZMP/CC densities and
+  grid coordinates/weights are reused, constraints are merged into
+  `data_<name>_addon.npz`, and CC/ZMP inversion and VV10 work are skipped.
+  Existing addon fields are preserved. Cached feature counts are reused;
+  incompatible cube layouts are errors. Legacy caches use the standard
+  density-fitted B3LYP baseline and quadrature, whose actual settings are
+  recorded anew.
+  `--zmp_response_block_size` (default 32 centers) bounds transient Jacobian
+  blocks, not disk size or model autograd memory. No training losses or force
+  conventions are changed by these generation options.
 - `ccsd_t_target.py`: shared CCSD solver settings, CCSD(T) lambda solving,
   triples-corrected target density and CC-gradient one-particle intermediates.
   `ccsd_t_target_gradient()` handles restricted/unrestricted two-particle
@@ -89,6 +142,11 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     chunks of at most 32,768 entries, checkpointing the aggregation to recompute
     gathered activations during backward. Readouts and the transformer run
     once per batch of up to 256 centers, rather than per tiny edge batch.
+    This variable-radius model runs eagerly: whole-model `torch.compile`
+    traces variable-length Python neighborhood loops and can spend excessive
+    time compiling/recompiling before an epoch finishes. Fixed-neighborhood
+    models retain their existing compilation policy. Disabling compilation
+    does not cap neighborhoods or reduce the edge-processing workload.
     Feature and model-parameter derivatives are retained without a full
     expanded edge list. Parameter names/shapes and normalized pooling are
     preserved; changed reduction order can introduce roundoff differences.
@@ -259,9 +317,34 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     Checkpoint-size checks stream serialization into a byte counter rather than
     retaining a full serialized checkpoint in RAM.
 - `model/`: neural model definitions; `--model NAME` → `model/NAME.py` with `Model`
+  - `transformer+dense_mix_e3nn_4_correct_5` uses the `cube5` input contract:
+    four alternating corners and the center in `ModelClass.CUBE_INDEX` order
+    `[0, 8, 13, 24, 20]`, with `cube_type="cube5"` and `cube_size=5`.
+    Each spacing-normalized e3nn expert uses those five points; the center
+    branch and six-way output mixture are unchanged. `EDGE_SIZE=3` is required.
+    This variant requires a fresh checkpoint. Its e3nn experts use the same
+    point ordering when selecting their geometry through `point_indices`.
 - `*.json`: dataset/split definitions (`gmtkn-def2`, `gmtkn-diet30-def2`,
   `gmtkn-diet100-def2`, `dft-fitset-def2`)
 - PySCF CCSD(T) intermediate files: vendor-like scientific code — patch minimally
+
+### Training stall diagnostics
+
+Set `DFT2CC_TRACE_TRAIN=1` in the training job environment to emit flushed
+`[train-progress]` start/done messages for logger setup, RNG restoration, batch
+fetching, molecular/atomic forward passes, backward, and optimizer updates.
+Default is `0`; other values are rejected. Each message identifies the PID
+and stage; tensor stages also include the system, device, and grid count.
+Radius batches report the total directed neighbor count, including centers,
+before padding. This is the edge workload, not the model's latent width.
+
+An unfinished stage dumps Python thread stacks to stderr every 120 seconds.
+The watchdog is cancelled on success or exception; exceptions propagate without
+a misleading `done` message. Tensor stages synchronize CUDA before reporting
+completion, so diagnostic wall times include queued GPU work and tracing adds
+synchronization overhead. Training mathematics and neighborhoods are unchanged.
+Enable tracing in a newly launched process; it cannot instrument an already
+running worker. These diagnostics identify the slow stage, not a speedup.
 
 ### Training peak GPU memory
 

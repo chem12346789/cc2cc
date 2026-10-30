@@ -1,8 +1,10 @@
+import faulthandler
 import os
 import random
 import shutil
 import time
 from collections import deque
+from contextlib import contextmanager
 from io import BytesIO
 from typing import cast
 
@@ -60,6 +62,35 @@ TIME_LIST = [
 
 STATE_DICT_PREFIXES = ("_orig_mod.",)
 DEBUG = 0
+
+
+@contextmanager
+def _training_stage(stage, batch=None):
+    setting = os.environ.get("DFT2CC_TRACE_TRAIN", "0")
+    if setting not in ("0", "1"):
+        raise ValueError("DFT2CC_TRACE_TRAIN must be 0 or 1")
+    if setting == "0":
+        yield
+        return
+
+    label = f"[train-progress] pid={os.getpid()} stage={stage}"
+    device = None
+    if batch is not None:
+        device = batch["input"].device
+        label += f" name={batch.get('name', 'atomic')} device={device} grids={len(batch['input'])}"
+        neighbors = batch.get("neighbor_indices")
+        if isinstance(neighbors, RadiusNeighborhoods):
+            label += f" edges={int(neighbors.counts.sum())}"
+    print(f"{label} start", flush=True)
+    start = time.perf_counter()
+    faulthandler.dump_traceback_later(120, repeat=True)
+    try:
+        yield
+        if device is not None and device.type == "cuda":
+            torch.cuda.synchronize(device)
+    finally:
+        faulthandler.cancel_dump_traceback_later()
+    print(f"{label} done wall_s={time.perf_counter() - start:.3f}", flush=True)
 
 
 class _CheckpointSizeBuffer(BytesIO):
@@ -229,10 +260,17 @@ class ModelClass:
         if self.args.if_grad:
             return
 
+        if self.radius_cutoff is not None:
+            self.print(
+                "Running radius model in eager mode: variable-length neighborhood "
+                "loops are not compiled."
+            )
+            return
+
         try:
             compiled_model = torch.compile(self.model)
             self.model = cast(torch.nn.Module, compiled_model)
-            self.print("Model compiled with torch.compile().")
+            self.print("torch.compile enabled; compilation occurs on first use.")
         except Exception as exc:  # pragma: no cover - fallback path
             self.print(f"torch.compile failed ({exc}). Using eager mode.")
 
@@ -714,12 +752,13 @@ class ModelClass:
             input_ = input_.detach()
 
         relative_positions = batch.get("relative_positions")
-        input_, output = self.model_output(
-            input_,
-            weight,
-            relative_positions,
-            neighbor_indices=batch.get("neighbor_indices"),
-        )
+        with _training_stage("forward" if if_train else "eval-forward", batch):
+            input_, output = self.model_output(
+                input_,
+                weight,
+                relative_positions,
+                neighbor_indices=batch.get("neighbor_indices"),
+            )
         if not if_train:
             output = output.detach()
 
@@ -806,12 +845,13 @@ class ModelClass:
                     },
                     device=self.local_rank,
                 )
-                _, atomic_output = self.model_output(
-                    atomic_batch["input"],
-                    atomic_batch["weight"],
-                    atomic_batch.get("relative_positions"),
-                    neighbor_indices=atomic_batch.get("neighbor_indices"),
-                )
+                with _training_stage(f"atomic-forward:{name_atom}", atomic_batch):
+                    _, atomic_output = self.model_output(
+                        atomic_batch["input"],
+                        atomic_batch["weight"],
+                        atomic_batch.get("relative_positions"),
+                        neighbor_indices=atomic_batch.get("neighbor_indices"),
+                    )
                 atomic_output = torch.sum(atomic_output)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
 
@@ -862,18 +902,23 @@ class ModelClass:
         data_record_l = DataRecordList(len(self.database_train))
         pending_records = deque()
 
-        for step, batch in enumerate(self.database_train.data_gpu):
+        batches = iter(self.database_train.data_gpu)
+        for step in range(len(self.database_train.data_gpu)):
+            with _training_stage(f"train-fetch:{step}"):
+                batch = next(batches)
             if profile_memory:
                 torch.cuda.synchronize(memory_device)
                 torch.cuda.reset_peak_memory_stats(memory_device)
                 start_allocated = torch.cuda.memory_allocated(memory_device)
             batch = self.database_train.process_batch(batch, device=self.local_rank)
             tot_loss, data_record, event = self.loss(batch, if_grad=if_grad)
-            tot_loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
-            self.optimizer.step()
-            self.scheduler.step()
-            self.optimizer.zero_grad(set_to_none=True)
+            with _training_stage("backward", batch):
+                tot_loss.backward()
+            with _training_stage("optimizer", batch):
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
+                self.optimizer.step()
+                self.scheduler.step()
+                self.optimizer.zero_grad(set_to_none=True)
             if profile_memory:
                 torch.cuda.synchronize(memory_device)
                 peak_allocated = torch.cuda.max_memory_allocated(memory_device)
@@ -917,7 +962,10 @@ class ModelClass:
         data_record_l = DataRecordList(len(self.database_eval))
         pending_records = deque()
 
-        for batch in self.database_eval.data_gpu:
+        batches = iter(self.database_eval.data_gpu)
+        for step in range(len(self.database_eval.data_gpu)):
+            with _training_stage(f"eval-fetch:{step}"):
+                batch = next(batches)
             batch = self.database_eval.process_batch(batch, device=self.local_rank)
             _, data_record, event = self.loss(batch, if_train=False)
             if event is None:
