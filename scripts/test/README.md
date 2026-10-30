@@ -10,7 +10,7 @@ and on fixed B3LYP densities:
 ```bash
 python -m scripts.analyze_density_effect \
   --scf 'validate/def2-QZVP(D)_atom-3259973/2395' \
-  --b3lyp 'validate/def2-QZVP(D)_atom-3259973-scf-b3-post-scf-b3lyp/2395'
+  --b3lyp 'validate/def2-QZVP(D)_atom-3259973-post-b3lyp/2395'
 ```
 
 Replace both paths to analyze other checkpoints. Each input accepts a checkpoint

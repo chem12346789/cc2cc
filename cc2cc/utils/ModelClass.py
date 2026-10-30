@@ -12,7 +12,6 @@ import torch
 import torch.distributed as dist
 import torch.optim as optim
 from torch.nn.parallel import DistributedDataParallel
-from torch.utils.checkpoint import checkpoint
 
 from cc2cc.utils.DataBase import DataBase
 from cc2cc.utils.env_var import CHECKPOINTS_PATH, CUBE_MIDDLE, MAIN_PATH
@@ -653,40 +652,23 @@ class ModelClass:
         if isinstance(neighbor_indices, RadiusNeighborhoods):
             if relative_positions is None:
                 raise ValueError("Radius neighborhoods require grid coordinates.")
-            outputs = []
-            for start, stop in neighbor_indices.ranges(32768):
-                def evaluate(features, coords, start=start, stop=stop):
-                    indices = torch.as_tensor(
-                        neighbor_indices.query(start, stop),
-                        dtype=torch.int64, device=features.device,
-                    )
-                    edges = coords[indices] - coords[start:stop, None, :]
-                    padding = indices == indices[:, :1]
-                    padding[:, 0] = False
-                    outside = edges.new_tensor((2 * neighbor_indices.radius, 0, 0))
-                    edges = torch.where(padding[..., None], outside, edges)
-                    return self.model(
-                        features[indices].permute(0, 2, 1).contiguous(), edges
-                    )
-                outputs.append(checkpoint(
-                    evaluate, input_, relative_positions, use_reentrant=False
-                ))
-            return input_, torch.cat(outputs) * weight
-        if model.cube_type == "neighbors" and neighbor_indices is not None:
-            input_ = input_[neighbor_indices].permute(0, 2, 1).contiguous()
-        if model.before_weight:
-            input_ = torch.einsum("p...,pi->p...", input_, weight)
+            return input_, self.model(
+                input_, relative_positions, neighborhoods=neighbor_indices
+            ) * weight
         if model.cube_type == "neighbors":
+            if neighbor_indices is not None:
+                input_ = input_[neighbor_indices].permute(0, 2, 1).contiguous()
+            if model.before_weight:
+                input_ = torch.einsum("p...,pi->p...", input_, weight)
             if relative_positions is None:
                 raise ValueError("Neighbor model requires relative_positions.")
             output = self.model(input_, relative_positions)
+            derivative_input = center_input if neighbor_indices is not None else input_
         else:
+            if model.before_weight:
+                input_ = torch.einsum("p...,pi->p...", input_, weight)
             output = self.model(input_)
-        derivative_input = (
-            center_input
-            if model.cube_type == "neighbors" and neighbor_indices is not None
-            else input_
-        )
+            derivative_input = input_
         return derivative_input, output if model.before_weight else output * weight
 
     def loss(self, batch, if_train=True, if_grad=True):

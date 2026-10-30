@@ -54,23 +54,18 @@ class Model(torch.nn.Module):
         self.mixing_weight = torch.nn.Linear(self.flat_size, self.input_level + 2)
 
     def forward(self, x, relative_positions):
-        radius = getattr(self, "radius_cutoff", None)
-        if x.ndim != 3 or x.shape[1] != 4 or (
-            radius is None and x.shape[2] != self.cube_size
-        ):
+        if x.ndim != 3 or x.shape[1:] != (4, self.cube_size):
             raise ValueError(
                 f"Expected density features with shape (N, 4, {self.cube_size})."
             )
-        if relative_positions.shape != (x.shape[0], x.shape[2], 3):
+        if relative_positions.shape != (x.shape[0], self.cube_size, 3):
             raise ValueError(
                 f"Expected relative positions with shape (N, {self.cube_size}, 3)."
             )
         features = x.permute(0, 2, 1).contiguous()
         encoded = torch.cat(
             tuple(
-                getattr(self, f"conv{i}")(
-                    features, relative_positions, radius_cutoff=radius
-                )
+                getattr(self, f"conv{i}")(features, relative_positions)
                 for i in range(1, self.input_level + 1)
             ),
             dim=-2,

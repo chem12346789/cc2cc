@@ -41,29 +41,15 @@ class E3nn(torch.nn.Module):
             device="cpu", dtype=torch.float64
         )
 
-    def forward(
-        self, f_in: torch.Tensor, edge_vec: torch.Tensor, radius_cutoff=None
-    ) -> torch.Tensor:
+    def forward(self, f_in: torch.Tensor, edge_vec: torch.Tensor) -> torch.Tensor:
         """Map [..., cube_size, input_level] and [..., cube_size, 3] to scalars."""
-        if f_in.shape[-1] != self.input_level or (
-            radius_cutoff is None and f_in.shape[-2] != self.cube_size
-        ):
+        if f_in.shape[-2:] != (self.cube_size, self.input_level):
             raise ValueError("Feature shape does not match neighborhood size/channels.")
-        if edge_vec.shape != (*f_in.shape[:-1], 3):
+        if edge_vec.shape[-2:] != (self.cube_size, 3):
             raise ValueError("Expected edge_vec with shape [..., cube_size, 3].")
         radii = torch.linalg.vector_norm(edge_vec, dim=-1, keepdim=True)
         sh = o3.spherical_harmonics(
             self.irreps_sh, edge_vec, normalize=True, normalization="component"
         )
         f_hidden = self.tp1(f_in, sh, self.radial(radii))
-        if radius_cutoff is None:
-            pooled = f_hidden.mean(dim=-2, keepdim=True)
-        else:
-            # Squared radii avoid a norm derivative at the center; the cubic
-            # taper and its first two derivatives vanish at the boundary.
-            weights = (1 - edge_vec.square().sum(-1, keepdim=True)
-                       / radius_cutoff**2).clamp_min(0).pow(3)
-            pooled = (f_hidden * weights).sum(dim=-2, keepdim=True) / weights.sum(
-                dim=-2, keepdim=True
-            )
-        return self.readout(pooled)
+        return self.readout(f_hidden.mean(dim=-2, keepdim=True))

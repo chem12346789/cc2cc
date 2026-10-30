@@ -58,7 +58,7 @@ def load_post_scf_density(mol, name, test_mode, *, grid_level=None, use_gpu=None
     from cc2cc.utils.b3lyp_reference import converged_b3lyp
     from cc2cc.utils.env_var import DATA_TEST_PATH
 
-    vv10 = test_mode == "post-scf-b3lyp-vv10"
+    vv10 = test_mode == "post-b3lyp-vv10"
     key = "dm1_scf_vv10" if vv10 else "dm1_dft-b3lyp"
     energy_key = "e_scf_vv10" if vv10 else "e_dft-b3lyp"
     path = DATA_TEST_PATH / f"{name}_dft.npz"

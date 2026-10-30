@@ -61,7 +61,7 @@ def test_model_rks(
 
             get_veff_modified_rks(mdft, modeldict)
 
-    if args.baseline == "b3lyp-vv10" or test_mode == "post-scf-b3lyp-vv10":
+    if args.baseline == "b3lyp-vv10" or test_mode == "post-b3lyp-vv10":
         mdft.xc = "b3lyp"
         mdft.nlc = "vv10"
     else:
@@ -111,24 +111,6 @@ def test_model_rks(
 
         dm1_scf = mdft.make_rdm1()
         e_scf = mdft.e_tot
-
-    e_post_scf_vv10 = None
-    if not mdft.do_nlc():
-        if use_gpu:
-            nlcgrids = utils.GridCPU(
-                mol,
-                args.grid_level,
-                input_level=modeldict.input_level,
-                cube_type=modeldict.cube_type,
-                cube_size=modeldict.cube_size,
-            )
-            dm1_nlc = cp.asnumpy(dm1_scf)
-        else:
-            nlcgrids = mdft.grids
-            dm1_nlc = dm1_scf
-        exc_vv10 = utils.eval_nlc_exc_density(mol, nlcgrids, dm1_nlc, "vv10")
-        enlc_post = np.dot(exc_vv10, nlcgrids.weights)
-        e_post_scf_vv10 = e_scf + enlc_post
 
     if (
         args.s6 is None
@@ -183,8 +165,6 @@ def test_model_rks(
         "time_ai": time_ai,
         "scf_ene": e_scf,
         "scf_d3bj_ene": e_scf + d3_energy_force[0],
-        "scf_vv10_ene": e_scf if mdft.do_nlc() else None,
-        "post_scf_vv10_ene": e_post_scf_vv10,
         "scf_dipole_x": scf_dipole[0],
         "scf_dipole_y": scf_dipole[1],
         "scf_dipole_z": scf_dipole[2],

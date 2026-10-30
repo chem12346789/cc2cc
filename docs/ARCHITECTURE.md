@@ -83,9 +83,15 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     experiment: do not resume its checkpoints as an equivalent model.
     Existing archives supply coordinates and central features, without being
     modified. A lazy KD-tree queries variable-length neighborhoods in bounded
-    padded batches; padding contributes zero weight. Training checkpoints
-    those batches to recompute gathered activations during backward, retaining
-    feature and model-parameter derivatives without a full expanded edge list.
+    padded batches; padding contributes zero weight. The cutoff encoder lives
+    in `model/model_utils/model_e3nn_correct_no_cube_radius.py`; the original
+    encoder remains cutoff-free. Training pools hidden edge features in
+    chunks of at most 32,768 entries, checkpointing the aggregation to recompute
+    gathered activations during backward. Readouts and the transformer run
+    once per batch of up to 256 centers, rather than per tiny edge batch.
+    Feature and model-parameter derivatives are retained without a full
+    expanded edge list. Parameter names/shapes and normalized pooling are
+    preserved; changed reduction order can introduce roundoff differences.
     A single neighborhood larger than the batch budget is still included
     completely. CPU RKS/UKS gradients and CPU/GPU SCF use the same radius and
     taper; GPU gradients remain unsupported. Total compute can remain large
@@ -385,12 +391,16 @@ created, and failures may occur after earlier files have been updated.
     without recomputing DFT.
 - `train.py`: train/eval list setup → `train_model()`
 - `test.py`: checkpoint loading and RKS/UKS model validation
-  - `--test_mode post-scf-b3lyp` evaluates the model once on cached `dm1_dft`,
-    using the B3LYP baseline. `--test_mode post-scf-b3lyp-vv10` uses cached
-    `dm1_scf_vv10` with the B3LYP+VV10 baseline. Neither mode runs model SCF;
-    `--max_cycle` is ignored for model evaluation.
+  - `--test_mode post-b3lyp` evaluates the model once on cached `dm1_dft`,
+    using the B3LYP baseline. `--test_mode post-b3lyp-d3` uses that same
+    density and reports the D3BJ-corrected energy in `scf_d3bj_ene`.
+    `--test_mode post-b3lyp-nl` also uses the B3LYP density and reports
+    the post-SCF VV10 energy in `post_scf_vv10_ene`.
+    `--test_mode post-b3lyp-vv10` uses cached `dm1_scf_vv10` with the
+    B3LYP+VV10 baseline. None of these modes runs model SCF; `--max_cycle` is
+    ignored for model evaluation.
     The default `--test_mode scf` preserves model SCF.
-  - Both modes read and write only `${name}_dft.npz` in `DATA_TEST_PATH`
+  - All post-SCF modes read and write only `${name}_dft.npz` in `DATA_TEST_PATH`
     (default `data/test/`), never training-data or addon caches.
     If the file or requested density/energy pair is missing, plain B3LYP or
     B3LYP+VV10 reference SCF runs with the requested grid level (RKS or UKS).
@@ -407,10 +417,10 @@ created, and failures may occur after earlier files have been updated.
     `${load}-${test_mode}`, isolating CSVs and continuation from model SCF.
     Use that label as `collect_info.py --model_load`; checkpoint loading still
     uses the original `--load`. For example, `--load atom-393567 --load_epoch 1115
-    --test_mode post-scf-b3lyp` writes under
-    `validate/${basis}_atom-393567-post-scf-b3lyp/1115/`.
-  - `scripts/test/test_diet100.bash` accepts `TEST_MODE=post-scf-b3lyp` or
-    `TEST_MODE=post-scf-b3lyp-vv10` (default `scf`), with separate log directories.
+    --test_mode post-b3lyp` writes under
+    `validate/${basis}_atom-393567-post-b3lyp/1115/`.
+  - `scripts/test/test_diet100.bash` accepts `TEST_MODE=post-b3lyp` or
+    `TEST_MODE=post-b3lyp-vv10` (default `scf`), with separate log directories.
     The DIET100 calculator includes the launcher's post-SCF runs at epoch 2395:
     `atom-3259973-scf-b3` and `atom-3259973-scf-b3-vv10`, respectively.
 - `benchmark_dft.py`: baseline DFT benchmarking
