@@ -3,8 +3,8 @@
 # =========================
 # Model and checkpoint
 # =========================
-# export MODEL="--model transformer+dense_mix_e3nn_4_correct"
-export MODEL="--model transformer+dense_mix_e3nn_4_no_cube"
+export MODEL="--model transformer+dense_mix_e3nn_4_correct"
+# export MODEL="--model transformer+dense_mix_e3nn_4_correct_cube5"
 
 # =========================
 # Data and targets
@@ -14,11 +14,11 @@ export BASIS_ARGS="def2-QZVPPD"
 
 # dft_vv10 is the renamed dft_d3bj_vv10 target.
 # export RHO_INPUT="dft"
-# export RHO_INPUT="dft_vv10"
-export RHO_INPUT="zmp"
+export RHO_INPUT="dft_vv10"
+# export RHO_INPUT="zmp"
 
-export SPLIT_CONFIG="mol1_add.json"
-# export SPLIT_CONFIG="mol2_ex_add.json"
+# export SPLIT_CONFIG="mol1_add.json"
+export SPLIT_CONFIG="mol2_ex_add.json"
 # export SPLIT_CONFIG="test.json"
 # export SPLIT_CONFIG="mini.json"
 export MOL0_WEIGHTING=4
@@ -61,7 +61,7 @@ export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${C
 # Hardware and environment
 # =========================
 export NUMBER_OF_GPU=1
-export CUDA_VISIBLE_DEVICES=6
+export CUDA_VISIBLE_DEVICES=4
 
 if [ ${NUMBER_OF_GPU} -gt 1 ]; then
 	export DISTRIBUTED="--distributed 1"
@@ -125,6 +125,7 @@ train_run() {
 		--append_mol0 "${APPEND_MOL0}"
 		--relative_weight_epsilon "${RELATIVE_WEIGHT_EPSILON}"
 		${LOSS_ARGS}
+		${ENE_ARG}
 		${GRAD_ARG}
 		${ATOMIC_ARG}
 		${ABS_ARG}

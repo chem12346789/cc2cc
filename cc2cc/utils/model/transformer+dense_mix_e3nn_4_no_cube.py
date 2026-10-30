@@ -10,10 +10,10 @@ from cc2cc.utils.model.model_utils.model_e3nn_correct_no_cube import E3nn
 class Model(torch.nn.Module):
     """Four scalar features per point, relative positions in Bohr, scalar output."""
 
-    def __init__(self):
+    def __init__(self, neighborhood_size=27):
         super().__init__()
         self.cube_type = "neighbors"
-        self.cube_size = 27
+        self.cube_size = neighborhood_size
         self.cube_middle = 0
         self.input_level = 4
         self.before_weight = False
@@ -54,10 +54,14 @@ class Model(torch.nn.Module):
         self.mixing_weight = torch.nn.Linear(self.flat_size, self.input_level + 2)
 
     def forward(self, x, relative_positions):
-        if x.ndim != 3 or x.shape[1:] != (4, 27):
-            raise ValueError("Expected density features with shape (N, 4, 27).")
-        if relative_positions.shape != (x.shape[0], 27, 3):
-            raise ValueError("Expected relative positions with shape (N, 27, 3).")
+        if x.ndim != 3 or x.shape[1:] != (4, self.cube_size):
+            raise ValueError(
+                f"Expected density features with shape (N, 4, {self.cube_size})."
+            )
+        if relative_positions.shape != (x.shape[0], self.cube_size, 3):
+            raise ValueError(
+                f"Expected relative positions with shape (N, {self.cube_size}, 3)."
+            )
         features = x.permute(0, 2, 1).contiguous()
         encoded = torch.cat(
             tuple(

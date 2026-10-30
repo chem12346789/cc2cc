@@ -13,7 +13,9 @@ source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
-    (0) export load_model_args="--load atom-393567 --load_epoch 1115" ;;
+    (0) export load_model_args="--load atom-3259973 --load_epoch 2395 --test_mode post-b3lyp" ;;
+    (1) export load_model_args="--load atom-3259973 --load_epoch 2395 --test_mode post-b3lyp-vv10" ;;
+    # (0) export load_model_args="--load atom-393567 --load_epoch 2395" ;;
     # (0) export load_model_args="--load atom-35580 --load_epoch 4955" ;;
     # (1) export load_model_args="--load atom-35580 --load_epoch 10075" ;;
 esac
@@ -22,6 +24,7 @@ export if_continue_args=0
 export IF_GRAD=0
 export name_mol_reverse=0
 export DATASET="gmtkn-diet100-def2"
+export TEST_MODE="${TEST_MODE:-scf}"
 export DFT2CC_MAX_GPU_JK_NAO=3500
 export DFT2CC_PROFILE_XC=1
 

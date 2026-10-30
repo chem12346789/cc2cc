@@ -22,7 +22,7 @@ from cc2cc.utils.ccsd_t_target import (
 from cc2cc.utils.get_dft_energy_rks import get_cc_energy, get_dft_energy, get_hf_energy
 from cc2cc.utils.get_dft_grad_rks import get_dft_grad, get_dft_input
 from cc2cc.utils.zmp_reference import get_zmp, zmp_baseline_gradient
-from cc2cc.utils.grid_neighbors import grid_neighborhoods
+from cc2cc.utils.zmp_constraints import get_zmp_constraint_data
 from cc2cc.utils.b3lyp_reference import converged_b3lyp, get_vv10_data
 
 
@@ -116,7 +116,6 @@ def cc(
 
     # Generate input data
     data_dict = {}
-    neighbor_indices = grid_neighborhoods(grids.coords)
 
     # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
     data_append_dict = get_cc_energy(
@@ -165,13 +164,9 @@ def cc(
         )
 
     if not evaluate:
-        data_append_dict = get_dft_grad(
-            mol, grids, dm1_dft, neighbor_indices=neighbor_indices
-        )
+        data_append_dict = get_dft_grad(mol, grids, dm1_dft)
         data_dict.update(data_append_dict)
-        data_append_dict = get_dft_grad(
-            mol, grids, dm1_zmp, neighbor_indices=neighbor_indices
-        )
+        data_append_dict = get_dft_grad(mol, grids, dm1_zmp)
         for key in data_append_dict:
             if "dft" in key:
                 key_zmp = key.replace("dft", "zmp")
@@ -277,7 +272,6 @@ def cc(
             "energy_train": energy_train,
             "weights": grids.weights,
             "coords": grids.coords,
-            "neighbor_indices": neighbor_indices,
             "grid_atom_indices": grids.atm_idx,
         }
     )
@@ -291,4 +285,7 @@ def cc(
             mol, grids, dm1_zmp, e_zmp, dm1_cc, args, suffix="_zmp",
         )
     )
+    data_dict.update(get_zmp_constraint_data(
+        mdft, grids, dm1_zmp, dm1_cc, DATA_PATH / f"data_{name}_zmp", args,
+    ))
     np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)

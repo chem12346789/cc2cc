@@ -12,7 +12,10 @@ from gpu4pyscf.lib.cupy_helper import tag_array
 from cc2cc.utils.GridsGPU import (
     GridCube, get_cached_gdftopt, iterate_grid_segments, rho_evaluator,
 )
-from cc2cc.utils.grid_neighbors import grid_neighborhoods
+from cc2cc.utils.grid_neighbors import (
+    RadiusNeighborhoods, build_neighborhoods, neighborhoods_match,
+    neighborhood_batches, neighborhood_edges,
+)
 
 
 def get_veff_modified_uks_gpu(ks, modeldict, max_memory_gpu=4000):
@@ -53,10 +56,13 @@ def nr_neighbors_gpu(modeldict, ni, mol, grids, dm, max_memory, *, unrestricted=
     weights = cp.asarray(grids.weights)
     cached = getattr(grids, "_neighbor_scf_gpu_cache", None)
     if (
-        cached is None or cached[0].device.id != coords.device.id
+        cached is None or not neighborhoods_match(cached[1], modeldict)
+        or cached[0].device.id != coords.device.id
         or not cp.array_equal(cached[0], coords)
     ):
-        indices = cp.asarray(grid_neighborhoods(cp.asnumpy(coords)), dtype=cp.int64)
+        indices = build_neighborhoods(cp.asnumpy(coords), modeldict)
+        if not isinstance(indices, RadiusNeighborhoods):
+            indices = cp.asarray(indices, dtype=cp.int64)
         cached = (coords.copy(), indices)
         grids._neighbor_scf_gpu_cache = cached
     indices = cached[1]
@@ -94,12 +100,13 @@ def nr_neighbors_gpu(modeldict, ni, mol, grids, dm, max_memory, *, unrestricted=
 
     derivative = cp.zeros_like(features)
     energy = cp.zeros((), dtype=cp.float64)
-    batch_size = min(4096, max(1, int(memory * 1e6 / (27 * 7 * 8 * 32))))
-    for start in range(0, len(coords), batch_size):
-        stop = min(start + batch_size, len(coords))
-        neighbors = indices[start:stop]
+    batch_size = min(4096, max(1, int(memory * 1e6 / (modeldict.cube_size * 7 * 8 * 32))))
+    for start, stop, neighbors in neighborhood_batches(indices, batch_size, modeldict.cube_size):
+        neighbors = cp.asarray(neighbors, dtype=cp.int64)
         unique, local = cp.unique(neighbors, return_inverse=True)
-        edges = coords[neighbors] - coords[start:stop, None, :]
+        edges = neighborhood_edges(
+            coords, neighbors, start, getattr(modeldict, "radius_cutoff", None)
+        )
         energies, gradient = modeldict.eval_xc_eff(
             torch.utils.dlpack.from_dlpack(features[unique]),
             torch.utils.dlpack.from_dlpack(weights[start:stop]),

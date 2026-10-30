@@ -24,6 +24,7 @@ from cc2cc.utils.b3lyp_reference import get_vv10_data
 from cc2cc.utils.parser import gen_name_args, str2bool
 from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc
+from cc2cc.utils.zmp_constraints import get_zmp_constraint_data
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -58,6 +59,22 @@ if __name__ == "__main__":
         type=str2bool,
         default=True,
         help="Whether to check the convergence of the wave function. Default is True.",
+    )
+    parser.add_argument(
+        "--zmp_feature_ov", type=str2bool, default=True,
+        help="Stream feature/occupied-virtual rotation Jacobians to float64 sidecars.",
+    )
+    parser.add_argument(
+        "--zmp_observable_response", type=str2bool, default=True,
+        help="Generate compact dipole, second-moment and atom-projection response data.",
+    )
+    parser.add_argument(
+        "--zmp_response_block_size", type=int, default=32,
+        help="Number of grid centers per ZMP constraint generation block.",
+    )
+    parser.add_argument(
+        "--zmp_response_gap_floor", type=float, default=1e-3,
+        help="Positive response denominator floor in Hartree; nonpositive gaps are errors.",
     )
     args = add_args(parser)
 
@@ -165,7 +182,92 @@ if __name__ == "__main__":
             grids = Grid(mol, args.grid_level, 7)
 
             if args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
-                print(f"SKIP: {name} already exists.")
+                # print(f"SKIP: {name} already exists.")
+
+                if args.zmp_feature_ov or args.zmp_observable_response:
+                    cache_path = DATA_PATH / f"data_{name}.npz"
+                    with np.load(cache_path, allow_pickle=True) as cached:
+                        grids.coords = cached["coords"]
+                        grids.weights = cached["weights"]
+                        if len(grids.coords) != len(grids.weights):
+                            raise ValueError("Cached coordinates/weights have different lengths.")
+                        feature_shape = cached["rho_cube_zmp"].shape
+                        grids.input_level = feature_shape[1]
+                        if int(np.prod(feature_shape[2:])) != grids.cube_size:
+                            raise ValueError("Cached cube layout differs from the current layout.")
+                        baseline = pyscf.dft.RKS(mol) if mol.spin == 0 else pyscf.dft.UKS(mol)
+                        baseline = baseline.density_fit()
+                        baseline.xc = "b3lyp"
+                        baseline.nlc = ""
+                        constraint_data = get_zmp_constraint_data(
+                            baseline, grids, cached["dm1_zmp"], cached["dm1_cc"],
+                            DATA_PATH / f"data_{name}_zmp", args,
+                        )
+                    addon_path = DATA_PATH / f"data_{name}_addon.npz"
+                    if addon_path.exists():
+                        with np.load(addon_path, allow_pickle=True) as addon:
+                            constraint_addon = dict(addon.items())
+                    else:
+                        constraint_addon = {}
+                    constraint_addon.update(constraint_data)
+                    np.savez(addon_path, **constraint_addon)
+                    print(f"Updated ZMP constraints for {name}")
+                    continue
+
+                print(f"Add zmp VV10 data for {name}")
+                cache_path = DATA_PATH / f"data_{name}.npz"
+                with np.load(cache_path, allow_pickle=True) as cached:
+                    required = ("dm1_dft", "e_dft", "dm1_cc", "weights")
+                    missing = [key for key in required if key not in cached]
+                    if missing:
+                        print(
+                            f"SKIP VV10 update for {name}: missing cached fields "
+                            f"{', '.join(missing)}."
+                        )
+                    else:
+                        cached_weights = cached["weights"]
+                        if cached_weights.shape != grids.weights.shape:
+                            raise RuntimeError(
+                                f"Cached grid weights for {name} have shape "
+                                f"{cached_weights.shape}, expected {grids.weights.shape}."
+                            )
+                        grids.weights = cached_weights
+                        vv10_data = get_vv10_data(
+                            mol,
+                            grids,
+                            cached["dm1_dft"],
+                            cached["e_dft"],
+                            cached["dm1_cc"],
+                            args,
+                        )
+                        if "dm1_zmp" in cached and "e_zmp" in cached:
+                            vv10_data.update(
+                                get_vv10_data(
+                                    mol,
+                                    grids,
+                                    cached["dm1_zmp"],
+                                    cached["e_zmp"],
+                                    cached["dm1_cc"],
+                                    args,
+                                    suffix="_zmp",
+                                )
+                            )
+                        else:
+                            print(
+                                f"SKIP ZMP-based VV10 update for {name}: missing "
+                                "cached dm1_zmp or e_zmp."
+                            )
+
+                        addon_path = DATA_PATH / f"data_{name}_addon.npz"
+                        if addon_path.exists():
+                            with np.load(addon_path, allow_pickle=True) as addon:
+                                data_dict_addon = dict(addon.items())
+                        else:
+                            data_dict_addon = {}
+                        data_dict_addon.pop("exc_post_grid", None)
+                        data_dict_addon.pop("enlc_post", None)
+                        data_dict_addon.update(vv10_data)
+                        np.savez(addon_path, **data_dict_addon)
             else:
                 if mol.spin == 0:
                     cc(mol, grids, name, args, evaluate=evaluate)

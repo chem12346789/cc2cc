@@ -4,34 +4,45 @@ from cc2cc.utils.env_var import EDGE_SIZE
 
 from cc2cc.utils.model.model_utils.model_dense import DenseNet
 from cc2cc.utils.model.model_utils.model_transformer import Transformer
-from cc2cc.utils.model.model_utils.model_e3nn_correct_2 import E3nn
+from cc2cc.utils.model.model_utils.model_e3nn_correct import E3nn
 
 
 class Model(torch.nn.Module):
-    """Transformer/e3nn mixed model."""
+    """Transformer/e3nn mixed model for the five-point cube representation."""
 
     def __init__(self):
         super().__init__()
 
-        self.cube_type = "cube"
-        self.cube_size = EDGE_SIZE**3
-        self.cube_middle = (self.cube_size - 1) // 2
+        if EDGE_SIZE != 3:
+            raise ValueError("The five-point model requires EDGE_SIZE=3.")
+
+        self.cube_type = "cube5"
+        self.cube_size = 5
+        self.cube_middle = 2
         self.input_level = 4
         self.before_weight = False
         self.lmax = 0
-        self.flat_size = self.input_level * self.cube_size
+        self.latent_size = 5
+        self.flat_size = self.input_level * self.latent_size
+
+        point_indices = torch.tensor(
+            [0, 8, 13, 24, 20],
+            dtype=torch.long,
+            device="cpu",
+        )
 
         e3nn_args = {
             "cube_type": self.cube_type,
-            "cube_size": self.cube_size,
+            "cube_size": self.latent_size,
             "input_level": self.input_level,
             "lmax": self.lmax,
+            "point_indices": point_indices,
         }
         for i in range(1, self.input_level + 1):
             setattr(self, f"conv{i}", E3nn(**e3nn_args))
 
-        self.predictor1 = Transformer(
-            d_model=self.cube_size,
+        self.predictor = Transformer(
+            d_model=self.latent_size,
             seq_len=self.input_level,
             num_layer=5,
             qkv_bias=False,
@@ -40,26 +51,7 @@ class Model(torch.nn.Module):
             atte_actv="gelu",
         )
 
-        self.densenet1 = DenseNet(
-            d_model=self.flat_size,
-            mlp=108,
-            depth=5,
-            dense_bias=False,
-            if_skip_connection_dense=1,
-            dense_actv="gelu",
-        )
-
-        self.predictor2 = Transformer(
-            d_model=self.cube_size,
-            seq_len=self.input_level,
-            num_layer=5,
-            qkv_bias=False,
-            ffn_bias=False,
-            mlp_ratio=1,
-            atte_actv="gelu",
-        )
-
-        self.densenet2 = DenseNet(
+        self.densenet = DenseNet(
             d_model=self.flat_size,
             mlp=108,
             depth=5,
@@ -78,11 +70,13 @@ class Model(torch.nn.Module):
             dense_actv="gelu",
         )
 
-        self.mixing_weight = torch.nn.Linear(self.flat_size, self.input_level + 3)
+        self.mixing_weight = torch.nn.Linear(
+            self.flat_size, self.input_level + 2, device="cpu", dtype=torch.float64
+        )
+        self.to(device="cpu", dtype=torch.float64)
 
     def forward(self, x):
         x_center = x[:, :, self.cube_middle]
-
         x_in = x.permute(0, 2, 1).contiguous()
 
         x_cube = torch.cat(
@@ -96,12 +90,10 @@ class Model(torch.nn.Module):
         weight_out = torch.softmax(
             self.mixing_weight(x_cube.reshape(-1, self.flat_size)), dim=-1
         )
-
-        x_cube1 = self.densenet1(self.predictor1(x_cube).reshape(-1, self.flat_size))
-        x_cube2 = self.densenet2(self.predictor2(x_cube).reshape(-1, self.flat_size))
+        x_cube = self.densenet(self.predictor(x_cube).reshape(-1, self.flat_size))
 
         center_values = x_center.reshape(-1, self.input_level)
         x_center = self.densenet_center(center_values)
 
-        expert_outputs = torch.cat((x_cube1, x_cube2, x_center, center_values), dim=-1)
+        expert_outputs = torch.cat((x_cube, x_center, center_values), dim=-1)
         return (weight_out * expert_outputs).sum(dim=-1, keepdim=True)

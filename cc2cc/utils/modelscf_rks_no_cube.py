@@ -12,7 +12,9 @@ from pyscf.grad import rks as rks_grad, uks as uks_grad
 from scipy.spatial import cKDTree
 
 from cc2cc.utils.Grids import GridCube, iterate_grid_segments, iterate_grid_response_segments
-from cc2cc.utils.grid_neighbors import grid_neighborhoods
+from cc2cc.utils.grid_neighbors import (
+    build_neighborhoods, neighborhoods_match, neighborhood_batches, neighborhood_edges,
+)
 
 
 def _install_scf(ks, modeldict, unrestricted):
@@ -105,8 +107,12 @@ def nr_neighbors(
     if grids.coords is None:
         grids.build(with_non0tab=False, sort_grids=False)
     cached = getattr(grids, "_neighbor_scf_cache", None)
-    if cached is None or not np.array_equal(cached[0], grids.coords):
-        cached = (np.array(grids.coords, copy=True), grid_neighborhoods(grids.coords))
+    if (cached is None or not neighborhoods_match(cached[1], modeldict)
+            or not np.array_equal(cached[0], grids.coords)):
+        cached = (
+            np.array(grids.coords, copy=True),
+            build_neighborhoods(grids.coords, modeldict),
+        )
         grids._neighbor_scf_cache = cached
     indices = cached[1]
     center_grid = copy.copy(grids)
@@ -141,14 +147,14 @@ def nr_neighbors(
         position_gradient = np.zeros((len(features), 3), dtype=np.float64)
     energy = 0.0
     # Bound gathered features, geometry and network batches independently of AO blocks.
-    batch_size = min(4096, max(1, int(memory * 1e6 / (27 * 7 * 8 * 32))))
-    for start in range(0, len(features), batch_size):
-        stop = min(start + batch_size, len(features))
-        neighbors = indices[start:stop]
+    batch_size = min(4096, max(1, int(memory * 1e6 / (modeldict.cube_size * 7 * 8 * 32))))
+    for start, stop, neighbors in neighborhood_batches(indices, batch_size, modeldict.cube_size):
         unique, local_indices = np.unique(neighbors, return_inverse=True)
         local_indices = local_indices.reshape(neighbors.shape)
         values = features[unique]
-        edges = grids.coords[neighbors] - grids.coords[start:stop, None, :]
+        edges = neighborhood_edges(
+            grids.coords, neighbors, start, getattr(modeldict, "radius_cutoff", None)
+        )
         outputs = modeldict.eval_xc_eff(
             values, grids.weights[start:stop], relative_positions=edges,
             neighbor_indices=local_indices,

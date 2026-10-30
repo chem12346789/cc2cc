@@ -8,9 +8,14 @@ export model_load_epoch_pairs=(
     "atom-82794:10005:scf_d3bj_ene:best before"
     "atom-3259973:2395:scf_d3bj_ene:vv10"
     "atom-3259973:2395:post_scf_vv10_ene:vv10"
-    "atom-35580:1115:scf_d3bj_ene:zmp"
-    "atom-35580:2395:scf_d3bj_ene:zmp"
-    "atom-393567:1115:scf_d3bj_ene:zmp_no_cube"
+    "atom-3259973-vv10:2395:scf_d3bj_ene:vv10"
+    "atom-3259973-post-b3lyp:2395:scf_d3bj_ene:post B3LYP"
+    "atom-3259973-post-b3lyp-nl:2395:scf_d3bj_ene:post B3LYP vv10"
+    "atom-3259973-post-b3lyp-vv10:2395:scf_d3bj_ene:post B3LYP VV10"
+    # "atom-35580:1115:scf_d3bj_ene:zmp"
+    # "atom-35580:2395:scf_d3bj_ene:zmp"
+    # "atom-393567:1115:scf_d3bj_ene:zmp_no_cube"
+    # "atom-393567:2395:scf_d3bj_ene:zmp_no_cube"
 )
 
 # find log folder with 4 days old files
@@ -20,10 +25,10 @@ find log -type f -mtime +4 -name "*.out" -exec rm -f {} \;
 # clean up empty folders in log folder
 find log -type d -empty -delete
 
-header_format='| %-18s | %8s | %8s | %9s | %-9s | %-9s | %-13s | %-13s |\n'
-table_format='| %-18s | %8s | %8.2f | %9.2f | %-9s | %-9s | %-13s | %-13s |\n'
+header_format='| %-30s | %8s | %8s | %9s | %-9s | %-9s | %-13s | %-13s |\n'
+table_format='| %-30s | %8s | %8.2f | %9s | %-9s | %-9s | %-13s | %-13s |\n'
 printf "$header_format" 'Model' 'Epoch' 'AI' 'Corrected' 'Processed' 'Converged' 'Energy_column' 'Note'
-printf '%s\n' '|--------------------|----------|----------|-----------|-----------|-----------|---------------|---------------|'
+printf '%s\n' '|--------------------------------|----------|----------|-----------|-----------|-----------|---------------|---------------|'
 find_messages=()
 for pair in "${model_load_epoch_pairs[@]}"; do
     IFS=: read -r model_load load_epoch energy_column note <<< "$pair"
@@ -36,7 +41,7 @@ for pair in "${model_load_epoch_pairs[@]}"; do
     fi
 
     ~/anaconda3/envs/pyscf/bin/python collect_info.py --model_load "$model_load" --epoch "$load_epoch" --energy_column "$energy_column" --basis "$basis_args" --verbose 0 --frequency 30m --max_checks 0 --data_set gmtkn-diet100-def2 >"$log_file" 2>&1
-    awk -v model="$model_load" -v epoch="$load_epoch" -v energy_column="$energy_column" -v note="$note" -v table_format="$table_format" '
+    awk -v model="${model_load#atom-}" -v epoch="$load_epoch" -v energy_column="$energy_column" -v note="$note" -v table_format="$table_format" '
         /summary/ { summary = $0 }
         /^Converged tests: / { converged = $3 }
         END {
@@ -48,7 +53,9 @@ for pair in "${model_load_epoch_pairs[@]}"; do
                 } else if (energy_column == "post_scf_vv10_ene") {
                     energy_label = "post_vv10"
                 }
-                printf table_format, model, epoch, $2, $3, $4, converged, energy_label, note
+                corrected = NF > 3 ? sprintf("%.2f", $3) : "N/A"
+                processed = $NF
+                printf table_format, model, epoch, $2, corrected, processed, converged, energy_label, note
             }
         }
     ' "$log_file"

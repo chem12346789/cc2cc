@@ -107,11 +107,18 @@ select_molecule_profile() {
 
     local load_name="no-load"
     local load_epoch="no-epoch"
+    local test_mode="${TEST_MODE:-scf}"
     if [[ "${load_model_args:-}" =~ --load[[:space:]=]+([^[:space:]]+) ]]; then
         load_name="${BASH_REMATCH[1]}"
     fi
     if [[ "${load_model_args:-}" =~ --load_epoch[[:space:]=]+([^[:space:]]+) ]]; then
         load_epoch="${BASH_REMATCH[1]}"
+    fi
+    if [[ "${load_model_args:-}" =~ --test_mode[[:space:]=]+([^[:space:]]+) ]]; then
+        test_mode="${BASH_REMATCH[1]}"
+    fi
+    if [[ "${test_mode}" != "scf" ]]; then
+        load_name="${load_name}-${test_mode}"
     fi
     local set_name="${name_mol_input#molecule_}"
     local log_dir="${REPO_ROOT}/log/${load_name}/${load_epoch}"
@@ -128,6 +135,7 @@ select_molecule_profile() {
 
 run_test_job() {
     "${PYTHON_BIN}" "${REPO_ROOT}/test.py" \
+        --test_mode "${TEST_MODE:-scf}" \
         --basis "${basis_args}" \
         --precision float64 \
         ${load_model_args} \

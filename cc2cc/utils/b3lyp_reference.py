@@ -144,17 +144,20 @@ def get_scf_vv10_data(mol, grids, dm_dft, dm_cc, args, evaluate=False):
     return data
 
 
-def converged_b3lyp(mol, dm0=None, *, nlc="", grids=None, verbose=0):
+def converged_b3lyp(mol, dm0=None, *, nlc="", grids=None, verbose=0, use_gpu=False):
     mf = (
         pyscf.dft.RKS(mol, xc="b3lyp")
         if mol.spin == 0
         else pyscf.dft.UKS(mol, xc="b3lyp")
     )
+    mf = mf.density_fit()
     if grids is not None:
         mf.grids = grids
     mf.verbose = verbose
     mf.max_cycle = 200
     mf.nlc = nlc
+    if use_gpu:
+        mf = mf.to_gpu()
     mf.kernel(dm0=dm0)
     return mf
 
