@@ -1,12 +1,12 @@
 {
     "train": [
         "molecule0-W4_11",
-        "molecule0-ADDON",
         "molecule0-APPENDIX",
         "molecule1-W4_11",
         "molecule2-W4_11"
     ],
     "eval": [
+        "molecule0-ADDON",
         "molecule3-W4_11",
         "molecule4-W4_11",
         "molecule5-W4_11",
