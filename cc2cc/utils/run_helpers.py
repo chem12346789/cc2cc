@@ -109,5 +109,58 @@ def load_post_scf_density(mol, name, test_mode, *, grid_level=None, use_gpu=None
     return density
 
 
+def load_post_scf_vv10(mf, name, density):
+    """Cache the post-SCF VV10 energy for an exact density and NLC grid."""
+    from hashlib import sha256
+    from tempfile import TemporaryDirectory
+
+    import numpy as np
+
+    from cc2cc.utils.env_var import DATA_TEST_PATH
+
+    def as_numpy(value):
+        if cp is not None and isinstance(value, cp.ndarray):
+            return cp.asnumpy(value)
+        return np.asarray(value)
+
+    fingerprint = sha256(type(mf._numint).__module__.encode())
+    for value in (
+        mf.mol._atm, mf.mol._bas, mf.mol._env,
+        density, mf.nlcgrids.coords, mf.nlcgrids.weights,
+    ):
+        array = as_numpy(value)
+        fingerprint.update(str((array.shape, array.dtype)).encode())
+        fingerprint.update(array.tobytes())
+    fingerprint = fingerprint.hexdigest()
+    path = DATA_TEST_PATH / f"{name}_dft.npz"
+    cached = {}
+    if path.exists():
+        with np.load(path, allow_pickle=True) as data:
+            cached = dict(data.items())
+        if (
+            "enlc_post_vv10" in cached
+            and cached.get("enlc_post_vv10_fingerprint") == fingerprint
+        ):
+            print(f"Using cached post-SCF VV10 correction for {name}.")
+            return float(cached["enlc_post_vv10"])
+
+    dm_tot = density if mf.mol.spin == 0 else density[0] + density[1]
+    _, enlc, _ = mf._numint.nr_nlc_vxc(
+        mf.mol, mf.nlcgrids, "vv10", dm_tot, max_memory=mf.max_memory,
+    )
+    enlc = float(enlc)
+    cached.update({
+        "enlc_post_vv10": enlc,
+        "enlc_post_vv10_fingerprint": fingerprint,
+    })
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(dir=path.parent) as directory:
+        temporary = Path(directory) / path.name
+        np.savez(temporary, **cached)
+        temporary.replace(path)
+    print(f"Cached post-SCF VV10 correction for {name}: {enlc:.12g} Ha.")
+    return enlc
+
+
 def should_skip(name: str, data_record, args) -> bool:
     return args.if_continue and name in data_record.df_dict.get("name", [])

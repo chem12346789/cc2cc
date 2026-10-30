@@ -82,7 +82,8 @@ def main():
         "cached density: B3LYP for post-b3lyp, post-b3lyp-d3, and "
         "post-b3lyp-nl; self-consistent B3LYP-VV10 for "
         "post-b3lyp-vv10. The D3 mode reports D3BJ energy, and the NL mode "
-        "reports the post-SCF VV10 energy. Missing references are computed by "
+        "reports the post-SCF VV10 energy, with the VV10 correction cached "
+        "for the reference density and NLC grid. Missing references are computed by "
         "reference SCF and cached. Post-SCF modes are energy-only.",
     )
     parser.add_argument(

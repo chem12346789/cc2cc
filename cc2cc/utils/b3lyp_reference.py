@@ -150,6 +150,7 @@ def converged_b3lyp(mol, dm0=None, *, nlc="", grids=None, verbose=0, use_gpu=Fal
         if mol.spin == 0
         else pyscf.dft.UKS(mol, xc="b3lyp")
     )
+    mf = mf.density_fit()
     if grids is not None:
         mf.grids = grids
     mf.verbose = verbose

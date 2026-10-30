@@ -14,7 +14,7 @@ import pyscf
 import pyscf.dft
 
 import cc2cc.utils as utils
-from cc2cc.utils.run_helpers import load_post_scf_density
+from cc2cc.utils.run_helpers import load_post_scf_density, load_post_scf_vv10
 
 pyscf.lib.logger.TIMER_LEVEL = 4
 VERBOSE = 4
@@ -61,7 +61,10 @@ def test_model_uks(
 
             get_veff_modified_uks(mdft, modeldict)
 
-    if args.baseline == "b3lyp-vv10" or test_mode == "post-b3lyp-vv10":
+    if args.baseline == "b3lyp-vv10" or test_mode in (
+        "post-b3lyp-nl",
+        "post-b3lyp-vv10",
+    ):
         mdft.xc = "b3lyp"
         mdft.nlc = "vv10"
     else:
@@ -86,7 +89,13 @@ def test_model_uks(
         )
         if use_gpu:
             dm1_scf = cp.asarray(dm1_scf)
-        e_scf = mdft.energy_tot(dm=dm1_scf)
+        if test_mode == "post-b3lyp-nl":
+            mdft.initialize_grids(mol, dm1_scf)
+            enlc = load_post_scf_vv10(mdft, name, dm1_scf)
+            mdft.nlc = ""
+            e_scf = mdft.energy_tot(dm=dm1_scf) + enlc
+        else:
+            e_scf = mdft.energy_tot(dm=dm1_scf)
     else:
         if args.max_cycle == -1:
             mdft.max_cycle = -1
