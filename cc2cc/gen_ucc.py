@@ -21,7 +21,6 @@ from cc2cc.utils import DATA_PATH, AU2KCALMOL
 from cc2cc.utils.get_dft_energy_uks import get_cc_energy, get_dft_energy, get_hf_energy
 from cc2cc.utils.get_dft_grad_uks import get_dft_grad, get_dft_input
 from cc2cc.utils.zmp_reference import get_zmp, zmp_baseline_gradient
-from cc2cc.utils.grid_neighbors import grid_neighborhoods
 from cc2cc.utils.b3lyp_reference import converged_b3lyp, get_vv10_data
 
 def ucc(mol, grids, name, args, evaluate=False):
@@ -111,7 +110,6 @@ def ucc(mol, grids, name, args, evaluate=False):
 
     # Generate input data
     data_dict = {}
-    neighbor_indices = grid_neighborhoods(grids.coords)
 
     # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
     data_append_dict = get_cc_energy(
@@ -162,13 +160,9 @@ def ucc(mol, grids, name, args, evaluate=False):
         )
 
     if not evaluate:
-        data_append_dict = get_dft_grad(
-            mol, grids, dm1_dft, neighbor_indices=neighbor_indices
-        )
+        data_append_dict = get_dft_grad(mol, grids, dm1_dft)
         data_dict.update(data_append_dict)
-        data_append_dict = get_dft_grad(
-            mol, grids, dm1_zmp, neighbor_indices=neighbor_indices
-        )
+        data_append_dict = get_dft_grad(mol, grids, dm1_zmp)
         for key in data_append_dict:
             if "dft" in key:
                 key_zmp = key.replace("dft", "zmp")
@@ -273,7 +267,6 @@ def ucc(mol, grids, name, args, evaluate=False):
             "energy_train": energy_train,
             "weights": grids.weights,
             "coords": grids.coords,
-            "neighbor_indices": neighbor_indices,
             "grid_atom_indices": grids.atm_idx,
         }
     )

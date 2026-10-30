@@ -279,9 +279,9 @@ class DataBase:
             raise ValueError(f"No input_mat in data: {self.args.rho_input}")
 
         if self.input_mode == "neighbors":
-            if "coords" not in data or "neighbor_indices" not in data:
+            if "coords" not in data:
                 raise ValueError(
-                    f"{name}: neighbor inputs require coords and neighbor_indices; "
+                    f"{name}: neighbor inputs require coords; "
                     "regenerate the archive or provide a matching addon."
                 )
             coords = np.asarray(data["coords"], dtype=np.float64)
@@ -295,24 +295,9 @@ class DataBase:
                 raise ValueError(
                     f"{name}: features, grid coordinates and weights differ."
                 )
-            indices = np.asarray(data["neighbor_indices"])
-            if (
-                indices.ndim != 2
-                or indices.shape[0] != len(coords)
-                or indices.shape[1] not in (27, self.neighborhood_size)
-                or not np.issubdtype(indices.dtype, np.integer)
-                or np.any(indices < 0)
-                or np.any(indices >= len(coords))
-                or not np.array_equal(indices[:, 0], np.arange(len(coords)))
-            ):
-                raise ValueError(f"{name}: invalid center-first neighbor_indices.")
             if self.radius_cutoff is not None:
                 indices = RadiusNeighborhoods(coords, self.radius_cutoff)
-            elif indices.shape[1] != self.neighborhood_size:
-                print(
-                    f"{name}: rebuilding archived {indices.shape[1]}-point "
-                    f"neighborhoods as {self.neighborhood_size}-point neighborhoods."
-                )
+            else:
                 indices = grid_neighborhoods(
                     coords, neighborhood_size=self.neighborhood_size
                 )

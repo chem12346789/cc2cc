@@ -91,17 +91,17 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     taper; GPU gradients remain unsupported. Total compute can remain large
     on dense near-nuclear grids. The original model and generator defaults
     stay at 27 points.
-  - Both generators now save `coords` in Bohr aligned with their `weights` and
+  - Both generators save `coords` in Bohr aligned with their `weights` and
     feature grid (not a separately reconstructed B3LYP SCF grid). The dataset
-    extracts central features from existing cubes and loads center-first
-    `neighbor_indices` of shape `(N_grid, 27)` precomputed by both generators.
-    It keeps all central features on CPU and gathers neighborhoods on batch
-    transfer; the original 27-point path does not search for neighbors in the
-    dataset. The radius experiment instead queries neighborhoods lazily.
+    extracts central features from existing cubes and builds center-first
+    neighborhoods from those coordinates; archived `neighbor_indices` are not
+    loaded. It keeps all central features on CPU and gathers neighborhoods on
+    batch transfer. The radius experiment queries neighborhoods lazily.
     Point filtering is disabled for all input modes: zero-feature centers,
     weights, grid targets and cube force Jacobians retain their original order.
-    Existing archives need matching coordinates and indices in the base or addon
-    archive; missing fields are errors. No-cube indices are unchanged by density.
+    Existing archives need matching coordinates in the base or addon archive;
+    neighborhood indices are rebuilt by the dataset. No-cube indices are
+    unchanged by density.
     For training-data generation, `grad_zmp_no_cube` stores the same analytic
     baseline nuclear gradient `(N_atoms, 3)` as `grad_zmp`; it is not a neighbor
     feature Jacobian.
@@ -109,9 +109,9 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     (ZMP) cube Jacobian and copies only its central slot into a compact
     `(N_atoms, N_channels, N_grid, 3)` array before tensor/GPU transfer.
     RKS/UKS generators no longer return or save redundant `grad2force_no_cube`
-    fields. The optional `neighbor_indices` argument remains accepted but
-    no longer affects Jacobian generation. Both generators save neighborhood
-    indices separately as archive metadata.
+    fields. The optional `neighbor_indices` argument remains accepted by the
+    gradient helpers but does not affect Jacobian generation. Generators do not
+    save neighborhood indices; the dataset derives them from coordinates.
     Dataset transfer retains `x_center` with shape `(N_grid, 4)`. Inside the
     differentiable model forward, indexing constructs
     `X[p,c,k] = x_center[neighbor_indices[p,k],c]`. This is the sparse selection
@@ -125,8 +125,8 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     quadrature weights are not baked into the stored Jacobian.
     Its element count is exactly 27 times smaller than the expanded neighbor
     Jacobian, not necessarily total training memory or archive size.
-    Existing archives with the cube Jacobians and matching neighborhood metadata
-    work without regeneration; any older `grad2force_no_cube` fields are ignored.
+    Existing archives with the cube Jacobians and coordinates work without
+    regeneration; any older `grad2force_no_cube` fields are ignored.
     The full cube is still generated, stored, and temporarily loaded on CPU;
     only compact central derivatives are retained in the dataset and sent to GPU.
     Training differentiates the weighted model energy with respect to unique
