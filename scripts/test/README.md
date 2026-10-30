@@ -2,6 +2,34 @@
 
 This directory contains reproducible evaluation and benchmark submission scripts.
 
+## Comparing density choices without rerunning SCF
+
+From the repository root, compare the same checkpoint evaluated self-consistently
+and on fixed B3LYP densities:
+
+```bash
+python -m scripts.analyze_density_effect \
+  --scf 'validate/def2-QZVP(D)_atom-3259973/2395' \
+  --b3lyp 'validate/def2-QZVP(D)_atom-3259973-scf-b3-post-scf-b3lyp/2395'
+```
+
+Replace both paths to analyze other checkpoints. Each input accepts a checkpoint
+directory containing molecular validation CSVs, or one aggregated molecular CSV.
+The default dataset is DIET100; `--dataset PATH` selects another GMTKN/DIET
+reaction JSON, `--basis` selects the molecule-name suffix, `--columns` selects
+matching energy columns (default: `scf_ene scf_d3bj_ene`), and `--top` controls
+the number of ranked reactions. Compare identical functional/dispersion settings;
+the script cannot infer checkpoint or numerical-setting equivalence from CSVs.
+
+The read-only report includes unweighted reaction MAE, collector-compatible
+WTMAD-2, paired prediction shifts, gains/losses, subset contributions, and
+within-reaction cancellation of molecular energy shifts. Positive gains mean
+SCF is more accurate. Missing molecules, duplicate names, or non-finite selected
+energies fail explicitly rather than silently comparing a partial benchmark.
+Convergence metadata are reported; blank post-SCF flags are not SCF failures.
+Redirect stdout to save the human-readable report. No density-quality claim can
+be made from energy comparisons alone.
+
 ## ZMP energy-gradient reference
 
 Run the CPU-only RKS/UKS reference explicitly from the repository root:
