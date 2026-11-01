@@ -3,7 +3,7 @@ import numpy as np
 from pyscf import lib
 
 from cc2cc.utils.b3lyp_reference import converged_b3lyp
-from cc2cc.utils.modelscf_rks import get_veff_grad_modified_zeros
+from cc2cc.utils.modelscf_uks import get_veff_grad_modified_zeros
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
 
 

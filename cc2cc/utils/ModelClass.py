@@ -20,6 +20,7 @@ from cc2cc.utils.env_var import CHECKPOINTS_PATH, CUBE_MIDDLE, MAIN_PATH
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.schedulers import CosineAnnealingWarmRestarts2
 from cc2cc.utils.grid_neighbors import RadiusNeighborhoods
+from cc2cc.utils.zmp_ov_training import GaussianOrbitalCache
 
 CUBE_INDEX = {
     "cube5": np.array(
@@ -52,6 +53,7 @@ TORCH_LIST = [
     "loss_tot_abs",
     "loss_tot_grad",
     "loss_tot_atomic",
+    "loss_zmp_ov",
 ]
 TIME_LIST = [
     "time_loss_tot_ene",
@@ -177,6 +179,7 @@ class ModelClass:
         self.optimizer_state_dict = None
         self.rng_state_dict = None
         self.rng_state_for_save = None
+        self.zmp_ov_cache = None
 
         # for distributed training
         self.verbose = True
@@ -257,7 +260,7 @@ class ModelClass:
             self.init_train()
 
     def _maybe_compile_model(self):
-        if self.args.if_grad:
+        if self.args.if_grad or getattr(self.args, "zmp_ov_loss", False):
             return
 
         if self.radius_cutoff is not None:
@@ -459,6 +462,9 @@ class ModelClass:
             neighborhood_size=self.cube_size,
             radius_cutoff=self.radius_cutoff,
         )
+
+        if getattr(self.args, "zmp_ov_loss", False):
+            self._init_zmp_ov_cache()
 
         self.print(f"Training on {len(self.database_train)} systems.")
         self.print(f"Evaluating on {len(self.database_eval)} systems.")
@@ -709,6 +715,131 @@ class ModelClass:
             derivative_input = input_
         return derivative_input, output if model.before_weight else output * weight
 
+    def _init_zmp_ov_cache(self):
+        if self.args.rho_input != "zmp":
+            raise ValueError("--zmp_ov_loss requires --rho_input zmp.")
+        if self.dtype != torch.float64:
+            raise ValueError("--zmp_ov_loss requires --precision float64.")
+        if self.args.distributed:
+            raise ValueError("--zmp_ov_loss currently requires non-distributed training.")
+        if self.cube_type != "cube" or self.cube_size != 27:
+            raise ValueError("--zmp_ov_loss currently requires 3x3x3 cube inputs.")
+        if getattr(self.model, "before_weight", False):
+            raise ValueError("--zmp_ov_loss does not support models with before_weight.")
+        if not 1 <= self.input_level <= 7:
+            raise ValueError("--zmp_ov_loss supports one to seven input features.")
+        if self.args.zmp_ov_block_size <= 0:
+            raise ValueError("--zmp_ov_block_size must be positive.")
+        if self.args.zmp_ov_loss_multiplier <= 0:
+            raise ValueError("--zmp_ov_loss_multiplier must be positive.")
+
+        modules = tuple(self.model.modules())
+        dropout_types = (
+            torch.nn.Dropout,
+            torch.nn.Dropout1d,
+            torch.nn.Dropout2d,
+            torch.nn.Dropout3d,
+            torch.nn.AlphaDropout,
+            torch.nn.FeatureAlphaDropout,
+        )
+        batch_norm_types = (
+            torch.nn.BatchNorm1d,
+            torch.nn.BatchNorm2d,
+            torch.nn.BatchNorm3d,
+            torch.nn.SyncBatchNorm,
+        )
+        if any(isinstance(module, dropout_types) and module.p > 0 for module in modules):
+            raise ValueError(
+                "Two-pass ZMP training requires deterministic model evaluations; "
+                "nonzero dropout is unsupported."
+            )
+        if any(isinstance(module, batch_norm_types) for module in modules):
+            raise ValueError(
+                "Two-pass ZMP training requires model outputs independent "
+                "across grid centers; batch normalization is unsupported."
+            )
+
+        names = set(self.database_train.dataset.name_list)
+        if len(names) != 1:
+            raise ValueError(
+                "--zmp_ov_loss currently requires exactly one training system "
+                "so its complete constraint cache can remain GPU-resident."
+            )
+        name = next(iter(names))
+        batch = self.database_train.dataset.data[name]
+        self.zmp_ov_cache = GaussianOrbitalCache.from_archive(
+            name,
+            batch["input"],
+            batch["weight"],
+            self.device,
+            self.args.zmp_ov_block_size,
+        )
+        batch["input"] = self.zmp_ov_cache.input.detach()
+        batch["weight"] = self.zmp_ov_cache.weights
+        self.print(
+            f"Loaded all-grid Gaussian ZMP factors for {name} on {self.device}; "
+            f"input shape={tuple(self.zmp_ov_cache.input.shape)}."
+        )
+
+    def _zmp_ov_loss(self, accumulate_parameter_gradients):
+        cache = self.zmp_ov_cache
+        if cache is None:
+            raise RuntimeError("The ZMP orbital cache is not initialized.")
+
+        fock = cache.fock0.clone()
+        for start, stop in cache.batches():
+            input_tile = cache.input[start:stop].detach().requires_grad_(True)
+            _, output = self.model_output(
+                input_tile, cache.weights[start:stop]
+            )
+            feature_gradient = torch.autograd.grad(
+                output.sum(), input_tile, create_graph=False
+            )[0]
+            fock = fock + cache.fock_tile(feature_gradient, start)
+
+        residual = cache.cv.T @ fock @ cache.co
+        loss = (
+            self.args.zmp_ov_loss_multiplier
+            * torch.mean(residual * residual)
+        )
+        if accumulate_parameter_gradients:
+            fock_adjoint = cache.cv @ (
+                2
+                * self.args.zmp_ov_loss_multiplier
+                * residual
+                / residual.numel()
+            ) @ cache.co.T
+            parameters = tuple(
+                parameter
+                for parameter in self.model.parameters()
+                if parameter.requires_grad
+            )
+            for start, stop in cache.batches():
+                input_tile = cache.input[start:stop].detach().requires_grad_(True)
+                _, output = self.model_output(
+                    input_tile, cache.weights[start:stop]
+                )
+                feature_gradient = torch.autograd.grad(
+                    output.sum(), input_tile, create_graph=True
+                )[0]
+                fock_tile = cache.fock_tile(feature_gradient, start)
+                surrogate = torch.sum(fock_adjoint * fock_tile)
+                gradients = torch.autograd.grad(
+                    surrogate, parameters, allow_unused=True
+                )
+                for parameter, gradient in zip(parameters, gradients):
+                    if gradient is None:
+                        continue
+                    if parameter.grad is None:
+                        parameter.grad = gradient.detach()
+                    else:
+                        parameter.grad.add_(gradient.detach())
+        return loss.detach()
+
+    def _zmp_ov_loss_for_eval(self):
+        with torch.inference_mode(False), torch.enable_grad():
+            return self._zmp_ov_loss(accumulate_parameter_gradients=False)
+
     def loss(self, batch, if_train=True, if_grad=True):
         input_ = batch["input"]
         weight = batch["weight"]
@@ -906,6 +1037,15 @@ class ModelClass:
         for step in range(len(self.database_train.data_gpu)):
             with _training_stage(f"train-fetch:{step}"):
                 batch = next(batches)
+            if self.zmp_ov_cache is not None:
+                if batch["name"] != self.zmp_ov_cache.name:
+                    raise ValueError(
+                        "--zmp_ov_loss batch does not match the resident "
+                        "single-system constraint cache."
+                    )
+                batch = dict(batch)
+                batch["input"] = self.zmp_ov_cache.input.detach()
+                batch["weight"] = self.zmp_ov_cache.weights
             if profile_memory:
                 torch.cuda.synchronize(memory_device)
                 torch.cuda.reset_peak_memory_stats(memory_device)
@@ -914,6 +1054,16 @@ class ModelClass:
             tot_loss, data_record, event = self.loss(batch, if_grad=if_grad)
             with _training_stage("backward", batch):
                 tot_loss.backward()
+            if self.zmp_ov_cache is not None:
+                with _training_stage("zmp-ov", batch):
+                    zmp_ov_loss = self._zmp_ov_loss(
+                        accumulate_parameter_gradients=True
+                    )
+                zmp_ov_value = zmp_ov_loss.cpu().numpy()
+                data_record["loss_zmp_ov"] = zmp_ov_value
+                data_record["loss_tot"] = (
+                    data_record["loss_tot"] + zmp_ov_value
+                )
             with _training_stage("optimizer", batch):
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
                 self.optimizer.step()
@@ -968,6 +1118,9 @@ class ModelClass:
                 batch = next(batches)
             batch = self.database_eval.process_batch(batch, device=self.local_rank)
             _, data_record, event = self.loss(batch, if_train=False)
+            if self.zmp_ov_cache is not None and batch["name"] == self.zmp_ov_cache.name:
+                zmp_ov_loss = self._zmp_ov_loss_for_eval()
+                data_record["loss_zmp_ov"] = zmp_ov_loss.cpu().numpy()
             if event is None:
                 data_record_l.add_data_record(data_record)
                 continue

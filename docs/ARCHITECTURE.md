@@ -21,6 +21,18 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 - `modelscf_rks.py`, `modelscf_uks.py`, `_gpu` variants: custom effective-
   potential/gradient hooks for PySCF SCF
 - `get_dft_energy_*.py`, `get_dft_grad_*.py`: energy and gradient helpers
+  - Restricted and unrestricted energy helpers return `ecp_cc_grids`,
+    `ecp_dft_grids`, and `ecp_hf_grids` for scalar pseudopotentials, or zeros
+    for all-electron molecules. CC and DFT totals include these terms; the
+    DFT-to-ZMP key conversion also produces `ecp_zmp_grids`. Previously
+    generated archives do not gain these fields automatically, and
+    `--if_continue` skips existing archives.
+    UKS supplies its two spin densities to LibXC with `spin=1`, including
+    net-spin-zero unrestricted states.
+  - The nonlocal pseudopotential uses the AO-projected gauge
+    `phi(r)^T S^-1 V_pp D phi(r)`, with `V_pp = hcore - kinetic - nuclear`.
+    Its integral is `Tr(V_pp D)` up to grid quadrature error; it is not a
+    pointwise local potential times the electron density.
 - `grid_neighbors.py`: opt-in, data-only nearest-grid prototype. Run
   `python -m cc2cc.utils.grid_neighbors input.npz --coords-key coords --output neighbors.npz`
   using the selected project interpreter and coordinates exported from the actual
@@ -44,7 +56,8 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   Full-pipeline finite differences remain available as trajectory diagnostics.
   `get_zmp.py` forwards legacy entry points and `zmp.py` implements the inversion
   SCF equations.
-- `zmp_constraints.py`: generation only; training is unchanged.
+- `zmp_constraints.py`: optional full-OV stationarity and compact observable
+  constraints for ZMP generation and training.
   Both `--zmp_feature_ov` and `--zmp_observable_response` default to `true`;
   pass `false` explicitly to disable either option.
   `gen_data.py --zmp_feature_ov true` streams float64
@@ -87,16 +100,27 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   overlap, serialized molecule/basis/ECP and density-fitting auxiliary molecule,
   both quadrature grids and cube layout.
   Sidecar filenames are relative to the dataset directory; keep them together.
-  With `--if_continue true` and either new flag, cached ZMP/CC densities and
-  grid coordinates/weights are reused, constraints are merged into
-  `data_<name>_addon.npz`, and CC/ZMP inversion and VV10 work are skipped.
-  Existing addon fields are preserved. Cached feature counts are reused;
-  incompatible cube layouts are errors. Legacy caches use the standard
-  density-fitted B3LYP baseline and quadrature, whose actual settings are
-  recorded anew.
+  `gen_data.py --if_continue true --zmp_constraint_metadata true
+  --zmp_feature_ov false --zmp_observable_response false` refreshes the fixed
+  reference metadata from cached ZMP density and grid coordinates without
+  rerunning CC or rewriting the potentially large addon archive. It writes
+  `data_<name>_zmp_metadata.npz`; training reads this sidecar ahead of the
+  main/addon archives. Legacy caches use the standard density-fitted B3LYP
+  baseline, and its actual settings are recorded anew.
   `--zmp_response_block_size` (default 32 centers) bounds transient Jacobian
   blocks, not disk size or model autograd memory. No training losses or force
   conventions are changed by these generation options.
+- Enable `--zmp_ov_loss true` to add the mean-square full occupied–virtual
+  Fock residual to training. This opt-in path retains every grid point and
+  occupied–virtual pair in float64, accumulates the complete-grid Fock before
+  evaluating the nonlinear residual, and recomputes grid tiles in a second
+  pass to accumulate parameter gradients. The input, quadrature weights,
+  coordinates, Gaussian radial values, and feature-to-density chain cache
+  stay on the selected GPU; the block size limits only temporary tile work.
+  Current support is restricted to one closed-shell RKS training system,
+  non-distributed training, 3x3x3 cube inputs, deterministic models without
+  batch normalization, and float64. This mode has not been GPU-profiled, so
+  its actual device peak memory depends on the system and model.
 - `ccsd_t_target.py`: shared CCSD solver settings, CCSD(T) lambda solving,
   triples-corrected target density and CC-gradient one-particle intermediates.
   `ccsd_t_target_gradient()` handles restricted/unrestricted two-particle
@@ -529,6 +553,12 @@ created, and failures may occur after earlier files have been updated.
   missed; measurements do not reserve GPU resources. The total wait is bounded
   by twice the sampling duration plus 10 seconds to allow queue/startup time;
   incomplete probes are rejected.
+
+- `scripts/gen_data/gen_data_direct.bash`: submit from the repository root with
+  `sbatch scripts/gen_data/gen_data_direct.bash`. Slurm runs one generator per
+  array task: `MP_NUMBER=SLURM_ARRAY_TASK_ID` and `MP_TOTAL=SLURM_ARRAY_TASK_COUNT`.
+  Use contiguous, zero-based arrays (for example `0-3%1`); there is no Bash
+  worker loop or standalone fan-out.
 
 - `scripts/direct_run_per_gpu.py`: background-by-default, single-host alternative without
   Slurm. For example:

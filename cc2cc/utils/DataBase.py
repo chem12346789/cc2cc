@@ -210,7 +210,9 @@ class DataBase:
             shuffle=shuffle,
             batch_size=None,
             num_workers=0,
-            pin_memory=True,
+            pin_memory=not (
+                getattr(args, "zmp_ov_loss", False) and not self.if_eval
+            ),
             sampler=self.sampler,
         )
 

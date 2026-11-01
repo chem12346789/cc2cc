@@ -161,6 +161,24 @@ def add_args(parser: argparse.ArgumentParser):
         help="Model for training.",
     )
     parser.add_argument(
+        "--zmp_ov_loss",
+        type=str2bool,
+        default=False,
+        help="Add the all-grid float64 ZMP occupied-virtual stationarity loss.",
+    )
+    parser.add_argument(
+        "--zmp_ov_loss_multiplier",
+        type=float,
+        default=1.0,
+        help="Multiplier for the mean-square full-OV Fock residual.",
+    )
+    parser.add_argument(
+        "--zmp_ov_block_size",
+        type=int,
+        default=32,
+        help="Grid centers per GPU tile for the two-pass full-OV loss.",
+    )
+    parser.add_argument(
         "--load",
         type=str,
         default="",

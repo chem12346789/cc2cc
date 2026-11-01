@@ -363,21 +363,35 @@ def get_veff_grad_modified_zeros(ks_grad):
 
         mf = ks_grad_.base
         ni = mf._numint
+        auxbasis_response = getattr(ks_grad_, "auxbasis_response", False)
 
         ni = mf._numint
         t0 = logger.timer(ks_grad_, "vxc", *t0)
 
         if not ni.libxc.is_hybrid_xc(mf.xc):
             vj = ks_grad_.get_j(mol, dm)
-            vxc = vj[0] + vj[1]
+            vxc = np.broadcast_to(vj[0] + vj[1], vj.shape).copy()
+            if auxbasis_response:
+                e1_aux = vj.aux.sum((0, 1))
         else:
             omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mf.xc, spin=mol.spin)
             vj, vk = ks_grad_.get_jk(mol, dm)
-            vk *= hyb
+            if auxbasis_response:
+                vk.aux = vk.aux * hyb
+            vk[:] *= hyb
             if omega != 0:
-                vk += ks_grad_.get_k(mol, dm, omega=omega) * (alpha - hyb)
+                vk_lr = ks_grad_.get_k(mol, dm, omega=omega)
+                vk[:] += vk_lr * (alpha - hyb)
+                if auxbasis_response:
+                    vk.aux[:] += vk_lr.aux * (alpha - hyb)
             vxc = vj[0] + vj[1] - vk
+            if auxbasis_response:
+                e1_aux = vj.aux.sum((0, 1))
+                e1_aux -= np.trace(vk.aux, axis1=0, axis2=1)
 
-        return lib.tag_array(vxc, exc1_grid=None)
+        exc1_grid = np.zeros((mol.natm, 3)) if ks_grad_.grid_response else None
+        if auxbasis_response:
+            return lib.tag_array(vxc, exc1_grid=exc1_grid, aux=e1_aux)
+        return lib.tag_array(vxc, exc1_grid=exc1_grid)
 
     ks_grad.get_veff = types.MethodType(get_veff, ks_grad)
