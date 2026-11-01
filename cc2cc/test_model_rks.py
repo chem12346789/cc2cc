@@ -129,7 +129,9 @@ def test_model_rks(
         or args.a2 is None
         or args.alp is None
     ):
-        d3 = disp.DFTD3Dispersion(mol)
+        d3 = disp.DFTD3Dispersion(
+            mol, xc="b3lyp" if test_mode == "post-b3lyp-d3" else "hf",
+        )
     else:
         param = {
             "s6": args.s6,

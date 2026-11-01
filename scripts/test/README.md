@@ -2,6 +2,16 @@
 
 This directory contains reproducible evaluation and benchmark submission scripts.
 
+## Post-B3LYP-D3 evaluation
+
+In `test_diet100.bash`, select `MODEL_INDEX=3` for `atom-3259973` or
+`MODEL_INDEX=4` for `atom-1279985` (epoch 2395) to use `--test_mode post-b3lyp-d3`.
+This evaluates the model once on the B3LYP density, without model SCF or VV10.
+Use `scf_d3bj_ene` for the total energy:
+`E_B3LYP + E_D3BJ + E_model[rho_B3LYP]`.
+The `scf_ene` column excludes D3BJ; do not add D3 again to `scf_d3bj_ene`.
+Existing model selections are unchanged.
+
 ## Comparing density choices without rerunning SCF
 
 From the repository root, compare the same checkpoint evaluated self-consistently

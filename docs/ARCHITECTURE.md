@@ -476,7 +476,9 @@ created, and failures may occur after earlier files have been updated.
 - `test.py`: checkpoint loading and RKS/UKS model validation
   - `--test_mode post-b3lyp` evaluates the model once on cached `dm1_dft`,
     using the B3LYP baseline. `--test_mode post-b3lyp-d3` uses that same
-    density and reports the D3BJ-corrected energy in `scf_d3bj_ene`.
+    density and reports `E_B3LYP + E_D3BJ + E_model[rho_B3LYP]` in
+    `scf_d3bj_ene`; `scf_ene` remains the energy without D3BJ.
+    The D3 mode uses B3LYP D3BJ damping unless explicit D3 parameters are supplied.
     `--test_mode post-b3lyp-nl` also uses the B3LYP density and reports
     the post-SCF VV10 energy in `post_scf_vv10_ene`.
     `--test_mode post-b3lyp-vv10` uses cached `dm1_scf_vv10` with the
