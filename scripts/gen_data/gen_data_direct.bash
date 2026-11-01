@@ -50,6 +50,8 @@ exec ~/anaconda3/envs/pyscf/bin/python gen_data.py \
     --basis "${basis_args}" --dataset "${DATASET}" --if_continue "${IF_CONTINUE}" \
     --if_eval 0 --name_mol_reverse 0 --md_number "${MD_NUMBER}" --device cpu \
     --mp_number "${MP_NUMBER}" --mp_total "${MP_TOTAL}" --grid_level 4 \
+    --zmp_feature_ov false --zmp_observable_response false \
+    --zmp_constraint_metadata true \
     --gen_config "${GEN_CONFIG}" \
     >"log/gen_data-${PID_THIS_RUN}-${MP_NUMBER}.log" \
     2>"log/gen_data-${PID_THIS_RUN}-${MP_NUMBER}.err"
