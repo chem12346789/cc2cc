@@ -572,7 +572,13 @@ created, and failures may occur after earlier files have been updated.
   Memory (default 15 GiB) and optional power filters are instantaneous checks
   before dispatch, not reservations; coordinate GPU ownership with other users.
   With no `--gpus`, respects `CUDA_VISIBLE_DEVICES` or discovers all local GPUs.
-  `--dry-run --gpus 0,1` previews without GPU access, file writes, or job execution.
+  If `nvidia-smi` is missing, it warns and skips GPU selection and filters;
+  jobs inherit CUDA visibility and must choose their own device. In that mode,
+  the array limit or `--array-concurrency` is a global limit (default 1).
+  `--dry-run --gpus 0,1` previews without probing `nvidia-smi`, so it may not
+  reflect the fallback; it does not access GPUs, write files, or execute jobs.
+  To run `scripts/gen_data/gen_data_direct.bash` locally, set
+  `SLURM_ARRAY_TASK_COUNT` to the number of tasks (4 for its default array).
   Default run log directories use the run's timestamp.
   Each run has separate stdout/stderr logs and per-job PySCF scratch directories
   under `PYSCF_TMPDIR`, `TMPDIR`, or repository `tmp` (retained for inspection).
