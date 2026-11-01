@@ -24,7 +24,10 @@ from cc2cc.utils.b3lyp_reference import get_vv10_data
 from cc2cc.utils.parser import gen_name_args, str2bool
 from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc
-from cc2cc.utils.zmp_constraints import get_zmp_constraint_data
+from cc2cc.utils.zmp_constraints import (
+    get_zmp_constraint_data,
+    refresh_zmp_constraint_metadata,
+)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -67,6 +70,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--zmp_observable_response", type=str2bool, default=True,
         help="Generate compact dipole, second-moment and atom-projection response data.",
+    )
+    parser.add_argument(
+        "--zmp_constraint_metadata",
+        type=str2bool,
+        default=False,
+        help="Refresh fixed-reference orbital metadata when continuing a dataset.",
     )
     parser.add_argument(
         "--zmp_response_block_size", type=int, default=32,
@@ -182,7 +191,11 @@ if __name__ == "__main__":
             grids = Grid(mol, args.grid_level, 7)
 
             if args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
-                print(f"SKIP: {name} already exists.")
+                if args.zmp_constraint_metadata:
+                    refresh_zmp_constraint_metadata(mol, grids, name, args)
+                    print(f"Updated ZMP orbital metadata: {name}")
+                else:
+                    print(f"SKIP: {name} already exists.")
             else:
                 if mol.spin == 0:
                     cc(mol, grids, name, args, evaluate=evaluate)

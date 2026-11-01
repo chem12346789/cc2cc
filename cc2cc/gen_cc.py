@@ -213,12 +213,14 @@ def cc(
                     + data_dict["hatree_cc_grids"]
                     + data_dict["kin_cc_grids"]
                     + data_dict["nuc_cc_grids"]
+                    + data_dict["ecp_cc_grids"]
                 )
                 - (
                     data_dict["exc_k_hf_grids"]
                     + data_dict["hatree_hf_grids"]
                     + data_dict["kin_hf_grids"]
                     + data_dict["nuc_hf_grids"]
+                    + data_dict["ecp_hf_grids"]
                 )
             )
             * grids.weights
@@ -233,6 +235,7 @@ def cc(
                         + data_dict["hatree_cc_grids"]
                         + data_dict["kinl_cc_grids"]
                         + data_dict["nuc_erf_cc_grids"]
+                        + data_dict["ecp_cc_grids"]
                     )
                     - (
                         data_dict["exc_dft_grids"]
@@ -240,6 +243,7 @@ def cc(
                         + data_dict["hatree_dft_grids"]
                         + data_dict["kinl_dft_grids"]
                         + data_dict["nuc_erf_dft_grids"]
+                        + data_dict["ecp_dft_grids"]
                     )
                 )
                 * grids.weights

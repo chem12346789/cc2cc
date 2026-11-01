@@ -1,10 +1,11 @@
 """Fixed-reference orbital and compact observable constraints for generation."""
 
+import copy
 from pathlib import Path
 
 import numpy as np
 
-from cc2cc.utils.env_var import EDGE_LEN
+from cc2cc.utils.env_var import DATA_PATH, EDGE_LEN
 
 
 def _observable_operators(mol, grids, ni, block_size):
@@ -43,7 +44,8 @@ def get_zmp_constraint_data(mf, grids, dm_zmp, dm_target, cache_prefix, args):
     """
     feature_ov = getattr(args, "zmp_feature_ov", True)
     response = getattr(args, "zmp_observable_response", True)
-    if not (feature_ov or response):
+    metadata_only = getattr(args, "zmp_constraint_metadata", False)
+    if not (feature_ov or response or metadata_only):
         return {}
     block_size = getattr(args, "zmp_response_block_size", 32)
     gap_floor = getattr(args, "zmp_response_gap_floor", 1e-3)
@@ -117,6 +119,18 @@ def get_zmp_constraint_data(mf, grids, dm_zmp, dm_target, cache_prefix, args):
             "zmp_response_origin_bohr": np.zeros(3, dtype=np.float64),
             "zmp_response_gaussian_width_bohr": 1.0,
         })
+
+    if metadata_only and not (feature_ov or response):
+        for spin, (c, n, f, e) in enumerate(
+            zip(coeffs, occs, focks, energies)
+        ):
+            occupied = n > 0
+            gaps = e[~occupied, None] - e[None, occupied]
+            data[f"zmp_fock_ov_s{spin}"] = (
+                c[:, ~occupied].T @ f @ c[:, occupied]
+            )
+            data[f"zmp_gap_s{spin}"] = gaps
+        return data
 
     prefix = Path(cache_prefix)
     pending = []
@@ -193,3 +207,58 @@ def get_zmp_constraint_data(mf, grids, dm_zmp, dm_target, cache_prefix, args):
         array.flush()
         Path(str(path) + ".partial").replace(path)
     return data
+
+
+def refresh_zmp_constraint_metadata(mol, grids, name, args):
+    """Write training metadata beside an existing ZMP archive without rerunning CC."""
+    data_path = DATA_PATH / f"data_{name}.npz"
+    addon_path = DATA_PATH / f"data_{name}_addon.npz"
+    metadata_path = DATA_PATH / f"data_{name}_zmp_metadata.npz"
+    if not data_path.exists():
+        raise FileNotFoundError(f"ZMP dataset not found: {data_path}")
+    if not addon_path.exists():
+        raise FileNotFoundError(
+            f"ZMP grid-coordinate addon not found: {addon_path}"
+        )
+
+    with np.load(data_path, allow_pickle=True) as archive:
+        dm_zmp = np.asarray(archive["dm1_zmp"], dtype=np.float64)
+        weights = np.asarray(archive["weights"], dtype=np.float64)
+    with np.load(addon_path, allow_pickle=True) as archive:
+        if "coords" not in archive:
+            raise ValueError(f"{name}: addon has no saved ZMP grid coordinates.")
+        coords = np.asarray(archive["coords"], dtype=np.float64)
+
+    if coords.shape != (len(weights), 3):
+        raise ValueError(f"{name}: saved ZMP coordinates and weights differ.")
+    if mol.nao != dm_zmp.shape[-1]:
+        raise ValueError(
+            f"{name}: regenerated molecule basis differs from the saved ZMP density."
+        )
+
+    grids.coords = coords
+    grids.weights = weights
+
+    from pyscf import dft
+
+    mf_class = dft.RKS if mol.spin == 0 else dft.UKS
+    mf = mf_class(mol, xc="b3lyp").density_fit()
+    metadata_args = copy.copy(args)
+    metadata_args.zmp_constraint_metadata = True
+    metadata_args.zmp_feature_ov = False
+    metadata_args.zmp_observable_response = False
+    metadata = get_zmp_constraint_data(
+        mf,
+        grids,
+        dm_zmp,
+        None,
+        DATA_PATH / f"data_{name}_zmp",
+        metadata_args,
+    )
+    if not metadata:
+        raise RuntimeError(f"{name}: failed to create ZMP constraint metadata.")
+
+    temporary_path = metadata_path.with_name(metadata_path.name + ".partial")
+    with temporary_path.open("wb") as stream:
+        np.savez_compressed(stream, **metadata)
+    temporary_path.replace(metadata_path)

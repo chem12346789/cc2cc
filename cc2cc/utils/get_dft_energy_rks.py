@@ -8,6 +8,20 @@ import torch
 
 import pyscf
 import pyscf.dft
+import pyscf.scf
+
+
+def _ecp_energy_density(mol, ao, dm):
+    """Return the pseudopotential correction in the AO-projected gauge."""
+    if not mol.has_ecp():
+        return np.zeros(ao.shape[0], dtype=ao.dtype)
+
+    ecp = pyscf.scf.hf.get_hcore(mol)
+    ecp -= mol.intor_symmetric("int1e_kin")
+    ecp -= mol.intor_symmetric("int1e_nuc")
+    overlap = mol.intor_symmetric("int1e_ovlp")
+    projected_dm = np.linalg.solve(overlap, ecp @ dm)
+    return np.einsum("pi,ij,pj->p", ao, projected_dm, ao, optimize=True)
 
 
 def block_loop_rdm2(nao):
@@ -68,6 +82,7 @@ def get_cc_energy(
     mf_mo_coeff = mf.mo_coeff
 
     rho_cc = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc, xctype="GGA")
+    ecp_cc_grids = _ecp_energy_density(mol, ao_value[0], dm1_cc)
 
     # exchange part from dm2_cc
     print("Start exchange part...")
@@ -168,7 +183,9 @@ def get_cc_energy(
     print("Nuclear scale factors (cc/dft/hf):", nuc_erf_cc_scale)
     print("Nuclear part done.\n")
 
-    tol_cc_grids = exc_cc_grids + hatree_cc_grids + kin_cc_grids + nuc_cc_grids
+    tol_cc_grids = (
+        exc_cc_grids + hatree_cc_grids + kin_cc_grids + nuc_cc_grids + ecp_cc_grids
+    )
 
     return {
         "exc_cc_grids": exc_cc_grids,
@@ -177,6 +194,7 @@ def get_cc_energy(
         "kinl_cc_grids": kinl_cc_grids,
         "nuc_cc_grids": nuc_cc_grids,
         "nuc_erf_cc_grids": nuc_erf_cc_grids,
+        "ecp_cc_grids": ecp_cc_grids,
         "tol_cc_grids": tol_cc_grids,
     }
 
@@ -202,6 +220,7 @@ def get_dft_energy(
     ao_1 = ao_value[1:4]
 
     rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
+    ecp_dft_grids = _ecp_energy_density(mol, ao_value[0], dm1_dft)
     dft_mo_coeff = mdft.mo_coeff
     exc_dft_grids = pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0]
 
@@ -315,6 +334,7 @@ def get_dft_energy(
         + hatree_dft_grids
         + kin_dft_grids
         + nuc_dft_grids
+        + ecp_dft_grids
     )
 
     return {
@@ -325,6 +345,7 @@ def get_dft_energy(
         "kinl_dft_grids": kinl_dft_grids,
         "nuc_dft_grids": nuc_dft_grids,
         "nuc_erf_dft_grids": nuc_erf_dft_grids,
+        "ecp_dft_grids": ecp_dft_grids,
         "tol_dft_grids": tol_dft_grids,
     }
 
@@ -350,6 +371,7 @@ def get_hf_energy(
     ao_1 = ao_value[1:4]
 
     rho_hf = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_hf, xctype="GGA")
+    ecp_hf_grids = _ecp_energy_density(mol, ao_value[0], dm1_hf)
     mf_mo_coeff = mf.mo_coeff
 
     # K part from dm1_hf
@@ -460,4 +482,5 @@ def get_hf_energy(
         "kinl_hf_grids": kinl_hf_grids,
         "nuc_hf_grids": nuc_hf_grids,
         "nuc_erf_hf_grids": nuc_erf_hf_grids,
+        "ecp_hf_grids": ecp_hf_grids,
     }

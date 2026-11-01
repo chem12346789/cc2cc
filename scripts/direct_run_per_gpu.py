@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run existing array job scripts locally, respecting array concurrency per GPU."""
+"""Run existing array job scripts locally, respecting array concurrency."""
 
 from __future__ import annotations
 
@@ -58,11 +58,13 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--array", help="Override the script's #SBATCH array, e.g. 0-54%%2.")
     parser.add_argument(
         "--gpus", help="Comma-separated nvidia-smi indices or GPU UUIDs; defaults to "
-        "CUDA_VISIBLE_DEVICES if set, otherwise all local GPUs.",
+        "CUDA_VISIBLE_DEVICES if set, otherwise all local GPUs. Ignored if "
+        "nvidia-smi is missing.",
     )
     parser.add_argument(
         "--array-concurrency", type=int,
-        help="Maximum simultaneous jobs per GPU; overrides the array's %%limit.",
+        help="Maximum simultaneous jobs per GPU, or total without GPU selection; "
+        "overrides the array's %%limit.",
     )
     parser.add_argument("--cpus-per-task", type=int, help="Override #SBATCH CPU count.")
     parser.add_argument("--model-indices", help="Comma-separated MODEL_INDEX values.")
@@ -86,7 +88,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def stop_jobs(running: dict[subprocess.Popen, tuple[str, int, int]]) -> None:
+def stop_jobs(running: dict[subprocess.Popen, tuple[str | None, int, int]]) -> None:
     for process in running:
         if process.poll() is None:
             try:
@@ -106,14 +108,15 @@ def stop_jobs(running: dict[subprocess.Popen, tuple[str, int, int]]) -> None:
 
 
 def run_jobs(
-    script: Path, jobs: list[tuple[int, int]], gpus: dict[str, str],
+    script: Path, jobs: list[tuple[int, int]], gpus: dict[str, str] | None,
     concurrency: int, cpus: int, log_dir: Path, scratch_dir: Path,
     min_free_memory: float, max_power: float | None, poll_interval: float,
 ) -> int:
     pending = deque(jobs)
-    running: dict[subprocess.Popen, tuple[str, int, int]] = {}
+    resources: list[str | None] = list(gpus) if gpus is not None else [None]
+    running: dict[subprocess.Popen, tuple[str | None, int, int]] = {}
     failures = 0
-    total_concurrency = concurrency * len(gpus)
+    total_concurrency = concurrency * len(resources)
     try:
         while pending or running:
             for process, (gpu, model, task) in list(running.items()):
@@ -121,19 +124,23 @@ def run_jobs(
                     continue
                 del running[process]
                 failures += returncode != 0
+                device = f"GPU={gpu}" if gpu is not None else "GPU=unmanaged"
                 print(
-                    f"[DONE] model={model} task={task} GPU={gpu} exit={returncode}",
+                    f"[DONE] model={model} task={task} {device} exit={returncode}",
                     flush=True,
                 )
             active_by_gpu = {
                 gpu: sum(active_gpu == gpu for active_gpu, _, _ in running.values())
-                for gpu in gpus
+                for gpu in resources
             }
             available_gpus = [
                 gpu for gpu, active in active_by_gpu.items() if active < concurrency
             ]
             if pending and available_gpus and len(running) < total_concurrency:
-                available = query_gpus(list(gpus.values()), min_free_memory, max_power)
+                available = (
+                    set(query_gpus(list(gpus.values()), min_free_memory, max_power))
+                    if gpus is not None else {None}
+                )
                 for gpu in available_gpus:
                     while (
                         pending and active_by_gpu[gpu] < concurrency
@@ -149,19 +156,23 @@ def run_jobs(
                         env.update(
                             MODEL_INDEX=str(model), SLURM_ARRAY_TASK_ID=str(task),
                             SLURM_CPUS_PER_TASK=str(cpus),
-                            FORCE_CUDA_VISIBLE_DEVICES=gpus[gpu],
-                            CUDA_VISIBLE_DEVICES=gpus[gpu],
                             PYSCF_TMPDIR=str(task_scratch),
                             DIRECT_RUN_LOG_LINKS="1",
                         )
+                        if gpu is not None and gpus is not None:
+                            env.update(
+                                FORCE_CUDA_VISIBLE_DEVICES=gpus[gpu],
+                                CUDA_VISIBLE_DEVICES=gpus[gpu],
+                            )
                         process = subprocess.Popen(
                             ["bash", str(script)], cwd=submit.ROOT, env=env,
                             start_new_session=True,
                         )
                         running[process] = (gpu, model, task)
                         active_by_gpu[gpu] += 1
+                        device = f"GPU={gpu}" if gpu is not None else "GPU=unmanaged"
                         print(
-                            f"[START] model={model} task={task} GPU={gpu} PID={process.pid}",
+                            f"[START] model={model} task={task} {device} PID={process.pid}",
                             flush=True,
                         )
             if pending or running:
@@ -225,16 +236,29 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     gpu_text = args.gpus if args.gpus is not None else os.environ.get("CUDA_VISIBLE_DEVICES")
     requested = submit.parse_csv_list(gpu_text) if gpu_text is not None else None
-    if requested == []:
+    if requested == [] and args.gpus is not None:
         parser.error("The GPU selection is empty")
-    gpus = (
-        dict.fromkeys(requested, "") if args.dry_run and requested is not None
-        else query_gpus(requested, args.min_free_memory, args.max_gpu_power)
-    )
-    if not gpus:
-        raise RuntimeError("No local GPUs satisfy the memory/power filters")
+    if args.dry_run and requested:
+        gpus: dict[str, str] | None = dict.fromkeys(requested, "")
+    else:
+        try:
+            gpus = query_gpus(requested, args.min_free_memory, args.max_gpu_power)
+        except FileNotFoundError as error:
+            if error.filename != "nvidia-smi":
+                raise
+            print(
+                "[WARN] nvidia-smi not found; GPU selection and filters are "
+                "disabled. Jobs inherit CUDA visibility.",
+                file=sys.stderr, flush=True,
+            )
+            gpus = None
+        else:
+            if requested == []:
+                parser.error("The GPU selection is empty")
+            if not gpus:
+                raise RuntimeError("No local GPUs satisfy the memory/power filters")
     concurrency = concurrency or 1
-    total_concurrency = concurrency * len(gpus)
+    total_concurrency = concurrency * (len(gpus) if gpus is not None else 1)
     run_id = datetime.now().strftime("direct-%Y%m%d-%H%M%S-%f")
     log_dir = Path(args.log_dir).expanduser().resolve() if args.log_dir else (
         submit.ROOT / "log" / run_id
@@ -243,10 +267,14 @@ def main(argv: list[str] | None = None) -> int:
         os.environ.get("PYSCF_TMPDIR") or os.environ.get("TMPDIR") or submit.ROOT / "tmp"
     ).expanduser().resolve()
     scratch_dir = scratch_base / run_id
+    selection = (
+        f"GPUs={','.join(gpus)} concurrency={concurrency}/GPU"
+        if gpus is not None else f"GPU-selection=disabled concurrency={concurrency}"
+    )
     print(
-        f"[PLAN] script={script} jobs={len(jobs)} GPUs={','.join(gpus)} "
-        f"concurrency={concurrency}/GPU total-concurrency={total_concurrency} "
-        f"cpus/job={cpus} logs={log_dir}", flush=True,
+        f"[PLAN] script={script} jobs={len(jobs)} {selection} "
+        f"total-concurrency={total_concurrency} cpus/job={cpus} logs={log_dir}",
+        flush=True,
     )
     if args.dry_run:
         for model, task in jobs:
@@ -258,9 +286,11 @@ def main(argv: list[str] | None = None) -> int:
         launcher_log = log_dir / "launcher.log"
         command = [
             sys.executable, "-u", str(Path(__file__).resolve()), *argv,
-            "--script", str(script), "--gpus", ",".join(gpus.values()),
-            "--foreground", "--background-worker", "--log-dir", str(log_dir),
+            "--script", str(script),
         ]
+        if gpus is not None:
+            command.extend(("--gpus", ",".join(gpus.values())))
+        command.extend(("--foreground", "--background-worker", "--log-dir", str(log_dir)))
         with launcher_log.open("w") as output:
             process = subprocess.Popen(
                 command, stdin=subprocess.DEVNULL, stdout=output,
