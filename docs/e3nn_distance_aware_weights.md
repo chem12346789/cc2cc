@@ -110,6 +110,9 @@ and is not checkpoint-compatible with `correct2`.
 - [Targeted tests](../tests/test_model_e3nn_correct2.py) cover distance
   sensitivity, cubic symmetry checks, gradients, shapes, finite center
   features, checkpoint round-trip, and unsupported geometry.
+- [Mixed-model tests](../tests/test_model_transformer_dense_mix_e3nn_4_correct.py)
+  cover batched inference, input and force-loss gradients, rotational symmetry,
+  and checkpoint restoration.
 
 More parameters increase capacity; radial conditioning supplies a specific
 dependence on distance.
