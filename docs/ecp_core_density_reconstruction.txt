@@ -1,0 +1,90 @@
+ECP CORE-DENSITY RECONSTRUCTION
+
+Why a reconstruction model is needed
+------------------------------------
+An effective core potential (ECP) replaces explicit core electrons with
+an operator acting on valence electrons. Its parameters describe this
+operator, not the shape of the missing core-electron density. Therefore,
+the ECP alone does not specify a unique core density.
+
+The existing B3LYP and ZMP calculations use a PySCF molecule containing
+the ECP. Their valence densities already reflect its effect on the
+orbitals. Reconstructing additional core density is a separate modeling
+choice, not an automatic consequence of using the ECP.
+
+1. All-electron reference
+-------------------------
+Perform an all-electron reference calculation with an appropriate
+all-electron basis and compare it with a matching ECP calculation.
+For the same geometry, charge, spin and reference method, define:
+
+  correction(r) = density_AE_reference(r) - density_ECP_reference(r)
+
+The correction can include changes to the valence density as well as
+the missing core density. Adding it to a different ECP density assumes
+that the correction transfers to that system or state; validate this
+assumption. Do not add the entire all-electron density to the ECP
+density, because that would count the valence density twice.
+
+Advantages: can capture the reference environment and core relaxation.
+Limitations: requires an additional all-electron calculation and
+consistent, converged reference settings.
+
+2. Fitted atomic-core model
+---------------------------
+Choose a published or fitted core-density function for each element
+and ECP, then sum the atom-centered functions at the desired points:
+
+  core_density(r) = sum over atoms A of core_A(|r - R_A|)
+
+Each atomic function must be normalized to the number of electrons
+removed by that ECP. A closed-shell core contributes equally to alpha
+and beta densities. The model must also provide spatial derivatives
+when the downstream features depend on density gradients.
+
+Advantages: inexpensive and reusable across geometries.
+Limitations: a fixed atomic core may miss relaxation and any valence
+reconstruction; its fit and transferability need validation.
+
+3. Dataset-specific reconstruction
+-----------------------------------
+Use a reconstruction dataset made for the exact potential, element
+and valence configuration. Such data may supply core densities and
+all-electron/pseudo partial waves or other prescribed corrections.
+Follow the dataset's own reconstruction and normalization conventions.
+
+Advantages: can provide a systematic correction when matching data
+are available. Limitations: many molecular ECPs do not include such
+data, and a PAW or other augmentation dataset is not automatically
+compatible with an unrelated molecular ECP.
+
+Using a reconstruction in this project
+---------------------------------------
+The name rho_cube_dft can be misleading: the existing CPU grid code
+stores exchange-correlation energy-density features, not raw electron
+densities. For example, its first channels are built from LDA exchange,
+VWN3 correlation, B88 exchange and LYP correlation, multiplied by the
+electron density. The ZMP cube uses the same feature construction.
+
+Consequently, do not add a core density directly to rho_cube_dft or
+rho_cube_zmp: the units and meanings differ. Instead, a proposed method
+would reconstruct the underlying density and any required density
+derivatives, then recompute the features separately for the B3LYP and
+ZMP inputs. For unrestricted calculations it must also define the
+spin-resolved core contribution consistently.
+
+Validate electron counts, grid convergence, total-density behavior near
+nuclei and agreement with representative all-electron references. If the
+model is used for energies or forces, consistently account for the
+reconstructed features and their derivatives, including atom-centered
+core motion. Changing saved cubes alone does not update SCF energies or
+gradients, and may make training targets inconsistent.
+
+Recommendation
+--------------
+First check for reconstruction data explicitly matched to the chosen
+ECP. Otherwise, compare an all-electron reference-derived correction
+with a documented atomic-core model for representative systems. Record
+the ECP, basis, reconstruction source, electron-count convention and
+validation results. No reconstruction scheme is selected or implemented
+by this document.
