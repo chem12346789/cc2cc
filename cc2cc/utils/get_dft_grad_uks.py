@@ -41,7 +41,7 @@ def get_dft_input(mol, grids, dm1_dft, max_memory=8000):
     }
 
 
-def get_dft_grad(mol, grids, dm1_dft, max_memory=8000, *, neighbor_indices=None):
+def get_dft_grad(mol, grids, dm1_dft, max_memory=8000):
     """
     Calculate the gradient of (exchange-correlation energy - DFT energy) on the grids.
     Note the max_memory is hard to predict (a large memory usage is due to grad2force and grad_mat), so just set it to a relative small value to avoid OOM.

@@ -4,13 +4,16 @@ This directory contains reproducible evaluation and benchmark submission scripts
 
 ## Post-B3LYP-D3 evaluation
 
-In `test_diet100.bash`, select `MODEL_INDEX=3` for `atom-3259973` or
-`MODEL_INDEX=4` for `atom-1279985` (epoch 2395) to use `--test_mode post-b3lyp-d3`.
-This evaluates the model once on the B3LYP density, without model SCF or VV10.
+In `test_diet100.bash`, set `TEST_MODE=post-b3lyp-d3` with `MODEL_INDEX=0`
+for `atom-3259973` or `MODEL_INDEX=1` for `atom-1279985` (epoch 2395).
+This evaluates the model once on the B3LYP density, without model SCF or VV10,
+using standard B3LYP-D3BJ parameters rather than the launcher's custom D3 values.
 Use `scf_d3bj_ene` for the total energy:
 `E_B3LYP + E_D3BJ + E_model[rho_B3LYP]`.
 The `scf_ene` column excludes D3BJ; do not add D3 again to `scf_d3bj_ene`.
-Existing model selections are unchanged.
+For `collect_info.py`, use `--model_load atom-3259973-post-b3lyp-d3` or
+`--model_load atom-1279985-post-b3lyp-d3` with the default energy column.
+Existing model selections and their default modes are unchanged.
 
 ## Comparing density choices without rerunning SCF
 

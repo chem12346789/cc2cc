@@ -42,6 +42,8 @@ UT   = unit test
 
 ## Output
 - Code only, no explanation, unless asked
+- For responses involving mathematical formulas, deliver the response as a PDF
+  with rendered formulas and link to it.
 - Bullets over paragraphs. No preamble, no recap
 - Describe changes in prose + file:line — no diff hunks
 - Rationale <= 3 short sentences

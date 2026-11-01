@@ -194,7 +194,6 @@ def cc(
         data_dict["grad_dft"] = grad_dft
         data_dict["grad_dft_d3bj"] = grad_dft_d3bj
         data_dict["grad_zmp"] = grad_zmp
-        data_dict["grad_zmp_no_cube"] = grad_zmp
     else:
         data_append_dict = get_dft_input(mol, grids, dm1_dft)
         data_dict.update(data_append_dict)

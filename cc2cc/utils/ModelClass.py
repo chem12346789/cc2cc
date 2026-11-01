@@ -19,8 +19,6 @@ from cc2cc.utils.DataBase import DataBase
 from cc2cc.utils.env_var import CHECKPOINTS_PATH, CUBE_MIDDLE, MAIN_PATH
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.schedulers import CosineAnnealingWarmRestarts2
-from cc2cc.utils.grid_neighbors import RadiusNeighborhoods
-from cc2cc.utils.zmp_ov_training import GaussianOrbitalCache
 
 CUBE_INDEX = {
     "cube5": np.array(
@@ -53,7 +51,6 @@ TORCH_LIST = [
     "loss_tot_abs",
     "loss_tot_grad",
     "loss_tot_atomic",
-    "loss_zmp_ov",
 ]
 TIME_LIST = [
     "time_loss_tot_ene",
@@ -80,9 +77,6 @@ def _training_stage(stage, batch=None):
     if batch is not None:
         device = batch["input"].device
         label += f" name={batch.get('name', 'atomic')} device={device} grids={len(batch['input'])}"
-        neighbors = batch.get("neighbor_indices")
-        if isinstance(neighbors, RadiusNeighborhoods):
-            label += f" edges={int(neighbors.counts.sum())}"
     print(f"{label} start", flush=True)
     start = time.perf_counter()
     faulthandler.dump_traceback_later(120, repeat=True)
@@ -179,7 +173,6 @@ class ModelClass:
         self.optimizer_state_dict = None
         self.rng_state_dict = None
         self.rng_state_for_save = None
-        self.zmp_ov_cache = None
 
         # for distributed training
         self.verbose = True
@@ -217,22 +210,9 @@ class ModelClass:
         self.device, self.dtype = param.device, param.dtype
         self.cube_type = self.model.cube_type
         self.cube_size = self.model.cube_size
-        self.radius_cutoff = getattr(self.model, "radius_cutoff", None)
         self.input_level = self.model.input_level
-        if self.cube_type == "neighbors" and self.args.if_grad:
-            if self.dtype != torch.float64:
-                raise ValueError("No-cube force training requires --precision float64.")
-            self.print(
-                "No-cube force training uses cached fixed-grid feature derivatives, "
-                "not a complete analytic total nuclear gradient."
-            )
         for name in ("cube_type", "cube_size", "input_level"):
             self.print(f"{name}: {getattr(self, name)}")
-        if self.radius_cutoff is not None:
-            self.print(
-                f"radius_cutoff: {self.radius_cutoff} Bohr "
-                "(all points; cube_size is the latent width)"
-            )
 
         if self.state_dict is not None:
             self.model.load_state_dict(self.state_dict, strict=True)
@@ -260,14 +240,7 @@ class ModelClass:
             self.init_train()
 
     def _maybe_compile_model(self):
-        if self.args.if_grad or getattr(self.args, "zmp_ov_loss", False):
-            return
-
-        if self.radius_cutoff is not None:
-            self.print(
-                "Running radius model in eager mode: variable-length neighborhood "
-                "loops are not compiled."
-            )
+        if self.args.if_grad:
             return
 
         try:
@@ -396,17 +369,6 @@ class ModelClass:
             raise ValueError(f"Unknown cube type: {self.cube_type}")
 
         def process_grad2force(x):
-            if self.cube_type == "neighbors":
-                if x.ndim != 4 or x.shape[-1] != 3:
-                    raise ValueError(
-                        "Expected compact no-cube Jacobian (atoms, channels, grids, 3); "
-                        "regenerate expanded archives."
-                    )
-                return (
-                    x[:, : self.input_level]
-                    .transpose(2, 1, 0, 3)
-                    .reshape(x.shape[2], self.input_level, -1)
-                )
             # tipabcx -> tipCx -> piCtx
             if self.cube_type == "center_4":
                 x = x[
@@ -445,8 +407,6 @@ class ModelClass:
             process_grad2force=process_grad2force,
             verbose=self.verbose,
             input_mode=self.cube_type,
-            neighborhood_size=self.cube_size,
-            radius_cutoff=self.radius_cutoff,
         )
         self.database_eval = DataBase(
             eval_str_dict,
@@ -459,12 +419,7 @@ class ModelClass:
             process_grad2force=process_grad2force,
             verbose=self.verbose,
             input_mode=self.cube_type,
-            neighborhood_size=self.cube_size,
-            radius_cutoff=self.radius_cutoff,
         )
-
-        if getattr(self.args, "zmp_ov_loss", False):
-            self._init_zmp_ov_cache()
 
         self.print(f"Training on {len(self.database_train)} systems.")
         self.print(f"Evaluating on {len(self.database_eval)} systems.")
@@ -684,161 +639,16 @@ class ModelClass:
     def eval(self):
         self.model.eval()
 
-    def model_output(
-        self, input_, weight, relative_positions=None, *, neighbor_indices=None
-    ):
+    def model_output(self, input_, weight):
         model = (
             self.model.module
             if isinstance(self.model, DistributedDataParallel)
             else self.model
         )
-        center_input = input_
-        if isinstance(neighbor_indices, RadiusNeighborhoods):
-            if relative_positions is None:
-                raise ValueError("Radius neighborhoods require grid coordinates.")
-            return input_, self.model(
-                input_, relative_positions, neighborhoods=neighbor_indices
-            ) * weight
-        if model.cube_type == "neighbors":
-            if neighbor_indices is not None:
-                input_ = input_[neighbor_indices].permute(0, 2, 1).contiguous()
-            if model.before_weight:
-                input_ = torch.einsum("p...,pi->p...", input_, weight)
-            if relative_positions is None:
-                raise ValueError("Neighbor model requires relative_positions.")
-            output = self.model(input_, relative_positions)
-            derivative_input = center_input if neighbor_indices is not None else input_
-        else:
-            if model.before_weight:
-                input_ = torch.einsum("p...,pi->p...", input_, weight)
-            output = self.model(input_)
-            derivative_input = input_
-        return derivative_input, output if model.before_weight else output * weight
-
-    def _init_zmp_ov_cache(self):
-        if self.args.rho_input != "zmp":
-            raise ValueError("--zmp_ov_loss requires --rho_input zmp.")
-        if self.dtype != torch.float64:
-            raise ValueError("--zmp_ov_loss requires --precision float64.")
-        if self.args.distributed:
-            raise ValueError("--zmp_ov_loss currently requires non-distributed training.")
-        if self.cube_type != "cube" or self.cube_size != 27:
-            raise ValueError("--zmp_ov_loss currently requires 3x3x3 cube inputs.")
-        if getattr(self.model, "before_weight", False):
-            raise ValueError("--zmp_ov_loss does not support models with before_weight.")
-        if not 1 <= self.input_level <= 7:
-            raise ValueError("--zmp_ov_loss supports one to seven input features.")
-        if self.args.zmp_ov_block_size <= 0:
-            raise ValueError("--zmp_ov_block_size must be positive.")
-        if self.args.zmp_ov_loss_multiplier <= 0:
-            raise ValueError("--zmp_ov_loss_multiplier must be positive.")
-
-        modules = tuple(self.model.modules())
-        dropout_types = (
-            torch.nn.Dropout,
-            torch.nn.Dropout1d,
-            torch.nn.Dropout2d,
-            torch.nn.Dropout3d,
-            torch.nn.AlphaDropout,
-            torch.nn.FeatureAlphaDropout,
-        )
-        batch_norm_types = (
-            torch.nn.BatchNorm1d,
-            torch.nn.BatchNorm2d,
-            torch.nn.BatchNorm3d,
-            torch.nn.SyncBatchNorm,
-        )
-        if any(isinstance(module, dropout_types) and module.p > 0 for module in modules):
-            raise ValueError(
-                "Two-pass ZMP training requires deterministic model evaluations; "
-                "nonzero dropout is unsupported."
-            )
-        if any(isinstance(module, batch_norm_types) for module in modules):
-            raise ValueError(
-                "Two-pass ZMP training requires model outputs independent "
-                "across grid centers; batch normalization is unsupported."
-            )
-
-        names = set(self.database_train.dataset.name_list)
-        if len(names) != 1:
-            raise ValueError(
-                "--zmp_ov_loss currently requires exactly one training system "
-                "so its complete constraint cache can remain GPU-resident."
-            )
-        name = next(iter(names))
-        batch = self.database_train.dataset.data[name]
-        self.zmp_ov_cache = GaussianOrbitalCache.from_archive(
-            name,
-            batch["input"],
-            batch["weight"],
-            self.device,
-            self.args.zmp_ov_block_size,
-        )
-        batch["input"] = self.zmp_ov_cache.input.detach()
-        batch["weight"] = self.zmp_ov_cache.weights
-        self.print(
-            f"Loaded all-grid Gaussian ZMP factors for {name} on {self.device}; "
-            f"input shape={tuple(self.zmp_ov_cache.input.shape)}."
-        )
-
-    def _zmp_ov_loss(self, accumulate_parameter_gradients):
-        cache = self.zmp_ov_cache
-        if cache is None:
-            raise RuntimeError("The ZMP orbital cache is not initialized.")
-
-        fock = cache.fock0.clone()
-        for start, stop in cache.batches():
-            input_tile = cache.input[start:stop].detach().requires_grad_(True)
-            _, output = self.model_output(
-                input_tile, cache.weights[start:stop]
-            )
-            feature_gradient = torch.autograd.grad(
-                output.sum(), input_tile, create_graph=False
-            )[0]
-            fock = fock + cache.fock_tile(feature_gradient, start)
-
-        residual = cache.cv.T @ fock @ cache.co
-        loss = (
-            self.args.zmp_ov_loss_multiplier
-            * torch.mean(residual * residual)
-        )
-        if accumulate_parameter_gradients:
-            fock_adjoint = cache.cv @ (
-                2
-                * self.args.zmp_ov_loss_multiplier
-                * residual
-                / residual.numel()
-            ) @ cache.co.T
-            parameters = tuple(
-                parameter
-                for parameter in self.model.parameters()
-                if parameter.requires_grad
-            )
-            for start, stop in cache.batches():
-                input_tile = cache.input[start:stop].detach().requires_grad_(True)
-                _, output = self.model_output(
-                    input_tile, cache.weights[start:stop]
-                )
-                feature_gradient = torch.autograd.grad(
-                    output.sum(), input_tile, create_graph=True
-                )[0]
-                fock_tile = cache.fock_tile(feature_gradient, start)
-                surrogate = torch.sum(fock_adjoint * fock_tile)
-                gradients = torch.autograd.grad(
-                    surrogate, parameters, allow_unused=True
-                )
-                for parameter, gradient in zip(parameters, gradients):
-                    if gradient is None:
-                        continue
-                    if parameter.grad is None:
-                        parameter.grad = gradient.detach()
-                    else:
-                        parameter.grad.add_(gradient.detach())
-        return loss.detach()
-
-    def _zmp_ov_loss_for_eval(self):
-        with torch.inference_mode(False), torch.enable_grad():
-            return self._zmp_ov_loss(accumulate_parameter_gradients=False)
+        if model.before_weight:
+            input_ = torch.einsum("p...,pi->p...", input_, weight)
+        output = self.model(input_)
+        return input_, output if model.before_weight else output * weight
 
     def loss(self, batch, if_train=True, if_grad=True):
         input_ = batch["input"]
@@ -882,14 +692,8 @@ class ModelClass:
         else:
             input_ = input_.detach()
 
-        relative_positions = batch.get("relative_positions")
         with _training_stage("forward" if if_train else "eval-forward", batch):
-            input_, output = self.model_output(
-                input_,
-                weight,
-                relative_positions,
-                neighbor_indices=batch.get("neighbor_indices"),
-            )
+            input_, output = self.model_output(input_, weight)
         if not if_train:
             output = output.detach()
 
@@ -924,15 +728,7 @@ class ModelClass:
                         inputs=input_,
                         create_graph=True,
                     )[0]
-                    model = (
-                        self.model.module
-                        if isinstance(self.model, DistributedDataParallel)
-                        else self.model
-                    )
-                    if model.cube_type == "neighbors":
-                        force = torch.einsum("pi,pix->x", middle_, grad2force)
-                    else:
-                        force = torch.einsum("piC,piCx->x", middle_, grad2force)
+                    force = torch.einsum("piC,piCx->x", middle_, grad2force)
 
                     loss_grad = scale_grad * self.loss_fun(grad_cc_train, force)
                     tot_loss = tot_loss + loss_grad
@@ -966,12 +762,7 @@ class ModelClass:
                 atomic_batch = self.database_train.process_batch(
                     {
                         key: atomic_batch[key]
-                        for key in (
-                            "input",
-                            "weight",
-                            "neighbor_indices",
-                            "relative_positions",
-                        )
+                        for key in ("input", "weight")
                         if key in atomic_batch
                     },
                     device=self.local_rank,
@@ -980,8 +771,6 @@ class ModelClass:
                     _, atomic_output = self.model_output(
                         atomic_batch["input"],
                         atomic_batch["weight"],
-                        atomic_batch.get("relative_positions"),
-                        neighbor_indices=atomic_batch.get("neighbor_indices"),
                     )
                 atomic_output = torch.sum(atomic_output)
                 ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
@@ -1037,15 +826,6 @@ class ModelClass:
         for step in range(len(self.database_train.data_gpu)):
             with _training_stage(f"train-fetch:{step}"):
                 batch = next(batches)
-            if self.zmp_ov_cache is not None:
-                if batch["name"] != self.zmp_ov_cache.name:
-                    raise ValueError(
-                        "--zmp_ov_loss batch does not match the resident "
-                        "single-system constraint cache."
-                    )
-                batch = dict(batch)
-                batch["input"] = self.zmp_ov_cache.input.detach()
-                batch["weight"] = self.zmp_ov_cache.weights
             if profile_memory:
                 torch.cuda.synchronize(memory_device)
                 torch.cuda.reset_peak_memory_stats(memory_device)
@@ -1054,16 +834,6 @@ class ModelClass:
             tot_loss, data_record, event = self.loss(batch, if_grad=if_grad)
             with _training_stage("backward", batch):
                 tot_loss.backward()
-            if self.zmp_ov_cache is not None:
-                with _training_stage("zmp-ov", batch):
-                    zmp_ov_loss = self._zmp_ov_loss(
-                        accumulate_parameter_gradients=True
-                    )
-                zmp_ov_value = zmp_ov_loss.cpu().numpy()
-                data_record["loss_zmp_ov"] = zmp_ov_value
-                data_record["loss_tot"] = (
-                    data_record["loss_tot"] + zmp_ov_value
-                )
             with _training_stage("optimizer", batch):
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
                 self.optimizer.step()
@@ -1118,9 +888,6 @@ class ModelClass:
                 batch = next(batches)
             batch = self.database_eval.process_batch(batch, device=self.local_rank)
             _, data_record, event = self.loss(batch, if_train=False)
-            if self.zmp_ov_cache is not None and batch["name"] == self.zmp_ov_cache.name:
-                zmp_ov_loss = self._zmp_ov_loss_for_eval()
-                data_record["loss_zmp_ov"] = zmp_ov_loss.cpu().numpy()
             if event is None:
                 data_record_l.add_data_record(data_record)
                 continue
@@ -1147,8 +914,6 @@ class ModelClass:
     def get_b3lyp_ene(self, rho_cube):
         if self.cube_type == "center_4":
             rho = rho_cube[:, :4]
-        elif self.cube_type == "neighbors":
-            rho = rho_cube[:, :4, 0]
         elif self.cube_type in ("cube", "cube5"):
             rho = rho_cube[:, :4, self.model.cube_middle]
         else:
@@ -1157,15 +922,8 @@ class ModelClass:
 
     def eval_xc_eff(
         self, rho_cube, weights_, weight_response=False, *, return_tensors=False,
-        relative_positions=None, neighbor_indices=None, position_response=False,
     ):
         """Optionally return weight derivatives and detached on-device tensors."""
-        if self.cube_type == "neighbors" and relative_positions is None:
-            raise ValueError("Neighbor XC evaluation requires relative_positions.")
-        if neighbor_indices is not None and self.cube_type != "neighbors":
-            raise ValueError("Neighbor indices require a neighbors model.")
-        if position_response and (relative_positions is None or not weight_response):
-            raise ValueError("Position response requires positions and weight_response=True.")
         input_mat = torch.as_tensor(rho_cube, dtype=self.dtype, device=self.device)
         weights_mat = torch.as_tensor(
             weights_.reshape((-1, 1)), dtype=self.dtype, device=self.device
@@ -1173,47 +931,19 @@ class ModelClass:
         input_mat.requires_grad = True
         density_input = input_mat
         weights_mat.requires_grad = weight_response
-        if relative_positions is not None:
-            relative_positions = torch.as_tensor(
-                relative_positions, dtype=self.dtype, device=self.device
-            )
-            if position_response:
-                relative_positions.requires_grad_(True)
-            if neighbor_indices is not None:
-                neighbor_indices = torch.as_tensor(
-                    neighbor_indices, dtype=torch.int64, device=self.device
-                )
-            input_mat, exc_cube = self.model_output(
-                input_mat, weights_mat, relative_positions,
-                neighbor_indices=neighbor_indices,
-            )
-        else:
-            input_mat, exc_cube = self.model_output(input_mat, weights_mat)
-        if neighbor_indices is None:
-            baseline_input = density_input if self.cube_type == "neighbors" else input_mat
-            baseline = self.get_b3lyp_ene(baseline_input)
-        else:
-            centers = density_input[neighbor_indices[:, 0], :4]
-            baseline = (centers * self.b3lyp_weights(centers)).sum(-1)
+        input_mat, exc_cube = self.model_output(input_mat, weights_mat)
+        baseline = self.get_b3lyp_ene(input_mat)
         exc_cube += torch.einsum("i,ij->ij", baseline, weights_mat)
-        if position_response:
-            middle_cube, weight_derivative, edge_derivative = torch.autograd.grad(
-                exc_cube.sum(), (density_input, weights_mat, relative_positions),
-                materialize_grads=True,
-            )
-        elif weight_response:
+        if weight_response:
             middle_cube, weight_derivative = torch.autograd.grad(
                 torch.sum(exc_cube), (density_input, weights_mat)
             )
         else:
-            derivative_input = density_input if self.cube_type == "neighbors" else input_mat
-            middle_cube = torch.autograd.grad(torch.sum(exc_cube), derivative_input)[0]
+            middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
             weight_derivative = None
         outputs = (exc_cube.detach().squeeze(-1), middle_cube.detach())
         if weight_response:
             outputs += (weight_derivative.detach().reshape(-1),)
-        if position_response:
-            outputs += (edge_derivative.detach(),)
         if return_tensors:
             return outputs
         return tuple(output.cpu().numpy() for output in outputs)

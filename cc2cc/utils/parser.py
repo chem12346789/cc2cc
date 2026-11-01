@@ -164,19 +164,19 @@ def add_args(parser: argparse.ArgumentParser):
         "--zmp_ov_loss",
         type=str2bool,
         default=False,
-        help="Add the all-grid float64 ZMP occupied-virtual stationarity loss.",
+        help="Legacy option; enabling ZMP occupied-virtual loss is no longer supported.",
     )
     parser.add_argument(
         "--zmp_ov_loss_multiplier",
         type=float,
         default=1.0,
-        help="Multiplier for the mean-square full-OV Fock residual.",
+        help="Legacy setting; ZMP occupied-virtual loss is no longer supported.",
     )
     parser.add_argument(
         "--zmp_ov_block_size",
         type=int,
         default=32,
-        help="Grid centers per GPU tile for the two-pass full-OV loss.",
+        help="Legacy setting; ZMP occupied-virtual loss is no longer supported.",
     )
     parser.add_argument(
         "--load",
@@ -211,6 +211,9 @@ def add_args(parser: argparse.ArgumentParser):
     )
 
     args = parser.parse_args()
+
+    if args.zmp_ov_loss:
+        parser.error("--zmp_ov_loss is no longer supported.")
 
     args.name_mol_input = args.name_mol.copy()
     args.name_mol = gen_name_args(args.name_mol, args.dataset, args.name_mol_reverse)

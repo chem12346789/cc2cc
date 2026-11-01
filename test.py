@@ -81,7 +81,9 @@ def main():
         help="Run model SCF (default), or evaluate once without model SCF on a "
         "cached density: B3LYP for post-b3lyp, post-b3lyp-d3, and "
         "post-b3lyp-nl; self-consistent B3LYP-VV10 for "
-        "post-b3lyp-vv10. The D3 mode reports D3BJ energy, and the NL mode "
+        "post-b3lyp-vv10. The D3 mode reports B3LYP-D3BJ plus the model "
+        "correction in scf_d3bj_ene, using B3LYP D3BJ parameters by default; "
+        "scf_ene excludes D3. The NL mode "
         "reports the post-SCF VV10 energy, with the VV10 correction cached "
         "for the reference density and NLC grid. Missing references are computed by "
         "reference SCF and cached. Post-SCF modes are energy-only.",

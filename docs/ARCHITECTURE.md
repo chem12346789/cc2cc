@@ -33,18 +33,6 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     `phi(r)^T S^-1 V_pp D phi(r)`, with `V_pp = hcore - kinetic - nuclear`.
     Its integral is `Tr(V_pp D)` up to grid quadrature error; it is not a
     pointwise local potential times the electron density.
-- `grid_neighbors.py`: opt-in, data-only nearest-grid prototype. Run
-  `python -m cc2cc.utils.grid_neighbors input.npz --coords-key coords --output neighbors.npz`
-  using the selected project interpreter and coordinates exported from the actual
-  B3LYP `mdft.grids`. Saves coordinates and center-first indices for 26 nearest
-  other entries, without changing training or generating electronic-structure data.
-  Gather features by these indices; reconstruct relative positions as
-  `coords[indices] - coords[:, None, :]` in blocks. Keep the center's quadrature
-  weight for energy integration, not the sum of its neighbors' weights.
-  Coincident grid entries are retained; equal-distance ordering is unspecified.
-  These irregular neighborhoods are not Cartesian cubes and are not compatible
-  with existing cube checkpoints. Force derivatives must include moving-grid
-  effects; neighbor exchanges introduce discrete boundaries.
 - `zmp_reference.py`: shared ZMP inversion, diagnostic prints, and numerical
   nuclear-gradient reference. Generation stores `grad_zmp` using
   `zmp_baseline_gradient(mdft, dm1_zmp)`: an analytic B3LYP baseline gradient
@@ -104,23 +92,13 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   --zmp_feature_ov false --zmp_observable_response false` refreshes the fixed
   reference metadata from cached ZMP density and grid coordinates without
   rerunning CC or rewriting the potentially large addon archive. It writes
-  `data_<name>_zmp_metadata.npz`; training reads this sidecar ahead of the
-  main/addon archives. Legacy caches use the standard density-fitted B3LYP
-  baseline, and its actual settings are recorded anew.
+  `data_<name>_zmp_metadata.npz`; the model training loop does not consume
+  this sidecar. Legacy caches use the standard density-fitted B3LYP baseline,
+  and its actual settings are recorded anew.
   `--zmp_response_block_size` (default 32 centers) bounds transient Jacobian
   blocks, not disk size or model autograd memory. No training losses or force
   conventions are changed by these generation options.
-- Enable `--zmp_ov_loss true` to add the mean-square full occupied–virtual
-  Fock residual to training. This opt-in path retains every grid point and
-  occupied–virtual pair in float64, accumulates the complete-grid Fock before
-  evaluating the nonlinear residual, and recomputes grid tiles in a second
-  pass to accumulate parameter gradients. The input, quadrature weights,
-  coordinates, Gaussian radial values, and feature-to-density chain cache
-  stay on the selected GPU; the block size limits only temporary tile work.
-  Current support is restricted to one closed-shell RKS training system,
-  non-distributed training, 3x3x3 cube inputs, deterministic models without
-  batch normalization, and float64. This mode has not been GPU-profiled, so
-  its actual device peak memory depends on the system and model.
+- `--zmp_ov_loss true` is no longer supported and is rejected.
 - `ccsd_t_target.py`: shared CCSD solver settings, CCSD(T) lambda solving,
   triples-corrected target density and CC-gradient one-particle intermediates.
   `ccsd_t_target_gradient()` handles restricted/unrestricted two-particle
@@ -131,212 +109,17 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   amplitudes/lambda `1e-10`, and CC/lambda iteration limits of 200.
 - `DataBase.py`, `TestDataDFT.py`, `DataRecord.py`, `ModelClass.py`: data
   loading, record keeping, model init, checkpoints, losses
-  - Select `--model transformer+dense_mix_e3nn_4_no_cube` for opt-in
-    nearest-grid training. Enable the fixed-grid gradient-loss path with
-    `--if_grad 1 --precision float64`; `--if_grad 0` selects energy-only training.
-    Its density input remains
-    `(N_centers, 4, 27)` and output `(N_centers, 1)`, with a separate
-    `relative_positions` tensor `(N_centers, 27, 3)` in Bohr. Slot zero is the
-    center. Four `model_e3nn_correct_no_cube.E3nn` experts use the
-    `model_e3nn_correct` radial tensor-product/readout architecture, accepting
-    per-input `edge_vec` instead of fixed cube geometry. Each expert uses
-    raw neighbor-center radii in Bohr, without `EDGE_LEN` or per-expert
-    distance normalization, with `lmax=0` matching the corrected cube model.
-    This changes normalization for older no-cube checkpoints; start a fresh
-    run rather than treating old optimizer/checkpoint state as an exact resume.
-    Mean pooling makes neighbor order irrelevant when features and positions
-    are permuted together. This replaces the initial no-cube moment encoder;
-    its earlier checkpoints are incompatible.
-  - For the separate smooth-radius experiment, select
-    `--model transformer+dense_mix_e3nn_4_no_cube_100` and start a fresh training
-    run. Despite the historical `_100` name, 100 now specifies the latent
-    encoder/readout width, not a point-count limit. Every grid point within
-    **0.1 Bohr** is included. Per-edge encoded features are weighted by
-    `max(0, 1 - r² / r_c²)³` before summation and divided by the sum of these
-    weights, including the center (weight one). The taper and its first two
-    derivatives vanish at the boundary, so changing radius membership does not
-    introduce hard nearest-neighbor energy jumps. This changes the model
-    function even though parameter shapes still match the earlier 100-point
-    experiment: do not resume its checkpoints as an equivalent model.
-    Existing archives supply coordinates and central features, without being
-    modified. A lazy KD-tree queries variable-length neighborhoods in bounded
-    padded batches; padding contributes zero weight. The cutoff encoder lives
-    in `model/model_utils/model_e3nn_correct_no_cube_radius.py`; the original
-    encoder remains cutoff-free. Training pools hidden edge features in
-    chunks of at most 32,768 entries, checkpointing the aggregation to recompute
-    gathered activations during backward. Readouts and the transformer run
-    once per batch of up to 256 centers, rather than per tiny edge batch.
-    This variable-radius model runs eagerly: whole-model `torch.compile`
-    traces variable-length Python neighborhood loops and can spend excessive
-    time compiling/recompiling before an epoch finishes. Fixed-neighborhood
-    models retain their existing compilation policy. Disabling compilation
-    does not cap neighborhoods or reduce the edge-processing workload.
-    Feature and model-parameter derivatives are retained without a full
-    expanded edge list. Parameter names/shapes and normalized pooling are
-    preserved; changed reduction order can introduce roundoff differences.
-    A single neighborhood larger than the batch budget is still included
-    completely. CPU RKS/UKS gradients and CPU/GPU SCF use the same radius and
-    taper; GPU gradients remain unsupported. Total compute can remain large
-    on dense near-nuclear grids. The original model and generator defaults
-    stay at 27 points.
   - Both generators save `coords` in Bohr aligned with their `weights` and
-    feature grid (not a separately reconstructed B3LYP SCF grid). The dataset
-    extracts central features from existing cubes and builds center-first
-    neighborhoods from those coordinates; archived `neighbor_indices` are not
-    loaded. It keeps all central features on CPU and gathers neighborhoods on
-    batch transfer. The radius experiment queries neighborhoods lazily.
-    Point filtering is disabled for all input modes: zero-feature centers,
-    weights, grid targets and cube force Jacobians retain their original order.
-    Existing archives need matching coordinates in the base or addon archive;
-    neighborhood indices are rebuilt by the dataset. No-cube indices are
-    unchanged by density.
-    For training-data generation, `grad_zmp_no_cube` stores the same analytic
-    baseline nuclear gradient `(N_atoms, 3)` as `grad_zmp`; it is not a neighbor
-    feature Jacobian.
-    No-cube training reads the existing `grad2force` (DFT) or `grad2force_zmp`
-    (ZMP) cube Jacobian and copies only its central slot into a compact
-    `(N_atoms, N_channels, N_grid, 3)` array before tensor/GPU transfer.
-    RKS/UKS generators no longer return or save redundant `grad2force_no_cube`
-    fields. The optional `neighbor_indices` argument remains accepted by the
-    gradient helpers but does not affect Jacobian generation. Generators do not
-    save neighborhood indices; the dataset derives them from coordinates.
-    Dataset transfer retains `x_center` with shape `(N_grid, 4)`. Inside the
-    differentiable model forward, indexing constructs
-    `X[p,c,k] = x_center[neighbor_indices[p,k],c]`. This is the sparse selection
-    operation `X = TRANS * x_center`, without materializing a selection matrix.
-    Autograd directly returns `G = dE/dx_center`, implicitly summing contributions
-    from every `(center, neighbor slot)` onto their unique grid indices:
-    `G[i,c] = sum_{p,k: neighbor_indices[p,k]=i} dE/dX[p,c,k]`.
-    Then contract `G[i,c] * J[A,c,i,alpha]` over grid points and channels.
-    This is exact, including shared-neighbor effects and parameter gradients;
-    it does not approximate the model as center-only. Model derivatives and
-    quadrature weights are not baked into the stored Jacobian.
-    Its element count is exactly 27 times smaller than the expanded neighbor
-    Jacobian, not necessarily total training memory or archive size.
-    Existing archives with the cube Jacobians and coordinates work without
-    regeneration; any older `grad2force_no_cube` fields are ignored.
-    The full cube is still generated, stored, and temporarily loaded on CPU;
-    only compact central derivatives are retained in the dataset and sent to GPU.
-    Training differentiates the weighted model energy with respect to unique
-    center features with `create_graph=True`, contracts
-    the compact Jacobian, and backpropagates the gradient loss into model parameters.
-    There is no manual derivative scatter in the loss. Neighborhood activations
-    and their higher-order autograd graph are still needed inside the model;
-    this is not a guarantee of 27 times lower total peak GPU memory.
-    Neighbor indices remain int64 on CPU and GPU. No-cube gradient targets are
-    not silently disabled by the legacy cube grid-count threshold; the complete
-    molecule is used, so available GPU memory still limits molecule size.
-    Generators also save PySCF `grid_atom_indices` (parent atom per quadrature
-    entry; -1 is fixed padding). The dataset optionally gathers these into
-    integer `neighbor_atom_indices`. Under the fixed-coordinate convention used
-    by the feature Jacobian, relative positions have zero nuclear derivative;
-    the loss therefore contracts only feature derivatives and does not require
-    grid ownership. This does not implement a moving-grid nuclear gradient.
-    This enables the existing cached, fixed-AO-density/fixed-grid gradient-loss
-    objective, not a complete analytic nuclear gradient of the total functional.
-    Correction Pulay and density-response terms are not supplied by this Jacobian;
-    baseline targets are unchanged (in particular, the ZMP baseline includes its
-    own Pulay and grid response). Fixed weights/coordinates remove explicit
-    weight/geometry response only, not those other terms. Do not interpret this
-    training objective as a consistent moving-grid or MD force implementation.
-    Neighbor membership is held fixed; neighbor swaps are nondifferentiable boundaries.
-    Loading prints each molecule's unweighted mean neighbor-center distance in
-    Bohr and population standard deviation (`ddof=0`) in Bohr over the 26 neighbors
-    of all centers, excluding the center itself.
-  - This mode does not eliminate cube generation from the existing generators;
-    it reuses cube centers. Nearest-neighbor distances can vary strongly across
-    atom-centered quadrature grids. No-cube checkpoints are distinct from cube
-    checkpoints. CPU nuclear-gradient evaluation supports fixed grids;
-    training uses compact no-cube Jacobians, not expanded cube Jacobians.
-  - No-cube RKS/UKS SCF uses CPU PySCF quadrature, with the network on its
-    selected device. Each SCF iteration computes central features on the full
-    grid, then partitions output centers into bounded batches. Each batch uses
-    a cluster containing all unique entries in those centers' global neighborhoods,
-    including neighbors outside the batch. Local integer indices gather model
-    inputs inside autograd, which returns derivatives directly for unique cluster
-    features. Only batch centers contribute weighted energy and B3LYP baseline;
-    cluster halo points do not add extra energy terms. Cluster derivatives are
-    accumulated at global indices before blocked AO contraction. Global neighbor
-    membership is unchanged, and overlaps between clusters are accumulated.
-    `eval_xc_eff(..., neighbor_indices=local_indices)` accepts `(N_unique, 4)`
-    features and returns `(N_centers,)` energies and `(N_unique, 4)` derivatives.
-    Omitting indices preserves the expanded-input interface. This avoids
-    duplicated feature transfers, not the network's neighborhood activations;
-    ordinary SCF does not build a higher-order derivative graph.
-    Neighborhood indices are cached until grid coordinates change. The
-    semilocal B3LYP baseline and existing hybrid J/K and NLC handling are retained.
-    Energy-only evaluation selects GPU4PySCF when CUDA is available unless
-    `--cpu` is requested. The no-cube model must be on the active CUDA device.
-    Nuclear-gradient requests select CPU PySCF quadrature and retain both
-    fixed-grid and full moving-grid response modes.
-  - Independent `modelscf_rks_no_cube_gpu.py` and
-    `modelscf_uks_no_cube_gpu.py` contain their own GPU neighbor quadrature
-    and SCF hooks. Neither imports the shared GPU no-cube implementation,
-    the other spin module, or the legacy cube hooks.
-    AO evaluation, semilocal feature construction, unique-cluster indexing,
-    feature-derivative accumulation, and Fock contraction use CuPy/GPU4PySCF.
-    Features, local indices, geometry and derivatives cross the CuPy/PyTorch
-    boundary using stream-aware DLPack, without host feature/Fock staging.
-    Only neighborhood construction transfers coordinates to the CPU KD-tree
-    when coordinates change; indices are then cached on the GPU. AO sorting,
-    padding and final unsorting follow GPU4PySCF's integration optimizer.
-    Existing GPU hybrid J/K, density fitting and NLC handling are retained.
-    `max_memory_gpu` controls neighbor integration batching, not a hard GPU
-    allocation cap; standard GPU4PySCF manages J/K and NLC memory separately.
-    The model must be on the active CUDA device. GPU nuclear-gradient assembly
-    remains unsupported; nuclear gradients use CPU quadrature/assembly.
-    The existing cube-specific `DFT2CC_PROFILE_XC` stage report is not emitted
-    by this new no-cube GPU quadrature path.
-    Actual GPU4PySCF validation covered RKS/UKS CPU/GPU quadrature agreement,
-    STO-3G and cc-pVDZ AO sorting/padding, Hermiticity, cluster-size independence,
-    cache reuse/invalidation, B3LYP baseline limits, density-fitted SCF,
-    self-consistent VV10, and user-facing GPU evaluation with post-SCF VV10/D3.
-    GPU energy/Fock finite-difference errors were below `1.2e-10`.
-    The selected Python environment needed `gpu4pyscf-cuda12x` (1.9.0) and its
-    CuPy dependency for these checks; repository dependency manifests were unchanged.
-  - CPU no-cube RKS/UKS total nuclear gradients use the standard PySCF
-    gradient hooks, with `--if_grad 1 --grid_response 1` for standard PySCF
-    full model grid response or `--grid_response 0` for entirely frozen grids.
-    Cluster feature derivatives are contracted
-    with second-order AO derivatives via the existing GGA gradient assembly.
-    The existing total-SCF energy-weighted density supplies overlap/Pulay terms;
-    Coulomb, hybrid exchange, and density-fitting auxiliary-basis response retain
-    their existing handling. Physical forces are the negative nuclear gradients.
-    `modelscf_rks_no_cube.py` and `modelscf_uks_no_cube.py` expose the spin-specific
-    hooks and each contains its own quadrature and grid-response implementation,
-    without importing the other spin module.
-    Both retain standard PySCF J/K and density-fitting assembly.
-    With grid response enabled,
-    model weight, grid-sampling and explicit relative-position derivatives are
-    included. Shared-neighbor derivatives accumulate globally, and grid motion
-    is assigned to each sampled point's owning atom. NLC response remains in
-    PySCF. Neighbor/pruning selections are held fixed locally; derivatives are
-    piecewise analytic and need not exist at selection changes.
-    For entirely frozen-grid finite differences, displace nuclei and reconverge
-    SCF with reference coordinates and weights. No separate `nuclear_gradient`
-    wrapper is used. `eval_xc_eff` accepts compact neighbor inputs and optional
-    weight/edge response; existing cube evaluator signatures and default
-    two-result output remain supported. Original cube RKS/UKS modules and
-    force-training loss conventions are unchanged.
-    A CUDA network is supported with CPU quadrature and CPU nuclear assembly;
-    it does not select GPU4PySCF numerical integration.
-    Validation on tiny STO-3G systems covered real CPU/CUDA network parity,
-    batching, RKS/UKS converged SCF, and frozen-grid nuclear-energy finite
-    differences. Density-fitted nuclear-gradient errors were about
-    `2.3e-9` Hartree/Bohr, also with self-consistent VV10 when both semilocal
-    and NLC grids were frozen. Conventional (non-density-fitted) full
-    two-atom gradients agreed within `4.3e-9` Hartree/Bohr. Both user-facing
-    evaluators ran with a real CUDA network, CPU gradients, D3 and post-SCF VV10.
-    A bounded CUDA check peaked near 112.25 MiB allocated
-    by PyTorch; this is not a production benchmark or a 27-times memory claim.
+    feature grid (not a separately reconstructed B3LYP SCF grid), as well as
+    PySCF `grid_atom_indices` (parent atom per quadrature entry; -1 is fixed
+    padding). Point filtering is disabled: zero-feature centers, weights,
+    grid targets and cube force Jacobians retain their original order.
   - Dataset tensors remain on CPU; batch device transfers do not evict them.
-    Model XC evaluation returns energy and feature derivatives only, treating
-    quadrature weights as fixed. Model nuclear-gradient hooks require
-    `grid_response=False`; moving-grid weight response is unsupported.
     Base/addon NPZ arrays are read lazily, with addon keys taking precedence,
     and both archives close after loading each system. Grid targets are retained
-    only for absolute loss. Atomic forwards transfer model inputs, weights,
-    and optional neighborhood geometry.
+    only for absolute loss. Atomic forwards transfer model inputs and weights.
+    Model XC evaluation returns energy and feature derivatives, with optional
+    weight derivatives for the CPU RKS/UKS moving-grid gradient hooks.
   - Loaded checkpoint references are released after model/optimizer restoration.
     Checkpoint-size checks stream serialization into a byte counter rather than
     retaining a full serialized checkpoint in RAM.
@@ -359,14 +142,12 @@ Set `DFT2CC_TRACE_TRAIN=1` in the training job environment to emit flushed
 fetching, molecular/atomic forward passes, backward, and optimizer updates.
 Default is `0`; other values are rejected. Each message identifies the PID
 and stage; tensor stages also include the system, device, and grid count.
-Radius batches report the total directed neighbor count, including centers,
-before padding. This is the edge workload, not the model's latent width.
 
 An unfinished stage dumps Python thread stacks to stderr every 120 seconds.
 The watchdog is cancelled on success or exception; exceptions propagate without
 a misleading `done` message. Tensor stages synchronize CUDA before reporting
 completion, so diagnostic wall times include queued GPU work and tracing adds
-synchronization overhead. Training mathematics and neighborhoods are unchanged.
+synchronization overhead. Training mathematics is unchanged.
 Enable tracing in a newly launched process; it cannot instrument an already
 running worker. These diagnostics identify the slow stage, not a speedup.
 
@@ -386,9 +167,7 @@ earlier steps; no cache is emptied. The allocated peak includes resident model
 and optimizer state, not just allocations made during the step.
 Compare identical molecules, precision, model, and force-loss settings; report
 the first-step peak separately from warmed-up steps because optimizer state is
-initialized lazily. The compact Jacobian is 27 times smaller, but total measured
-peak memory need not be. Profiling works with the fixed-grid no-cube gradient loss;
-it does not enable nuclear-gradient evaluation.
+initialized lazily. Profiling does not enable nuclear-gradient evaluation.
 
 ### GPU SCF XC profiling
 
@@ -502,7 +281,8 @@ created, and failures may occur after earlier files have been updated.
     using the B3LYP baseline. `--test_mode post-b3lyp-d3` uses that same
     density and reports `E_B3LYP + E_D3BJ + E_model[rho_B3LYP]` in
     `scf_d3bj_ene`; `scf_ene` remains the energy without D3BJ.
-    The D3 mode uses B3LYP D3BJ damping unless explicit D3 parameters are supplied.
+    The D3 mode uses B3LYP D3BJ damping unless all six custom D3 parameters
+    are supplied.
     `--test_mode post-b3lyp-nl` also uses the B3LYP density and reports
     the post-SCF VV10 energy in `post_scf_vv10_ene`.
     `--test_mode post-b3lyp-vv10` uses cached `dm1_scf_vv10` with the
@@ -528,10 +308,10 @@ created, and failures may occur after earlier files have been updated.
     uses the original `--load`. For example, `--load atom-393567 --load_epoch 1115
     --test_mode post-b3lyp` writes under
     `validate/${basis}_atom-393567-post-b3lyp/1115/`.
-  - `scripts/test/test_diet100.bash` accepts `TEST_MODE=post-b3lyp` or
-    `TEST_MODE=post-b3lyp-vv10` (default `scf`), with separate log directories.
-    The DIET100 calculator includes the launcher's post-SCF runs at epoch 2395:
-    `atom-3259973-scf-b3` and `atom-3259973-scf-b3-vv10`, respectively.
+  - `scripts/test/test_diet100.bash` accepts `TEST_MODE=post-b3lyp-d3` for
+    either checkpoint; it uses standard B3LYP-D3BJ parameters for that mode.
+    Model selections 0 and 1 default to `post-b3lyp`, and selection 2 to `scf`.
+    Other `TEST_MODE` values can also override these defaults.
 - `benchmark_dft.py`: baseline DFT benchmarking
 - `d3_para.py`: D3 parameter fitting/testing
 - `collect_info.py`: collect validation CSV summaries
@@ -605,7 +385,7 @@ created, and failures may occur after earlier files have been updated.
   the origin, coordinates in Angstrom). Charges, spins and atom order are
   preserved. Distinct molecule names keep results for all nine geometries.
   The script defaults to energy-only evaluation (`IF_GRAD=0`); optionally use
-  `IF_GRAD=1 GRID_RESPONSE=1` for full no-cube moving-grid response, or
+  `IF_GRAD=1 GRID_RESPONSE=1` for moving-grid response, or
   `GRID_RESPONSE=0` for fixed-grid CPU gradient evaluation.
   `ROTATION_SET` overrides the selected molecule/group. No extra runtime
   rotation is applied. Rotations rebuild atom-centered quadrature grids;

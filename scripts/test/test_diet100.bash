@@ -13,8 +13,8 @@ source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
-    (0) export load_model_args="--load atom-3259973 --load_epoch 2395 --test_mode post-b3lyp" ;;
-    (1) export load_model_args="--load atom-1279985 --load_epoch 2395 --test_mode post-b3lyp" ;;
+    (0) export load_model_args="--load atom-3259973 --load_epoch 2395 --test_mode ${TEST_MODE:-post-b3lyp}" ;;
+    (1) export load_model_args="--load atom-1279985 --load_epoch 2395 --test_mode ${TEST_MODE:-post-b3lyp}" ;;
     (2) export load_model_args="--load atom-1279985 --load_epoch 2395" ;;
     # (3) export load_model_args="--load atom-1279985 --load_epoch 2395 --test_mode post-b3lyp-d3" ;;
     # (0) export load_model_args="--load atom-393567 --load_epoch 2395" ;;
@@ -42,5 +42,13 @@ find "${PYSCF_TMPDIR}" -type d -empty -delete
 
 sleep $SLURM_ARRAY_TASK_ID
 begin_test_job
-run_test_job --max_memory_gpu 8000 --max_cycle 50 --s6 1.0 --a1 0.8 --s8 -1.0725 --a2 0.15 --alp 14.0 --s9 1.0
+test_mode="${TEST_MODE}"
+if [[ "${load_model_args:-}" =~ --test_mode[[:space:]=]+([^[:space:]]+) ]]; then
+    test_mode="${BASH_REMATCH[1]}"
+fi
+if [[ "${test_mode}" == "post-b3lyp-d3" ]]; then
+    run_test_job --max_memory_gpu 8000 --max_cycle 50
+else
+    run_test_job --max_memory_gpu 8000 --max_cycle 50 --s6 1.0 --a1 0.8 --s8 -1.0725 --a2 0.15 --alp 14.0 --s9 1.0
+fi
 finish_test_job
