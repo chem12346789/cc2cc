@@ -22,7 +22,7 @@ case "${MODEL_INDEX:-0}" in
     # (1) export load_model_args="--load atom-35580 --load_epoch 10075" ;;
 esac
 
-export if_continue_args=0
+export if_continue_args=1
 export IF_GRAD=0
 export name_mol_reverse=0
 export DATASET="gmtkn-diet100-def2"

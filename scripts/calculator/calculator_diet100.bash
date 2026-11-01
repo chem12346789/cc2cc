@@ -12,6 +12,8 @@ export model_load_epoch_pairs=(
     "atom-3259973-post-b3lyp:2395:scf_d3bj_ene:post B3LYP"
     "atom-3259973-post-b3lyp-nl:2395:scf_d3bj_ene:post B3LYP vv10"
     "atom-3259973-post-b3lyp-vv10:2395:scf_d3bj_ene:post B3LYP VV10"
+    "atom-1279985:2395:scf_d3bj_ene:SCF"
+    "atom-1279985-post-b3lyp:2395:scf_d3bj_ene:post B3LYP"
     # "atom-35580:1115:scf_d3bj_ene:zmp"
     # "atom-35580:2395:scf_d3bj_ene:zmp"
 )
