@@ -138,6 +138,9 @@ def zmp_baseline_gradient(mf, dm_zmp):
     Use the baseline occupied Fock block for the energy-weighted density,
     excluding response along rebuilt ZMP solutions. The learned correction
     must supply its own explicit, Pulay, and grid contributions.
+
+    Pass the same SCF object used for the baseline energy so its integral
+    approximation and native gradient agree, including DF auxiliary response.
     """
     overlap = mf.get_ovlp()
     density_energy, coeff = mf.eig(-overlap @ dm_zmp @ overlap, overlap)

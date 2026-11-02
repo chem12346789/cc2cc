@@ -14,8 +14,8 @@ fi
 export DATASET="gmtkn-def2"
 export basis_args="def2-QZVPPD"
 export MD_NUMBER=0
-export GEN_CONFIG="gen_mol_addon.json"
-# export GEN_CONFIG="gen_mol1.json"
+export GEN_CONFIG="gen_test.json"
+# export GEN_CONFIG="gen_mol_addon.json"
 # export GEN_CONFIG="gen_mol2.json"
 export IF_CONTINUE=1
 
@@ -46,6 +46,12 @@ mkdir -p log
 mkdir -p data/grids_dft
 
 # Run generation
+log_file="log/gen_data-${PID_THIS_RUN}-${MP_NUMBER}.log"
+err_file="log/gen_data-${PID_THIS_RUN}-${MP_NUMBER}.err"
+if [[ "${DIRECT_RUN_LOG_LINKS:-}" == "1" ]]; then
+    printf '[TASK-LOG] model=%s task=%s log=%s err=%s\n' \
+        "${MODEL_INDEX:-0}" "${MP_NUMBER}" "${PWD}/${log_file}" "${PWD}/${err_file}"
+fi
 exec ~/anaconda3/envs/pyscf/bin/python gen_data.py \
     --basis "${basis_args}" --dataset "${DATASET}" --if_continue "${IF_CONTINUE}" \
     --if_eval 0 --name_mol_reverse 0 --md_number "${MD_NUMBER}" --device cpu \
@@ -53,5 +59,5 @@ exec ~/anaconda3/envs/pyscf/bin/python gen_data.py \
     --zmp_feature_ov false --zmp_observable_response false \
     --zmp_constraint_metadata true \
     --gen_config "${GEN_CONFIG}" \
-    >"log/gen_data-${PID_THIS_RUN}-${MP_NUMBER}.log" \
-    2>"log/gen_data-${PID_THIS_RUN}-${MP_NUMBER}.err"
+    >"${log_file}" \
+    2>"${err_file}"

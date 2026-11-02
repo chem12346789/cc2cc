@@ -292,6 +292,8 @@ def main(argv: list[str] | None = None) -> int:
             command.extend(("--gpus", ",".join(gpus.values())))
         command.extend(("--foreground", "--background-worker", "--log-dir", str(log_dir)))
         with launcher_log.open("w") as output:
+            output.write(f"[LAUNCHER-LOG] path={launcher_log}\n")
+            output.flush()
             process = subprocess.Popen(
                 command, stdin=subprocess.DEVNULL, stdout=output,
                 stderr=subprocess.STDOUT, start_new_session=True,

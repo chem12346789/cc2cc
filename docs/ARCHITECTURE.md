@@ -35,8 +35,9 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     pointwise local potential times the electron density.
 - `reference_zmp.py`: shared ZMP inversion, diagnostic prints, and numerical
   nuclear-gradient reference. Generation stores `grad_zmp` using
-  `zmp_baseline_gradient(mdft, dm1_zmp)`: an analytic B3LYP baseline gradient
-  at the supplied ZMP determinant, with moving-grid response and a baseline
+  `zmp_baseline_gradient(mzmp, dm1_zmp)`: an analytic B3LYP baseline gradient
+  using the same density-fitted object as `e_zmp`, with moving-grid and
+  auxiliary-basis response at the supplied ZMP determinant and a baseline
   occupied-Fock-block energy-weighted density for the Pulay term. It excludes
   rebuilt-ZMP orbital response; the learned correction must contribute its
   explicit derivative, Pulay term, and grid response separately. Existing
@@ -50,10 +51,12 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   Comparisons use scaled DFT errors rather than division; a zero DFT error
   requires zero ZMP error. Strict references retain the fixed lambda schedule,
   and the existing divergence fallback is unchanged.
-  `zmp.py` implements the inversion SCF equations. Both restricted and
-  unrestricted inversion use a reusable PySCF density-fitting object with its
-  default auxiliary basis for all internal Coulomb J matrices (target,
-  baseline, and SCF iterations); exchange K remains exact.
+  `zmp.py` implements the inversion SCF equations. RZMP and UZMP use PySCF's
+  native `_DFHF` mixin, as its dynamically generated DFRKS/DFUKS classes do.
+  Both Coulomb J and exchange K now use the standard `.density_fit()` auxiliary
+  basis and shared `with_df` object, including baseline energies and gradients.
+  This replaces the previous internal J-only fitting with exact exchange;
+  cached ZMP energies and gradients must be regenerated.
 - `zmp_constraints.py`: optional full-OV stationarity and compact observable
   constraints for ZMP generation and training.
   Both `--zmp_feature_ov` and `--zmp_observable_response` default to `true`;
@@ -374,8 +377,10 @@ created, and failures may occur after earlier files have been updated.
   To run `scripts/gen_data/gen_data_direct.bash` locally, set
   `SLURM_ARRAY_TASK_COUNT` to the number of tasks (4 for its default array).
   Default run log directories use the run's timestamp.
-  Each run has separate stdout/stderr logs and per-job PySCF scratch directories
-  under `PYSCF_TMPDIR`, `TMPDIR`, or repository `tmp` (retained for inspection).
+  `[TASK-LOG]` lines show the actual stdout/stderr paths for test jobs and
+  `gen_data_direct.bash`; `[LAUNCHER-LOG]` identifies the launcher log itself.
+  Per-job PySCF scratch directories use `PYSCF_TMPDIR`, `TMPDIR`, or repository
+  `tmp` (retained for inspection).
   `--log-dir` must name a new directory. Job failures are logged and produce a
   nonzero worker exit status, saved in `exit-code`. By default the command returns
   after starting a detached launcher; its stdout/stderr go to `launcher.log`

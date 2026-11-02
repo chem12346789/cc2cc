@@ -9,7 +9,7 @@ import logging
 import numpy as np
 
 import pyscf
-from pyscf import df
+from pyscf.df.df_jk import _DFHF
 from pyscf.lib import logger
 import pyscf.dft
 from pyscf.dft.numint import _dot_ao_ao_dense
@@ -99,10 +99,11 @@ class DIIS:
         return newfock, diis_error
 
 
-class RZMP(pyscf.dft.rks.RKS):
+class RZMP(_DFHF, pyscf.dft.rks.RKS):
 
     def __init__(self, mol, dm_tar, grids, faxc=0, dftxc=0, xc="b3lyp"):
-        super().__init__(mol)
+        mf = pyscf.dft.rks.RKS(mol, xc=xc).density_fit()
+        super().__init__(mf, mf.with_df, only_dfj=False)
         self.initialize_grids(mol, dm_tar)
 
         self.faxc = faxc * (1.0 - 1.0 / self.mol.nelectron)
@@ -117,15 +118,13 @@ class RZMP(pyscf.dft.rks.RKS):
         self.rho_tar = pyscf.dft.numint.eval_rho(
             mol, self.ao, self.dm_tar, xctype="LDA"
         )
-        self._df_j = df.DF(mol)
-        self.J_tar = self._df_j.get_jk(self.dm_tar, with_k=False)[0]
+        self.J_tar, K_tar = self.get_jk(self.mol, self.dm_tar)
         self.S = mol.intor_symmetric("int1e_ovlp")
 
         self.conv_tol_dm = 1e-8
         self.conv_tol_diis = 1e-4
 
         J_tar = self.J_tar
-        K_tar = self.get_k(self.mol, self.dm_tar)
         ni = self._numint
         vxc = ni.nr_rks(self.mol, self.grids, self.xc, self.dm_tar)[2]
         self.extra_vxc = self.dftxc * vxc
@@ -150,7 +149,7 @@ class RZMP(pyscf.dft.rks.RKS):
         t0 = (logger.process_clock(), logger.perf_counter())
 
         for cycle in range(1, self.max_cycle):
-            self.J = self._df_j.get_jk(self.dm, with_k=False)[0]
+            self.J = self.get_j(self.mol, self.dm)
 
             self.F = self.F0 + l * (self.J - self.J_tar) + self.faxc * self.J
 
@@ -192,10 +191,11 @@ class RZMP(pyscf.dft.rks.RKS):
         )
 
 
-class UZMP(pyscf.dft.uks.UKS):
+class UZMP(_DFHF, pyscf.dft.uks.UKS):
 
     def __init__(self, mol, dm_tar, grids, faxc=0, dftxc=0, xc="b3lyp"):
-        super().__init__(mol)
+        mf = pyscf.dft.uks.UKS(mol, xc=xc).density_fit()
+        super().__init__(mf, mf.with_df, only_dfj=False)
         self.initialize_grids(mol, dm_tar)
 
         self.faxc = faxc * (1.0 - 1.0 / self.mol.nelectron)
@@ -211,15 +211,13 @@ class UZMP(pyscf.dft.uks.UKS):
             pyscf.dft.numint.eval_rho(mol, self.ao, self.dm_tar[0], xctype="LDA"),
             pyscf.dft.numint.eval_rho(mol, self.ao, self.dm_tar[1], xctype="LDA"),
         ]
-        self._df_j = df.DF(mol)
-        self.J_tar = self._df_j.get_jk(self.dm_tar, with_k=False)[0]
+        self.J_tar, K_tar = self.get_jk(self.mol, self.dm_tar)
         self.S = mol.intor_symmetric("int1e_ovlp")
 
         self.conv_tol_dm = 1e-8
         self.conv_tol_diis = 1e-4
 
         J_tar = self.J_tar
-        K_tar = self.get_k(self.mol, self.dm_tar)
         ni = self._numint
         vxc = ni.nr_uks(self.mol, self.grids, self.xc, self.dm_tar)[2]
         self.extra_vxc = self.dftxc * vxc
@@ -245,7 +243,7 @@ class UZMP(pyscf.dft.uks.UKS):
         t0 = (logger.process_clock(), logger.perf_counter())
 
         for cycle in range(1, self.max_cycle):
-            J = self._df_j.get_jk(self.dm, with_k=False)[0]
+            J = self.get_j(self.mol, self.dm)
 
             Fa = self.F0[0] + 2 * l * (J[0] - self.J_tar[0]) + self.faxc * (J[0] + J[1])
             Fb = self.F0[1] + 2 * l * (J[1] - self.J_tar[1]) + self.faxc * (J[0] + J[1])
