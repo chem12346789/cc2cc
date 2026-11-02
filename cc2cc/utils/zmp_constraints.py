@@ -216,18 +216,25 @@ def refresh_zmp_constraint_metadata(mol, grids, name, args):
     metadata_path = DATA_PATH / f"data_{name}_zmp_metadata.npz"
     if not data_path.exists():
         raise FileNotFoundError(f"ZMP dataset not found: {data_path}")
-    if not addon_path.exists():
-        raise FileNotFoundError(
-            f"ZMP grid-coordinate addon not found: {addon_path}"
-        )
 
     with np.load(data_path, allow_pickle=True) as archive:
         dm_zmp = np.asarray(archive["dm1_zmp"], dtype=np.float64)
         weights = np.asarray(archive["weights"], dtype=np.float64)
-    with np.load(addon_path, allow_pickle=True) as archive:
-        if "coords" not in archive:
-            raise ValueError(f"{name}: addon has no saved ZMP grid coordinates.")
-        coords = np.asarray(archive["coords"], dtype=np.float64)
+        if "coords" in archive:
+            coords = np.asarray(archive["coords"], dtype=np.float64)
+        else:
+            if not addon_path.exists():
+                raise FileNotFoundError(
+                    f"{name}: no saved ZMP grid coordinates in {data_path}; "
+                    f"addon not found: {addon_path}"
+                )
+            with np.load(addon_path, allow_pickle=True) as addon:
+                if "coords" not in addon:
+                    raise ValueError(
+                        f"{name}: neither {data_path} nor {addon_path} has "
+                        "saved ZMP grid coordinates."
+                    )
+                coords = np.asarray(addon["coords"], dtype=np.float64)
 
     if coords.shape != (len(weights), 3):
         raise ValueError(f"{name}: saved ZMP coordinates and weights differ.")

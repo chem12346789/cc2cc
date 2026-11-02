@@ -103,7 +103,8 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   `gen_data.py --if_continue true --zmp_constraint_metadata true
   --zmp_feature_ov false --zmp_observable_response false` refreshes the fixed
   reference metadata from cached ZMP density and grid coordinates without
-  rerunning CC or rewriting the potentially large addon archive. It writes
+  rerunning CC or rewriting cached archives. Coordinates are read from
+  `data_<name>.npz`, or from `data_<name>_addon.npz` for legacy caches. It writes
   `data_<name>_zmp_metadata.npz`; the model training loop does not consume
   this sidecar. Legacy caches use the standard density-fitted B3LYP baseline,
   and its actual settings are recorded anew.
