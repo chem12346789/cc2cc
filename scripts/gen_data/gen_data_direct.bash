@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --array=0-3%2
+#SBATCH --array=[0]%1
 #SBATCH --cpus-per-task=24
 # CLUSTER-ONLY: This script is configured for this cluster; do not run it elsewhere.
 
@@ -12,16 +12,14 @@ fi
 
 # Parameters for train.py
 export DATASET="gmtkn-def2"
-
 export basis_args="def2-QZVPPD"
 
 export MP_TOTAL="${SLURM_ARRAY_TASK_COUNT:?Submit this script as a Slurm array}"
 export MP_NUMBER="${SLURM_ARRAY_TASK_ID:?Submit this script as a Slurm array}"
 export MD_NUMBER=0
-# export GEN_CONFIG="gen_test.json"
+export GEN_CONFIG="gen_addon.json"
 # export GEN_CONFIG="gen_mol1.json"
-export GEN_CONFIG="gen_mol2.json"
-# export GEN_CONFIG="gen_val.json"
+# export GEN_CONFIG="gen_mol2.json"
 
 export DATASET="gmtkn-def2"
 export IF_CONTINUE=1
