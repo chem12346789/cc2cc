@@ -1,4 +1,4 @@
-"""ZMP inversion, projected analytic baseline gradients, and finite differences."""
+"""ZMP inversion and projected analytic baseline gradients."""
 
 import argparse
 import json
@@ -14,10 +14,11 @@ from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
 from cc2cc.utils.reference_cc import make_ccsd, ccsd_t_target_density
 from cc2cc.utils.zmp import RZMP, UZMP
 
-LEVEL_SHIFT = 4
-MAX_CYCLE = 20000
-RHO_REL_TOL = 1e-2
+LEVEL_SHIFT = 2
+MAX_CYCLE = 200000
+RHO_REL_TOL = 1e-1
 I_VALUE_REL_TOL = 1e-3
+DIIS_SPACE = 8
 
 
 def get_zmp(
@@ -29,25 +30,19 @@ def get_zmp(
     verbose=0,
     start_l=0,
     max_cycle=MAX_CYCLE,
-    *,
-    strict=False,
 ):
     """Invert a restricted/unrestricted density and print per-stage diagnostics.
 
-    Strict references require every stage to converge and use a fixed schedule.
-    Otherwise stop a converged stage when both density errors meet the relative
-    DFT tolerances, preserving the divergence stop and previous-density fallback.
+    Stop a converged stage when both density errors meet the relative DFT
+    tolerances, preserving the divergence stop and previous-density fallback.
     """
     if dm_tar is None:
         return None, None
     zmp_class = RZMP if np.ndim(dm_tar) == 2 else UZMP
     mzmp = zmp_class(mol, dm_tar, grids, dftxc=1, xc="b3lyp")
-    mzmp.diis_space = 64
+    mzmp.diis_space = DIIS_SPACE
     mzmp.verbose = verbose
     mzmp.max_cycle = max_cycle
-    if strict:
-        mzmp.conv_tol_dm = 1e-10
-        mzmp.conv_tol_diis = 1e-7
 
     ao = mzmp.ao
     print("Start hatree part...")
@@ -77,30 +72,26 @@ def get_zmp(
         mzmp.level_shift = LEVEL_SHIFT**exponent
         print(f"Running ZMP with lambda_ZMP = {2**exponent}")
         mzmp.zscf(2**exponent)
-        if strict and not mzmp.converged:
-            raise RuntimeError(
-                f"Reference ZMP did not converge at lambda={2**exponent}."
-            )
         dm = mzmp.make_rdm1()
         zmp_difference = diff_rho(mol, dm, dm_tar, grids)
         zmp_i_value = diff_I_value(mol, dm, dm_tar, grids)
         zmp_dipole = mzmp.dip_moment(mol=mol, dm=dm, unit="A.U.")
         zmp_difference_dipole = np.linalg.norm(zmp_dipole - tar_dipole)
         print(
-            f"ZMP, rho diff = {zmp_difference:.3e} "
-            f"I value = {zmp_i_value:.3e} "
-            f"dipole diff = {zmp_difference_dipole:.3e} ",
+            f"ZMP, rho diff = {zmp_difference:.3e} electrons "
+            f"I value = {zmp_i_value:.3e} (dimensionless) "
+            f"dipole diff = {zmp_difference_dipole:.3e} A.U. ",
             flush=True,
         )
         print(
-            f"DFT, rho diff = {dft_difference:.3e} "
-            f"I value = {dft_i_value:.3e} "
-            f"dipole diff = {dft_difference_dipole:.3e} ",
+            f"DFT, rho diff = {dft_difference:.3e} electrons "
+            f"I value = {dft_i_value:.3e} (dimensionless) "
+            f"dipole diff = {dft_difference_dipole:.3e} A.U. ",
             flush=True,
         )
         if best_difference is None or zmp_difference < best_difference:
             best_difference = zmp_difference
-        elif not strict and zmp_difference > best_difference * 10:
+        elif zmp_difference > best_difference * 10:
             print("Warning: rho difference increased significantly, may be diverged.")
             print("Warning: ZMP did not converge within the specified lambda range.")
             return mzmp, previous_dm
@@ -112,12 +103,11 @@ def get_zmp(
             error_dft = np.dot(np.abs(target - dft_values), grids.weights)
             error_zmp = np.dot(np.abs(target - zmp_values), grids.weights)
             print(
-                f"Difference in {label} grids between CCSD: "
+                f"Difference in {label} grids between CCSD (kcal/mol): "
                 f"DFT {error_dft * AU2KCALMOL}, ZMP {error_zmp * AU2KCALMOL}"
             )
         if (
-            not strict
-            and mzmp.converged
+            mzmp.converged
             and zmp_difference <= RHO_REL_TOL * dft_difference
             and zmp_i_value <= I_VALUE_REL_TOL * dft_i_value
         ):

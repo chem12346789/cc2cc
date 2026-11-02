@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --array=[0]%1
+#SBATCH --array=[0-2]%3
 #SBATCH --cpus-per-task=24
 # CLUSTER-ONLY: This script is configured for this cluster; do not run it elsewhere.
 

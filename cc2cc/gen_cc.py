@@ -70,7 +70,7 @@ def cc(
     mdft_d3bj.xc = "b3lyp-d3bj"
     mdft_d3bj.kernel(dm1_dft)
     e_dft_d3bj = mdft_d3bj.e_tot
-    print(f"DFT-D3BJ correct energy: {e_dft_d3bj - e_dft}")
+    print(f"DFT-D3BJ correction energy (Hartree): {e_dft_d3bj - e_dft}")
 
     # CCSD calculation
     mycc = make_ccsd(mf)
@@ -80,7 +80,7 @@ def cc(
     eris = mycc.ao2mo()
     e3ref = ccsd_t.kernel(mycc, eris, t1, t2)
     e_cc = mycc.e_tot + e3ref
-    print(f"CCSD(T) energy: {e_cc}")
+    print(f"CCSD(T) energy (Hartree): {e_cc}")
     energy_train = e_cc - e_dft
 
     if evaluate:
@@ -107,10 +107,13 @@ def cc(
         gc.collect()
 
         # Compare CCSD and DFT
-        print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} (CCSD vs DFT)")
+        print(
+            f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} electrons "
+            "(CCSD vs DFT)"
+        )
         cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
         dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
-        print(f"{np.linalg.norm(cc_dipole - dft_dipole)} (CCSD vs DFT)")
+        print(f"{np.linalg.norm(cc_dipole - dft_dipole)} A.U. (CCSD vs DFT)")
 
     mzmp, dm1_zmp = get_zmp(mol, dm1_cc, dm1_dft, grids, max_l=20)
     e_zmp = mzmp.energy_tot(dm1_zmp)
@@ -205,7 +208,7 @@ def cc(
 
     if "tol_delta_grids" in data_dict:
         error = np.sum(data_dict["tol_delta_grids"] * grids.weights) - energy_train
-        print(f"Error: {AU2KCALMOL * error}")
+        print(f"Error (kcal/mol): {AU2KCALMOL * error}")
         error_hf = np.sum(
             (
                 (
@@ -225,7 +228,7 @@ def cc(
             )
             * grids.weights
         ) - (e_cc - e_hf)
-        print(f"Error HF part: {AU2KCALMOL * error_hf}")
+        print(f"Error HF part (kcal/mol): {AU2KCALMOL * error_hf}")
 
         error_exc_lerf = (
             np.sum(
@@ -250,14 +253,14 @@ def cc(
             )
             - energy_train
         )
-        print(f"Error exc_lerf part: {AU2KCALMOL * error_exc_lerf}")
+        print(f"Error exc_lerf part (kcal/mol): {AU2KCALMOL * error_exc_lerf}")
 
     if "tol_delta_zmp_grids" in data_dict:
         energy_train = e_cc - e_zmp
         error_zmp = (
             np.sum(data_dict["tol_delta_zmp_grids"] * grids.weights) - energy_train
         )
-        print(f"Error ZMP: {AU2KCALMOL * error_zmp}")
+        print(f"Error ZMP (kcal/mol): {AU2KCALMOL * error_zmp}")
         data_dict["e_zmp"] = e_zmp
         data_dict["dm1_zmp"] = dm1_zmp
 

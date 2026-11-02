@@ -33,8 +33,8 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     `phi(r)^T S^-1 V_pp D phi(r)`, with `V_pp = hcore - kinetic - nuclear`.
     Its integral is `Tr(V_pp D)` up to grid quadrature error; it is not a
     pointwise local potential times the electron density.
-- `reference_zmp.py`: shared ZMP inversion, diagnostic prints, and numerical
-  nuclear-gradient reference. Generation stores `grad_zmp` using
+- `reference_zmp.py`: shared ZMP inversion and diagnostic prints. Generation
+  stores `grad_zmp` using
   `zmp_baseline_gradient(mzmp, dm1_zmp)`: an analytic B3LYP baseline gradient
   using the same density-fitted object as `e_zmp`, with moving-grid and
   auxiliary-basis response at the supplied ZMP determinant and a baseline
@@ -42,15 +42,14 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   rebuilt-ZMP orbital response; the learned correction must contribute its
   explicit derivative, Pulay term, and grid response separately. Existing
   cached `grad_zmp` values must be regenerated before using this convention.
-  Full-pipeline finite differences remain available as trajectory diagnostics.
-  Non-strict generation stops at an SCF-converged stage once the integrated
+  No dedicated full-pipeline ZMP finite-difference routine is currently implemented.
+  Generation stops at an SCF-converged stage once the integrated
   density error is at most 10% of the DFT error and the I-value error is at
   most 0.1% of the DFT error, both measured against the target density.
   These thresholds are based on the 16 runs in `log/gen_data-*.log`, which
   first satisfy both at lambda 128--1024, before later stagnation or divergence.
   Comparisons use scaled DFT errors rather than division; a zero DFT error
-  requires zero ZMP error. Strict references retain the fixed lambda schedule,
-  and the existing divergence fallback is unchanged.
+  requires zero ZMP error. The existing divergence fallback is unchanged.
   `zmp.py` implements the inversion SCF equations. RZMP and UZMP use PySCF's
   native `_DFHF` mixin, as its dynamically generated DFRKS/DFUKS classes do.
   Both Coulomb J and exchange K now use the standard `.density_fit()` auxiliary
