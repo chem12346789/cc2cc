@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=2400:00:00
-#SBATCH -a [0-54]%2
+#SBATCH -a [0-54]%3
 #SBATCH -J validate-diet100
 
 SCRIPT_DIR="scripts"
@@ -13,8 +13,10 @@ source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
-    (0) export load_model_args="--load atom-1279985 --load_epoch 2395" ;;
-    # (3) export load_model_args="--load atom-1279985 --load_epoch 2395 --test_mode post-b3lyp-d3" ;;
+    (0) export load_model_args="--load atom-1278887 --load_epoch 2395 --test_mode post-b3lyp" ;;
+    (1) export load_model_args="--load atom-1276108 --load_epoch 4955 --test_mode post-b3lyp" ;;
+    (2) export load_model_args="--load atom-1278887 --load_epoch 2395" ;;
+    (3) export load_model_args="--load atom-1276108 --load_epoch 4955" ;;
     # (0) export load_model_args="--load atom-393567 --load_epoch 2395" ;;
     # (0) export load_model_args="--load atom-35580 --load_epoch 4955" ;;
     # (1) export load_model_args="--load atom-35580 --load_epoch 10075" ;;
