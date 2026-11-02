@@ -13,9 +13,7 @@ source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
-    (0) export load_model_args="--load atom-3259973 --load_epoch 2395 --test_mode ${TEST_MODE:-post-b3lyp}" ;;
-    (1) export load_model_args="--load atom-1279985 --load_epoch 2395 --test_mode ${TEST_MODE:-post-b3lyp}" ;;
-    (2) export load_model_args="--load atom-1279985 --load_epoch 2395" ;;
+    (0) export load_model_args="--load atom-1279985 --load_epoch 2395" ;;
     # (3) export load_model_args="--load atom-1279985 --load_epoch 2395 --test_mode post-b3lyp-d3" ;;
     # (0) export load_model_args="--load atom-393567 --load_epoch 2395" ;;
     # (0) export load_model_args="--load atom-35580 --load_epoch 4955" ;;
