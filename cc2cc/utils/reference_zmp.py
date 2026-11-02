@@ -16,6 +16,8 @@ from cc2cc.utils.zmp import RZMP, UZMP
 
 LEVEL_SHIFT = 4
 MAX_CYCLE = 20000
+RHO_REL_TOL = 1e-2
+I_VALUE_REL_TOL = 1e-3
 
 
 def get_zmp(
@@ -33,7 +35,8 @@ def get_zmp(
     """Invert a restricted/unrestricted density and print per-stage diagnostics.
 
     Strict references require every stage to converge and use a fixed schedule.
-    Otherwise preserve the data-generation divergence stop and previous density.
+    Otherwise stop a converged stage when both density errors meet the relative
+    DFT tolerances, preserving the divergence stop and previous-density fallback.
     """
     if dm_tar is None:
         return None, None
@@ -112,6 +115,19 @@ def get_zmp(
                 f"Difference in {label} grids between CCSD: "
                 f"DFT {error_dft * AU2KCALMOL}, ZMP {error_zmp * AU2KCALMOL}"
             )
+        if (
+            not strict
+            and mzmp.converged
+            and zmp_difference <= RHO_REL_TOL * dft_difference
+            and zmp_i_value <= I_VALUE_REL_TOL * dft_i_value
+        ):
+            print(
+                f"ZMP density converged at lambda_ZMP = {2**exponent}: "
+                f"rho diff <= {RHO_REL_TOL:g} * DFT rho diff and "
+                f"I value <= {I_VALUE_REL_TOL:g} * DFT I value.",
+                flush=True,
+            )
+            return mzmp, dm
         previous_dm = np.array(dm, copy=True)
     return mzmp, mzmp.make_rdm1()
 
@@ -142,42 +158,6 @@ def zmp_baseline_gradient(mf, dm_zmp):
     grad = mf.nuc_grad_method()
     grad.grid_response = True
     return grad.kernel(mo_energy=energy, mo_coeff=coeff, mo_occ=occ)
-
-
-def zmp_reference_energy(mol, grid_level=3, max_l=20):
-    """Return (ZMP-density B3LYP, self-consistent B3LYP) energies in Hartree.
-
-    Reproduce the CCSD(T) target-density construction in gen_cc.cc/gen_ucc.ucc.
-    Every inversion stage must converge; no previous-density fallback is used.
-    """
-    if mol.nelectron < 2:
-        raise ValueError("The CCSD(T) ZMP reference requires at least two electrons.")
-    if max_l < 0:
-        raise ValueError("max_l must be nonnegative.")
-    mf = scf.RHF(mol) if mol.spin == 0 else scf.UHF(mol)
-    mf.conv_tol = 1e-12
-    mf.conv_tol_grad = 1e-8
-    mf.max_cycle = 2500
-    mf.kernel()
-    if not mf.converged:
-        raise RuntimeError("Reference HF did not converge.")
-    mdft = converged_b3lyp(mol, mf.make_rdm1())
-    if not mdft.converged:
-        raise RuntimeError("Reference B3LYP did not converge.")
-    mycc = make_ccsd(mf, unrestricted=mol.spin != 0, reference=True)
-    mycc.kernel()
-    eris = mycc.ao2mo()
-    dm_tar = ccsd_t_target_density(
-        mycc, eris, unrestricted=mol.spin != 0, reference=True
-    )[-1]
-    grids = Grid(mol, grid_level, 7)
-    mzmp, dm_zmp = get_zmp(
-        mol, dm_tar, mdft.make_rdm1(), grids, max_l=max_l, strict=True
-    )
-    energy = float(mzmp.energy_tot(dm_zmp))
-    if not np.isfinite(energy) or not np.isfinite(mdft.e_tot):
-        raise RuntimeError("Reference calculation produced a non-finite energy.")
-    return energy, float(mdft.e_tot)
 
 
 if __name__ == "__main__":

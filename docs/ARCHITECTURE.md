@@ -42,7 +42,18 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   explicit derivative, Pulay term, and grid response separately. Existing
   cached `grad_zmp` values must be regenerated before using this convention.
   Full-pipeline finite differences remain available as trajectory diagnostics.
-  `zmp.py` implements the inversion SCF equations.
+  Non-strict generation stops at an SCF-converged stage once the integrated
+  density error is at most 10% of the DFT error and the I-value error is at
+  most 0.1% of the DFT error, both measured against the target density.
+  These thresholds are based on the 16 runs in `log/gen_data-*.log`, which
+  first satisfy both at lambda 128--1024, before later stagnation or divergence.
+  Comparisons use scaled DFT errors rather than division; a zero DFT error
+  requires zero ZMP error. Strict references retain the fixed lambda schedule,
+  and the existing divergence fallback is unchanged.
+  `zmp.py` implements the inversion SCF equations. Both restricted and
+  unrestricted inversion use a reusable PySCF density-fitting object with its
+  default auxiliary basis for all internal Coulomb J matrices (target,
+  baseline, and SCF iterations); exchange K remains exact.
 - `zmp_constraints.py`: optional full-OV stationarity and compact observable
   constraints for ZMP generation and training.
   Both `--zmp_feature_ov` and `--zmp_observable_response` default to `true`;

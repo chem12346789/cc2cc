@@ -9,6 +9,7 @@ import logging
 import numpy as np
 
 import pyscf
+from pyscf import df
 from pyscf.lib import logger
 import pyscf.dft
 from pyscf.dft.numint import _dot_ao_ao_dense
@@ -116,13 +117,15 @@ class RZMP(pyscf.dft.rks.RKS):
         self.rho_tar = pyscf.dft.numint.eval_rho(
             mol, self.ao, self.dm_tar, xctype="LDA"
         )
-        self.J_tar = self.get_j(self.mol, self.dm_tar)
+        self._df_j = df.DF(mol)
+        self.J_tar = self._df_j.get_jk(self.dm_tar, with_k=False)[0]
         self.S = mol.intor_symmetric("int1e_ovlp")
 
         self.conv_tol_dm = 1e-8
         self.conv_tol_diis = 1e-4
 
-        J_tar, K_tar = self.get_jk(self.mol, self.dm_tar)
+        J_tar = self.J_tar
+        K_tar = self.get_k(self.mol, self.dm_tar)
         ni = self._numint
         vxc = ni.nr_rks(self.mol, self.grids, self.xc, self.dm_tar)[2]
         self.extra_vxc = self.dftxc * vxc
@@ -147,7 +150,7 @@ class RZMP(pyscf.dft.rks.RKS):
         t0 = (logger.process_clock(), logger.perf_counter())
 
         for cycle in range(1, self.max_cycle):
-            self.J = self.get_jk(self.mol, self.dm)[0]
+            self.J = self._df_j.get_jk(self.dm, with_k=False)[0]
 
             self.F = self.F0 + l * (self.J - self.J_tar) + self.faxc * self.J
 
@@ -208,13 +211,15 @@ class UZMP(pyscf.dft.uks.UKS):
             pyscf.dft.numint.eval_rho(mol, self.ao, self.dm_tar[0], xctype="LDA"),
             pyscf.dft.numint.eval_rho(mol, self.ao, self.dm_tar[1], xctype="LDA"),
         ]
-        self.J_tar = self.get_j(self.mol, self.dm_tar)
+        self._df_j = df.DF(mol)
+        self.J_tar = self._df_j.get_jk(self.dm_tar, with_k=False)[0]
         self.S = mol.intor_symmetric("int1e_ovlp")
 
         self.conv_tol_dm = 1e-8
         self.conv_tol_diis = 1e-4
 
-        J_tar, K_tar = self.get_jk(self.mol, self.dm_tar)
+        J_tar = self.J_tar
+        K_tar = self.get_k(self.mol, self.dm_tar)
         ni = self._numint
         vxc = ni.nr_uks(self.mol, self.grids, self.xc, self.dm_tar)[2]
         self.extra_vxc = self.dftxc * vxc
@@ -240,7 +245,7 @@ class UZMP(pyscf.dft.uks.UKS):
         t0 = (logger.process_clock(), logger.perf_counter())
 
         for cycle in range(1, self.max_cycle):
-            J = self.get_jk(self.mol, self.dm)[0]
+            J = self._df_j.get_jk(self.dm, with_k=False)[0]
 
             Fa = self.F0[0] + 2 * l * (J[0] - self.J_tar[0]) + self.faxc * (J[0] + J[1])
             Fb = self.F0[1] + 2 * l * (J[1] - self.J_tar[1]) + self.faxc * (J[0] + J[1])
