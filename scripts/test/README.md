@@ -45,10 +45,11 @@ be made from energy comparisons alone.
 
 ## ZMP energy-gradient reference
 
-Run the CPU-only RKS/UKS reference explicitly from the repository root:
+The module currently rejects CLI execution; the following CPU-only RKS/UKS
+reference command and JSON output described below are not available:
 
 ```bash
-python -m cc2cc.utils.zmp_reference \
+python -m cc2cc.utils.reference_zmp \
   --atom 'H 0 0 0; H 0 0 0.8' --basis sto-3g \
   --steps 0.002 0.001 --max-l 20 --output zmp_reference.json
 ```
@@ -83,16 +84,15 @@ eigenvalue threshold as PySCF DIIS, avoiding singular solves at displaced
 geometries without lowering the inversion limit.
 
 The shared inversion loop and informational output live in
-`cc2cc/utils/zmp_reference.py:get_zmp`. Both data generation and numerical
+`cc2cc/utils/reference_zmp.py:get_zmp`. Both data generation and numerical
 references use it, including per-lambda density, I-value, dipole, Hartree-grid,
 and nuclear-grid comparisons. Strict numerical references retain tight
 tolerances and require every stage to converge; normal generation retains
-its divergence-stop behavior. `get_zmp.py` only forwards the legacy
-`get_zmp_rks`/`get_zmp_uks` entry points.
+its divergence-stop behavior.
 
 CCSD solver settings, triples-corrected lambda solving, and target one-particle
 density construction are shared by `cc()`, `ucc()`, and displaced references
-through `cc2cc/utils/ccsd_t_target.py`. Change CC iteration/tolerance parameters
+through `cc2cc/utils/reference_cc.py`. Change CC iteration/tolerance parameters
 and lambda iteration/tolerance parameters there. Generation and displaced
 references use identical CC settings: energy tolerance `1e-12`, amplitude and
 lambda tolerances `1e-10`, and 200 iterations for both CC and lambda solvers.

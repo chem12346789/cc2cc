@@ -8,10 +8,10 @@ import numpy as np
 from pyscf import gto, lib, scf
 
 from cc2cc.utils.Grids import Grid
-from cc2cc.utils.b3lyp_reference import converged_b3lyp
+from cc2cc.utils.reference_b3lyp import converged_b3lyp
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
-from cc2cc.utils.ccsd_t_target import make_ccsd, ccsd_t_target_density
+from cc2cc.utils.reference_cc import make_ccsd, ccsd_t_target_density
 from cc2cc.utils.zmp import RZMP, UZMP
 
 LEVEL_SHIFT = 4
@@ -67,6 +67,7 @@ def get_zmp(
     dft_dipole = mzmp.dip_moment(mol=mol, dm=dm_dft, unit="A.U.")
     dft_difference = diff_rho(mol, dm_dft, dm_tar, grids)
     dft_i_value = diff_I_value(mol, dm_dft, dm_tar, grids)
+    dft_difference_dipole = np.linalg.norm(dft_dipole - tar_dipole)
     best_difference = None
     previous_dm = None
     for exponent in range(start_l, max_l + 1):
@@ -78,23 +79,25 @@ def get_zmp(
                 f"Reference ZMP did not converge at lambda={2**exponent}."
             )
         dm = mzmp.make_rdm1()
-        difference = diff_rho(mol, dm, dm_tar, grids)
-        dipole = mzmp.dip_moment(mol=mol, dm=dm, unit="A.U.")
+        zmp_difference = diff_rho(mol, dm, dm_tar, grids)
+        zmp_i_value = diff_I_value(mol, dm, dm_tar, grids)
+        zmp_dipole = mzmp.dip_moment(mol=mol, dm=dm, unit="A.U.")
+        zmp_difference_dipole = np.linalg.norm(zmp_dipole - tar_dipole)
         print(
-            f"ZMP, rho diff = {difference:.3e} "
-            f"I value = {diff_I_value(mol, dm, dm_tar, grids):.3e} "
-            f"dipole diff = {np.linalg.norm(dipole - tar_dipole):.3e} ",
+            f"ZMP, rho diff = {zmp_difference:.3e} "
+            f"I value = {zmp_i_value:.3e} "
+            f"dipole diff = {zmp_difference_dipole:.3e} ",
             flush=True,
         )
         print(
             f"DFT, rho diff = {dft_difference:.3e} "
             f"I value = {dft_i_value:.3e} "
-            f"dipole diff = {np.linalg.norm(dft_dipole - tar_dipole):.3e} ",
+            f"dipole diff = {dft_difference_dipole:.3e} ",
             flush=True,
         )
-        if best_difference is None or difference < best_difference:
-            best_difference = difference
-        elif not strict and difference > best_difference * 10:
+        if best_difference is None or zmp_difference < best_difference:
+            best_difference = zmp_difference
+        elif not strict and zmp_difference > best_difference * 10:
             print("Warning: rho difference increased significantly, may be diverged.")
             print("Warning: ZMP did not converge within the specified lambda range.")
             return mzmp, previous_dm

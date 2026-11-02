@@ -14,16 +14,17 @@ from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
 
 from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
-from cc2cc.utils.ccsd_t_target import (
+from cc2cc.utils.reference_cc import (
     make_ccsd,
     ccsd_t_target_density,
     ccsd_t_target_gradient,
 )
 from cc2cc.utils.get_dft_energy_rks import get_cc_energy, get_dft_energy, get_hf_energy
 from cc2cc.utils.get_dft_grad_rks import get_dft_grad, get_dft_input
-from cc2cc.utils.zmp_reference import get_zmp, zmp_baseline_gradient
+from cc2cc.utils.reference_zmp import get_zmp, zmp_baseline_gradient
 from cc2cc.utils.zmp_constraints import get_zmp_constraint_data
-from cc2cc.utils.b3lyp_reference import converged_b3lyp, get_vv10_data
+from cc2cc.utils.reference_b3lyp import converged_b3lyp
+from cc2cc.utils.reference_vv10 import get_vv10_data
 
 
 def is_hermitian(matrix, tol=1e-8):

@@ -20,7 +20,7 @@ from cc2cc.utils import (
     Grid,
     DATA_PATH,
 )
-from cc2cc.utils.b3lyp_reference import get_vv10_data
+from cc2cc.utils.reference_vv10 import get_vv10_data
 from cc2cc.utils.parser import gen_name_args, str2bool
 from cc2cc.gen_cc import cc
 from cc2cc.gen_ucc import ucc

@@ -55,7 +55,7 @@ def load_post_scf_density(mol, name, test_mode, *, grid_level=None, use_gpu=None
     import numpy as np
     from pyscf.dft.gen_grid import Grids
 
-    from cc2cc.utils.b3lyp_reference import converged_b3lyp
+    from cc2cc.utils.reference_b3lyp import converged_b3lyp
     from cc2cc.utils.env_var import DATA_TEST_PATH
 
     vv10 = test_mode == "post-b3lyp-vv10"

@@ -10,7 +10,7 @@ import numpy as np
 import pyscf
 
 import gen_data
-from cc2cc.utils.b3lyp_reference import converged_b3lyp
+from cc2cc.utils.reference_b3lyp import converged_b3lyp
 from cc2cc.utils import Grid
 from cc2cc.utils.nlc import post_dft_vv10_gradient
 

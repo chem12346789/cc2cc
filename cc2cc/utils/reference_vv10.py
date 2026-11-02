@@ -1,4 +1,4 @@
-"""Shared B3LYP/VV10 data generation and finite-difference references."""
+"""Shared VV10 data generation and finite-difference references."""
 
 from __future__ import annotations
 
@@ -10,6 +10,11 @@ from cc2cc.utils.Grids import Grid
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.TestDataDFT import diff_rho
 from cc2cc.utils.nlc import eval_nlc_exc_density, post_dft_vv10_gradient
+from cc2cc.utils.reference_b3lyp import (
+    b3lyp_finite_difference_gradient,
+    converged_b3lyp,
+    finite_difference_gradient,
+)
 
 
 def get_vv10_data(
@@ -144,24 +149,6 @@ def get_scf_vv10_data(mol, grids, dm_dft, dm_cc, args, evaluate=False):
     return data
 
 
-def converged_b3lyp(mol, dm0=None, *, nlc="", grids=None, verbose=0, use_gpu=False):
-    mf = (
-        pyscf.dft.RKS(mol, xc="b3lyp")
-        if mol.spin == 0
-        else pyscf.dft.UKS(mol, xc="b3lyp")
-    )
-    mf = mf.density_fit()
-    if grids is not None:
-        mf.grids = grids
-    mf.verbose = verbose
-    mf.max_cycle = 200
-    mf.nlc = nlc
-    if use_gpu:
-        mf = mf.to_gpu()
-    mf.kernel(dm0=dm0)
-    return mf
-
-
 def post_vv10_total_energy(mol, grid_level):
     mf = converged_b3lyp(mol)
     dm = mf.make_rdm1()
@@ -179,28 +166,3 @@ def post_vv10_finite_difference_gradient(mol, grid_level, step=1e-3):
     return finite_difference_gradient(
         mol, lambda displaced: post_vv10_total_energy(displaced, grid_level), step
     )
-
-
-def b3lyp_finite_difference_gradient(mol, step=1e-3):
-    """Central-difference B3LYP gradient in Hartree/Bohr; step in Bohr."""
-    return finite_difference_gradient(
-        mol, lambda displaced: converged_b3lyp(displaced).e_tot, step
-    )
-
-
-def finite_difference_gradient(mol, total_energy, step):
-    coords = mol.atom_coords()
-    gradient = np.empty_like(coords)
-    for atom in range(mol.natm):
-        for axis in range(3):
-            displaced_energies = []
-            for sign in (1, -1):
-                displaced_mol = mol.copy()
-                displaced_coords = coords.copy()
-                displaced_coords[atom, axis] += sign * step
-                displaced_mol.set_geom_(displaced_coords, unit="Bohr")
-                displaced_energies.append(total_energy(displaced_mol))
-            gradient[atom, axis] = (displaced_energies[0] - displaced_energies[1]) / (
-                2 * step
-            )
-    return gradient

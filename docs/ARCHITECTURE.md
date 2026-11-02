@@ -33,7 +33,7 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     `phi(r)^T S^-1 V_pp D phi(r)`, with `V_pp = hcore - kinetic - nuclear`.
     Its integral is `Tr(V_pp D)` up to grid quadrature error; it is not a
     pointwise local potential times the electron density.
-- `zmp_reference.py`: shared ZMP inversion, diagnostic prints, and numerical
+- `reference_zmp.py`: shared ZMP inversion, diagnostic prints, and numerical
   nuclear-gradient reference. Generation stores `grad_zmp` using
   `zmp_baseline_gradient(mdft, dm1_zmp)`: an analytic B3LYP baseline gradient
   at the supplied ZMP determinant, with moving-grid response and a baseline
@@ -42,8 +42,7 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   explicit derivative, Pulay term, and grid response separately. Existing
   cached `grad_zmp` values must be regenerated before using this convention.
   Full-pipeline finite differences remain available as trajectory diagnostics.
-  `get_zmp.py` forwards legacy entry points and `zmp.py` implements the inversion
-  SCF equations.
+  `zmp.py` implements the inversion SCF equations.
 - `zmp_constraints.py`: optional full-OV stationarity and compact observable
   constraints for ZMP generation and training.
   Both `--zmp_feature_ov` and `--zmp_observable_response` default to `true`;
@@ -99,7 +98,7 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   blocks, not disk size or model autograd memory. No training losses or force
   conventions are changed by these generation options.
 - `--zmp_ov_loss true` is no longer supported and is rejected.
-- `ccsd_t_target.py`: shared CCSD solver settings, CCSD(T) lambda solving,
+- `reference_cc.py`: shared CCSD solver settings, CCSD(T) lambda solving,
   triples-corrected target density and CC-gradient one-particle intermediates.
   `ccsd_t_target_gradient()` handles restricted/unrestricted two-particle
   intermediate compression, electronic/nuclear gradient assembly, and symmetry
@@ -236,10 +235,12 @@ created, and failures may occur after earlier files have been updated.
 - `gen_data.py`: molecule selection → `gen_mole()` → optional MD/rotation →
   `Grid` → `cc()`/`ucc()` → `.npz` grid data
   - `cc()` and `ucc()` call the shared `get_vv10_data()` helper in
-    `utils/b3lyp_reference.py` and save Post-DFT VV10 and SCF-VV10 energies,
+    `utils/reference_vv10.py` and save Post-DFT VV10 and SCF-VV10 energies,
     `dm1_scf_vv10`, and gradients in the main archive. They also
     save separate VV10 results based on `dm1_zmp` with `_zmp`-suffixed keys.
     The helper separates `get_post_vv10_data()` and `get_scf_vv10_data()`.
+    Shared B3LYP SCF and finite-difference helpers live in
+    `utils/reference_b3lyp.py`.
     `get_vv10_data()` derives its policy from `suffix`, not caller flags:
     `"_zmp"` sets evaluation on, SCF-VV10 off, and gradient checks off;
     the default `""` enables SCF-VV10, all gradients, and gradient checks.

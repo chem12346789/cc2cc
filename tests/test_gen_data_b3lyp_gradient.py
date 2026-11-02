@@ -9,11 +9,11 @@ import numpy as np
 import pyscf
 
 import gen_data
-from cc2cc.utils.b3lyp_reference import (
+from cc2cc.utils.reference_b3lyp import (
     converged_b3lyp,
     b3lyp_finite_difference_gradient,
-    post_vv10_finite_difference_gradient,
 )
+from cc2cc.utils.reference_vv10 import post_vv10_finite_difference_gradient
 
 
 class TestB3lypGradient(TestCase):
@@ -73,7 +73,7 @@ class TestB3lypGradient(TestCase):
     def test_post_vv10_reference_preserves_grid_level_and_step(self):
         mol = pyscf.M(atom="He 0 0 0", basis="sto-3g", verbose=0)
         with patch(
-            "cc2cc.utils.b3lyp_reference.post_vv10_total_energy",
+            "cc2cc.utils.reference_vv10.post_vv10_total_energy",
             side_effect=lambda displaced, level: np.sum(displaced.atom_coords() ** 2)
             + level,
         ) as energy:
