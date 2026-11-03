@@ -47,9 +47,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     blksize = min(
         nvira, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**3 * nvira)) ** (1 / 2))
     )
-    if blksize < nvira:
-        blksize = min(blksize, (nvira + 1) // 2)
-        blksize = max(blksize, 1)
+    blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 1 rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -217,9 +215,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     blksize = min(
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**3 * nvirb)) ** (1 / 2))
     )
-    if blksize < nvirb:
-        blksize = min(blksize, (nvirb + 1) // 2)
-        blksize = max(blksize, 1)
+    blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 2 rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -387,9 +383,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**2 * noccb)) ** (1 / 3))
     )
     blksize = min(nvira, blksize)
-    if blksize < nvirb:
-        blksize = min(blksize, (nvirb + 1) // 2)
-        blksize = max(blksize, 1)
+    blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 2 rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -611,10 +605,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nvira**2 * nvirb)) ** (1 / 3))
     )
     blksize = min(nocca, blksize)
-    if blksize < nocca or blksize < noccb:
-        blksize = min(blksize, (nocca + 1) // 2)
-        blksize = min(blksize, (noccb + 1) // 2)
-        blksize = max(blksize, 1)
+    blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = (%d,%d), (%d,%d)  blksize = %d",
         max_memory,
@@ -850,10 +841,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         ),
     )
     blksize = min(nocca, blksize)
-    if blksize < noccb or blksize < nocca:
-        blksize = min(blksize, (nocca + 1) // 2)
-        blksize = min(blksize, (noccb + 1) // 2)
-        blksize = max(blksize, 1)
+    blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = (%d,%d), (%d,%d)  blksize = %d",
         max_memory,
@@ -1084,10 +1072,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**2 * nocca)) ** (1 / 3))
     )
     blksize = min(nvira, blksize)
-    if blksize < nvira or blksize < nvirb:
-        blksize = min(blksize, (nvira + 1) // 2)
-        blksize = min(blksize, (nvirb + 1) // 2)
-        blksize = max(blksize, 1)
+    blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 2 rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -1317,10 +1302,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nvirb**2 * nvira)) ** (1 / 3))
     )
     blksize = min(nocca, blksize)
-    if blksize < nocca or blksize < noccb:
-        blksize = min(blksize, (nocca + 1) // 2)
-        blksize = min(blksize, (noccb + 1) // 2)
-        blksize = max(blksize, 1)
+    blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = (%d,%d), (%d,%d)  blksize = %d",
         max_memory,
@@ -1553,10 +1535,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         ),
     )
     blksize = min(nocca, blksize)
-    if blksize < noccb or blksize < nocca:
-        blksize = min(blksize, (nocca + 1) // 2)
-        blksize = min(blksize, (noccb + 1) // 2)
-        blksize = max(blksize, 1)
+    blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = (%d,%d), (%d,%d)  blksize = %d",
         max_memory,

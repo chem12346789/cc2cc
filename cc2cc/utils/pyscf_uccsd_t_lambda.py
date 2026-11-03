@@ -97,9 +97,7 @@ def make_intermediates(mycc, t1, t2, eris):
     blksize = min(
         nvira, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**3 * nvira)) ** (1 / 2))
     )
-    if blksize < nvira:
-        blksize = min(blksize, (nvira + 1) // 2)
-        blksize = max(blksize, 1)
+    blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 1 rdm make_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -287,9 +285,7 @@ def make_intermediates(mycc, t1, t2, eris):
     blksize = min(
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**3 * nvirb)) ** (1 / 2))
     )
-    if blksize < nvirb:
-        blksize = min(blksize, (nvirb + 1) // 2)
-        blksize = max(blksize, 1)
+    blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 2 rdm make_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -487,9 +483,7 @@ def make_intermediates(mycc, t1, t2, eris):
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**2 * noccb)) ** (1 / 3))
     )
     blksize = min(nvira, blksize)
-    if blksize < nvirb:
-        blksize = min(blksize, (nvirb + 1) // 2)
-        blksize = max(blksize, 1)
+    blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 2 rdm make_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -874,10 +868,7 @@ def make_intermediates(mycc, t1, t2, eris):
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**2 * nocca)) ** (1 / 3))
     )
     blksize = min(nvira, blksize)
-    if blksize < nvira or blksize < nvirb:
-        blksize = min(blksize, (nvira + 1) // 2)
-        blksize = min(blksize, (nvirb + 1) // 2)
-        blksize = max(blksize, 1)
+    blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 2 rdm make_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,

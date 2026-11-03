@@ -126,8 +126,10 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   reordering the numerical updates, releasing reused results within each block.
   The triples debug `max_memory` value is the configured budget minus RSS sampled
   before the passes, not peak usage or system-free RAM. This budget guides block
-  sizing rather than reserving memory; orbital dimensions and block-splitting
-  heuristics also limit block sizes.
+  sizing rather than reserving memory. Unrestricted triples lambda and density
+  blocks use the memory-derived size capped by the relevant orbital dimensions,
+  with a minimum size of one; unequal spin dimensions do not force half-size
+  blocks. Restricted triples routines retain their block-splitting heuristics.
 - `DataBase.py`, `TestDataDFT.py`, `DataRecord.py`, `ModelClass.py`: data
   loading, record keeping, model init, checkpoints, losses
   - Both generators save `coords` in Bohr aligned with their `weights` and
