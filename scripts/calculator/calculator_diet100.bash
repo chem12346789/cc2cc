@@ -16,8 +16,10 @@ export model_load_epoch_pairs=(
     "atom-1279985-post-b3lyp:2395:scf_d3bj_ene:post B3LYP"
     "atom-1278887:2395:scf_d3bj_ene:SCF"
     "atom-1278887-post-b3lyp:2395:scf_d3bj_ene:post B3LYP"
-    "atom-1276108:4955:scf_d3bj_ene:SCF"
-    "atom-1276108-post-b3lyp:4955:scf_d3bj_ene:post B3LYP"
+    # "atom-1275973:4955:scf_d3bj_ene:SCF"
+    # "atom-1275973-post-b3lyp:4955:scf_d3bj_ene:post B3LYP"
+    # "atom-1275973:10075:scf_d3bj_ene:SCF"
+    # "atom-1275973-post-b3lyp:10075:scf_d3bj_ene:post B3LYP"
 )
 
 # find log folder with 4 days old files
