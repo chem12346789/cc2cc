@@ -13,10 +13,11 @@ source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
-    (0) export load_model_args="--load atom-1279985 --load_epoch 4955 --test_mode post-b3lyp" ;;
-    (1) export load_model_args="--load atom-1278887 --load_epoch 4955 --test_mode post-b3lyp" ;;
-    (2) export load_model_args="--load atom-1279985 --load_epoch 4955" ;;
-    (3) export load_model_args="--load atom-1278887 --load_epoch 4955" ;;
+    (0) export load_model_args="--load atom-1278887 --load_epoch 2395 --test_mode post-b3lyp" ;;
+    (1) export load_model_args="--load atom-1279985 --load_epoch 4955 --test_mode post-b3lyp" ;;
+    (2) export load_model_args="--load atom-1278887 --load_epoch 4955 --test_mode post-b3lyp" ;;
+    (3) export load_model_args="--load atom-1279985 --load_epoch 4955" ;;
+    (4) export load_model_args="--load atom-1278887 --load_epoch 4955" ;;
     # (0) export load_model_args="--load atom-393567 --load_epoch 2395" ;;
     # (0) export load_model_args="--load atom-35580 --load_epoch 4955" ;;
     # (1) export load_model_args="--load atom-35580 --load_epoch 10075" ;;
@@ -33,7 +34,7 @@ export DFT2CC_PROFILE_XC=1
 export basis_args="def2-QZVP(D)"
 select_molecule_profile gmtkn55
 
-setup_gpu_test_job 256000 16000
+setup_gpu_test_job 256000 24000
 # Arguments: PySCF memory (MiB); minimum free GPU memory (MiB).
 echo "NUMBER_OF_THREADS=${NUMBER_OF_THREADS}"
 
