@@ -35,11 +35,11 @@ def ccsd_t_target_density(mycc, eris, *, unrestricted=False, reference=False):
     full-block corrections instead. Keep separate arrays for these two uses.
     Reference mode requires converged CC and lambda equations.
     """
-    time = lib.logger.process_clock()
     if reference and not mycc.converged:
         raise RuntimeError("Reference CCSD did not converge.")
     t1, t2 = mycc.t1, mycc.t2
     kernel = uccsd_t_lambda_kernel if unrestricted else ccsd_t_lambda.kernel
+    time = (lib.logger.process_clock(), lib.logger.perf_counter())
     converged, l1, l2 = kernel(
         mycc,
         eris,
@@ -48,6 +48,7 @@ def ccsd_t_target_density(mycc, eris, *, unrestricted=False, reference=False):
         max_cycle=LAMBDA_MAX_CYCLE,
         tol=LAMBDA_TOL,
     )
+    time = lib.logger.timer(mycc, "CCSD(T) lambda", *time)
     if reference and not converged:
         raise RuntimeError("Reference CCSD(T) lambda equations did not converge.")
     if unrestricted:
