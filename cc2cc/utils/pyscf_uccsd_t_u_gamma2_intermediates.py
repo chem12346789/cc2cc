@@ -2,12 +2,8 @@ import numpy
 from pyscf import lib
 from pyscf.lib import logger
 from pyscf.cc import uccsd_rdm
-from pyscf.cc import ccsd_lambda
-from pyscf.cc import uccsd_lambda
 
-
-def parallel_einsum(subscripts, *tensors):
-    return numpy.einsum(subscripts, *tensors, optimize="optimal")
+from cc2cc.utils.tensor_helper import parallel_einsum
 
 
 def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):

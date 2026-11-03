@@ -5,9 +5,7 @@ from pyscf.cc import uccsd_rdm
 from pyscf.cc import ccsd_lambda
 from pyscf.cc import uccsd_lambda
 
-
-def parallel_einsum(subscripts, *tensors):
-    return numpy.einsum(subscripts, *tensors, optimize="optimal")
+from cc2cc.utils.tensor_helper import parallel_einsum
 
 
 def p6(t):
