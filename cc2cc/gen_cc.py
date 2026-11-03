@@ -48,7 +48,7 @@ def cc(
     mf.conv_tol = 1e-12
     mf.conv_tol_grad = 1e-8
     mf.max_cycle = 2500
-    mf.verbose = 4
+    mf.verbose = 9
     mf.kernel()
     for level_shift in range(5):
         if args.check_convergence and not mf.converged:

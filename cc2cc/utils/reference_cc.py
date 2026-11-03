@@ -35,6 +35,7 @@ def ccsd_t_target_density(mycc, eris, *, unrestricted=False, reference=False):
     full-block corrections instead. Keep separate arrays for these two uses.
     Reference mode requires converged CC and lambda equations.
     """
+    time = lib.logger.process_clock()
     if reference and not mycc.converged:
         raise RuntimeError("Reference CCSD did not converge.")
     t1, t2 = mycc.t1, mycc.t2
