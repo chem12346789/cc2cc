@@ -50,7 +50,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     if blksize < nvira:
         blksize = min(blksize, (nvira + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t spin 1 rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         nocca,
@@ -209,7 +209,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
             goo += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.125
             gvv += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.125
             gvo += parallel_einsum("jkbc,ijkabc->ai", t2aa[:, :, b0:b1, c0:c1], rw) * 0.125
-        time2 = log.timer_debug1(
+        time2 = log.timer_info(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (b0, b1), *time2
         )
 
@@ -220,7 +220,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t spin 2 rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         noccb,
@@ -378,7 +378,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
             gOO += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.125
             gVV += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.125
             gVO += parallel_einsum("jkbc,ijkabc->ai", t2bb[:, :, b0:b1, c0:c1], rw) * 0.125
-        time2 = log.timer_debug1(
+        time2 = log.timer_info(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (b0, b1), *time2
         )
 
@@ -390,7 +390,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t spin 2 rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         noccb,
@@ -603,7 +603,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 goo += parallel_einsum("kilabc,kjlabc->ij", wvd, rw) * 0.25
                 goo += parallel_einsum("kliabc,kljabc->ij", wvd, rw) * 0.25
                 gOO += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.25
-        time2 = log.timer_debug1(
+        time2 = log.timer_info(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (a0, a1), *time2
         )
 
@@ -615,7 +615,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         blksize = min(blksize, (nocca + 1) // 2)
         blksize = min(blksize, (noccb + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = (%d,%d), (%d,%d)  blksize = %d",
         max_memory,
         nocca,
@@ -838,7 +838,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 gvv += parallel_einsum("ijkcad,ijkcbd->ab", wvd, rw) * 0.25
                 gvv += parallel_einsum("ijkcda,ijkcdb->ab", wvd, rw) * 0.25
                 gVV += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.25
-        time2 = log.timer_debug1(
+        time2 = log.timer_info(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (i0, i1), *time2
         )
 
@@ -854,7 +854,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         blksize = min(blksize, (nocca + 1) // 2)
         blksize = min(blksize, (noccb + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = (%d,%d), (%d,%d)  blksize = %d",
         max_memory,
         nocca,
@@ -1075,7 +1075,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
             rw = w_blk / d3
             gvo += parallel_einsum("kica,ijkabc->bj", t2ab[k0:k1, :, c0:c1, :], rw) * 0.5
             gVO += parallel_einsum("jkbc,ijkabc->ai", t2aa[:, k0:k1, :, c0:c1], rw) * 0.125
-        time2 = log.timer_debug1(
+        time2 = log.timer_info(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (c0, c1), *time2
         )
 
@@ -1088,7 +1088,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         blksize = min(blksize, (nvira + 1) // 2)
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t spin 2 rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         noccb,
@@ -1309,7 +1309,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 goo += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.25
                 gOO += parallel_einsum("kilabc,kjlabc->ij", wvd, rw) * 0.25
                 gOO += parallel_einsum("kliabc,kljabc->ij", wvd, rw) * 0.25
-        time2 = log.timer_debug1(
+        time2 = log.timer_info(
             "uccsd_t spin 2 rdm _gamma1_intermediates pass2 [%d:%d]" % (a0, a1), *time2
         )
 
@@ -1321,7 +1321,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         blksize = min(blksize, (nocca + 1) // 2)
         blksize = min(blksize, (noccb + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = (%d,%d), (%d,%d)  blksize = %d",
         max_memory,
         nocca,
@@ -1557,7 +1557,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         blksize = min(blksize, (nocca + 1) // 2)
         blksize = min(blksize, (noccb + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = (%d,%d), (%d,%d)  blksize = %d",
         max_memory,
         nocca,

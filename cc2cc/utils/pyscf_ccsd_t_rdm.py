@@ -55,7 +55,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
     if blksize < nvir:
         blksize = min(blksize, (nvir + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         nocc,
@@ -176,7 +176,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
                     w_blk[:ba, :bb, :bc, :, :, :],
                 )
 
-        time2 = log.timer_debug1(
+        time2 = log.timer_info(
             "ccsd_t rdm _gamma1_intermediates pass1 [%d:%d]" % (a0, a1), *time2
         )
 
@@ -189,7 +189,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
     if blksize < nocc:
         blksize = min(blksize, (nocc + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         nocc,
@@ -310,7 +310,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
                     w_blk[:bi, :bj, :bk, :, :, :],
                 )
 
-        time2 = log.timer_debug1(
+        time2 = log.timer_info(
             "ccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (k0, k1), *time2
         )
 
@@ -369,7 +369,7 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
     if blksize < nvir:
         blksize = min(blksize, (nvir + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t rdm _gamma2_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         nocc,
@@ -498,7 +498,7 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
                     v_blk[:ba, :bb, :bc, :, :, :],
                 )
 
-        time2 = log.timer_debug1(
+        time2 = log.timer_info(
             "ccsd_t rdm _gamma2_intermediates [%d:%d]" % (c0, c1), *time2
         )
 

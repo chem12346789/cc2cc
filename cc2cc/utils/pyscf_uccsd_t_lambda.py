@@ -1,7 +1,6 @@
 import numpy
 from pyscf import lib
 from pyscf.lib import logger
-from pyscf.cc import uccsd_rdm
 from pyscf.cc import ccsd_lambda
 from pyscf.cc import uccsd_lambda
 
@@ -101,7 +100,7 @@ def make_intermediates(mycc, t1, t2, eris):
     if blksize < nvira:
         blksize = min(blksize, (nvira + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t spin 1 rdm make_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         nocca,
@@ -278,7 +277,7 @@ def make_intermediates(mycc, t1, t2, eris):
             ).transpose(1, 0, 3, 2)
 
             l2aa_t[:, :, b0:b1, c0:c1] += parallel_einsum("ijkabc,ai->jkbc", rw, fvo)
-        time2 = log.timer_debug1(
+        time2 = log.timer_info(
             "uccsd_t rdm make_intermediates pass1 [%d:%d]" % (b0, b1), *time2
         )
     imds.l1a_t = l1a_t / eia * 0.25
@@ -294,7 +293,7 @@ def make_intermediates(mycc, t1, t2, eris):
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t spin 2 rdm make_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         noccb,
@@ -480,7 +479,7 @@ def make_intermediates(mycc, t1, t2, eris):
                 rw,
                 fVO,
             )
-        time2 = log.timer_debug1(
+        time2 = log.timer_info(
             "uccsd_t rdm make_intermediates pass2 [%d:%d]" % (b0, b1), *time2
         )
 
@@ -500,7 +499,7 @@ def make_intermediates(mycc, t1, t2, eris):
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t spin 2 rdm make_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         noccb,
@@ -878,7 +877,7 @@ def make_intermediates(mycc, t1, t2, eris):
                     rw,
                     fvo[b0:b1, :],
                 )
-        time2 = log.timer_debug1(
+        time2 = log.timer_info(
             "uccsd_t rdm make_intermediates pass3 [%d:%d]" % (a0, a1), *time2
         )
 
@@ -901,7 +900,7 @@ def make_intermediates(mycc, t1, t2, eris):
         blksize = min(blksize, (nvira + 1) // 2)
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
-    log.debug1(
+    log.info(
         "ccsd_t spin 2 rdm make_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         noccb,
@@ -1277,7 +1276,7 @@ def make_intermediates(mycc, t1, t2, eris):
                 l2ab_t[:, :, a0:a1, c0:c1] += parallel_einsum(
                     "ijkabc,bj->ikac", rw, fVO[b0:b1, :]
                 )
-        time2 = log.timer_debug1(
+        time2 = log.timer_info(
             "uccsd_t rdm make_intermediates pass4 [%d:%d]" % (a0, a1), *time2
         )
 
