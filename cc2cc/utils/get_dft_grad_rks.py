@@ -1,4 +1,5 @@
 import numpy as np
+import opt_einsum as oe
 
 from pyscf import lib
 
@@ -42,6 +43,8 @@ def get_dft_input(mol, grids, dm1_dft, max_memory=8000):
 def get_dft_grad(mol, grids, dm1_dft, max_memory=8000):
     """
     Calculate the gradient of (exchange-correlation energy - DFT energy) on the grids.
+    Grid contractions use opt_einsum's NumPy backend with BLAS enabled.
+    max_memory estimates the grid batch size; it does not cap contraction temporaries.
     Note the max_memory is hard to predict (a large memory usage is due to grad2force and grad_mat), so just set it to a relative small value to avoid OOM.
     """
     if dm1_dft is None:
@@ -103,20 +106,24 @@ def get_dft_grad(mol, grids, dm1_dft, max_memory=8000):
                 f"size of ao_array: {ao_array.shape} elements, size of ao_mat: {ao_mat.shape} elements, size of ao_value: {ao_value.shape} elements, size of grad2force: {grad2force.shape} elements, size of wv: {wv.shape} elements",
                 flush=True,
             )
-            grad2force_part = np.einsum(
+            grad2force_part = oe.contract(
                 "inp,xpu,npv,uv->ipx",
                 wv,
                 ao_value[1:4, :, ao0:ao1],
                 ao_array,
                 dm1_dft[ao0:ao1],
-                optimize=True,
-            ) + np.einsum(
+                optimize="optimal",
+                backend="numpy",
+                use_blas=True,
+            ) + oe.contract(
                 "inp,nxpu,pv,uv->ipx",
                 wv,
                 ao_mat[:, :, :, ao0:ao1],
                 ao_value[0],
                 dm1_dft[ao0:ao1],
-                optimize=True,
+                optimize="optimal",
+                backend="numpy",
+                use_blas=True,
             )
             grad2force_part = -2 * grad2force_part
             grad2force[k, :, p0:p1] = np.reshape(

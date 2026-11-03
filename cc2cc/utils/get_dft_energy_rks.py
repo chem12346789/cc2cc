@@ -24,6 +24,25 @@ def _ecp_energy_density(mol, ao, dm):
     return np.einsum("pi,ij,pj->p", ao, projected_dm, ao, optimize=True)
 
 
+def _orbital_gradient_squared(ao_gradient, orbital_coeff):
+    orbital_gradient = oe.contract(
+        "xpm,m->xp",
+        ao_gradient,
+        orbital_coeff,
+        optimize="optimal",
+        backend="numpy",
+        use_blas=True,
+    )
+    return oe.contract(
+        "xp,xp->p",
+        orbital_gradient,
+        orbital_gradient,
+        optimize="optimal",
+        backend="numpy",
+        use_blas=True,
+    )
+
+
 def block_loop_rdm2(nao):
     """
     Generate slices for block processing of the 4-index 2-RDM.
@@ -98,7 +117,12 @@ def get_cc_energy(
         nao_slice_l,
     ) in block_loop_rdm2(mol.nao):
         dm12_cc = 0.5 * dm2_cc[i_slice, j_slice, k_slice, l_slice] - 0.5 * oe.contract(
-            "pq,rs->pqrs", dm1_cc[i_slice, j_slice], dm1_cc[k_slice, l_slice]
+            "pq,rs->pqrs",
+            dm1_cc[i_slice, j_slice],
+            dm1_cc[k_slice, l_slice],
+            optimize="optimal",
+            backend="numpy",
+            use_blas=True,
         )
 
         expr_rinv_dm2_r = oe.contract_expression(
@@ -109,6 +133,7 @@ def get_cc_energy(
             (nao_slice_k, nao_slice_l),
             constants=[0],
             optimize="optimal",
+            use_blas=True,
         )
 
         for i, coord in enumerate(grids.coords):
@@ -151,16 +176,13 @@ def get_cc_energy(
             eigs_v_dm1[:, i],
             eigs_v_dm1[:, i],
             ao_2_diag,
+            optimize="optimal",
+            backend="numpy",
+            use_blas=True,
         )
         kin_cc_grids -= part * eigs_e_dm1[i] / 2
 
-        partl = oe.contract(
-            "xpm,m,n,xpn->p",
-            ao_1,
-            eigs_v_dm1[:, i],
-            eigs_v_dm1[:, i],
-            ao_1,
-        )
+        partl = _orbital_gradient_squared(ao_1, eigs_v_dm1[:, i])
         kinl_cc_grids += partl * eigs_e_dm1[i] / 2
 
     # nuclear part
@@ -250,6 +272,7 @@ def get_dft_energy(
             (nao_slice_k, nao_slice_l),
             constants=[0, 1],
             optimize="optimal",
+            use_blas=True,
         )
 
         for i, coord in enumerate(grids.coords):
@@ -292,16 +315,13 @@ def get_dft_energy(
             dft_mo_coeff[:, i],
             dft_mo_coeff[:, i],
             ao_2_diag,
+            optimize="optimal",
+            backend="numpy",
+            use_blas=True,
         )
         kin_dft_grids -= part
 
-        partl = oe.contract(
-            "xpm,m,n,xpn->p",
-            ao_1,
-            dft_mo_coeff[:, i],
-            dft_mo_coeff[:, i],
-            ao_1,
-        )
+        partl = _orbital_gradient_squared(ao_1, dft_mo_coeff[:, i])
         kinl_dft_grids += partl
     print("Kinetic part done.\n")
 
@@ -400,6 +420,7 @@ def get_hf_energy(
             (nao_slice_k, nao_slice_l),
             constants=[0, 1],
             optimize="optimal",
+            use_blas=True,
         )
 
         for i, coord in enumerate(grids.coords):
@@ -441,16 +462,13 @@ def get_hf_energy(
             mf_mo_coeff[:, i],
             mf_mo_coeff[:, i],
             ao_2_diag,
+            optimize="optimal",
+            backend="numpy",
+            use_blas=True,
         )
         kin_hf_grids -= part
 
-        partl = oe.contract(
-            "xpm,m,n,xpn->p",
-            ao_1,
-            mf_mo_coeff[:, i],
-            mf_mo_coeff[:, i],
-            ao_1,
-        )
+        partl = _orbital_gradient_squared(ao_1, mf_mo_coeff[:, i])
         kinl_hf_grids += partl
     print("Kinetic part done.\n")
 

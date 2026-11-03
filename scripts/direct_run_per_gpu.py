@@ -111,6 +111,7 @@ def run_jobs(
     script: Path, jobs: list[tuple[int, int]], gpus: dict[str, str] | None,
     concurrency: int, cpus: int, log_dir: Path, scratch_dir: Path,
     min_free_memory: float, max_power: float | None, poll_interval: float,
+    *, array_task_count: int | None = None,
 ) -> int:
     pending = deque(jobs)
     resources: list[str | None] = list(gpus) if gpus is not None else [None]
@@ -159,6 +160,8 @@ def run_jobs(
                             PYSCF_TMPDIR=str(task_scratch),
                             DIRECT_RUN_LOG_LINKS="1",
                         )
+                        if array_task_count is not None:
+                            env["SLURM_ARRAY_TASK_COUNT"] = str(array_task_count)
                         if gpu is not None and gpus is not None:
                             env.update(
                                 FORCE_CUDA_VISIBLE_DEVICES=gpus[gpu],
@@ -203,6 +206,7 @@ def main(argv: list[str] | None = None) -> int:
     task_ids = submit.parse_array_ids(array)
     if min(task_ids) < 0:
         parser.error("Array task IDs must be non-negative")
+    array_task_count = len(task_ids)
     concurrency = args.array_concurrency
     if concurrency is None:
         concurrency = submit.parse_array_limit(array)
@@ -273,7 +277,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(
         f"[PLAN] script={script} jobs={len(jobs)} {selection} "
-        f"total-concurrency={total_concurrency} cpus/job={cpus} logs={log_dir}",
+        f"total-concurrency={total_concurrency} cpus/job={cpus} "
+        f"SLURM_ARRAY_TASK_COUNT={array_task_count} logs={log_dir}",
         flush=True,
     )
     if args.dry_run:
@@ -325,6 +330,7 @@ def main(argv: list[str] | None = None) -> int:
         status = run_jobs(
             script, jobs, gpus, concurrency, cpus, log_dir, scratch_dir,
             args.min_free_memory, args.max_gpu_power, args.poll_interval,
+            array_task_count=array_task_count,
         )
     except KeyboardInterrupt:
         print("[STOP] Interrupted; local job process groups terminated.", flush=True)

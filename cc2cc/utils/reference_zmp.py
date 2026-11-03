@@ -16,8 +16,8 @@ from cc2cc.utils.zmp import RZMP, UZMP
 
 LEVEL_SHIFT = 2
 MAX_CYCLE = 200000
-RHO_REL_TOL = 1e-1
-I_VALUE_REL_TOL = 1e-3
+RHO_REL_TOL = 1e-2
+I_VALUE_REL_TOL = 1e-4
 DIIS_SPACE = 8
 
 

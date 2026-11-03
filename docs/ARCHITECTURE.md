@@ -52,6 +52,8 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   requires zero ZMP error. The existing divergence fallback is unchanged.
   `zmp.py` implements the inversion SCF equations. RZMP and UZMP use PySCF's
   native `_DFHF` mixin, as its dynamically generated DFRKS/DFUKS classes do.
+  Their DIIS extrapolation uses all available Fock/error pairs, up to the
+  configured `diis_space`; history starts on the second SCF cycle.
   Both Coulomb J and exchange K now use the standard `.density_fit()` auxiliary
   basis and shared `with_df` object, including baseline energies and gradients.
   This replaces the previous internal J-only fitting with exact exchange;
@@ -360,12 +362,13 @@ created, and failures may occur after earlier files have been updated.
 - `scripts/direct_run_per_gpu.py`: background-by-default, single-host alternative without
   Slurm. For example:
   `python scripts/direct_run_per_gpu.py --script test/test_diet100.bash --gpus 0,1`.
-  Uses the script's array and CPU directives, supplies `MODEL_INDEX`,
-  `SLURM_ARRAY_TASK_ID`, and `SLURM_CPUS_PER_TASK` for the existing Bash helpers,
-  and binds each job to a GPU UUID. The array's `%limit` sets the maximum
-  concurrent jobs per GPU (`--array-concurrency` overrides it); without a limit,
-  one job runs per GPU.
-  Optional `--time-array` prioritizes longer tasks and skips zero runtimes.
+  Uses the script's array and CPU directives (`--array` overrides the array),
+  supplies `MODEL_INDEX`, `SLURM_ARRAY_TASK_ID`, `SLURM_ARRAY_TASK_COUNT`, and
+  `SLURM_CPUS_PER_TASK` for the existing Bash helpers, and binds each job to a
+  GPU UUID. The array's `%limit` sets the maximum concurrent jobs per GPU
+  (`--array-concurrency` overrides it); without a limit, one job runs per GPU.
+  Optional `--time-array` prioritizes longer tasks and skips zero runtimes; the
+  task count remains the size of the configured array before filtering.
   Memory (default 15 GiB) and optional power filters are instantaneous checks
   before dispatch, not reservations; coordinate GPU ownership with other users.
   With no `--gpus`, respects `CUDA_VISIBLE_DEVICES` or discovers all local GPUs.
@@ -374,8 +377,6 @@ created, and failures may occur after earlier files have been updated.
   the array limit or `--array-concurrency` is a global limit (default 1).
   `--dry-run --gpus 0,1` previews without probing `nvidia-smi`, so it may not
   reflect the fallback; it does not access GPUs, write files, or execute jobs.
-  To run `scripts/gen_data/gen_data_direct.bash` locally, set
-  `SLURM_ARRAY_TASK_COUNT` to the number of tasks (4 for its default array).
   Default run log directories use the run's timestamp.
   `[TASK-LOG]` lines show the actual stdout/stderr paths for test jobs and
   `gen_data_direct.bash`; `[LAUNCHER-LOG]` identifies the launcher log itself.

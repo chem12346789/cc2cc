@@ -14,6 +14,9 @@ from pyscf.lib import logger
 import pyscf.dft
 from pyscf.dft.numint import _dot_ao_ao_dense
 
+CONV_TOL_DM = 1e-8
+CONV_TOL_DIIS = 1e-3
+
 
 class DIIS:
     """Summary: Class for DIIS extrapolation used in ZMP
@@ -72,7 +75,8 @@ class DIIS:
         diis_error = np.abs(np.ravel(self.ems[0])[idx])
 
         # Solve BC = A to find C
-        nb = min(iteration, self.diis_space) - 1
+        # The first SCF cycle does not populate the DIIS history.
+        nb = min(iteration - 1, self.diis_space)
         B = -1.0 * np.ones((nb + 1, nb + 1))
         B[nb, nb] = 0.0
         B[:nb, :nb] = np.einsum(
@@ -120,9 +124,6 @@ class RZMP(_DFHF, pyscf.dft.rks.RKS):
         )
         self.J_tar, K_tar = self.get_jk(self.mol, self.dm_tar)
         self.S = mol.intor_symmetric("int1e_ovlp")
-
-        self.conv_tol_dm = 1e-8
-        self.conv_tol_diis = 1e-4
 
         J_tar = self.J_tar
         ni = self._numint
@@ -179,8 +180,8 @@ class RZMP(_DFHF, pyscf.dft.rks.RKS):
 
             t0 = logger.timer(self, f"{cycle:4d} gap {gap:.2e} dm_e {dm_e:.2e}", *t0)
 
-            dm_converged = dm_e < self.conv_tol_dm
-            diis_converged = diis_e < self.conv_tol_diis
+            dm_converged = dm_e < CONV_TOL_DM
+            diis_converged = diis_e < CONV_TOL_DIIS
             self.converged = dm_converged and diis_converged
             if self.converged and cycle > 1:
                 break
@@ -213,9 +214,6 @@ class UZMP(_DFHF, pyscf.dft.uks.UKS):
         ]
         self.J_tar, K_tar = self.get_jk(self.mol, self.dm_tar)
         self.S = mol.intor_symmetric("int1e_ovlp")
-
-        self.conv_tol_dm = 1e-8
-        self.conv_tol_diis = 1e-4
 
         J_tar = self.J_tar
         ni = self._numint
@@ -298,8 +296,8 @@ class UZMP(_DFHF, pyscf.dft.uks.UKS):
 
             t0 = logger.timer(self, f"{cycle:4d} gap {gap:.2e} dm_e {dm_e:.2e}", *t0)
 
-            dm_converged = dm_e < self.conv_tol_dm
-            diis_converged = diis_e_a + diis_e_b < self.conv_tol_diis
+            dm_converged = dm_e < CONV_TOL_DM
+            diis_converged = diis_e_a + diis_e_b < CONV_TOL_DIIS
             self.converged = dm_converged and diis_converged
             if self.converged and cycle > 1:
                 break
