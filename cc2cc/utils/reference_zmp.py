@@ -13,12 +13,13 @@ from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
 from cc2cc.utils.reference_cc import make_ccsd, ccsd_t_target_density
 from cc2cc.utils.zmp import RZMP, UZMP
+from cc2cc.utils.tensor_helper import parallel_einsum
 
 LEVEL_SHIFT = 2
 MAX_CYCLE = 200000
 RHO_REL_TOL = 1e-2
 I_VALUE_REL_TOL = 1e-4
-DIIS_SPACE = 8
+DIIS_SPACE = 64
 
 
 def get_zmp(
@@ -56,7 +57,7 @@ def get_zmp(
     def energy_grids(dm):
         dm_tot = dm if np.ndim(dm) == 2 else np.sum(dm, axis=0)
         rho = mzmp._numint.eval_rho(mol, ao, dm_tot, xctype="LDA")
-        hartree = 0.5 * np.einsum("pij,ij->p", int1e_grids, dm_tot) * rho
+        hartree = 0.5 * parallel_einsum("pij,ij->p", int1e_grids, dm_tot) * rho
         return hartree, rho * nuc_grids
 
     hartree_tar, nuc_tar = energy_grids(dm_tar)

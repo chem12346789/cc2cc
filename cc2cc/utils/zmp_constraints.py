@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from cc2cc.utils.env_var import DATA_PATH, EDGE_LEN
+from cc2cc.utils.tensor_helper import parallel_einsum
 
 
 def _observable_operators(mol, grids, ni, block_size):
@@ -20,9 +21,8 @@ def _observable_operators(mol, grids, ni, block_size):
         coords = grids.coords[start:stop]
         ao = ni.eval_ao(mol, coords)
         gaussian = np.exp(-np.sum((centers[:, None] - coords) ** 2, axis=2))
-        projections += np.einsum(
+        projections += parallel_einsum(
             "gp,g,gq,kg->kpq", ao, grids.weights[start:stop], ao, gaussian,
-            optimize=True,
         )
     operators = np.concatenate(
         (dipole, np.array([second[i, j] for i, j in pairs]), projections)
@@ -111,8 +111,8 @@ def get_zmp_constraint_data(mf, grids, dm_zmp, dm_target, cache_prefix, args):
             "zmp_observable_labels": labels,
             "zmp_observable_operators": operators,
             "zmp_observable_nuclear": nuclear,
-            "zmp_observable_reference": np.einsum("kpq,qp->k", operators, total_ref) + nuclear,
-            "zmp_observable_target": np.einsum("kpq,qp->k", operators, total_target) + nuclear,
+            "zmp_observable_reference": parallel_einsum("kpq,qp->k", operators, total_ref) + nuclear,
+            "zmp_observable_target": parallel_einsum("kpq,qp->k", operators, total_target) + nuclear,
             "zmp_response_gap_floor": gap_floor,
             "zmp_response_projection_rcond": 1e-10,
             "zmp_response_model": "independent_particle; block_diagonal_baseline_fock; no_induced_Hxc",
@@ -145,15 +145,15 @@ def get_zmp_constraint_data(mf, grids, dm_zmp, dm_target, cache_prefix, args):
         maps = {}
         shape = (len(grids.coords), grids.input_level, grids.cube_size)
         if response:
-            potential_ov = np.einsum("pa,kpq,qi->kai", cv, operators, co, optimize=True)
+            potential_ov = parallel_einsum("pa,kpq,qi->kai", cv, operators, co)
             projection = np.linalg.pinv(
                 potential_ov.reshape(len(operators), -1).T, rcond=1e-10
             )
             data[f"zmp_potential_ov_s{spin}"] = potential_ov
             data[f"zmp_baseline_potential_coeff_s{spin}"] = projection @ fock_ov.ravel()
-            data[f"zmp_observable_response_s{spin}"] = -2 * occupation * np.einsum(
+            data[f"zmp_observable_response_s{spin}"] = -2 * occupation * parallel_einsum(
                 "mai,kai,ai->mk", potential_ov, potential_ov,
-                1 / np.maximum(gaps, gap_floor), optimize=True,
+                1 / np.maximum(gaps, gap_floor),
             )
             path = prefix.with_name(prefix.name + f"_potential_feature_s{spin}.npy")
             maps["potential"] = np.lib.format.open_memmap(
@@ -185,12 +185,11 @@ def get_zmp_constraint_data(mf, grids, dm_zmp, dm_target, cache_prefix, args):
             ao_vir = ao[:4] @ cv
             # The gradient channel differentiates both AO factors; the value
             # channel is already included by the first contraction.
-            jac = np.einsum(
-                "fdg,dga,gi->fgai", chain, ao_vir, ao_occ[0], optimize=True
+            jac = parallel_einsum(
+                "fdg,dga,gi->fgai", chain, ao_vir, ao_occ[0],
             )
-            jac += np.einsum(
+            jac += parallel_einsum(
                 "fdg,ga,dgi->fgai", chain[:, 1:], ao_vir[0], ao_occ[1:],
-                optimize=True,
             )
             jac *= 2 * occupation
             jac = jac.reshape(
@@ -199,9 +198,9 @@ def get_zmp_constraint_data(mf, grids, dm_zmp, dm_target, cache_prefix, args):
             if feature_ov:
                 maps["ov"][start:stop] = jac
             if response:
-                maps["potential"][start:stop] = np.einsum(
+                maps["potential"][start:stop] = parallel_einsum(
                     "ka,cfqa->cfqk", projection,
-                    jac.reshape(*jac.shape[:3], -1), optimize=True,
+                    jac.reshape(*jac.shape[:3], -1),
                 ) / (2 * occupation)
     for array, path in pending:
         array.flush()

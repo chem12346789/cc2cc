@@ -1,11 +1,11 @@
 import numpy as np
-import opt_einsum as oe
 
 from pyscf import lib
 
 from cc2cc.utils.reference_b3lyp import converged_b3lyp
 from cc2cc.utils.modelscf_rks import get_veff_grad_modified_zeros
 from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
+from cc2cc.utils.tensor_helper import parallel_einsum
 
 
 def get_dft_input(mol, grids, dm1_dft, max_memory=8000):
@@ -106,24 +106,18 @@ def get_dft_grad(mol, grids, dm1_dft, max_memory=8000):
                 f"size of ao_array: {ao_array.shape} elements, size of ao_mat: {ao_mat.shape} elements, size of ao_value: {ao_value.shape} elements, size of grad2force: {grad2force.shape} elements, size of wv: {wv.shape} elements",
                 flush=True,
             )
-            grad2force_part = oe.contract(
+            grad2force_part = parallel_einsum(
                 "inp,xpu,npv,uv->ipx",
                 wv,
                 ao_value[1:4, :, ao0:ao1],
                 ao_array,
                 dm1_dft[ao0:ao1],
-                optimize="optimal",
-                backend="numpy",
-                use_blas=True,
-            ) + oe.contract(
+            ) + parallel_einsum(
                 "inp,nxpu,pv,uv->ipx",
                 wv,
                 ao_mat[:, :, :, ao0:ao1],
                 ao_value[0],
                 dm1_dft[ao0:ao1],
-                optimize="optimal",
-                backend="numpy",
-                use_blas=True,
             )
             grad2force_part = -2 * grad2force_part
             grad2force[k, :, p0:p1] = np.reshape(
@@ -147,12 +141,11 @@ def get_dft_grad(mol, grids, dm1_dft, max_memory=8000):
     grad_mat[1, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.19
     grad_mat[2, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.72
     grad_mat[3, :, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE] += 0.81
-    force = np.einsum(
+    force = parallel_einsum(
         "p,ipabc,tipabcx->tx",
         grids.weights,
         grad_mat,
         grad2force,
-        optimize=True,
     )
     print(
         "Error force DFT: ",

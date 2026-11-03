@@ -14,6 +14,7 @@ from cc2cc.utils.get_dft_energy_rks import (
     _orbital_gradient_squared,
     block_loop_rdm2,
 )
+from cc2cc.utils.tensor_helper import parallel_einsum
 
 
 def get_cc_energy(
@@ -66,13 +67,10 @@ def get_cc_energy(
                 * (dm2_cc[1].transpose(2, 3, 0, 1))[i_slice, j_slice, k_slice, l_slice]
                 + 0.5 * dm2_cc[2][i_slice, j_slice, k_slice, l_slice]
                 - 0.5
-                * oe.contract(
+                * parallel_einsum(
                     "pq,rs->pqrs",
                     dm1_cc[0][i_slice, j_slice] + dm1_cc[1][i_slice, j_slice],
                     dm1_cc[0][k_slice, l_slice] + dm1_cc[1][k_slice, l_slice],
-                    optimize="optimal",
-                    backend="numpy",
-                    use_blas=True,
                 )
             )
 
@@ -108,7 +106,7 @@ def get_cc_energy(
         print("Start hatree part...")
         hatree_cc_grids = np.zeros_like(grids.weights)
         int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
-        vele = np.einsum(
+        vele = parallel_einsum(
             "pij,ij->p",
             int1e_grids,
             dm1_cc[0] + dm1_cc[1],
@@ -124,15 +122,12 @@ def get_cc_energy(
             eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo[i_spin])
             eigs_v_dm1 = mf_mo_coeff[i_spin] @ eigs_v_dm1
             for i in range(np.shape(eigs_v_dm1)[1]):
-                part = oe.contract(
+                part = parallel_einsum(
                     "pm,m,n,pn->p",
                     ao_value[0],
                     eigs_v_dm1[:, i],
                     eigs_v_dm1[:, i],
                     ao_2_diag,
-                    optimize="optimal",
-                    backend="numpy",
-                    use_blas=True,
                 )
                 kin_cc_grids -= part * eigs_e_dm1[i] / 2
 
@@ -159,8 +154,8 @@ def get_cc_energy(
                         * erf(1e2 * distance)
                         / distance
                     )
-        real_nuc_cc = np.einsum(
-            "pq,pq->", mol.intor("int1e_nuc"), dm1_cc[0] + dm1_cc[1]
+        real_nuc_cc = parallel_einsum(
+            "pq,pq->", mol.intor("int1e_nuc"), dm1_cc[0] + dm1_cc[1],
         )
         nuc_erf_cc_scale = real_nuc_cc / np.sum(nuc_erf_cc_grids * grids.weights)
         nuc_erf_cc_grids *= nuc_erf_cc_scale
@@ -221,8 +216,8 @@ def get_dft_energy(
 
         # K part from dm1_dft
         # exchange part
-        # - 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_dft[0], dm1_dft[0])
-        # - 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_dft[1], dm1_dft[1])
+        # - 0.5 * alpha * parallel_einsum("pr,qs->pqrs", dm1_dft[0], dm1_dft[0])
+        # - 0.5 * alpha * parallel_einsum("pr,qs->pqrs", dm1_dft[1], dm1_dft[1])
         print("Start K part...")
         exc_k_dft_grids = np.zeros_like(grids.weights)
         for (
@@ -235,20 +230,14 @@ def get_dft_energy(
             nao_slice_k,
             nao_slice_l,
         ) in block_loop_rdm2(mol.nao):
-            dm12_cc = oe.contract(
+            dm12_cc = parallel_einsum(
                 "pr,qs->pqrs",
                 dm1_dft[0][i_slice, k_slice],
                 dm1_dft[0][j_slice, l_slice],
-                optimize="optimal",
-                backend="numpy",
-                use_blas=True,
-            ) + oe.contract(
+            ) + parallel_einsum(
                 "pr,qs->pqrs",
                 dm1_dft[1][i_slice, k_slice],
                 dm1_dft[1][j_slice, l_slice],
-                optimize="optimal",
-                backend="numpy",
-                use_blas=True,
             )
             expr_rinv_dm2_r = oe.contract_expression(
                 "ijkl,i,j,kl->",
@@ -282,7 +271,7 @@ def get_dft_energy(
         print("Start hatree part...")
         int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
         hatree_dft_grids = np.zeros_like(grids.weights)
-        vele = np.einsum(
+        vele = parallel_einsum(
             "pij,ij->p",
             int1e_grids,
             dm1_dft[0] + dm1_dft[1],
@@ -296,15 +285,12 @@ def get_dft_energy(
         kinl_dft_grids = np.zeros_like(grids.weights)
         for i_spin in range(2):
             for i in range(mol.nelec[i_spin]):
-                part = oe.contract(
+                part = parallel_einsum(
                     "pm,m,n,pn->p",
                     ao_value[0],
                     dft_mo_coeff[i_spin][:, i],
                     dft_mo_coeff[i_spin][:, i],
                     ao_2_diag,
-                    optimize="optimal",
-                    backend="numpy",
-                    use_blas=True,
                 )
                 kin_dft_grids -= part / 2
 
@@ -331,8 +317,8 @@ def get_dft_energy(
                         * erf(1e2 * distance)
                         / distance
                     )
-        real_nuc_dft = np.einsum(
-            "pq,pq->", mol.intor("int1e_nuc"), dm1_dft[0] + dm1_dft[1]
+        real_nuc_dft = parallel_einsum(
+            "pq,pq->", mol.intor("int1e_nuc"), dm1_dft[0] + dm1_dft[1],
         )
         nuc_erf_dft_scale = real_nuc_dft / np.sum(nuc_erf_dft_grids * grids.weights)
         nuc_erf_dft_grids *= nuc_erf_dft_scale
@@ -391,8 +377,8 @@ def get_hf_energy(
 
         # K part from dm1_hf
         # exchange part
-        # - 0.5 * oe.contract("pr,qs->pqrs", dm1_hf[0], dm1_hf[0])
-        # - 0.5 * oe.contract("pr,qs->pqrs", dm1_hf[1], dm1_hf[1])
+        # - 0.5 * parallel_einsum("pr,qs->pqrs", dm1_hf[0], dm1_hf[0])
+        # - 0.5 * parallel_einsum("pr,qs->pqrs", dm1_hf[1], dm1_hf[1])
         print("Start K part from HF...")
         exc_k_hf_grids = np.zeros_like(grids.weights)
         for (
@@ -405,20 +391,14 @@ def get_hf_energy(
             nao_slice_k,
             nao_slice_l,
         ) in block_loop_rdm2(mol.nao):
-            dm12_cc = oe.contract(
+            dm12_cc = parallel_einsum(
                 "pr,qs->pqrs",
                 dm1_hf[0][i_slice, k_slice],
                 dm1_hf[0][j_slice, l_slice],
-                optimize="optimal",
-                backend="numpy",
-                use_blas=True,
-            ) + oe.contract(
+            ) + parallel_einsum(
                 "pr,qs->pqrs",
                 dm1_hf[1][i_slice, k_slice],
                 dm1_hf[1][j_slice, l_slice],
-                optimize="optimal",
-                backend="numpy",
-                use_blas=True,
             )
             expr_rinv_dm2_r = oe.contract_expression(
                 "ijkl,i,j,kl->",
@@ -452,7 +432,7 @@ def get_hf_energy(
         print("Start hatree part from HF...")
         int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
         hatree_hf_grids = np.zeros_like(grids.weights)
-        vele = np.einsum(
+        vele = parallel_einsum(
             "pij,ij->p",
             int1e_grids,
             dm1_hf[0] + dm1_hf[1],
@@ -466,15 +446,12 @@ def get_hf_energy(
         kinl_hf_grids = np.zeros_like(grids.weights)
         for i_spin in range(2):
             for i in range(mol.nelec[i_spin]):
-                part = oe.contract(
+                part = parallel_einsum(
                     "pm,m,n,pn->p",
                     ao_value[0],
                     mf_mo_coeff[i_spin][:, i],
                     mf_mo_coeff[i_spin][:, i],
                     ao_2_diag,
-                    optimize="optimal",
-                    backend="numpy",
-                    use_blas=True,
                 )
                 kin_hf_grids -= part / 2
 
@@ -501,8 +478,8 @@ def get_hf_energy(
                         * erf(1e2 * distance)
                         / distance
                     )
-        real_nuc_hf = np.einsum(
-            "pq,pq->", mol.intor("int1e_nuc"), dm1_hf[0] + dm1_hf[1]
+        real_nuc_hf = parallel_einsum(
+            "pq,pq->", mol.intor("int1e_nuc"), dm1_hf[0] + dm1_hf[1],
         )
         nuc_erf_hf_scale = real_nuc_hf / np.sum(nuc_erf_hf_grids * grids.weights)
         nuc_erf_hf_grids *= nuc_erf_hf_scale

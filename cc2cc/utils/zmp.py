@@ -14,6 +14,8 @@ from pyscf.lib import logger
 import pyscf.dft
 from pyscf.dft.numint import _dot_ao_ao_dense
 
+from cc2cc.utils.tensor_helper import parallel_einsum
+
 CONV_TOL_DM = 1e-8
 CONV_TOL_DIIS = 1e-3
 
@@ -79,8 +81,8 @@ class DIIS:
         nb = min(iteration - 1, self.diis_space)
         B = -1.0 * np.ones((nb + 1, nb + 1))
         B[nb, nb] = 0.0
-        B[:nb, :nb] = np.einsum(
-            "aij,bji->ab", self.ems[:nb, :, :], self.ems[:nb, :, :], optimize="greedy"
+        B[:nb, :nb] = parallel_einsum(
+            "aij,bji->ab", self.ems[:nb, :, :], self.ems[:nb, :, :]
         )
         A = np.zeros(nb + 1)
         A[nb] = -1.0

@@ -10,6 +10,8 @@ import pyscf
 import pyscf.dft
 import pyscf.scf
 
+from cc2cc.utils.tensor_helper import parallel_einsum
+
 
 def _ecp_energy_density(mol, ao, dm):
     """Return the pseudopotential correction in the AO-projected gauge."""
@@ -21,25 +23,19 @@ def _ecp_energy_density(mol, ao, dm):
     ecp -= mol.intor_symmetric("int1e_nuc")
     overlap = mol.intor_symmetric("int1e_ovlp")
     projected_dm = np.linalg.solve(overlap, ecp @ dm)
-    return np.einsum("pi,ij,pj->p", ao, projected_dm, ao, optimize=True)
+    return parallel_einsum("pi,ij,pj->p", ao, projected_dm, ao)
 
 
 def _orbital_gradient_squared(ao_gradient, orbital_coeff):
-    orbital_gradient = oe.contract(
+    orbital_gradient = parallel_einsum(
         "xpm,m->xp",
         ao_gradient,
         orbital_coeff,
-        optimize="optimal",
-        backend="numpy",
-        use_blas=True,
     )
-    return oe.contract(
+    return parallel_einsum(
         "xp,xp->p",
         orbital_gradient,
         orbital_gradient,
-        optimize="optimal",
-        backend="numpy",
-        use_blas=True,
     )
 
 
@@ -116,13 +112,10 @@ def get_cc_energy(
         nao_slice_k,
         nao_slice_l,
     ) in block_loop_rdm2(mol.nao):
-        dm12_cc = 0.5 * dm2_cc[i_slice, j_slice, k_slice, l_slice] - 0.5 * oe.contract(
+        dm12_cc = 0.5 * dm2_cc[i_slice, j_slice, k_slice, l_slice] - 0.5 * parallel_einsum(
             "pq,rs->pqrs",
             dm1_cc[i_slice, j_slice],
             dm1_cc[k_slice, l_slice],
-            optimize="optimal",
-            backend="numpy",
-            use_blas=True,
         )
 
         expr_rinv_dm2_r = oe.contract_expression(
@@ -157,7 +150,7 @@ def get_cc_energy(
     print("Start hatree part...")
     hatree_cc_grids = np.zeros_like(grids.weights)
     int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
-    vele = np.einsum(
+    vele = parallel_einsum(
         "pij,ij->p",
         int1e_grids,
         dm1_cc,
@@ -170,15 +163,12 @@ def get_cc_energy(
     eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(dm1_cc_mo)
     eigs_v_dm1 = mf_mo_coeff @ eigs_v_dm1
     for i in range(np.shape(eigs_v_dm1)[1]):
-        part = oe.contract(
+        part = parallel_einsum(
             "pm,m,n,pn->p",
             ao_value[0],
             eigs_v_dm1[:, i],
             eigs_v_dm1[:, i],
             ao_2_diag,
-            optimize="optimal",
-            backend="numpy",
-            use_blas=True,
         )
         kin_cc_grids -= part * eigs_e_dm1[i] / 2
 
@@ -199,7 +189,7 @@ def get_cc_energy(
                     * mol.atom_charges()[i_atom]
                     / distance
                 )
-    real_nuc_cc = np.einsum("pq,pq->", mol.intor("int1e_nuc"), dm1_cc)
+    real_nuc_cc = parallel_einsum("pq,pq->", mol.intor("int1e_nuc"), dm1_cc)
     nuc_erf_cc_scale = real_nuc_cc / np.sum(nuc_erf_cc_grids * grids.weights)
     nuc_erf_cc_grids *= nuc_erf_cc_scale
     print("Nuclear scale factors (cc/dft/hf):", nuc_erf_cc_scale)
@@ -248,8 +238,8 @@ def get_dft_energy(
 
     # K part from dm1_dft
     # exchange part
-    # - 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_dft[0], dm1_dft[0])
-    # - 0.5 * alpha * oe.contract("pr,qs->pqrs", dm1_dft[1], dm1_dft[1])
+    # - 0.5 * alpha * parallel_einsum("pr,qs->pqrs", dm1_dft[0], dm1_dft[0])
+    # - 0.5 * alpha * parallel_einsum("pr,qs->pqrs", dm1_dft[1], dm1_dft[1])
     # alpha is 0.2 in b3lyp
     print("Start K part...")
     exc_k_dft_grids = np.zeros_like(grids.weights)
@@ -296,7 +286,7 @@ def get_dft_energy(
     print("Start hatree part...")
     int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
     hatree_dft_grids = np.zeros_like(grids.weights)
-    vele = np.einsum(
+    vele = parallel_einsum(
         "pij,ij->p",
         int1e_grids,
         dm1_dft,
@@ -309,15 +299,12 @@ def get_dft_energy(
     kin_dft_grids = np.zeros_like(grids.weights)
     kinl_dft_grids = np.zeros_like(grids.weights)
     for i in range(mol.nelec[0]):
-        part = oe.contract(
+        part = parallel_einsum(
             "pm,m,n,pn->p",
             ao_value[0],
             dft_mo_coeff[:, i],
             dft_mo_coeff[:, i],
             ao_2_diag,
-            optimize="optimal",
-            backend="numpy",
-            use_blas=True,
         )
         kin_dft_grids -= part
 
@@ -342,7 +329,7 @@ def get_dft_energy(
                     * mol.atom_charges()[i_atom]
                     / distance
                 )
-    real_nuc_dft = np.einsum("pq,pq->", mol.intor("int1e_nuc"), dm1_dft)
+    real_nuc_dft = parallel_einsum("pq,pq->", mol.intor("int1e_nuc"), dm1_dft)
     nuc_erf_dft_scale = real_nuc_dft / np.sum(nuc_erf_dft_grids * grids.weights)
     nuc_erf_dft_grids *= nuc_erf_dft_scale
     print("Nuclear scale factors (cc/dft/hf):", nuc_erf_dft_scale)
@@ -396,8 +383,8 @@ def get_hf_energy(
 
     # K part from dm1_hf
     # exchange part
-    # - 0.5 * oe.contract("pr,qs->pqrs", dm1_hf[0], dm1_hf[0])
-    # - 0.5 * oe.contract("pr,qs->pqrs", dm1_hf[1], dm1_hf[1])
+    # - 0.5 * parallel_einsum("pr,qs->pqrs", dm1_hf[0], dm1_hf[0])
+    # - 0.5 * parallel_einsum("pr,qs->pqrs", dm1_hf[1], dm1_hf[1])
     # coefficient = - 2 * 0.5 * 0.5 * 0.5 = -0.25
     print("Start K part from HF...")
     exc_k_hf_grids = np.zeros_like(grids.weights)
@@ -443,7 +430,7 @@ def get_hf_energy(
     print("Start hatree part...")
     int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
     hatree_hf_grids = np.zeros_like(grids.weights)
-    vele = np.einsum(
+    vele = parallel_einsum(
         "pij,ij->p",
         int1e_grids,
         dm1_hf,
@@ -456,15 +443,12 @@ def get_hf_energy(
     kin_hf_grids = np.zeros_like(grids.weights)
     kinl_hf_grids = np.zeros_like(grids.weights)
     for i in range(mol.nelec[0]):
-        part = oe.contract(
+        part = parallel_einsum(
             "pm,m,n,pn->p",
             ao_value[0],
             mf_mo_coeff[:, i],
             mf_mo_coeff[:, i],
             ao_2_diag,
-            optimize="optimal",
-            backend="numpy",
-            use_blas=True,
         )
         kin_hf_grids -= part
 
@@ -487,7 +471,7 @@ def get_hf_energy(
                     * mol.atom_charges()[i_atom]
                     / distance
                 )
-    real_nuc_hf = np.einsum("pq,pq->", mol.intor("int1e_nuc"), dm1_hf)
+    real_nuc_hf = parallel_einsum("pq,pq->", mol.intor("int1e_nuc"), dm1_hf)
     nuc_erf_hf_scale = real_nuc_hf / np.sum(nuc_erf_hf_grids * grids.weights)
     nuc_erf_hf_grids *= nuc_erf_hf_scale
     print("Nuclear scale factors (cc/dft/hf):", nuc_erf_hf_scale)

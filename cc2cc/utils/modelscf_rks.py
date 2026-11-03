@@ -20,6 +20,7 @@ from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.Grids import (
     Grid, iterate_grid_segments, iterate_grid_response_segments,
 )
+from cc2cc.utils.tensor_helper import parallel_einsum
 
 
 def get_veff_modified_rks(ks, modeldict):
@@ -62,7 +63,7 @@ def get_veff_modified_rks(ks, modeldict):
                     energy_den, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
 
                     excsum[i] += np.sum(energy_den)
-                    wv = np.einsum("ixgC,giC->xgC", vxc_mat, middle_cube, optimize=True)
+                    wv = parallel_einsum("ixgC,giC->xgC", vxc_mat, middle_cube)
 
 
                     wv = wv.reshape(4, len(gridcube.coords))  # xgC -> xG
@@ -192,9 +193,9 @@ def get_veff_modified_rks(ks, modeldict):
             vxc += vj - vk * 0.5
 
             if ground_state:
-                exc -= np.einsum("ij,ji", dm, vk).real * 0.5 * 0.5
+                exc -= parallel_einsum("ij,ji", dm, vk).real * 0.5 * 0.5
         if ground_state:
-            ecoul = np.einsum("ij,ji", dm, vj).real * 0.5
+            ecoul = parallel_einsum("ij,ji", dm, vj).real * 0.5
         else:
             ecoul = None
 
@@ -255,15 +256,14 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
                         _, middle_cube, weight_derivative = modeldict.eval_xc_eff(
                             rho_cube, weights_, weight_response=True
                         )
-                        exc += np.einsum("p,axp->ax", weight_derivative, weight1)
+                        exc += parallel_einsum("p,axp->ax", weight_derivative, weight1)
                     else:
                         _, middle_cube = modeldict.eval_xc_eff(rho_cube, weights_)
 
-                    wv = np.einsum(
+                    wv = parallel_einsum(
                         "ilpC,piC->lpC",
                         vxc_mat,
                         middle_cube,
-                        optimize=True,
                     )
                     wv[0] *= 0.5
                     wv = wv.reshape(4, len(gridcube.coords))  # lpC -> lP
@@ -271,7 +271,7 @@ def get_veff_grad_modified_rks(ks_grad, modeldict):
                     _gga_grad_sum_(vtmp, mol, ao_value, wv, None, ao_loc)
                     vmat[idm] += vtmp
                     if ks_grad.grid_response:
-                        exc[atom] += 2 * np.einsum("xij,ji->x", vtmp, dms)
+                        exc[atom] += 2 * parallel_einsum("xij,ji->x", vtmp, dms)
 
         if nset == 1:
             vmat = vmat[0]

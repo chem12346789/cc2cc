@@ -16,6 +16,7 @@ from cc2cc.utils.reference_b3lyp import (
     converged_b3lyp,
     finite_difference_gradient,
 )
+from cc2cc.utils.tensor_helper import parallel_einsum
 
 
 def eval_nlc_exc_density(
@@ -76,30 +77,30 @@ def _gga_potential_grid_response(mf):
                 fxc = fxc[None, :, None, :, :]
             drho = []
             for density in dms:
-                ao_dm = np.einsum("cgi,ij->cgj", ao[:4], density)
-                derivative = 2 * np.einsum("xcgi,gi->xcg", dao, ao_dm[0])
-                derivative[:, 1:] += 2 * np.einsum(
-                    "cgi,xgi->xcg", ao[1:4], ao_dm[1:4]
+                ao_dm = parallel_einsum("cgi,ij->cgj", ao[:4], density)
+                derivative = 2 * parallel_einsum("xcgi,gi->xcg", dao, ao_dm[0])
+                derivative[:, 1:] += 2 * parallel_einsum(
+                    "cgi,xgi->xcg", ao[1:4], ao_dm[1:4],
                 )
                 drho.append(derivative)
-            dvxc = np.einsum("scudg,uxdg->sxcg", fxc, np.array(drho))
+            dvxc = parallel_einsum("scudg,uxdg->sxcg", fxc, np.array(drho))
             weight = weights[start:stop]
             for spin in range(len(dms)):
                 weighted_vxc = vxc[spin] * factors[:, None]
-                aow = np.einsum("cg,cgi->gi", weighted_vxc, ao[:4])
-                response[spin] += np.einsum(
+                aow = parallel_einsum("cg,cgi->gi", weighted_vxc, ao[:4])
+                response[spin] += parallel_einsum(
                     "axg,gi,gj->axij", weight1[:, :, start:stop],
-                    ao[0], aow, optimize=True,
+                    ao[0], aow,
                 )
-                daow = np.einsum(
-                    "xcg,cgi->xgi", dvxc[spin] * factors[None, :, None], ao[:4]
+                daow = parallel_einsum(
+                    "xcg,cgi->xgi", dvxc[spin] * factors[None, :, None], ao[:4],
                 )
-                daow += np.einsum("cg,xcgi->xgi", weighted_vxc, dao)
-                response[spin, owner] += np.einsum(
-                    "xgi,gj->xij", dao[:, 0], aow * weight[:, None]
+                daow += parallel_einsum("cg,xcgi->xgi", weighted_vxc, dao)
+                response[spin, owner] += parallel_einsum(
+                    "xgi,gj->xij", dao[:, 0], aow * weight[:, None],
                 )
-                response[spin, owner] += np.einsum(
-                    "gi,xgj->xij", ao[0], daow * weight[None, :, None]
+                response[spin, owner] += parallel_einsum(
+                    "gi,xgj->xij", ao[0], daow * weight[None, :, None],
                 )
     response += response.swapaxes(-1, -2).copy()
     return response[0] if dm.ndim == 2 else response
@@ -124,8 +125,8 @@ def post_dft_vv10_gradient(mf, nlcgrids):
     )
     gradient += grid_force
     for atom, (_, _, p0, p1) in enumerate(mol.aoslice_by_atom()):
-        gradient[atom] += 2 * np.einsum(
-            "xij,ij->x", vnlc_deriv[:, p0:p1], dm_tot[p0:p1]
+        gradient[atom] += 2 * parallel_einsum(
+            "xij,ij->x", vnlc_deriv[:, p0:p1], dm_tot[p0:p1],
         )
 
     hessian = mf.Hessian()
@@ -146,8 +147,8 @@ def post_dft_vv10_gradient(mf, nlcgrids):
         occupied = coeff[:, occ > 0] * occ[occ > 0]
         for atom in range(mol.natm):
             # mo1 includes the occupied-space overlap (Pulay) response.
-            gradient[atom] += 2 * np.einsum(
-                "ij,xjk,ik->x", vnlc, response[atom], occupied
+            gradient[atom] += 2 * parallel_einsum(
+                "ij,xjk,ik->x", vnlc, response[atom], occupied,
             )
     return gradient
 

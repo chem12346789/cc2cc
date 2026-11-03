@@ -14,6 +14,7 @@ from pyscf.dft import gen_grid, numint, radi
 from pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 
 from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
+from cc2cc.utils.tensor_helper import parallel_einsum
 
 GridsCPU = gen_grid.Grids
 OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
@@ -136,7 +137,7 @@ def eval_rho_cube(mol, ao, dm, rho_in_1, rho_in_2, screen_index, shls_slice, ao_
     if has_mo:
         pos = mo_occ > OCCDROP
         if np.any(pos):
-            cpos = np.einsum("ij,j->ij", mo_coeff[:, pos], np.sqrt(mo_occ[pos]))
+            cpos = parallel_einsum("ij,j->ij", mo_coeff[:, pos], np.sqrt(mo_occ[pos]))
             c0 = numint._dot_ao_dm(mol, ao[0], cpos, screen_index, shls_slice, ao_loc)
             c1 = numint._dot_ao_dm(mol, ao[1], cpos, screen_index, shls_slice, ao_loc)
             c2 = numint._dot_ao_dm(mol, ao[2], cpos, screen_index, shls_slice, ao_loc)
