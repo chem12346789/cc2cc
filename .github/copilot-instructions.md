@@ -23,22 +23,18 @@ UT   = unit test
 - if file > 50 lines: ask before delete
 - No dependency add/remove/upgrade without asking
 - No data generation/training/Slurm/long jobs unless explicitly requested
-- No claim check passed unless actually run
-- No read > 40 lines per tool call
+- Never claim a check passed unless it was actually run
 - No raw train*.log — filter: rg -iv 'warning|key|Loading|Adjusted' <f> | sed '/^$/d'
 - No raw tool output in final response
 
 ## DO
-- Before edit: git status --short
-- After edit: git diff --stat  # scope check
-- Locate: rg first; read smallest relevant range only
-- Batch independent shell commands in one call
-- For Python commands and tests, use the interpreter selected in VS Code via
-  "Python: Select Interpreter"; do not substitute the system Python or guess an
-  environment. Resolve the selected executable through VS Code when needed.
-- Changed .py: <selected Python> -c "import <module>"  # syntax check
-- Modified behavior: run targeted tests if available
-- Report: validation performed + remaining limitation
+- Inspect enough relevant context to make a correct change; choose efficient
+  search and read methods without an arbitrary line limit.
+- Preserve unrelated work and review the final diff for scope.
+- Run focused validation appropriate to the change when practical; avoid
+  unrelated or disproportionately expensive checks.
+- For Python validation, prefer the interpreter selected in VS Code when available.
+- Report validation performed and any remaining limitations.
 
 ## Output
 - Code only, no explanation, unless asked
@@ -48,11 +44,6 @@ UT   = unit test
 - Describe changes in prose + file:line — no diff hunks
 - Rationale <= 3 short sentences
 - No filler ("let me know if...")
-
-## Safety Net
-- Before making changes, run: git stash create  # snapshot, no side effects
-- Record the stash ref in your response as "rollback: <ref>"
-- To undo: git stash apply <ref>
 
 ## Done
 - [ ] Only task-relevant files changed
