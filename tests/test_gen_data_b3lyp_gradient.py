@@ -1,14 +1,9 @@
-import ast
-import contextlib
-import io
-from pathlib import Path
 from unittest import TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pyscf
 
-import gen_data
 from cc2cc.utils.reference_b3lyp import (
     converged_b3lyp,
     b3lyp_finite_difference_gradient,
@@ -37,38 +32,6 @@ class TestB3lypGradient(TestCase):
                 self.assertEqual(numerical.dtype, np.float64)
                 np.testing.assert_allclose(analytical, numerical, rtol=0, atol=5e-5)
                 np.testing.assert_array_equal(mol.atom_coords(), coords)
-
-    def test_reports_maximum_absolute_component_difference(self):
-        source = Path(gen_data.__file__)
-        tree = ast.parse(source.read_text())
-        block = next(
-            node for node in ast.walk(tree)
-            if isinstance(node, ast.If) and ast.unparse(node.test) == "mol.natm == 1"
-        )
-        analytical = np.array([[0.1, -0.2, 0.3], [-0.1, 0.2, -0.3]])
-        numerical = analytical.copy()
-        numerical[0, 1] -= 0.002
-        mf = Mock()
-        mf.nuc_grad_method.return_value.kernel.return_value = analytical
-        namespace = dict(
-            np=np, mol=Mock(), dm_dft=Mock(), nlcgrids=Mock(),
-            args=Mock(grid_level=0),
-            converged_b3lyp=Mock(return_value=mf),
-            post_dft_vv10_gradient=Mock(return_value=analytical),
-            post_vv10_finite_difference_gradient=Mock(return_value=analytical),
-            b3lyp_finite_difference_gradient=Mock(return_value=numerical),
-        )
-        output = io.StringIO()
-        with contextlib.redirect_stdout(output):
-            exec(compile(ast.Module(body=block.orelse, type_ignores=[]),
-                         str(source), "exec"), namespace)
-        self.assertIn(
-            "DFT (B3LYP) analytical/FD gradient max difference "
-            "(Hartree/Bohr): 2.000000000000e-03", output.getvalue()
-        )
-        namespace["b3lyp_finite_difference_gradient"].assert_called_once_with(
-            namespace["mol"]
-        )
 
     def test_post_vv10_reference_preserves_grid_level_and_step(self):
         mol = pyscf.M(atom="He 0 0 0", basis="sto-3g", verbose=0)

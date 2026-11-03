@@ -122,6 +122,12 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   Both generation entry points and displaced ZMP references use this helper;
   generation/reference CC convergence settings are identical: energy `1e-12`,
   amplitudes/lambda `1e-10`, and CC/lambda iteration limits of 200.
+  Unrestricted lambda intermediates reuse repeated contractions without
+  reordering the numerical updates, releasing reused results within each block.
+  The triples debug `max_memory` value is the configured budget minus RSS sampled
+  before the passes, not peak usage or system-free RAM. This budget guides block
+  sizing rather than reserving memory; orbital dimensions and block-splitting
+  heuristics also limit block sizes.
 - `DataBase.py`, `TestDataDFT.py`, `DataRecord.py`, `ModelClass.py`: data
   loading, record keeping, model init, checkpoints, losses
   - Both generators save `coords` in Bohr aligned with their `weights` and

@@ -191,11 +191,7 @@ if __name__ == "__main__":
             grids = Grid(mol, args.grid_level, 7)
 
             if args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
-                if args.zmp_constraint_metadata:
-                    refresh_zmp_constraint_metadata(mol, grids, name, args)
-                    print(f"Updated ZMP orbital metadata: {name}")
-                else:
-                    print(f"SKIP: {name} already exists.")
+                print(f"SKIP: {name} already exists.")
             else:
                 if mol.spin == 0:
                     cc(mol, grids, name, args, evaluate=evaluate)

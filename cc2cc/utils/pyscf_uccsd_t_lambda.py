@@ -261,20 +261,17 @@ def make_intermediates(mycc, t1, t2, eris):
                 eris_ovov[:, b0:b1, :, c0:c1],
             )
             wvd = r6(w_blk * 2 + v_blk) / d3
-            l2aa_t += parallel_einsum(
+            l2vv = parallel_einsum(
                 "ijkabc,kceb->ijae", wvd, eris_ovvv.conj()[:, c0:c1, :, b0:b1]
             )
-            l2aa_t[:, :, b0:b1, c0:c1] -= parallel_einsum(
+            l2aa_t += l2vv
+            l2oo = parallel_einsum(
                 "ijkabc,iajm->mkbc", wvd, eris_ovoo.conj()
             )
-
-            # # l2_t = l2_t + l2_t.transpose(1, 0, 3, 2)
-            l2aa_t += parallel_einsum(
-                "ijkabc,kceb->ijae", wvd, eris_ovvv.conj()[:, c0:c1, :, b0:b1]
-            ).transpose(1, 0, 3, 2)
-            l2aa_t[:, :, c0:c1, b0:b1] -= parallel_einsum(
-                "ijkabc,iajm->mkbc", wvd, eris_ovoo.conj()
-            ).transpose(1, 0, 3, 2)
+            l2aa_t[:, :, b0:b1, c0:c1] -= l2oo
+            l2aa_t += l2vv.transpose(1, 0, 3, 2)
+            l2aa_t[:, :, c0:c1, b0:b1] -= l2oo.transpose(1, 0, 3, 2)
+            del l2vv, l2oo
 
             l2aa_t[:, :, b0:b1, c0:c1] += parallel_einsum("ijkabc,ai->jkbc", rw, fvo)
         time2 = log.timer_debug1(
@@ -453,27 +450,21 @@ def make_intermediates(mycc, t1, t2, eris):
                 eris_OVOV[:, b0:b1, :, c0:c1],
             )
             wvd = r6(w_blk * 2 + v_blk) / d3
-            l2bb_t += parallel_einsum(
+            l2vv = parallel_einsum(
                 "ijkabc,kceb->ijae",
                 wvd,
                 eris_OVVV.conj()[:, c0:c1, :, b0:b1],
             )
-            l2bb_t[:, :, b0:b1, c0:c1] -= parallel_einsum(
+            l2bb_t += l2vv
+            l2oo = parallel_einsum(
                 "ijkabc,iajm->mkbc",
                 wvd,
                 eris_OVOO.conj(),
             )
-            # l2_t = l2_t + l2_t.transpose(1, 0, 3, 2)
-            l2bb_t += parallel_einsum(
-                "ijkabc,kceb->ijae",
-                wvd,
-                eris_OVVV.conj()[:, c0:c1, :, b0:b1],
-            ).transpose(1, 0, 3, 2)
-            l2bb_t[:, :, c0:c1, b0:b1] -= parallel_einsum(
-                "ijkabc,iajm->mkbc",
-                wvd,
-                eris_OVOO.conj(),
-            ).transpose(1, 0, 3, 2)
+            l2bb_t[:, :, b0:b1, c0:c1] -= l2oo
+            l2bb_t += l2vv.transpose(1, 0, 3, 2)
+            l2bb_t[:, :, c0:c1, b0:b1] -= l2oo.transpose(1, 0, 3, 2)
+            del l2vv, l2oo
             l2bb_t[:, :, b0:b1, c0:c1] += parallel_einsum(
                 "ijkabc,ai->jkbc",
                 rw,
@@ -557,16 +548,15 @@ def make_intermediates(mycc, t1, t2, eris):
                     eris_ovov[:, b0:b1, :, c0:c1],
                     t1b[:, a0:a1],
                 )
-                v_blk += parallel_einsum(
+                v_tmp = parallel_einsum(
                     "kcIA,jb->IjkAbc",
                     eris_ovOV[:, c0:c1, :, a0:a1],
                     t1a[:, b0:b1],
                 )
-                v_blk += parallel_einsum(
-                    "kcIA,jb->IjkAbc",
-                    eris_ovOV[:, c0:c1, :, a0:a1],
-                    t1a[:, b0:b1],
-                )
+                # Keep the original accumulation order rather than scaling by two.
+                v_blk += v_tmp
+                v_blk += v_tmp
+                del v_tmp
                 v_blk += (
                     parallel_einsum(
                         "jkbc,AI->IjkAbc",
@@ -718,16 +708,14 @@ def make_intermediates(mycc, t1, t2, eris):
                     eris_ovov[:, b0:b1, :, c0:c1],
                     t1b[:, a0:a1],
                 )
-                v_blk -= parallel_einsum(
+                v_tmp = parallel_einsum(
                     "jcIA,kb->IjkAbc",
                     eris_ovOV[:, c0:c1, :, a0:a1],
                     t1a[:, b0:b1],
                 )
-                v_blk -= parallel_einsum(
-                    "jcIA,kb->IjkAbc",
-                    eris_ovOV[:, c0:c1, :, a0:a1],
-                    t1a[:, b0:b1],
-                )
+                v_blk -= v_tmp
+                v_blk -= v_tmp
+                del v_tmp
                 v_blk -= (
                     parallel_einsum(
                         "kjbc,AI->IjkAbc",
@@ -750,16 +738,14 @@ def make_intermediates(mycc, t1, t2, eris):
                     eris_ovov[:, c0:c1, :, b0:b1],
                     t1b[:, a0:a1],
                 )
-                v_blk += parallel_einsum(
+                v_tmp = parallel_einsum(
                     "jbIA,kc->IjkAbc",
                     eris_ovOV[:, b0:b1, :, a0:a1],
                     t1a[:, c0:c1],
                 )
-                v_blk += parallel_einsum(
-                    "jbIA,kc->IjkAbc",
-                    eris_ovOV[:, b0:b1, :, a0:a1],
-                    t1a[:, c0:c1],
-                )
+                v_blk += v_tmp
+                v_blk += v_tmp
+                del v_tmp
                 v_blk += (
                     parallel_einsum(
                         "kjcb,AI->IjkAbc",
@@ -782,16 +768,14 @@ def make_intermediates(mycc, t1, t2, eris):
                     eris_ovov[:, c0:c1, :, b0:b1],
                     t1b[:, a0:a1],
                 )
-                v_blk -= parallel_einsum(
+                v_tmp = parallel_einsum(
                     "kbIA,jc->IjkAbc",
                     eris_ovOV[:, b0:b1, :, a0:a1],
                     t1a[:, c0:c1],
                 )
-                v_blk -= parallel_einsum(
-                    "kbIA,jc->IjkAbc",
-                    eris_ovOV[:, b0:b1, :, a0:a1],
-                    t1a[:, c0:c1],
-                )
+                v_blk -= v_tmp
+                v_blk -= v_tmp
+                del v_tmp
                 v_blk -= (
                     parallel_einsum(
                         "jkcb,AI->IjkAbc",
@@ -825,27 +809,21 @@ def make_intermediates(mycc, t1, t2, eris):
                     rw.conj(),
                     eris_ovov[:, b0:b1, :, c0:c1],
                 )
-                l2aa_t[:, :, b0:b1, :] += parallel_einsum(
+                l2vv = parallel_einsum(
                     "ijkabc,iaec->jkbe",
                     wvd,
                     eris_OVvv.conj()[:, a0:a1, :, c0:c1],
                 )
-                l2aa_t[:, :, b0:b1, c0:c1] -= parallel_einsum(
+                l2aa_t[:, :, b0:b1, :] += l2vv
+                l2oo = parallel_einsum(
                     "ijkabc,iakm->jmbc",
                     wvd,
                     eris_OVoo.conj()[:, a0:a1, :, :],
                 )
-                # l2aa_t = l2aa_t + l2aa_t.transpose(1, 0, 3, 2)
-                l2aa_t[:, :, :, b0:b1] += parallel_einsum(
-                    "ijkabc,iaec->jkbe",
-                    wvd,
-                    eris_OVvv.conj()[:, a0:a1, :, c0:c1],
-                ).transpose(1, 0, 3, 2)
-                l2aa_t[:, :, c0:c1, b0:b1] -= parallel_einsum(
-                    "ijkabc,iakm->jmbc",
-                    wvd,
-                    eris_OVoo.conj()[:, a0:a1, :, :],
-                ).transpose(1, 0, 3, 2)
+                l2aa_t[:, :, b0:b1, c0:c1] -= l2oo
+                l2aa_t[:, :, :, b0:b1] += l2vv.transpose(1, 0, 3, 2)
+                l2aa_t[:, :, c0:c1, b0:b1] -= l2oo.transpose(1, 0, 3, 2)
+                del l2vv, l2oo
                 l2aa_t[:, :, b0:b1, c0:c1] += parallel_einsum(
                     "ijkabc,ai->jkbc",
                     rw,
@@ -958,16 +936,14 @@ def make_intermediates(mycc, t1, t2, eris):
                     eris_OVOV[:, b0:b1, :, c0:c1],
                     t1a[:, a0:a1],
                 )
-                v_blk += parallel_einsum(
+                v_tmp = parallel_einsum(
                     "iakc,jb->ijkabc",
                     eris_ovOV[:, a0:a1, :, c0:c1],
                     t1b[:, b0:b1],
                 )
-                v_blk += parallel_einsum(
-                    "iakc,jb->ijkabc",
-                    eris_ovOV[:, a0:a1, :, c0:c1],
-                    t1b[:, b0:b1],
-                )
+                v_blk += v_tmp
+                v_blk += v_tmp
+                del v_tmp
                 v_blk += (
                     parallel_einsum(
                         "JKBC,ai->iJKaBC",
@@ -1119,16 +1095,14 @@ def make_intermediates(mycc, t1, t2, eris):
                     eris_OVOV[:, b0:b1, :, c0:c1],
                     t1a[:, a0:a1],
                 )
-                v_blk -= parallel_einsum(
+                v_tmp = parallel_einsum(
                     "iajc,kb->ijkabc",
                     eris_ovOV[:, a0:a1, :, c0:c1],
                     t1b[:, b0:b1],
                 )
-                v_blk -= parallel_einsum(
-                    "iajc,kb->ijkabc",
-                    eris_ovOV[:, a0:a1, :, c0:c1],
-                    t1b[:, b0:b1],
-                )
+                v_blk -= v_tmp
+                v_blk -= v_tmp
+                del v_tmp
                 v_blk -= (
                     parallel_einsum(
                         "KJBC,ai->iJKaBC",
@@ -1151,16 +1125,14 @@ def make_intermediates(mycc, t1, t2, eris):
                     eris_OVOV[:, c0:c1, :, b0:b1],
                     t1a[:, a0:a1],
                 )
-                v_blk += parallel_einsum(
+                v_tmp = parallel_einsum(
                     "iajb,kc->ijkabc",
                     eris_ovOV[:, a0:a1, :, b0:b1],
                     t1b[:, c0:c1],
                 )
-                v_blk += parallel_einsum(
-                    "iajb,kc->ijkabc",
-                    eris_ovOV[:, a0:a1, :, b0:b1],
-                    t1b[:, c0:c1],
-                )
+                v_blk += v_tmp
+                v_blk += v_tmp
+                del v_tmp
                 v_blk += (
                     parallel_einsum(
                         "KJCB,ai->iJKaBC",
@@ -1183,16 +1155,14 @@ def make_intermediates(mycc, t1, t2, eris):
                     eris_OVOV[:, c0:c1, :, b0:b1],
                     t1a[:, a0:a1],
                 )
-                v_blk -= parallel_einsum(
+                v_tmp = parallel_einsum(
                     "iakb,jc->ijkabc",
                     eris_ovOV[:, a0:a1, :, b0:b1],
                     t1b[:, c0:c1],
                 )
-                v_blk -= parallel_einsum(
-                    "iakb,jc->ijkabc",
-                    eris_ovOV[:, a0:a1, :, b0:b1],
-                    t1b[:, c0:c1],
-                )
+                v_blk -= v_tmp
+                v_blk -= v_tmp
+                del v_tmp
                 v_blk -= (
                     parallel_einsum(
                         "JKCB,ai->iJKaBC",
@@ -1226,27 +1196,21 @@ def make_intermediates(mycc, t1, t2, eris):
                     eris_ovOV[:, a0:a1, :, c0:c1],
                 )
 
-                l2bb_t[:, :, b0:b1, :] += parallel_einsum(
+                l2vv = parallel_einsum(
                     "ijkabc,iaec->jkbe",
                     wvd,
                     eris_ovVV[:, a0:a1, :, c0:c1],
                 )
-                l2bb_t[:, :, b0:b1, c0:c1] -= parallel_einsum(
+                l2bb_t[:, :, b0:b1, :] += l2vv
+                l2oo = parallel_einsum(
                     "ijkabc,iakm->jmbc",
                     wvd,
                     eris_ovOO[:, a0:a1, :, :],
                 )
-                # l2bb_t = l2bb_t + l2bb_t.transpose(1, 0, 3, 2)
-                l2bb_t[:, :, :, b0:b1] += parallel_einsum(
-                    "ijkabc,iaec->jkbe",
-                    wvd,
-                    eris_ovVV[:, a0:a1, :, c0:c1],
-                ).transpose(1, 0, 3, 2)
-                l2bb_t[:, :, c0:c1, b0:b1] -= parallel_einsum(
-                    "ijkabc,iakm->jmbc",
-                    wvd,
-                    eris_ovOO[:, a0:a1, :, :],
-                ).transpose(1, 0, 3, 2)
+                l2bb_t[:, :, b0:b1, c0:c1] -= l2oo
+                l2bb_t[:, :, :, b0:b1] += l2vv.transpose(1, 0, 3, 2)
+                l2bb_t[:, :, c0:c1, b0:b1] -= l2oo.transpose(1, 0, 3, 2)
+                del l2vv, l2oo
                 l2bb_t[:, :, b0:b1, c0:c1] += parallel_einsum(
                     "ijkabc,ai->jkbc",
                     rw,
