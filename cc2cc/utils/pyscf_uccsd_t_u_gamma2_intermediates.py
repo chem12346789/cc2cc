@@ -55,7 +55,7 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
     if blksize < nvira:
         blksize = min(blksize, (nvira + 1) // 2)
         blksize = max(blksize, 1)
-    log.info(
+    log.debug1(
         "ccsd_t spin 1 rdm _gamma2_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         nocca,
@@ -211,16 +211,19 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
             rw = r6(w_blk) / d3
             wvd = r6(w_blk * 2 + v_blk) / d3
 
-            dovov[:, b0:b1, :, c0:c1] += parallel_einsum("ia,ijkabc->jbkc", t1a, rw) * 0.25
+            dovov[:, b0:b1, :, c0:c1] += (
+                parallel_einsum("ia,ijkabc->jbkc", t1a, rw) * 0.25
+            )
             # *(1/8) instead of (1/4) because ooov appears 4 times in the 2pdm tensor due
             # to symmetrization, and its contribution is scaled by 1/2 in Tr(H,2pdm)
             dooov -= (
-                parallel_einsum("mkbc,ijkabc->jmia", t2aa[:, :, b0:b1, c0:c1], wvd) * 0.125
+                parallel_einsum("mkbc,ijkabc->jmia", t2aa[:, :, b0:b1, c0:c1], wvd)
+                * 0.125
             )
             dovvv[:, :, :, b0:b1] += (
                 parallel_einsum("kjcf,ijkabc->iafb", t2aa[:, :, c0:c1, :], wvd) * 0.125
             )
-        time2 = log.timer_info(
+        time2 = log.timer_debug1(
             "uccsd_t rdm _gamma2_intermediates pass1 [%d:%d]" % (b0, b1), *time2
         )
 
@@ -231,7 +234,7 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
-    log.info(
+    log.debug1(
         "ccsd_t spin 2 rdm _gamma2_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         noccb,
@@ -386,14 +389,17 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
             rw = r6(w_blk) / d3
             wvd = r6(w_blk * 2 + v_blk) / d3
 
-            dOVOV[:, b0:b1, :, c0:c1] += parallel_einsum("ia,ijkabc->jbkc", t1b, rw) * 0.25
+            dOVOV[:, b0:b1, :, c0:c1] += (
+                parallel_einsum("ia,ijkabc->jbkc", t1b, rw) * 0.25
+            )
             dOOOV -= (
-                parallel_einsum("mkbc,ijkabc->jmia", t2bb[:, :, b0:b1, c0:c1], wvd) * 0.125
+                parallel_einsum("mkbc,ijkabc->jmia", t2bb[:, :, b0:b1, c0:c1], wvd)
+                * 0.125
             )
             dOVVV[:, :, :, b0:b1] += (
                 parallel_einsum("kjcf,ijkabc->iafb", t2bb[:, :, c0:c1, :], wvd) * 0.125
             )
-        time2 = log.timer_info(
+        time2 = log.timer_debug1(
             "uccsd_t rdm _gamma_intermediates pass2 [%d:%d]" % (b0, b1), *time2
         )
 
@@ -405,7 +411,7 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
-    log.info(
+    log.debug1(
         "ccsd_t spin 2 rdm _gamma2_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         noccb,
@@ -721,13 +727,16 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
                 rw = w_blk / d3
                 wvd = (w_blk * 2 + v_blk) / d3
                 dovvv[:, c0:c1, :, b0:b1] += (
-                    parallel_einsum("jiea,ijkabc->kceb", t2ab[:, :, :, a0:a1], wvd) * 0.25
+                    parallel_einsum("jiea,ijkabc->kceb", t2ab[:, :, :, a0:a1], wvd)
+                    * 0.25
                 )
                 dovVV[:, c0:c1, :, a0:a1] += (
-                    parallel_einsum("jibe,ijkabc->kcea", t2ab[:, :, b0:b1, :], wvd) * 0.25
+                    parallel_einsum("jibe,ijkabc->kcea", t2ab[:, :, b0:b1, :], wvd)
+                    * 0.25
                 )
                 dOVvv[:, a0:a1, :, c0:c1] += (
-                    parallel_einsum("jkbe,ijkabc->iaec", t2aa[:, :, b0:b1, :], wvd) * 0.125
+                    parallel_einsum("jkbe,ijkabc->iaec", t2aa[:, :, b0:b1, :], wvd)
+                    * 0.125
                 )
                 dooov[:, :, :, c0:c1] -= (
                     parallel_einsum("miba,ijkabc->jmkc", t2ab[:, :, b0:b1, a0:a1], wvd)
@@ -748,7 +757,7 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
                 dovOV[:, c0:c1, :, a0:a1] += (
                     parallel_einsum("jb,ijkabc->kcia", t1a[:, b0:b1], rw) * 0.25
                 )
-        time2 = log.timer_info(
+        time2 = log.timer_debug1(
             "uccsd_t rdm _gamma2_intermediates pass3 [%d:%d]" % (a0, a1), *time2
         )
 
@@ -761,7 +770,7 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
         blksize = min(blksize, (nvira + 1) // 2)
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
-    log.info(
+    log.debug1(
         "ccsd_t spin 2 rdm _gamma2_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         noccb,
@@ -1077,13 +1086,16 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
                 rw = w_blk / d3
                 wvd = (w_blk * 2 + v_blk) / d3
                 dOVVV[:, c0:c1, :, b0:b1] += (
-                    parallel_einsum("ijae,ijkabc->kceb", t2ab[:, :, a0:a1, :], wvd) * 0.25
+                    parallel_einsum("ijae,ijkabc->kceb", t2ab[:, :, a0:a1, :], wvd)
+                    * 0.25
                 )
                 dOVvv[:, c0:c1, :, a0:a1] += (
-                    parallel_einsum("ijeb,ijkabc->kcea", t2ab[:, :, :, b0:b1], wvd) * 0.25
+                    parallel_einsum("ijeb,ijkabc->kcea", t2ab[:, :, :, b0:b1], wvd)
+                    * 0.25
                 )
                 dovVV[:, a0:a1, :, c0:c1] += (
-                    parallel_einsum("jkbe,ijkabc->iaec", t2bb[:, :, b0:b1, :], wvd) * 0.125
+                    parallel_einsum("jkbe,ijkabc->iaec", t2bb[:, :, b0:b1, :], wvd)
+                    * 0.125
                 )
                 dOOOV[:, :, :, c0:c1] -= (
                     parallel_einsum("imab,ijkabc->jmkc", t2ab[:, :, a0:a1, b0:b1], wvd)
@@ -1104,7 +1116,7 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
                     parallel_einsum("jb,ijkabc->iakc", t1b[:, b0:b1], rw) * 0.25
                 )
                 # dOVov += parallel_einsum('jb,ijkabc->kcia', t1b, rw) * .25
-        time2 = log.timer_info(
+        time2 = log.timer_debug1(
             "uccsd_t rdm _gamma2_intermediates pass4 [%d:%d]" % (a0, a1), *time2
         )
 
