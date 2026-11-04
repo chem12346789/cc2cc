@@ -15,11 +15,12 @@ from cc2cc.utils.reference_cc import make_ccsd, ccsd_t_target_density
 from cc2cc.utils.zmp import RZMP, UZMP
 from cc2cc.utils.tensor_helper import parallel_einsum
 
-LEVEL_SHIFT = 1.5
+LEVEL_SHIFT = 2
 MAX_CYCLE = 200000
 RHO_REL_TOL = 1e-2
 I_VALUE_REL_TOL = 1e-4
-DIIS_SPACE = 64
+I_VALUE_ABS_TOL = 1e-10
+DIIS_SPACE = 128
 
 
 def get_zmp(
@@ -97,6 +98,9 @@ def get_zmp(
             print("Warning: ZMP did not converge within the specified lambda range.")
             return mzmp, previous_dm
         hartree, nuclear = energy_grids(dm)
+        print("Differences from CCSD target:")
+        print(f"{'Metric':<12} | {'Unit':<12} | {'DFT':>12} | {'ZMP':>12}")
+        print(f"{'-' * 12}-+-{'-' * 12}-+-{'-' * 12}-+-{'-' * 12}")
         for label, target, dft_values, zmp_values in (
             ("Hartree", hartree_tar, hartree_dft, hartree),
             ("nuclear", nuc_tar, nuc_dft, nuclear),
@@ -104,13 +108,29 @@ def get_zmp(
             error_dft = np.dot(np.abs(target - dft_values), grids.weights)
             error_zmp = np.dot(np.abs(target - zmp_values), grids.weights)
             print(
-                f"Difference in {label} grids between CCSD (kcal/mol): "
-                f"DFT {error_dft * AU2KCALMOL}, ZMP {error_zmp * AU2KCALMOL}"
+                f"{label:<12} | {'kcal/mol':<12} | "
+                f"{error_dft * AU2KCALMOL:>12.4f} | "
+                f"{error_zmp * AU2KCALMOL:>12.4f}"
+            )
+        for label, unit, dft_value, zmp_value in (
+            ("rho diff", "electrons", dft_difference, zmp_difference),
+            ("I value", "dimensionless", dft_i_value, zmp_i_value),
+            (
+                "dipole diff",
+                "A.U.",
+                dft_difference_dipole,
+                zmp_difference_dipole,
+            ),
+        ):
+            print(
+                f"{label:<12} | {unit:<12} | {dft_value:>12.3e} | "
+                f"{zmp_value:>12.3e}"
             )
         if (
             mzmp.converged
             and zmp_difference <= RHO_REL_TOL * dft_difference
             and zmp_i_value <= I_VALUE_REL_TOL * dft_i_value
+            and zmp_i_value <= I_VALUE_ABS_TOL
         ):
             print(
                 f"ZMP density converged at lambda_ZMP = {2**exponent}: "
