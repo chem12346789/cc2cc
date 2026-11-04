@@ -3,7 +3,6 @@ from math import erf
 from itertools import product
 
 import numpy as np
-import opt_einsum as oe
 import torch
 
 import pyscf
@@ -87,8 +86,7 @@ def get_cc_energy(
     if evaluate:
         return {}
 
-    backends = "torch" if torch.cuda.is_available() else "numpy"
-    print(f"Using backend: {backends} for get_dft_energy\n")
+    print("Using backend: numpy for get_dft_energy\n")
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
     ao_value = ao_value[:4]
@@ -112,21 +110,12 @@ def get_cc_energy(
         nao_slice_k,
         nao_slice_l,
     ) in block_loop_rdm2(mol.nao):
-        dm12_cc = 0.5 * dm2_cc[i_slice, j_slice, k_slice, l_slice] - 0.5 * parallel_einsum(
+        dm12_cc = 0.5 * dm2_cc[
+            i_slice, j_slice, k_slice, l_slice
+        ] - 0.5 * parallel_einsum(
             "pq,rs->pqrs",
             dm1_cc[i_slice, j_slice],
             dm1_cc[k_slice, l_slice],
-        )
-
-        expr_rinv_dm2_r = oe.contract_expression(
-            "ijkl,i,j,kl->",
-            dm12_cc,
-            (nao_slice_i,),
-            (nao_slice_j,),
-            (nao_slice_k, nao_slice_l),
-            constants=[0],
-            optimize="optimal",
-            use_blas=True,
         )
 
         for i, coord in enumerate(grids.coords):
@@ -135,13 +124,14 @@ def get_cc_energy(
             ao_0_i = ao_value[0][i]
             with mol.with_rinv_origin(coord):
                 rinv = mol.intor("int1e_rinv")
-                exc_cc_grids[i] += expr_rinv_dm2_r(
+                exc_cc_grids[i] += parallel_einsum(
+                    "ijkl,i,j,kl->",
+                    dm12_cc,
                     ao_0_i[i_slice],
                     ao_0_i[j_slice],
                     rinv[k_slice, l_slice],
-                    backend=backends,
                 )
-        del expr_rinv_dm2_r, dm12_cc
+        del dm12_cc
         gc.collect()
         torch.cuda.empty_cache()
     print("Exchange part done.\n")
@@ -224,8 +214,7 @@ def get_dft_energy(
     if evaluate:
         return {}
 
-    backends = "torch" if torch.cuda.is_available() else "numpy"
-    print(f"Using backend: {backends} for get_dft_energy\n")
+    print("Using backend: numpy for get_dft_energy\n")
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
     ao_value = ao_value[:4]
@@ -253,31 +242,20 @@ def get_dft_energy(
         nao_slice_k,
         nao_slice_l,
     ) in block_loop_rdm2(mol.nao):
-        expr_rinv_dm2_r = oe.contract_expression(
-            "ik,jl,i,j,kl->",
-            dm1_dft[i_slice, k_slice],
-            dm1_dft[j_slice, l_slice],
-            (nao_slice_i,),
-            (nao_slice_j,),
-            (nao_slice_k, nao_slice_l),
-            constants=[0, 1],
-            optimize="optimal",
-            use_blas=True,
-        )
-
         for i, coord in enumerate(grids.coords):
             if i * 10 % len(grids.coords) == 0:
                 print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
             ao_0_i = ao_value[0][i]
             with mol.with_rinv_origin(coord):
                 rinv = mol.intor("int1e_rinv")
-                exc_k_dft_grids[i] += -0.05 * expr_rinv_dm2_r(
+                exc_k_dft_grids[i] += -0.05 * parallel_einsum(
+                    "ik,jl,i,j,kl->",
+                    dm1_dft[i_slice, k_slice],
+                    dm1_dft[j_slice, l_slice],
                     ao_0_i[i_slice],
                     ao_0_i[j_slice],
                     rinv[k_slice, l_slice],
-                    backend=backends,
                 )
-        del expr_rinv_dm2_r
         gc.collect()
         torch.cuda.empty_cache()
     print("Exchange part done.\n")
@@ -370,8 +348,7 @@ def get_hf_energy(
     if evaluate:
         return {}
 
-    backends = "torch" if torch.cuda.is_available() else "numpy"
-    print(f"Using backend: {backends} for get_dft_energy\n")
+    print("Using backend: numpy for get_dft_energy\n")
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
     ao_value = ao_value[:4]
@@ -398,31 +375,20 @@ def get_hf_energy(
         nao_slice_k,
         nao_slice_l,
     ) in block_loop_rdm2(mol.nao):
-        expr_rinv_dm2_r = oe.contract_expression(
-            "ik,jl,i,j,kl->",
-            dm1_hf[i_slice, k_slice],
-            dm1_hf[j_slice, l_slice],
-            (nao_slice_i,),
-            (nao_slice_j,),
-            (nao_slice_k, nao_slice_l),
-            constants=[0, 1],
-            optimize="optimal",
-            use_blas=True,
-        )
-
         for i, coord in enumerate(grids.coords):
             if i * 10 % len(grids.coords) == 0:
                 print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
             ao_0_i = ao_value[0][i]
             with mol.with_rinv_origin(coord):
                 rinv = mol.intor("int1e_rinv")
-                exc_k_hf_grids[i] += -0.25 * expr_rinv_dm2_r(
+                exc_k_hf_grids[i] += -0.25 * parallel_einsum(
+                    "ik,jl,i,j,kl->",
+                    dm1_hf[i_slice, k_slice],
+                    dm1_hf[j_slice, l_slice],
                     ao_0_i[i_slice],
                     ao_0_i[j_slice],
                     rinv[k_slice, l_slice],
-                    backend=backends,
                 )
-        del expr_rinv_dm2_r
         gc.collect()
         torch.cuda.empty_cache()
 

@@ -18,17 +18,54 @@
 
 import ctypes
 import numpy
+from numba import njit, prange
 from pyscf import lib
 from pyscf.lib import logger
 from pyscf.cc import ccsd_rdm, _ccsd
 
-from cc2cc.utils.tensor_helper import parallel_einsum
+from cc2cc.utils.tensor_helper import parallel_einsum, _w_einsum
+from cc2cc.utils.pyscf_uccsd_t_lambda import _run_fused
+
+
+@njit(parallel=True, cache=True)
+def _restricted_v_divide(
+    w, v, ovov, t1, t2, fvo, eia, start0, start1, start2, occupied, w_factor
+):
+    n0, n1, n2, n3, n4, n5 = w.shape
+    for row in prange(n0 * n1 * n2):
+        x = row // (n1 * n2)
+        y = (row // n2) % n1
+        z = row % n2
+        for p in range(n3):
+            if occupied:
+                i, a = start0 + x, p
+            else:
+                i, a = p, start0 + x
+            for q in range(n4):
+                if occupied:
+                    j, b = start1 + y, q
+                else:
+                    j, b = q, start1 + y
+                for r in range(n5):
+                    if occupied:
+                        k, c = start2 + z, r
+                    else:
+                        k, c = r, start2 + z
+                    value = ovov[i, a, j, b] * t1[k, c]
+                    value += ovov[i, a, k, c] * t1[j, b]
+                    value += ovov[j, b, k, c] * t1[i, a]
+                    value += fvo[c, k] * t2[i, j, a, b]
+                    value += fvo[a, i] * t2[j, k, b, c]
+                    value += fvo[b, j] * t2[k, i, c, a]
+                    denominator = (eia[i, a] + eia[j, b]) + eia[k, c]
+                    w_value = w[x, y, z, p, q, r] / denominator
+                    v[x, y, z, p, q, r] = value / denominator + w_factor * w_value
+                    w[x, y, z, p, q, r] = w_value
 
 
 def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
-    """Build 1-RDM intermediates with per-block CPU/wall timings at DEBUG1."""
+    """Build restricted 1-RDM intermediates with fused triples updates."""
     log = logger.Logger(mycc.stdout, mycc.verbose)
-    time0 = time1 = logger.process_clock(), logger.perf_counter()
 
     if (
         numpy.iscomplexobj(t1)
@@ -42,7 +79,6 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
         )
 
     doo, dov, dvo, dvv = ccsd_rdm._gamma1_intermediates(mycc, t1, t2, l1, l2)
-    time1 = log.timer_debug1("ccsd_t rdm gamma1 CCSD intermediates", *time1)
 
     if eris is None:
         eris = mycc.ao2mo()
@@ -53,7 +89,6 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
 
     mo_e = eris.mo_energy
     eia = lib.direct_sum("i-a->ia", mo_e[:nocc], mo_e[nocc:])
-    time1 = log.timer_debug1("ccsd_t rdm gamma1 integral preparation", *time1)
 
     mem_now = lib.current_memory()[0]
     max_memory = max(0, mycc.max_memory - mem_now)
@@ -72,136 +107,104 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
     goo = numpy.zeros((nocc, nocc), dtype=t1.dtype)
     w_blk = numpy.empty((blksize, blksize, blksize, nocc, nocc, nocc), dtype=t1.dtype)
     v_blk = numpy.empty((blksize, blksize, blksize, nocc, nocc, nocc), dtype=t1.dtype)
-    log.timer_debug1("ccsd_t rdm gamma1 pass1 buffer allocation", *time1)
 
-    time2 = logger.process_clock(), logger.perf_counter()
     for a0, a1 in lib.prange(0, nvir, blksize):
         ba = a1 - a0
         for b0, b1 in lib.prange(0, nvir, blksize):
             bb = b1 - b0
             for c0, c1 in lib.prange(0, nvir, blksize):
                 bc = c1 - c0
-                block_label = (
-                    f"ccsd_t rdm gamma1 pass1 a[{a0}:{a1}] "
-                    f"b[{b0}:{b1}] c[{c0}:{c1}]"
-                )
-                time3 = logger.process_clock(), logger.perf_counter()
 
                 w_blk[:ba, :bb, :bc] = parallel_einsum(
                     "iafb,kjcf->abcijk",
                     eris_ovvv[:, a0:a1, :, b0:b1],
                     t2[:, :, c0:c1, :],
                 )
-                w_blk[:ba, :bb, :bc] += parallel_einsum(
+                _w_einsum(
                     "iafc,jkbf->abcijk",
                     eris_ovvv[:, a0:a1, :, c0:c1],
                     t2[:, :, b0:b1, :],
+                    out=w_blk[:ba, :bb, :bc],
                 )
-                w_blk[:ba, :bb, :bc] += parallel_einsum(
+                _w_einsum(
                     "jbfa,kicf->abcijk",
                     eris_ovvv[:, b0:b1, :, a0:a1],
                     t2[:, :, c0:c1, :],
+                    out=w_blk[:ba, :bb, :bc],
                 )
-                w_blk[:ba, :bb, :bc] += parallel_einsum(
+                _w_einsum(
                     "jbfc,ikaf->abcijk",
                     eris_ovvv[:, b0:b1, :, c0:c1],
                     t2[:, :, a0:a1, :],
+                    out=w_blk[:ba, :bb, :bc],
                 )
-                w_blk[:ba, :bb, :bc] += parallel_einsum(
+                _w_einsum(
                     "kcfa,jibf->abcijk",
                     eris_ovvv[:, c0:c1, :, a0:a1],
                     t2[:, :, b0:b1, :],
+                    out=w_blk[:ba, :bb, :bc],
                 )
-                w_blk[:ba, :bb, :bc] += parallel_einsum(
+                _w_einsum(
                     "kcfb,ijaf->abcijk",
                     eris_ovvv[:, c0:c1, :, b0:b1],
                     t2[:, :, a0:a1, :],
+                    out=w_blk[:ba, :bb, :bc],
                 )
-                time3 = log.timer_debug1(block_label + " w ovvv contractions", *time3)
-                w_blk[:ba, :bb, :bc] -= parallel_einsum(
+                _w_einsum(
                     "iajm,mkbc->abcijk",
                     eris_ovoo[:, a0:a1, :, :],
                     t2[:, :, b0:b1, c0:c1],
+                    out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                w_blk[:ba, :bb, :bc] -= parallel_einsum(
+                _w_einsum(
                     "iakm,mjcb->abcijk",
                     eris_ovoo[:, a0:a1, :, :],
                     t2[:, :, c0:c1, b0:b1],
+                    out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                w_blk[:ba, :bb, :bc] -= parallel_einsum(
+                _w_einsum(
                     "jbim,mkac->abcijk",
                     eris_ovoo[:, b0:b1, :, :],
                     t2[:, :, a0:a1, c0:c1],
+                    out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                w_blk[:ba, :bb, :bc] -= parallel_einsum(
+                _w_einsum(
                     "jbkm,mica->abcijk",
                     eris_ovoo[:, b0:b1, :, :],
                     t2[:, :, c0:c1, a0:a1],
+                    out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                w_blk[:ba, :bb, :bc] -= parallel_einsum(
+                _w_einsum(
                     "kcim,mjab->abcijk",
                     eris_ovoo[:, c0:c1, :, :],
                     t2[:, :, a0:a1, b0:b1],
+                    out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                w_blk[:ba, :bb, :bc] -= parallel_einsum(
+                _w_einsum(
                     "kcjm,miba->abcijk",
                     eris_ovoo[:, c0:c1, :, :],
                     t2[:, :, b0:b1, a0:a1],
+                    out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
 
-                time3 = log.timer_debug1(block_label + " w ovoo contractions", *time3)
-                v_blk[:ba, :bb, :bc] = parallel_einsum(
-                    "iajb,kc->abcijk", eris_ovov[:, a0:a1, :, b0:b1], t1[:, c0:c1]
-                )
-                v_blk[:ba, :bb, :bc] += parallel_einsum(
-                    "iakc,jb->abcijk", eris_ovov[:, a0:a1, :, c0:c1], t1[:, b0:b1]
-                )
-                v_blk[:ba, :bb, :bc] += parallel_einsum(
-                    "jbkc,ia->abcijk", eris_ovov[:, b0:b1, :, c0:c1], t1[:, a0:a1]
-                )
-                v_blk[:ba, :bb, :bc] += parallel_einsum(
-                    "ck,ijab->abcijk",
-                    eris.fock[(nocc + c0) : (nocc + c1), :nocc],
-                    t2[:, :, a0:a1, b0:b1],
-                )
-                v_blk[:ba, :bb, :bc] += parallel_einsum(
-                    "ai,jkbc->abcijk",
-                    eris.fock[(nocc + a0) : (nocc + a1), :nocc],
-                    t2[:, :, b0:b1, c0:c1],
-                )
-                v_blk[:ba, :bb, :bc] += parallel_einsum(
-                    "bj,kica->abcijk",
-                    eris.fock[(nocc + b0) : (nocc + b1), :nocc],
-                    t2[:, :, c0:c1, a0:a1],
+                _run_fused(
+                    _restricted_v_divide,
+                    w_blk[:ba, :bb, :bc], v_blk[:ba, :bb, :bc],
+                    eris_ovov, t1, t2, eris.fock[nocc:, :nocc], eia,
+                    a0, b0, c0, False, 1.0,
                 )
 
-                time3 = log.timer_debug1(block_label + " v contractions", *time3)
-                d3_blk = lib.direct_sum(
-                    "ia,jb,kc->abcijk", eia[:, a0:a1], eia[:, b0:b1], eia[:, c0:c1]
-                )
-                w_blk[:ba, :bb, :bc] /= d3_blk
-                v_blk[:ba, :bb, :bc] /= d3_blk
-
-                v_blk += w_blk
-
-                time3 = log.timer_debug1(block_label + " denominator and combine", *time3)
                 t3_symm_ip_py(w_blk, blksize**3, nocc, "4-2-211-2", 1.0, 0.0)
-                time3 = log.timer_debug1(block_label + " triples symmetry", *time3)
                 goo[:, :] += parallel_einsum(
                     "abcikl,abcjkl->ij",
                     v_blk[:ba, :bb, :bc, :, :, :],
                     w_blk[:ba, :bb, :bc, :, :, :],
                 )
-                log.timer_debug1(block_label + " goo update", *time3)
 
-        time2 = log.timer_debug1(
-            "ccsd_t rdm _gamma1_intermediates pass1 [%d:%d]" % (a0, a1), *time2
-        )
 
     w_blk = None
     v_blk = None
 
-    time1 = logger.process_clock(), logger.perf_counter()
     mem_now = lib.current_memory()[0]
     max_memory = max(0, mycc.max_memory - mem_now)
     blksize = min(nocc, int(((max_memory * 0.9e6 / 8) / 6.0 / (nvir**3)) ** (1 / 3)))
@@ -219,132 +222,106 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
     gvv = numpy.zeros((nvir, nvir), dtype=t1.dtype)
     w_blk = numpy.empty((blksize, blksize, blksize, nvir, nvir, nvir), dtype=t1.dtype)
     v_blk = numpy.empty((blksize, blksize, blksize, nvir, nvir, nvir), dtype=t1.dtype)
-    log.timer_debug1("ccsd_t rdm gamma1 pass2 buffer allocation", *time1)
 
-    time2 = logger.process_clock(), logger.perf_counter()
     for k0, k1 in lib.prange(0, nocc, blksize):
         bk = k1 - k0
         for j0, j1 in lib.prange(0, nocc, blksize):
             bj = j1 - j0
             for i0, i1 in lib.prange(0, nocc, blksize):
                 bi = i1 - i0
-                block_label = (
-                    f"ccsd_t rdm gamma1 pass2 i[{i0}:{i1}] "
-                    f"j[{j0}:{j1}] k[{k0}:{k1}]"
-                )
-                time3 = logger.process_clock(), logger.perf_counter()
 
                 w_blk[:bi, :bj, :bk] = parallel_einsum(
                     "iafb,kjcf->ijkabc",
                     eris_ovvv[i0:i1, :, :, :],
                     t2[k0:k1, j0:j1, :, :],
                 )
-                w_blk[:bi, :bj, :bk] += parallel_einsum(
+                _w_einsum(
                     "iafc,jkbf->ijkabc",
                     eris_ovvv[i0:i1, :, :, :],
                     t2[j0:j1, k0:k1, :, :],
+                    out=w_blk[:bi, :bj, :bk],
                 )
-                w_blk[:bi, :bj, :bk] += parallel_einsum(
+                _w_einsum(
                     "jbfa,kicf->ijkabc",
                     eris_ovvv[j0:j1, :, :, :],
                     t2[k0:k1, i0:i1, :, :],
+                    out=w_blk[:bi, :bj, :bk],
                 )
-                w_blk[:bi, :bj, :bk] += parallel_einsum(
+                _w_einsum(
                     "jbfc,ikaf->ijkabc",
                     eris_ovvv[j0:j1, :, :, :],
                     t2[i0:i1, k0:k1, :, :],
+                    out=w_blk[:bi, :bj, :bk],
                 )
-                w_blk[:bi, :bj, :bk] += parallel_einsum(
+                _w_einsum(
                     "kcfa,jibf->ijkabc",
                     eris_ovvv[k0:k1, :, :, :],
                     t2[j0:j1, i0:i1, :, :],
+                    out=w_blk[:bi, :bj, :bk],
                 )
-                w_blk[:bi, :bj, :bk] += parallel_einsum(
+                _w_einsum(
                     "kcfb,ijaf->ijkabc",
                     eris_ovvv[k0:k1, :, :, :],
                     t2[i0:i1, j0:j1, :, :],
+                    out=w_blk[:bi, :bj, :bk],
                 )
-                time3 = log.timer_debug1(block_label + " w ovvv contractions", *time3)
-                w_blk[:bi, :bj, :bk] -= parallel_einsum(
+                _w_einsum(
                     "iajm,mkbc->ijkabc",
                     eris_ovoo[i0:i1, :, j0:j1, :],
                     t2[:, k0:k1, :, :],
+                    out=w_blk[:bi, :bj, :bk], subtract=True,
                 )
-                w_blk[:bi, :bj, :bk] -= parallel_einsum(
+                _w_einsum(
                     "iakm,mjcb->ijkabc",
                     eris_ovoo[i0:i1, :, k0:k1, :],
                     t2[:, j0:j1, :, :],
+                    out=w_blk[:bi, :bj, :bk], subtract=True,
                 )
-                w_blk[:bi, :bj, :bk] -= parallel_einsum(
+                _w_einsum(
                     "jbim,mkac->ijkabc",
                     eris_ovoo[j0:j1, :, i0:i1, :],
                     t2[:, k0:k1, :, :],
+                    out=w_blk[:bi, :bj, :bk], subtract=True,
                 )
-                w_blk[:bi, :bj, :bk] -= parallel_einsum(
+                _w_einsum(
                     "jbkm,mica->ijkabc",
                     eris_ovoo[j0:j1, :, k0:k1, :],
                     t2[:, i0:i1, :, :],
+                    out=w_blk[:bi, :bj, :bk], subtract=True,
                 )
-                w_blk[:bi, :bj, :bk] -= parallel_einsum(
+                _w_einsum(
                     "kcim,mjab->ijkabc",
                     eris_ovoo[k0:k1, :, i0:i1, :],
                     t2[:, j0:j1, :, :],
+                    out=w_blk[:bi, :bj, :bk], subtract=True,
                 )
-                w_blk[:bi, :bj, :bk] -= parallel_einsum(
+                _w_einsum(
                     "kcjm,miba->ijkabc",
                     eris_ovoo[k0:k1, :, j0:j1, :],
                     t2[:, i0:i1, :, :],
+                    out=w_blk[:bi, :bj, :bk], subtract=True,
                 )
 
-                time3 = log.timer_debug1(block_label + " w ovoo contractions", *time3)
-                v_blk[:bi, :bj, :bk] = parallel_einsum(
-                    "iajb,kc->ijkabc", eris_ovov[i0:i1, :, j0:j1, :], t1[k0:k1, :]
-                )
-                v_blk[:bi, :bj, :bk] += parallel_einsum(
-                    "iakc,jb->ijkabc", eris_ovov[i0:i1, :, k0:k1, :], t1[j0:j1, :]
-                )
-                v_blk[:bi, :bj, :bk] += parallel_einsum(
-                    "jbkc,ia->ijkabc", eris_ovov[j0:j1, :, k0:k1, :], t1[i0:i1, :]
-                )
-                v_blk[:bi, :bj, :bk] += parallel_einsum(
-                    "ck,ijab->ijkabc", eris.fock[nocc:, k0:k1], t2[i0:i1, j0:j1, :, :]
-                )
-                v_blk[:bi, :bj, :bk] += parallel_einsum(
-                    "ai,jkbc->ijkabc", eris.fock[nocc:, i0:i1], t2[j0:j1, k0:k1, :, :]
-                )
-                v_blk[:bi, :bj, :bk] += parallel_einsum(
-                    "bj,kica->ijkabc", eris.fock[nocc:, j0:j1], t2[k0:k1, i0:i1, :, :]
+                _run_fused(
+                    _restricted_v_divide,
+                    w_blk[:bi, :bj, :bk], v_blk[:bi, :bj, :bk],
+                    eris_ovov, t1, t2, eris.fock[nocc:, :nocc], eia,
+                    i0, j0, k0, True, 1.0,
                 )
 
-                time3 = log.timer_debug1(block_label + " v contractions", *time3)
-                d3_blk = lib.direct_sum(
-                    "ia,jb,kc->ijkabc", eia[i0:i1, :], eia[j0:j1, :], eia[k0:k1, :]
-                )
-                w_blk[:bi, :bj, :bk] /= d3_blk
-                v_blk[:bi, :bj, :bk] /= d3_blk
-
-                v_blk += w_blk
-
-                time3 = log.timer_debug1(block_label + " denominator and combine", *time3)
                 t3_symm_ip_py(w_blk, blksize**3, nvir, "4-2-211-2", 1.0, 0.0)
-                time3 = log.timer_debug1(block_label + " triples symmetry", *time3)
 
                 gvv[:, :] += parallel_einsum(
                     "ijkacd,ijkbcd->ab",
                     v_blk[:bi, :bj, :bk, :, :, :],
                     w_blk[:bi, :bj, :bk, :, :, :],
                 )
-                time3 = log.timer_debug1(block_label + " gvv update", *time3)
                 dvo[:, k0:k1] += 0.5 * parallel_einsum(
                     "ijab,ijkabc->ck",
                     t2[i0:i1, j0:j1, :, :],
                     w_blk[:bi, :bj, :bk, :, :, :],
                 )
-                log.timer_debug1(block_label + " dvo update", *time3)
 
-        time2 = log.timer_debug1(
-            "ccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (k0, k1), *time2
-        )
 
     w_blk = None
     v_blk = None
@@ -363,14 +340,12 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
     #     doo -= goo * 0.5
     #     dvv += gvv * 0.5
 
-    log.timer_debug1("ccsd_t rdm gamma1 total", *time0)
     return (doo, dov, dvo, dvv), goo, gvv
 
 
 def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
-    """Build Chemist-ordered 2-RDM intermediates; DEBUG1 logs block CPU/wall times."""
+    """Build Chemist-ordered 2-RDM intermediates with fused triples updates."""
     log = logger.Logger(mycc.stdout, mycc.verbose)
-    time0 = time1 = logger.process_clock(), logger.perf_counter()
 
     if (
         numpy.iscomplexobj(t1)
@@ -386,7 +361,6 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
     dovov, dvvvv, doooo, doovv, dovvo, dvvov, dovvv, dooov = (
         ccsd_rdm._gamma2_intermediates(mycc, t1, t2, l1, l2)
     )
-    time1 = log.timer_debug1("ccsd_t rdm gamma2 CCSD intermediates", *time1)
     if eris is None:
         eris = mycc.ao2mo()
 
@@ -397,7 +371,6 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
 
     mo_e = eris.mo_energy
     eia = lib.direct_sum("i-a->ia", mo_e[:nocc], mo_e[nocc:])
-    time1 = log.timer_debug1("ccsd_t rdm gamma2 integral preparation", *time1)
 
     mem_now = lib.current_memory()[0]
     max_memory = max(0, mycc.max_memory - mem_now)
@@ -415,147 +388,113 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
 
     w_blk = numpy.empty((blksize, blksize, blksize, nocc, nocc, nocc), dtype=t1.dtype)
     v_blk = numpy.empty((blksize, blksize, blksize, nocc, nocc, nocc), dtype=t1.dtype)
-    log.timer_debug1("ccsd_t rdm gamma2 buffer allocation", *time1)
 
-    time2 = logger.process_clock(), logger.perf_counter()
     for c0, c1 in lib.prange(0, nvir, blksize):
         bc = c1 - c0
         for b0, b1 in lib.prange(0, nvir, blksize):
             bb = b1 - b0
             for a0, a1 in lib.prange(0, nvir, blksize):
                 ba = a1 - a0
-                block_label = (
-                    f"ccsd_t rdm gamma2 a[{a0}:{a1}] "
-                    f"b[{b0}:{b1}] c[{c0}:{c1}]"
-                )
-                time3 = logger.process_clock(), logger.perf_counter()
 
                 w_blk[:ba, :bb, :bc] = parallel_einsum(
                     "iafb,kjcf->abcijk",
                     eris_ovvv[:, a0:a1, :, b0:b1],
                     t2[:, :, c0:c1, :],
                 )
-                w_blk[:ba, :bb, :bc] += parallel_einsum(
+                _w_einsum(
                     "iafc,jkbf->abcijk",
                     eris_ovvv[:, a0:a1, :, c0:c1],
                     t2[:, :, b0:b1, :],
+                    out=w_blk[:ba, :bb, :bc],
                 )
-                w_blk[:ba, :bb, :bc] += parallel_einsum(
+                _w_einsum(
                     "jbfa,kicf->abcijk",
                     eris_ovvv[:, b0:b1, :, a0:a1],
                     t2[:, :, c0:c1, :],
+                    out=w_blk[:ba, :bb, :bc],
                 )
-                w_blk[:ba, :bb, :bc] += parallel_einsum(
+                _w_einsum(
                     "jbfc,ikaf->abcijk",
                     eris_ovvv[:, b0:b1, :, c0:c1],
                     t2[:, :, a0:a1, :],
+                    out=w_blk[:ba, :bb, :bc],
                 )
-                w_blk[:ba, :bb, :bc] += parallel_einsum(
+                _w_einsum(
                     "kcfa,jibf->abcijk",
                     eris_ovvv[:, c0:c1, :, a0:a1],
                     t2[:, :, b0:b1, :],
+                    out=w_blk[:ba, :bb, :bc],
                 )
-                w_blk[:ba, :bb, :bc] += parallel_einsum(
+                _w_einsum(
                     "kcfb,ijaf->abcijk",
                     eris_ovvv[:, c0:c1, :, b0:b1],
                     t2[:, :, a0:a1, :],
+                    out=w_blk[:ba, :bb, :bc],
                 )
-                time3 = log.timer_debug1(block_label + " w ovvv contractions", *time3)
-                w_blk[:ba, :bb, :bc] -= parallel_einsum(
+                _w_einsum(
                     "iajm,mkbc->abcijk",
                     eris_ovoo[:, a0:a1, :, :],
                     t2[:, :, b0:b1, c0:c1],
+                    out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                w_blk[:ba, :bb, :bc] -= parallel_einsum(
+                _w_einsum(
                     "iakm,mjcb->abcijk",
                     eris_ovoo[:, a0:a1, :, :],
                     t2[:, :, c0:c1, b0:b1],
+                    out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                w_blk[:ba, :bb, :bc] -= parallel_einsum(
+                _w_einsum(
                     "jbim,mkac->abcijk",
                     eris_ovoo[:, b0:b1, :, :],
                     t2[:, :, a0:a1, c0:c1],
+                    out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                w_blk[:ba, :bb, :bc] -= parallel_einsum(
+                _w_einsum(
                     "jbkm,mica->abcijk",
                     eris_ovoo[:, b0:b1, :, :],
                     t2[:, :, c0:c1, a0:a1],
+                    out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                w_blk[:ba, :bb, :bc] -= parallel_einsum(
+                _w_einsum(
                     "kcim,mjab->abcijk",
                     eris_ovoo[:, c0:c1, :, :],
                     t2[:, :, a0:a1, b0:b1],
+                    out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                w_blk[:ba, :bb, :bc] -= parallel_einsum(
+                _w_einsum(
                     "kcjm,miba->abcijk",
                     eris_ovoo[:, c0:c1, :, :],
                     t2[:, :, b0:b1, a0:a1],
+                    out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
 
-                time3 = log.timer_debug1(block_label + " w ovoo contractions", *time3)
-                v_blk[:ba, :bb, :bc] = parallel_einsum(
-                    "iajb,kc->abcijk", eris_ovov[:, a0:a1, :, b0:b1], t1[:, c0:c1]
+                _run_fused(
+                    _restricted_v_divide,
+                    w_blk[:ba, :bb, :bc], v_blk[:ba, :bb, :bc],
+                    eris_ovov, t1, t2, eris.fock[nocc:, :nocc], eia,
+                    a0, b0, c0, False, 2.0,
                 )
-                v_blk[:ba, :bb, :bc] += parallel_einsum(
-                    "iakc,jb->abcijk", eris_ovov[:, a0:a1, :, c0:c1], t1[:, b0:b1]
-                )
-                v_blk[:ba, :bb, :bc] += parallel_einsum(
-                    "jbkc,ia->abcijk", eris_ovov[:, b0:b1, :, c0:c1], t1[:, a0:a1]
-                )
-                v_blk[:ba, :bb, :bc] += parallel_einsum(
-                    "ck,ijab->abcijk",
-                    eris.fock[nocc + c0 : nocc + c1, :nocc],
-                    t2[:, :, a0:a1, b0:b1],
-                )
-                v_blk[:ba, :bb, :bc] += parallel_einsum(
-                    "ai,jkbc->abcijk",
-                    eris.fock[nocc + a0 : nocc + a1, :nocc],
-                    t2[:, :, b0:b1, c0:c1],
-                )
-                v_blk[:ba, :bb, :bc] += parallel_einsum(
-                    "bj,kica->abcijk",
-                    eris.fock[nocc + b0 : nocc + b1, :nocc],
-                    t2[:, :, c0:c1, a0:a1],
-                )
-
-                time3 = log.timer_debug1(block_label + " v contractions", *time3)
-                d3_blk = lib.direct_sum(
-                    "ia,jb,kc->abcijk", eia[:, a0:a1], eia[:, b0:b1], eia[:, c0:c1]
-                )
-                w_blk[:ba, :bb, :bc] /= d3_blk
-                v_blk[:ba, :bb, :bc] /= d3_blk
-
-                v_blk += 2.0 * w_blk
-                time3 = log.timer_debug1(block_label + " denominator and combine", *time3)
                 t3_symm_ip_py(v_blk, blksize**3, nocc, "4-2-211-2", 1.0, 0.0)
                 t3_symm_ip_py(w_blk, blksize**3, nocc, "4-2-211-2", 0.5, 0.0)
-                time3 = log.timer_debug1(block_label + " triples symmetry", *time3)
 
                 dovov[:, a0:a1, :, b0:b1] += parallel_einsum(
                     "kc,abcijk->iajb", t1[:, c0:c1], w_blk[:ba, :bb, :bc, :, :, :]
                 )
-                time3 = log.timer_debug1(block_label + " dovov update", *time3)
                 dooov[:, :, :, a0:a1] -= parallel_einsum(
                     "mkbc,abcijk->jmia",
                     t2[:, :, b0:b1, c0:c1],
                     v_blk[:ba, :bb, :bc, :, :, :],
                 )
-                time3 = log.timer_debug1(block_label + " dooov update", *time3)
                 dovvv[:, a0:a1, :, b0:b1] += parallel_einsum(
                     "kjcf,abcijk->iafb",
                     t2[:, :, c0:c1, :],
                     v_blk[:ba, :bb, :bc, :, :, :],
                 )
-                log.timer_debug1(block_label + " dovvv update", *time3)
 
-        time2 = log.timer_debug1(
-            "ccsd_t rdm _gamma2_intermediates [%d:%d]" % (c0, c1), *time2
-        )
 
     w_blk = None
     v_blk = None
 
-    time1 = logger.process_clock(), logger.perf_counter()
     dvvov = dovvv.transpose(2, 3, 0, 1)
 
     if compress_vvvv:
@@ -567,8 +506,6 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
         dvvvv = lib.take_2d(dvvvv.reshape(nvir**2, nvir**2), vidx, vidx)
         dvvvv *= 0.25
 
-    log.timer_debug1("ccsd_t rdm gamma2 finalization", *time1)
-    log.timer_debug1("ccsd_t rdm gamma2 total", *time0)
     return dovov, dvvvv, doooo, doovv, dovvo, dvvov, dovvv, dooov
 
 

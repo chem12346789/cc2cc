@@ -62,7 +62,7 @@ def ucc(mol, grids, name, args, evaluate=False):
 
     # UCCSD calculation
     mycc = make_ccsd(mf, unrestricted=True)
-    mycc.verbose = 9
+    mycc.verbose = 4
     # To trace the usage of memory, set verbose as 9.
     _, t1, t2 = mycc.kernel()
     eris = mycc.ao2mo()

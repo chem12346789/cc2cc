@@ -48,7 +48,7 @@ def cc(
     mf.conv_tol = 1e-12
     mf.conv_tol_grad = 1e-8
     mf.max_cycle = 2500
-    mf.verbose = 9
+    mf.verbose = 4
     mf.kernel()
     for level_shift in range(5):
         if args.check_convergence and not mf.converged:
@@ -91,9 +91,7 @@ def cc(
         del t1, t2, eris, mycc
         gc.collect()
     else:
-        l1, l2, d1, d1_grad, dm1_cc_mo, dm1_cc = ccsd_t_target_density(
-            mycc, eris
-        )
+        l1, l2, d1, d1_grad, dm1_cc_mo, dm1_cc = ccsd_t_target_density(mycc, eris)
         d2 = _gamma2_intermediates(mycc, t1, t2, l1, l2, eris, compress_vvvv=False)
         grad_cc = ccsd_t_target_gradient(mycc, eris, l1, l2, d1_grad, d2)
 
@@ -107,10 +105,7 @@ def cc(
         gc.collect()
 
         # Compare CCSD and DFT
-        print(
-            f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} electrons "
-            "(CCSD vs DFT)"
-        )
+        print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} electrons " "(CCSD vs DFT)")
         cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
         dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} A.U. (CCSD vs DFT)")
@@ -284,15 +279,33 @@ def cc(
     )
     data_dict.update(
         get_vv10_data(
-            mol, grids, dm1_dft, e_dft, dm1_cc, args,
+            mol,
+            grids,
+            dm1_dft,
+            e_dft,
+            dm1_cc,
+            args,
         )
     )
     data_dict.update(
         get_vv10_data(
-            mol, grids, dm1_zmp, e_zmp, dm1_cc, args, suffix="_zmp",
+            mol,
+            grids,
+            dm1_zmp,
+            e_zmp,
+            dm1_cc,
+            args,
+            suffix="_zmp",
         )
     )
-    data_dict.update(get_zmp_constraint_data(
-        mdft, grids, dm1_zmp, dm1_cc, DATA_PATH / f"data_{name}_zmp", args,
-    ))
+    data_dict.update(
+        get_zmp_constraint_data(
+            mdft,
+            grids,
+            dm1_zmp,
+            dm1_cc,
+            DATA_PATH / f"data_{name}_zmp",
+            args,
+        )
+    )
     np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)

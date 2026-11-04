@@ -3,8 +3,10 @@ from pyscf import lib
 from pyscf.lib import logger
 from pyscf.cc import uccsd_rdm
 
-from cc2cc.utils.tensor_helper import parallel_einsum
+from cc2cc.utils.tensor_helper import parallel_einsum, _w_einsum
 from cc2cc.utils.pyscf_uccsd_t_lambda import (
+    _mixed_spin_divide,
+    _mixed_spin_v,
     _run_fused,
     _same_spin_r6_divide,
     _same_spin_v,
@@ -12,11 +14,9 @@ from cc2cc.utils.pyscf_uccsd_t_lambda import (
 
 
 def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
-    """Build unrestricted 1-RDM intermediates with DEBUG1 CPU/wall stage timers."""
+    """Build unrestricted 1-RDM intermediates."""
     log = logger.Logger(mycc.stdout, mycc.verbose)
-    time0 = time1 = logger.process_clock(), logger.perf_counter()
     d1 = uccsd_rdm._gamma1_intermediates(mycc, t1, t2, l1, l2)
-    time1 = log.timer_debug1("uccsd_t gamma1 CCSD intermediates", *time1)
 
     if eris is None:
         eris = mycc.ao2mo()
@@ -41,7 +41,6 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     eIA = mo_eb[:noccb, None] - mo_eb[noccb:]
     fvo = eris.focka[nocca:, :nocca]
     fVO = eris.fockb[noccb:, :noccb]
-    log.timer_debug1("uccsd_t gamma1 integral preparation", *time1)
 
     goo = numpy.zeros((nocca, nocca), dtype=t1a.dtype)
     gvv = numpy.zeros((nvira, nvira), dtype=t1a.dtype)
@@ -67,90 +66,91 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         blksize,
     )
 
-    time2 = logger.process_clock(), logger.perf_counter()
     for b0, b1 in lib.prange(0, nvira, blksize):
         for c0, c1 in lib.prange(0, nvira, blksize):
-            block_label = f"uccsd_t gamma1 aaa b[{b0}:{b1}] c[{c0}:{c1}]"
-            time3 = logger.process_clock(), logger.perf_counter()
-            w_blk = parallel_einsum(
+            w_blk = _w_einsum(
                 "ijae,kceb->ijkabc",
                 t2aa[:, :, :, :],
                 eris_ovvv[:, c0:c1, :, b0:b1],
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "kice,jbea->ijkabc",
                 t2aa[:, :, c0:c1, :],
                 eris_ovvv[:, b0:b1, :, :],
+                out=w_blk,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "jkbe,iaec->ijkabc",
                 t2aa[:, :, b0:b1, :],
                 eris_ovvv[:, :, :, c0:c1],
+                out=w_blk,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "ikae,jbec->ijkabc",
                 t2aa[:, :, :, :],
                 eris_ovvv[:, b0:b1, :, c0:c1],
+                out=w_blk,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "kjce,iaeb->ijkabc",
                 t2aa[:, :, c0:c1, :],
                 eris_ovvv[:, :, :, b0:b1],
+                out=w_blk,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "jibe,kcea->ijkabc",
                 t2aa[:, :, b0:b1, :],
                 eris_ovvv[:, c0:c1, :, :],
+                out=w_blk,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "mkbc,iajm->ijkabc",
                 t2aa[:, :, b0:b1, c0:c1],
                 eris_ovoo[:, :, :, :],
+                out=w_blk, subtract=True,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "mjab,kcim->ijkabc",
                 t2aa[:, :, :, b0:b1],
                 eris_ovoo[:, c0:c1, :, :],
+                out=w_blk, subtract=True,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "mica,jbkm->ijkabc",
                 t2aa[:, :, c0:c1, :],
                 eris_ovoo[:, b0:b1, :, :],
+                out=w_blk, subtract=True,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "mjcb,iakm->ijkabc",
                 t2aa[:, :, c0:c1, b0:b1],
                 eris_ovoo[:, :, :, :],
+                out=w_blk, subtract=True,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "miba,kcjm->ijkabc",
                 t2aa[:, :, b0:b1, :],
                 eris_ovoo[:, c0:c1, :, :],
+                out=w_blk, subtract=True,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "mkac,jbim->ijkabc",
                 t2aa[:, :, :, c0:c1],
                 eris_ovoo[:, b0:b1, :, :],
+                out=w_blk, subtract=True,
             )
-            time3 = log.timer_debug1(block_label + " w contractions", *time3)
             v_blk = _run_fused(
                 _same_spin_v, eris_ovov, t1a, t2aa, fvo, b0, b1, c0, c1
             )
 
-            time3 = log.timer_debug1(block_label + " v contractions", *time3)
             rw = _run_fused(_same_spin_r6_divide, w_blk, None, eia, b0, c0)
             wvd = _run_fused(
                 _same_spin_r6_divide, w_blk, v_blk, eia, b0, c0, False
             )
-            time3 = log.timer_debug1(block_label + " denominator and symmetry/division", *time3)
 
             goo += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.125
             gvv += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.125
             gvo += parallel_einsum("jkbc,ijkabc->ai", t2aa[:, :, b0:b1, c0:c1], rw) * 0.125
-            log.timer_debug1(block_label + " density updates", *time3)
-        time2 = log.timer_debug1(
-            "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (b0, b1), *time2
-        )
 
     # bbb
     blksize = min(
@@ -166,90 +166,91 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    time2 = logger.process_clock(), logger.perf_counter()
     for b0, b1 in lib.prange(0, nvirb, blksize):
         for c0, c1 in lib.prange(0, nvirb, blksize):
-            block_label = f"uccsd_t gamma1 bbb b[{b0}:{b1}] c[{c0}:{c1}]"
-            time3 = logger.process_clock(), logger.perf_counter()
-            w_blk = parallel_einsum(
+            w_blk = _w_einsum(
                 "ijae,kceb->ijkabc",
                 t2bb[:, :, :, :],
                 eris_OVVV[:, c0:c1, :, b0:b1],
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "kice,jbea->ijkabc",
                 t2bb[:, :, c0:c1, :],
                 eris_OVVV[:, b0:b1, :, :],
+                out=w_blk,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "jkbe,iaec->ijkabc",
                 t2bb[:, :, b0:b1, :],
                 eris_OVVV[:, :, :, c0:c1],
+                out=w_blk,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "ikae,jbec->ijkabc",
                 t2bb[:, :, :, :],
                 eris_OVVV[:, b0:b1, :, c0:c1],
+                out=w_blk,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "kjce,iaeb->ijkabc",
                 t2bb[:, :, c0:c1, :],
                 eris_OVVV[:, :, :, b0:b1],
+                out=w_blk,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "jibe,kcea->ijkabc",
                 t2bb[:, :, b0:b1, :],
                 eris_OVVV[:, c0:c1, :, :],
+                out=w_blk,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "imab,kcjm->ijkabc",
                 t2bb[:, :, :, b0:b1],
                 eris_OVOO[:, c0:c1, :, :],
+                out=w_blk, subtract=True,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "jmbc,iakm->ijkabc",
                 t2bb[:, :, b0:b1, c0:c1],
                 eris_OVOO[:, :, :, :],
+                out=w_blk, subtract=True,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "kmca,jbim->ijkabc",
                 t2bb[:, :, c0:c1, :],
                 eris_OVOO[:, b0:b1, :, :],
+                out=w_blk, subtract=True,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "imac,jbkm->ijkabc",
                 t2bb[:, :, :, c0:c1],
                 eris_OVOO[:, b0:b1, :, :],
+                out=w_blk, subtract=True,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "kmcb,iajm->ijkabc",
                 t2bb[:, :, c0:c1, b0:b1],
                 eris_OVOO[:, :, :, :],
+                out=w_blk, subtract=True,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "jmba,kcim->ijkabc",
                 t2bb[:, :, b0:b1, :],
                 eris_OVOO[:, c0:c1, :, :],
+                out=w_blk, subtract=True,
             )
-            time3 = log.timer_debug1(block_label + " w contractions", *time3)
             v_blk = _run_fused(
                 _same_spin_v, eris_OVOV, t1b, t2bb, fVO, b0, b1, c0, c1
             )
 
-            time3 = log.timer_debug1(block_label + " v contractions", *time3)
             rw = _run_fused(_same_spin_r6_divide, w_blk, None, eIA, b0, c0)
             wvd = _run_fused(
                 _same_spin_r6_divide, w_blk, v_blk, eIA, b0, c0, False
             )
-            time3 = log.timer_debug1(block_label + " denominator and symmetry/division", *time3)
 
             gOO += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.125
             gVV += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.125
             gVO += parallel_einsum("jkbc,ijkabc->ai", t2bb[:, :, b0:b1, c0:c1], rw) * 0.125
-            log.timer_debug1(block_label + " density updates", *time3)
-        time2 = log.timer_debug1(
-            "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (b0, b1), *time2
-        )
 
     # baa
     blksize = min(
@@ -266,226 +267,178 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    time2 = logger.process_clock(), logger.perf_counter()
     for a0, a1 in lib.prange(0, nvirb, blksize):
         for b0, b1 in lib.prange(0, nvira, blksize):
             for c0, c1 in lib.prange(0, nvira, blksize):
-                block_label = (
-                    f"uccsd_t gamma1 baa occupied-density a[{a0}:{a1}] "
-                    f"b[{b0}:{b1}] c[{c0}:{c1}]"
+                w_blk = _w_einsum(
+                    "jIeA,kceb->IjkAbc",
+                    t2ab[:, :, :, a0:a1],
+                    eris_ovvv[:, c0:c1, :, b0:b1],
+                    scale=2,
                 )
-                time3 = logger.process_clock(), logger.perf_counter()
-                w_blk = (
-                    parallel_einsum(
-                        "jIeA,kceb->IjkAbc",
-                        t2ab[:, :, :, a0:a1],
-                        eris_ovvv[:, c0:c1, :, b0:b1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "jIbE,kcEA->IjkAbc",
+                    t2ab[:, :, b0:b1, :],
+                    eris_ovVV[:, c0:c1, :, a0:a1],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "jIbE,kcEA->IjkAbc",
-                        t2ab[:, :, b0:b1, :],
-                        eris_ovVV[:, c0:c1, :, a0:a1],
-                    )
-                    * 2
-                )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "jkbe,IAec->IjkAbc",
                     t2aa[:, :, b0:b1, :],
                     eris_OVvv[:, a0:a1, :, c0:c1],
+                    out=w_blk,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "mIbA,kcjm->IjkAbc",
-                        t2ab[:, :, b0:b1, a0:a1],
-                        eris_ovoo[:, c0:c1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mIbA,kcjm->IjkAbc",
+                    t2ab[:, :, b0:b1, a0:a1],
+                    eris_ovoo[:, c0:c1, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "jMbA,kcIM->IjkAbc",
-                        t2ab[:, :, b0:b1, a0:a1],
-                        eris_ovOO[:, c0:c1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "jMbA,kcIM->IjkAbc",
+                    t2ab[:, :, b0:b1, a0:a1],
+                    eris_ovOO[:, c0:c1, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "jmbc,IAkm->IjkAbc",
                     t2aa[:, :, b0:b1, c0:c1],
                     eris_OVoo[:, a0:a1, :, :],
+                    out=w_blk, subtract=True,
                 )
-                time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
-                v_blk = parallel_einsum(
-                    "jbkc,IA->IjkAbc", eris_ovov[:, b0:b1, :, c0:c1], t1b[:, a0:a1]
-                )
-                v_blk += parallel_einsum(
-                    "kcIA,jb->IjkAbc", eris_ovOV[:, c0:c1, :, a0:a1], t1a[:, b0:b1]
-                )
-                v_blk += parallel_einsum(
-                    "kcIA,jb->IjkAbc", eris_ovOV[:, c0:c1, :, a0:a1], t1a[:, b0:b1]
-                )
-                v_blk += (
-                    parallel_einsum(
-                        "jkbc,AI->IjkAbc", t2aa[:, :, b0:b1, c0:c1], fVO[a0:a1, :]
-                    )
-                    * 0.5
-                )
-                v_blk += (
-                    parallel_einsum(
-                        "kIcA,bj->IjkAbc", t2ab[:, :, c0:c1, a0:a1], fvo[b0:b1, :]
-                    )
-                    * 2
+                v_blk = _run_fused(
+                    _mixed_spin_v,
+                    eris_ovov[:, b0:b1, :, c0:c1],
+                    t1b[:, a0:a1],
+                    eris_ovOV[:, c0:c1, :, a0:a1],
+                    t1a[:, b0:b1],
+                    t2aa[:, :, b0:b1, c0:c1],
+                    fVO[a0:a1, :],
+                    t2ab[:, :, c0:c1, a0:a1],
+                    fvo[b0:b1, :],
                 )
 
-                time3 = log.timer_debug1(block_label + " v contractions", *time3)
-                d3 = lib.direct_sum(
-                    "IA+jb+kc->IjkAbc", eIA[:, a0:a1], eia[:, b0:b1], eia[:, c0:c1]
+                wvd = _mixed_spin_divide(
+                    w_blk, v_blk, eIA[:, a0:a1], eia[:, b0:b1], eia[:, c0:c1], 1
                 )
-                wvd = (w_blk + v_blk) / d3
-                time3 = log.timer_debug1(block_label + " denominator and wvd division", *time3)
 
-                w_blk -= (
-                    parallel_einsum(
-                        "kIeA,jceb->IjkAbc",
-                        t2ab[:, :, :, a0:a1],
-                        eris_ovvv[:, c0:c1, :, b0:b1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "kIeA,jceb->IjkAbc",
+                    t2ab[:, :, :, a0:a1],
+                    eris_ovvv[:, c0:c1, :, b0:b1],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "kIbE,jcEA->IjkAbc",
-                        t2ab[:, :, b0:b1, :],
-                        eris_ovVV[:, c0:c1, :, a0:a1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "kIbE,jcEA->IjkAbc",
+                    t2ab[:, :, b0:b1, :],
+                    eris_ovVV[:, c0:c1, :, a0:a1],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "kjbe,IAec->IjkAbc",
                     t2aa[:, :, b0:b1, :],
                     eris_OVvv[:, a0:a1, :, c0:c1],
+                    out=w_blk, subtract=True,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "mIbA,jckm->IjkAbc",
-                        t2ab[:, :, b0:b1, a0:a1],
-                        eris_ovoo[:, c0:c1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mIbA,jckm->IjkAbc",
+                    t2ab[:, :, b0:b1, a0:a1],
+                    eris_ovoo[:, c0:c1, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "kMbA,jcIM->IjkAbc",
-                        t2ab[:, :, b0:b1, a0:a1],
-                        eris_ovOO[:, c0:c1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "kMbA,jcIM->IjkAbc",
+                    t2ab[:, :, b0:b1, a0:a1],
+                    eris_ovOO[:, c0:c1, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "kmbc,IAjm->IjkAbc",
                     t2aa[:, :, b0:b1, c0:c1],
                     eris_OVoo[:, a0:a1, :, :],
+                    out=w_blk,
                 )
 
-                w_blk += (
-                    parallel_einsum(
-                        "kIeA,jbec->IjkAbc",
-                        t2ab[:, :, :, a0:a1],
-                        eris_ovvv[:, b0:b1, :, c0:c1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "kIeA,jbec->IjkAbc",
+                    t2ab[:, :, :, a0:a1],
+                    eris_ovvv[:, b0:b1, :, c0:c1],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "kIcE,jbEA->IjkAbc",
-                        t2ab[:, :, c0:c1, :],
-                        eris_ovVV[:, b0:b1, :, a0:a1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "kIcE,jbEA->IjkAbc",
+                    t2ab[:, :, c0:c1, :],
+                    eris_ovVV[:, b0:b1, :, a0:a1],
+                    out=w_blk, scale=2,
                 )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "kjce,IAeb->IjkAbc",
                     t2aa[:, :, c0:c1, :],
                     eris_OVvv[:, a0:a1, :, b0:b1],
+                    out=w_blk,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "mIcA,jbkm->IjkAbc",
-                        t2ab[:, :, c0:c1, a0:a1],
-                        eris_ovoo[:, b0:b1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mIcA,jbkm->IjkAbc",
+                    t2ab[:, :, c0:c1, a0:a1],
+                    eris_ovoo[:, b0:b1, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "kMcA,jbIM->IjkAbc",
-                        t2ab[:, :, c0:c1, a0:a1],
-                        eris_ovOO[:, b0:b1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "kMcA,jbIM->IjkAbc",
+                    t2ab[:, :, c0:c1, a0:a1],
+                    eris_ovOO[:, b0:b1, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "kmcb,IAjm->IjkAbc",
                     t2aa[:, :, c0:c1, b0:b1],
                     eris_OVoo[:, a0:a1, :, :],
+                    out=w_blk, subtract=True,
                 )
 
-                w_blk -= (
-                    parallel_einsum(
-                        "jIeA,kbec->IjkAbc",
-                        t2ab[:, :, :, a0:a1],
-                        eris_ovvv[:, b0:b1, :, c0:c1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "jIeA,kbec->IjkAbc",
+                    t2ab[:, :, :, a0:a1],
+                    eris_ovvv[:, b0:b1, :, c0:c1],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "jIcE,kbEA->IjkAbc",
-                        t2ab[:, :, c0:c1, :],
-                        eris_ovVV[:, b0:b1, :, a0:a1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "jIcE,kbEA->IjkAbc",
+                    t2ab[:, :, c0:c1, :],
+                    eris_ovVV[:, b0:b1, :, a0:a1],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "jkce,IAeb->IjkAbc",
                     t2aa[:, :, c0:c1, :],
                     eris_OVvv[:, a0:a1, :, b0:b1],
+                    out=w_blk, subtract=True,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "mIcA,kbjm->IjkAbc",
-                        t2ab[:, :, c0:c1, a0:a1],
-                        eris_ovoo[:, b0:b1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mIcA,kbjm->IjkAbc",
+                    t2ab[:, :, c0:c1, a0:a1],
+                    eris_ovoo[:, b0:b1, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "jMcA,kbIM->IjkAbc",
-                        t2ab[:, :, c0:c1, a0:a1],
-                        eris_ovOO[:, b0:b1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "jMcA,kbIM->IjkAbc",
+                    t2ab[:, :, c0:c1, a0:a1],
+                    eris_ovOO[:, b0:b1, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "jmcb,IAkm->IjkAbc",
                     t2aa[:, :, c0:c1, b0:b1],
                     eris_OVoo[:, a0:a1, :, :],
+                    out=w_blk,
                 )
 
-                time3 = log.timer_debug1(block_label + " remaining w contractions", *time3)
-                rw = w_blk / d3
-                time3 = log.timer_debug1(block_label + " rw division", *time3)
+                rw = _mixed_spin_divide(
+                    w_blk, None, eIA[:, a0:a1], eia[:, b0:b1], eia[:, c0:c1]
+                )
                 goo += parallel_einsum("kilabc,kjlabc->ij", wvd, rw) * 0.25
                 goo += parallel_einsum("kliabc,kljabc->ij", wvd, rw) * 0.25
                 gOO += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.25
-                log.timer_debug1(block_label + " density updates", *time3)
-        time2 = log.timer_debug1(
-            "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (a0, a1), *time2
-        )
 
     blksize = min(
         noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nvira**2 * nvirb)) ** (1 / 3))
@@ -504,234 +457,176 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    time2 = logger.process_clock(), logger.perf_counter()
     for i0, i1 in lib.prange(0, noccb, blksize):
         for j0, j1 in lib.prange(0, nocca, blksize):
             for k0, k1 in lib.prange(0, nocca, blksize):
-                block_label = (
-                    f"uccsd_t gamma1 baa virtual-density i[{i0}:{i1}] "
-                    f"j[{j0}:{j1}] k[{k0}:{k1}]"
+                w_blk = _w_einsum(
+                    "jIeA,kceb->IjkAbc",
+                    t2ab[j0:j1, i0:i1, :, :],
+                    eris_ovvv[k0:k1, :, :, :],
+                    scale=2,
                 )
-                time3 = logger.process_clock(), logger.perf_counter()
-                w_blk = (
-                    parallel_einsum(
-                        "jIeA,kceb->IjkAbc",
-                        t2ab[j0:j1, i0:i1, :, :],
-                        eris_ovvv[k0:k1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "jIbE,kcEA->IjkAbc",
+                    t2ab[j0:j1, i0:i1, :, :],
+                    eris_ovVV[k0:k1, :, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "jIbE,kcEA->IjkAbc",
-                        t2ab[j0:j1, i0:i1, :, :],
-                        eris_ovVV[k0:k1, :, :, :],
-                    )
-                    * 2
-                )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "jkbe,IAec->IjkAbc",
                     t2aa[j0:j1, k0:k1, :, :],
                     eris_OVvv[i0:i1, :, :, :],
+                    out=w_blk,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "mIbA,kcjm->IjkAbc",
-                        t2ab[:, i0:i1, :, :],
-                        eris_ovoo[k0:k1, :, j0:j1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mIbA,kcjm->IjkAbc",
+                    t2ab[:, i0:i1, :, :],
+                    eris_ovoo[k0:k1, :, j0:j1, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "jMbA,kcIM->IjkAbc",
-                        t2ab[j0:j1, :, :, :],
-                        eris_ovOO[k0:k1, :, i0:i1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "jMbA,kcIM->IjkAbc",
+                    t2ab[j0:j1, :, :, :],
+                    eris_ovOO[k0:k1, :, i0:i1, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "jmbc,IAkm->IjkAbc",
                     t2aa[j0:j1, :, :, :],
                     eris_OVoo[i0:i1, :, k0:k1:, :],
+                    out=w_blk, subtract=True,
                 )
-                time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
-                v_blk = parallel_einsum(
-                    "jbkc,IA->IjkAbc",
+                v_blk = _run_fused(
+                    _mixed_spin_v,
                     eris_ovov[j0:j1, :, k0:k1, :],
                     t1b[i0:i1, :],
-                )
-                v_blk += parallel_einsum(
-                    "kcIA,jb->IjkAbc",
                     eris_ovOV[k0:k1, :, i0:i1, :],
                     t1a[j0:j1, :],
+                    t2aa[j0:j1, k0:k1, :, :],
+                    fVO[:, i0:i1],
+                    t2ab[k0:k1, i0:i1, :, :],
+                    fvo[:, j0:j1],
                 )
-                v_blk += parallel_einsum(
-                    "kcIA,jb->IjkAbc",
-                    eris_ovOV[k0:k1, :, i0:i1, :],
-                    t1a[j0:j1, :],
+                wvd = _mixed_spin_divide(
+                    w_blk, v_blk, eIA[i0:i1, :], eia[j0:j1, :], eia[k0:k1, :], 1
                 )
-                v_blk += (
-                    parallel_einsum(
-                        "jkbc,AI->IjkAbc",
-                        t2aa[j0:j1, k0:k1, :, :],
-                        fVO[:, i0:i1],
-                    )
-                    * 0.5
-                )
-                v_blk += (
-                    parallel_einsum(
-                        "kIcA,bj->IjkAbc",
-                        t2ab[k0:k1, i0:i1, :, :],
-                        fvo[:, j0:j1],
-                    )
-                    * 2
-                )
-                time3 = log.timer_debug1(block_label + " v contractions", *time3)
-                d3 = lib.direct_sum(
-                    "IA+jb+kc->IjkAbc", eIA[i0:i1, :], eia[j0:j1, :], eia[k0:k1, :]
-                )
-                wvd = (w_blk + v_blk) / d3
-                time3 = log.timer_debug1(block_label + " denominator and wvd division", *time3)
 
-                w_blk -= (
-                    parallel_einsum(
-                        "kIeA,jceb->IjkAbc",
-                        t2ab[k0:k1, i0:i1, :, :],
-                        eris_ovvv[j0:j1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "kIeA,jceb->IjkAbc",
+                    t2ab[k0:k1, i0:i1, :, :],
+                    eris_ovvv[j0:j1, :, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "kIbE,jcEA->IjkAbc",
-                        t2ab[k0:k1, i0:i1, :, :],
-                        eris_ovVV[j0:j1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "kIbE,jcEA->IjkAbc",
+                    t2ab[k0:k1, i0:i1, :, :],
+                    eris_ovVV[j0:j1, :, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "kjbe,IAec->IjkAbc",
                     t2aa[k0:k1, j0:j1, :, :],
                     eris_OVvv[i0:i1, :, :, :],
+                    out=w_blk, subtract=True,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "mIbA,jckm->IjkAbc",
-                        t2ab[:, i0:i1, :, :],
-                        eris_ovoo[j0:j1, :, k0:k1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mIbA,jckm->IjkAbc",
+                    t2ab[:, i0:i1, :, :],
+                    eris_ovoo[j0:j1, :, k0:k1, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "kMbA,jcIM->IjkAbc",
-                        t2ab[k0:k1, :, :, :],
-                        eris_ovOO[j0:j1, :, i0:i1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "kMbA,jcIM->IjkAbc",
+                    t2ab[k0:k1, :, :, :],
+                    eris_ovOO[j0:j1, :, i0:i1, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "kmbc,IAjm->IjkAbc",
                     t2aa[k0:k1, :, :, :],
                     eris_OVoo[i0:i1, :, j0:j1:, :],
+                    out=w_blk,
                 )
 
-                w_blk += (
-                    parallel_einsum(
-                        "kIeA,jbec->IjkAbc",
-                        t2ab[k0:k1, i0:i1, :, :],
-                        eris_ovvv[j0:j1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "kIeA,jbec->IjkAbc",
+                    t2ab[k0:k1, i0:i1, :, :],
+                    eris_ovvv[j0:j1, :, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "kIcE,jbEA->IjkAbc",
-                        t2ab[k0:k1, i0:i1, :, :],
-                        eris_ovVV[j0:j1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "kIcE,jbEA->IjkAbc",
+                    t2ab[k0:k1, i0:i1, :, :],
+                    eris_ovVV[j0:j1, :, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "kjce,IAeb->IjkAbc",
                     t2aa[k0:k1, j0:j1, :, :],
                     eris_OVvv[i0:i1, :, :, :],
+                    out=w_blk,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "mIcA,jbkm->IjkAbc",
-                        t2ab[:, i0:i1, :, :],
-                        eris_ovoo[j0:j1, :, k0:k1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mIcA,jbkm->IjkAbc",
+                    t2ab[:, i0:i1, :, :],
+                    eris_ovoo[j0:j1, :, k0:k1, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "kMcA,jbIM->IjkAbc",
-                        t2ab[k0:k1, :, :, :],
-                        eris_ovOO[j0:j1, :, i0:i1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "kMcA,jbIM->IjkAbc",
+                    t2ab[k0:k1, :, :, :],
+                    eris_ovOO[j0:j1, :, i0:i1, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "kmcb,IAjm->IjkAbc",
                     t2aa[k0:k1, :, :, :],
                     eris_OVoo[i0:i1, :, j0:j1:, :],
+                    out=w_blk, subtract=True,
                 )
 
-                w_blk -= (
-                    parallel_einsum(
-                        "jIeA,kbec->IjkAbc",
-                        t2ab[j0:j1, i0:i1, :, :],
-                        eris_ovvv[k0:k1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "jIeA,kbec->IjkAbc",
+                    t2ab[j0:j1, i0:i1, :, :],
+                    eris_ovvv[k0:k1, :, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "jIcE,kbEA->IjkAbc",
-                        t2ab[j0:j1, i0:i1, :, :],
-                        eris_ovVV[k0:k1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "jIcE,kbEA->IjkAbc",
+                    t2ab[j0:j1, i0:i1, :, :],
+                    eris_ovVV[k0:k1, :, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "jkce,IAeb->IjkAbc",
                     t2aa[j0:j1, k0:k1, :, :],
                     eris_OVvv[i0:i1, :, :, :],
+                    out=w_blk, subtract=True,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "mIcA,kbjm->IjkAbc",
-                        t2ab[:, i0:i1, :, :],
-                        eris_ovoo[k0:k1, :, j0:j1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mIcA,kbjm->IjkAbc",
+                    t2ab[:, i0:i1, :, :],
+                    eris_ovoo[k0:k1, :, j0:j1, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "jMcA,kbIM->IjkAbc",
-                        t2ab[j0:j1, :, :, :],
-                        eris_ovOO[k0:k1, :, i0:i1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "jMcA,kbIM->IjkAbc",
+                    t2ab[j0:j1, :, :, :],
+                    eris_ovOO[k0:k1, :, i0:i1, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "jmcb,IAkm->IjkAbc",
                     t2aa[j0:j1, :, :, :],
                     eris_OVoo[i0:i1, :, k0:k1:, :],
+                    out=w_blk,
                 )
-                time3 = log.timer_debug1(block_label + " remaining w contractions", *time3)
-                rw = w_blk / d3
-                time3 = log.timer_debug1(block_label + " rw division", *time3)
+                rw = _mixed_spin_divide(
+                    w_blk, None, eIA[i0:i1, :], eia[j0:j1, :], eia[k0:k1, :]
+                )
                 gvv += parallel_einsum("ijkcad,ijkcbd->ab", wvd, rw) * 0.25
                 gvv += parallel_einsum("ijkcda,ijkcdb->ab", wvd, rw) * 0.25
                 gVV += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.25
-                log.timer_debug1(block_label + " density updates", *time3)
-        time2 = log.timer_debug1(
-            "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (i0, i1), *time2
-        )
 
     blksize = min(
         noccb,
@@ -754,229 +649,174 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    time2 = logger.process_clock(), logger.perf_counter()
     for c0, c1 in lib.prange(0, nvira, blksize):
         for k0, k1 in lib.prange(0, nocca, blksize):
-            block_label = f"uccsd_t gamma1 baa off-diagonal c[{c0}:{c1}] k[{k0}:{k1}]"
-            time3 = logger.process_clock(), logger.perf_counter()
-            w_blk = (
-                parallel_einsum(
-                    "jIeA,kceb->IjkAbc",
-                    t2ab[:, :, :, :],
-                    eris_ovvv[k0:k1, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "jIeA,kceb->IjkAbc",
+                t2ab[:, :, :, :],
+                eris_ovvv[k0:k1, c0:c1, :, :],
+                scale=2,
             )
-            w_blk += (
-                parallel_einsum(
-                    "jIbE,kcEA->IjkAbc",
-                    t2ab[:, :, :, :],
-                    eris_ovVV[k0:k1, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "jIbE,kcEA->IjkAbc",
+                t2ab[:, :, :, :],
+                eris_ovVV[k0:k1, c0:c1, :, :],
+                out=w_blk, scale=2,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "jkbe,IAec->IjkAbc",
                 t2aa[:, k0:k1, :, :],
                 eris_OVvv[:, :, :, c0:c1],
+                out=w_blk,
             )
-            w_blk -= (
-                parallel_einsum(
-                    "mIbA,kcjm->IjkAbc",
-                    t2ab[:, :, :, :],
-                    eris_ovoo[k0:k1, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "mIbA,kcjm->IjkAbc",
+                t2ab[:, :, :, :],
+                eris_ovoo[k0:k1, c0:c1, :, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= (
-                parallel_einsum(
-                    "jMbA,kcIM->IjkAbc",
-                    t2ab[:, :, :, :],
-                    eris_ovOO[k0:k1, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "jMbA,kcIM->IjkAbc",
+                t2ab[:, :, :, :],
+                eris_ovOO[k0:k1, c0:c1, :, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "jmbc,IAkm->IjkAbc",
                 t2aa[:, :, :, c0:c1],
                 eris_OVoo[:, :, k0:k1, :],
+                out=w_blk, subtract=True,
             )
-            time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
-            v_blk = parallel_einsum(
-                "jbkc,IA->IjkAbc",
+            v_blk = _run_fused(
+                _mixed_spin_v,
                 eris_ovov[:, :, k0:k1, c0:c1],
                 t1b[:, :],
-            )
-            v_blk += parallel_einsum(
-                "kcIA,jb->IjkAbc",
                 eris_ovOV[k0:k1, c0:c1, :, :],
                 t1a[:, :],
+                t2aa[:, k0:k1, :, c0:c1],
+                fVO[:, :],
+                t2ab[k0:k1, :, c0:c1, :],
+                fvo[:, :],
             )
-            v_blk += parallel_einsum(
-                "kcIA,jb->IjkAbc",
-                eris_ovOV[k0:k1, c0:c1, :, :],
-                t1a[:, :],
+            wvd = _mixed_spin_divide(
+                w_blk, v_blk, eIA[:, :], eia[:, :], eia[k0:k1, c0:c1], 1
             )
-            v_blk += (
-                parallel_einsum(
-                    "jkbc,AI->IjkAbc",
-                    t2aa[:, k0:k1, :, c0:c1],
-                    fVO[:, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "kIcA,bj->IjkAbc",
-                    t2ab[k0:k1, :, c0:c1, :],
-                    fvo[:, :],
-                )
-                * 2
-            )
-            time3 = log.timer_debug1(block_label + " v contractions", *time3)
-            d3 = lib.direct_sum(
-                "IA+jb+kc->IjkAbc", eIA[:, :], eia[:, :], eia[k0:k1, c0:c1]
-            )
-            wvd = (w_blk + v_blk) / d3
-            time3 = log.timer_debug1(block_label + " denominator and wvd division", *time3)
 
-            w_blk -= (
-                parallel_einsum(
-                    "kIeA,jceb->IjkAbc",
-                    t2ab[k0:k1, :, :, :],
-                    eris_ovvv[:, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "kIeA,jceb->IjkAbc",
+                t2ab[k0:k1, :, :, :],
+                eris_ovvv[:, c0:c1, :, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= (
-                parallel_einsum(
-                    "kIbE,jcEA->IjkAbc",
-                    t2ab[k0:k1, :, :, :],
-                    eris_ovVV[:, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "kIbE,jcEA->IjkAbc",
+                t2ab[k0:k1, :, :, :],
+                eris_ovVV[:, c0:c1, :, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "kjbe,IAec->IjkAbc",
                 t2aa[k0:k1, :, :, :],
                 eris_OVvv[:, :, :, c0:c1],
+                out=w_blk, subtract=True,
             )
-            w_blk += (
-                parallel_einsum(
-                    "mIbA,jckm->IjkAbc",
-                    t2ab[:, :, :, :],
-                    eris_ovoo[:, c0:c1, k0:k1, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "mIbA,jckm->IjkAbc",
+                t2ab[:, :, :, :],
+                eris_ovoo[:, c0:c1, k0:k1, :],
+                out=w_blk, scale=2,
             )
-            w_blk += (
-                parallel_einsum(
-                    "kMbA,jcIM->IjkAbc",
-                    t2ab[k0:k1, :, :, :],
-                    eris_ovOO[:, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "kMbA,jcIM->IjkAbc",
+                t2ab[k0:k1, :, :, :],
+                eris_ovOO[:, c0:c1, :, :],
+                out=w_blk, scale=2,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "kmbc,IAjm->IjkAbc",
                 t2aa[k0:k1, :, :, c0:c1],
                 eris_OVoo[:, :, :, :],
+                out=w_blk,
             )
 
-            w_blk += (
-                parallel_einsum(
-                    "kIeA,jbec->IjkAbc",
-                    t2ab[k0:k1, :, :, :],
-                    eris_ovvv[:, :, :, c0:c1],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "kIeA,jbec->IjkAbc",
+                t2ab[k0:k1, :, :, :],
+                eris_ovvv[:, :, :, c0:c1],
+                out=w_blk, scale=2,
             )
-            w_blk += (
-                parallel_einsum(
-                    "kIcE,jbEA->IjkAbc",
-                    t2ab[k0:k1, :, c0:c1, :],
-                    eris_ovVV[:, :, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "kIcE,jbEA->IjkAbc",
+                t2ab[k0:k1, :, c0:c1, :],
+                eris_ovVV[:, :, :, :],
+                out=w_blk, scale=2,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "kjce,IAeb->IjkAbc",
                 t2aa[k0:k1, :, c0:c1, :],
                 eris_OVvv[:, :, :, :],
+                out=w_blk,
             )
-            w_blk -= (
-                parallel_einsum(
-                    "mIcA,jbkm->IjkAbc",
-                    t2ab[:, :, c0:c1, :],
-                    eris_ovoo[:, :, k0:k1, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "mIcA,jbkm->IjkAbc",
+                t2ab[:, :, c0:c1, :],
+                eris_ovoo[:, :, k0:k1, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= (
-                parallel_einsum(
-                    "kMcA,jbIM->IjkAbc",
-                    t2ab[k0:k1, :, c0:c1, :],
-                    eris_ovOO[:, :, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "kMcA,jbIM->IjkAbc",
+                t2ab[k0:k1, :, c0:c1, :],
+                eris_ovOO[:, :, :, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "kmcb,IAjm->IjkAbc",
                 t2aa[k0:k1, :, c0:c1, :],
                 eris_OVoo[:, :, :, :],
+                out=w_blk, subtract=True,
             )
 
-            w_blk -= (
-                parallel_einsum(
-                    "jIeA,kbec->IjkAbc",
-                    t2ab[:, :, :, :],
-                    eris_ovvv[k0:k1, :, :, c0:c1],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "jIeA,kbec->IjkAbc",
+                t2ab[:, :, :, :],
+                eris_ovvv[k0:k1, :, :, c0:c1],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= (
-                parallel_einsum(
-                    "jIcE,kbEA->IjkAbc",
-                    t2ab[:, :, c0:c1, :],
-                    eris_ovVV[k0:k1, :, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "jIcE,kbEA->IjkAbc",
+                t2ab[:, :, c0:c1, :],
+                eris_ovVV[k0:k1, :, :, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "jkce,IAeb->IjkAbc",
                 t2aa[:, k0:k1, c0:c1, :],
                 eris_OVvv[:, :, :, :],
+                out=w_blk, subtract=True,
             )
-            w_blk += (
-                parallel_einsum(
-                    "mIcA,kbjm->IjkAbc",
-                    t2ab[:, :, c0:c1, :],
-                    eris_ovoo[k0:k1, :, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "mIcA,kbjm->IjkAbc",
+                t2ab[:, :, c0:c1, :],
+                eris_ovoo[k0:k1, :, :, :],
+                out=w_blk, scale=2,
             )
-            w_blk += (
-                parallel_einsum(
-                    "jMcA,kbIM->IjkAbc",
-                    t2ab[:, :, c0:c1, :],
-                    eris_ovOO[k0:k1, :, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "jMcA,kbIM->IjkAbc",
+                t2ab[:, :, c0:c1, :],
+                eris_ovOO[k0:k1, :, :, :],
+                out=w_blk, scale=2,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "jmcb,IAkm->IjkAbc",
                 t2aa[:, :, c0:c1, :],
                 eris_OVoo[:, :, k0:k1, :],
+                out=w_blk,
             )
-            time3 = log.timer_debug1(block_label + " remaining w contractions", *time3)
-            rw = w_blk / d3
-            time3 = log.timer_debug1(block_label + " rw division", *time3)
+            rw = _mixed_spin_divide(
+                w_blk, None, eIA[:, :], eia[:, :], eia[k0:k1, c0:c1]
+            )
             gvo += parallel_einsum("kica,ijkabc->bj", t2ab[k0:k1, :, c0:c1, :], rw) * 0.5
             gVO += parallel_einsum("jkbc,ijkabc->ai", t2aa[:, k0:k1, :, c0:c1], rw) * 0.125
-            log.timer_debug1(block_label + " density updates", *time3)
-        time2 = log.timer_debug1(
-            "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (c0, c1), *time2
-        )
 
     # bba
     blksize = min(
@@ -994,234 +834,176 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    time2 = logger.process_clock(), logger.perf_counter()
     for a0, a1 in lib.prange(0, nvira, blksize):
         for b0, b1 in lib.prange(0, nvirb, blksize):
             for c0, c1 in lib.prange(0, nvirb, blksize):
-                block_label = (
-                    f"uccsd_t gamma1 bba occupied-density a[{a0}:{a1}] "
-                    f"b[{b0}:{b1}] c[{c0}:{c1}]"
+                w_blk = _w_einsum(
+                    "ijae,kceb->ijkabc",
+                    t2ab[:, :, a0:a1, :],
+                    eris_OVVV[:, c0:c1, :, b0:b1],
+                    scale=2,
                 )
-                time3 = logger.process_clock(), logger.perf_counter()
-                w_blk = (
-                    parallel_einsum(
-                        "ijae,kceb->ijkabc",
-                        t2ab[:, :, a0:a1, :],
-                        eris_OVVV[:, c0:c1, :, b0:b1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ijeb,kcea->ijkabc",
+                    t2ab[:, :, :, b0:b1],
+                    eris_OVvv[:, c0:c1, :, a0:a1],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "ijeb,kcea->ijkabc",
-                        t2ab[:, :, :, b0:b1],
-                        eris_OVvv[:, c0:c1, :, a0:a1],
-                    )
-                    * 2
-                )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "jkbe,iaec->ijkabc",
                     t2bb[:, :, b0:b1, :],
                     eris_ovVV[:, a0:a1, :, c0:c1],
+                    out=w_blk,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "imab,kcjm->ijkabc",
-                        t2ab[:, :, a0:a1, b0:b1],
-                        eris_OVOO[:, c0:c1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "imab,kcjm->ijkabc",
+                    t2ab[:, :, a0:a1, b0:b1],
+                    eris_OVOO[:, c0:c1, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "mjab,kcim->ijkabc",
-                        t2ab[:, :, a0:a1, b0:b1],
-                        eris_OVoo[:, c0:c1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mjab,kcim->ijkabc",
+                    t2ab[:, :, a0:a1, b0:b1],
+                    eris_OVoo[:, c0:c1, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "jmbc,iakm->ijkabc",
                     t2bb[:, :, b0:b1, c0:c1],
                     eris_ovOO[:, a0:a1, :, :],
+                    out=w_blk, subtract=True,
                 )
-                time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
-                v_blk = parallel_einsum(
-                    "jbkc,ia->ijkabc",
+                v_blk = _run_fused(
+                    _mixed_spin_v,
                     eris_OVOV[:, b0:b1, :, c0:c1],
                     t1a[:, a0:a1],
-                )
-                v_blk += parallel_einsum(
-                    "iakc,jb->ijkabc",
-                    eris_ovOV[:, a0:a1, :, c0:c1],
+                    eris_ovOV[:, a0:a1, :, c0:c1].transpose(2, 3, 0, 1),
                     t1b[:, b0:b1],
+                    t2bb[:, :, b0:b1, c0:c1],
+                    fvo[a0:a1, :],
+                    t2ab[:, :, a0:a1, c0:c1].transpose(1, 0, 3, 2),
+                    fVO[b0:b1, :],
                 )
-                v_blk += parallel_einsum(
-                    "iakc,jb->ijkabc",
-                    eris_ovOV[:, a0:a1, :, c0:c1],
-                    t1b[:, b0:b1],
+                wvd = _mixed_spin_divide(
+                    w_blk, v_blk, eia[:, a0:a1], eIA[:, b0:b1], eIA[:, c0:c1], 1
                 )
-                v_blk += (
-                    parallel_einsum(
-                        "JKBC,ai->iJKaBC",
-                        t2bb[:, :, b0:b1, c0:c1],
-                        fvo[a0:a1, :],
-                    )
-                    * 0.5
-                )
-                v_blk += (
-                    parallel_einsum(
-                        "iKaC,BJ->iJKaBC",
-                        t2ab[:, :, a0:a1, c0:c1],
-                        fVO[b0:b1, :],
-                    )
-                    * 2
-                )
-                time3 = log.timer_debug1(block_label + " v contractions", *time3)
-                d3 = lib.direct_sum(
-                    "ia+jb+kc->ijkabc", eia[:, a0:a1], eIA[:, b0:b1], eIA[:, c0:c1]
-                )
-                wvd = (w_blk + v_blk) / d3
-                time3 = log.timer_debug1(block_label + " denominator and wvd division", *time3)
 
-                w_blk -= (
-                    parallel_einsum(
-                        "ikae,jceb->ijkabc",
-                        t2ab[:, :, a0:a1, :],
-                        eris_OVVV[:, c0:c1, :, b0:b1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ikae,jceb->ijkabc",
+                    t2ab[:, :, a0:a1, :],
+                    eris_OVVV[:, c0:c1, :, b0:b1],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "ikeb,jcea->ijkabc",
-                        t2ab[:, :, :, b0:b1],
-                        eris_OVvv[:, c0:c1, :, a0:a1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ikeb,jcea->ijkabc",
+                    t2ab[:, :, :, b0:b1],
+                    eris_OVvv[:, c0:c1, :, a0:a1],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "kjbe,iaec->ijkabc",
                     t2bb[:, :, b0:b1, :],
                     eris_ovVV[:, a0:a1, :, c0:c1],
+                    out=w_blk, subtract=True,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "imab,jckm->ijkabc",
-                        t2ab[:, :, a0:a1, b0:b1],
-                        eris_OVOO[:, c0:c1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "imab,jckm->ijkabc",
+                    t2ab[:, :, a0:a1, b0:b1],
+                    eris_OVOO[:, c0:c1, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "mkab,jcim->ijkabc",
-                        t2ab[:, :, a0:a1, b0:b1],
-                        eris_OVoo[:, c0:c1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mkab,jcim->ijkabc",
+                    t2ab[:, :, a0:a1, b0:b1],
+                    eris_OVoo[:, c0:c1, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "kmbc,iajm->ijkabc",
                     t2bb[:, :, b0:b1, c0:c1],
                     eris_ovOO[:, a0:a1, :, :],
+                    out=w_blk,
                 )
 
-                w_blk += (
-                    parallel_einsum(
-                        "ikae,jbec->ijkabc",
-                        t2ab[:, :, a0:a1, :],
-                        eris_OVVV[:, b0:b1, :, c0:c1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ikae,jbec->ijkabc",
+                    t2ab[:, :, a0:a1, :],
+                    eris_OVVV[:, b0:b1, :, c0:c1],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "ikec,jbea->ijkabc",
-                        t2ab[:, :, :, c0:c1],
-                        eris_OVvv[:, b0:b1, :, a0:a1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ikec,jbea->ijkabc",
+                    t2ab[:, :, :, c0:c1],
+                    eris_OVvv[:, b0:b1, :, a0:a1],
+                    out=w_blk, scale=2,
                 )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "kjce,iaeb->ijkabc",
                     t2bb[:, :, c0:c1, :],
                     eris_ovVV[:, a0:a1, :, b0:b1],
+                    out=w_blk,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "imac,jbkm->ijkabc",
-                        t2ab[:, :, a0:a1, c0:c1],
-                        eris_OVOO[:, b0:b1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "imac,jbkm->ijkabc",
+                    t2ab[:, :, a0:a1, c0:c1],
+                    eris_OVOO[:, b0:b1, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "mkac,jbim->ijkabc",
-                        t2ab[:, :, a0:a1, c0:c1],
-                        eris_OVoo[:, b0:b1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mkac,jbim->ijkabc",
+                    t2ab[:, :, a0:a1, c0:c1],
+                    eris_OVoo[:, b0:b1, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "kmcb,iajm->ijkabc",
                     t2bb[:, :, c0:c1, b0:b1],
                     eris_ovOO[:, a0:a1, :, :],
+                    out=w_blk, subtract=True,
                 )
 
-                w_blk -= (
-                    parallel_einsum(
-                        "ijae,kbec->ijkabc",
-                        t2ab[:, :, a0:a1, :],
-                        eris_OVVV[:, b0:b1, :, c0:c1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ijae,kbec->ijkabc",
+                    t2ab[:, :, a0:a1, :],
+                    eris_OVVV[:, b0:b1, :, c0:c1],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "ijec,kbea->ijkabc",
-                        t2ab[:, :, :, c0:c1],
-                        eris_OVvv[:, b0:b1, :, a0:a1],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ijec,kbea->ijkabc",
+                    t2ab[:, :, :, c0:c1],
+                    eris_OVvv[:, b0:b1, :, a0:a1],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "jkce,iaeb->ijkabc",
                     t2bb[:, :, c0:c1, :],
                     eris_ovVV[:, a0:a1, :, b0:b1],
+                    out=w_blk, subtract=True,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "imac,kbjm->ijkabc",
-                        t2ab[:, :, a0:a1, c0:c1],
-                        eris_OVOO[:, b0:b1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "imac,kbjm->ijkabc",
+                    t2ab[:, :, a0:a1, c0:c1],
+                    eris_OVOO[:, b0:b1, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "mjac,kbim->ijkabc",
-                        t2ab[:, :, a0:a1, c0:c1],
-                        eris_OVoo[:, b0:b1, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mjac,kbim->ijkabc",
+                    t2ab[:, :, a0:a1, c0:c1],
+                    eris_OVoo[:, b0:b1, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "jmcb,iakm->ijkabc",
                     t2bb[:, :, c0:c1, b0:b1],
                     eris_ovOO[:, a0:a1, :, :],
+                    out=w_blk,
                 )
-                time3 = log.timer_debug1(block_label + " remaining w contractions", *time3)
-                rw = w_blk / d3
-                time3 = log.timer_debug1(block_label + " rw division", *time3)
+                rw = _mixed_spin_divide(
+                    w_blk, None, eia[:, a0:a1], eIA[:, b0:b1], eIA[:, c0:c1]
+                )
                 goo += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.25
                 gOO += parallel_einsum("kilabc,kjlabc->ij", wvd, rw) * 0.25
                 gOO += parallel_einsum("kliabc,kljabc->ij", wvd, rw) * 0.25
-                log.timer_debug1(block_label + " density updates", *time3)
-        time2 = log.timer_debug1(
-            "uccsd_t spin 2 rdm _gamma1_intermediates pass2 [%d:%d]" % (a0, a1), *time2
-        )
 
     blksize = min(
         noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nvirb**2 * nvira)) ** (1 / 3))
@@ -1240,231 +1022,176 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    time2 = logger.process_clock(), logger.perf_counter()
     for i0, i1 in lib.prange(0, nocca, blksize):
         for j0, j1 in lib.prange(0, noccb, blksize):
             for k0, k1 in lib.prange(0, noccb, blksize):
-                block_label = (
-                    f"uccsd_t gamma1 bba virtual-density i[{i0}:{i1}] "
-                    f"j[{j0}:{j1}] k[{k0}:{k1}]"
+                w_blk = _w_einsum(
+                    "ijae,kceb->ijkabc",
+                    t2ab[i0:i1, j0:j1, :, :],
+                    eris_OVVV[k0:k1, :, :, :],
+                    scale=2,
                 )
-                time3 = logger.process_clock(), logger.perf_counter()
-                w_blk = (
-                    parallel_einsum(
-                        "ijae,kceb->ijkabc",
-                        t2ab[i0:i1, j0:j1, :, :],
-                        eris_OVVV[k0:k1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ijeb,kcea->ijkabc",
+                    t2ab[i0:i1, j0:j1, :, :],
+                    eris_OVvv[k0:k1, :, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "ijeb,kcea->ijkabc",
-                        t2ab[i0:i1, j0:j1, :, :],
-                        eris_OVvv[k0:k1, :, :, :],
-                    )
-                    * 2
-                )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "jkbe,iaec->ijkabc",
                     t2bb[j0:j1, k0:k1, :, :],
                     eris_ovVV[i0:i1, :, :, :],
+                    out=w_blk,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "imab,kcjm->ijkabc",
-                        t2ab[i0:i1, :, :, :],
-                        eris_OVOO[k0:k1, :, j0:j1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "imab,kcjm->ijkabc",
+                    t2ab[i0:i1, :, :, :],
+                    eris_OVOO[k0:k1, :, j0:j1, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "mjab,kcim->ijkabc",
-                        t2ab[:, j0:j1, :, :],
-                        eris_OVoo[k0:k1, :, i0:i1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mjab,kcim->ijkabc",
+                    t2ab[:, j0:j1, :, :],
+                    eris_OVoo[k0:k1, :, i0:i1, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "jmbc,iakm->ijkabc",
                     t2bb[j0:j1, :, :, :],
                     eris_ovOO[i0:i1, :, k0:k1, :],
+                    out=w_blk, subtract=True,
                 )
-                time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
-                v_blk = parallel_einsum(
-                    "jbkc,ia->ijkabc",
+                v_blk = _run_fused(
+                    _mixed_spin_v,
                     eris_OVOV[j0:j1, :, k0:k1, :],
                     t1a[i0:i1, :],
-                )
-                v_blk += parallel_einsum(
-                    "iakc,jb->ijkabc",
-                    eris_ovOV[i0:i1, :, k0:k1, :],
+                    eris_ovOV[i0:i1, :, k0:k1, :].transpose(2, 3, 0, 1),
                     t1b[j0:j1, :],
+                    t2bb[j0:j1, k0:k1, :, :],
+                    fvo[:, i0:i1],
+                    t2ab[i0:i1, k0:k1, :, :].transpose(1, 0, 3, 2),
+                    fVO[:, j0:j1],
                 )
-                v_blk += parallel_einsum(
-                    "iakc,jb->ijkabc",
-                    eris_ovOV[i0:i1, :, k0:k1, :],
-                    t1b[j0:j1, :],
+                wvd = _mixed_spin_divide(
+                    w_blk, v_blk, eia[i0:i1, :], eIA[j0:j1, :], eIA[k0:k1, :], 1
                 )
-                v_blk += (
-                    parallel_einsum(
-                        "JKBC,ai->iJKaBC",
-                        t2bb[j0:j1, k0:k1, :, :],
-                        fvo[:, i0:i1],
-                    )
-                    * 0.5
-                )
-                v_blk += (
-                    parallel_einsum(
-                        "iKaC,BJ->iJKaBC",
-                        t2ab[i0:i1, k0:k1, :, :],
-                        fVO[:, j0:j1],
-                    )
-                    * 2
-                )
-                time3 = log.timer_debug1(block_label + " v contractions", *time3)
-                d3 = lib.direct_sum(
-                    "ia+jb+kc->ijkabc", eia[i0:i1, :], eIA[j0:j1, :], eIA[k0:k1, :]
-                )
-                wvd = (w_blk + v_blk) / d3
-                time3 = log.timer_debug1(block_label + " denominator and wvd division", *time3)
 
-                w_blk -= (
-                    parallel_einsum(
-                        "ikae,jceb->ijkabc",
-                        t2ab[i0:i1, k0:k1, :, :],
-                        eris_OVVV[j0:j1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ikae,jceb->ijkabc",
+                    t2ab[i0:i1, k0:k1, :, :],
+                    eris_OVVV[j0:j1, :, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "ikeb,jcea->ijkabc",
-                        t2ab[i0:i1, k0:k1, :, :],
-                        eris_OVvv[j0:j1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ikeb,jcea->ijkabc",
+                    t2ab[i0:i1, k0:k1, :, :],
+                    eris_OVvv[j0:j1, :, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "kjbe,iaec->ijkabc",
                     t2bb[k0:k1, j0:j1, :, :],
                     eris_ovVV[i0:i1, :, :, :],
+                    out=w_blk, subtract=True,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "imab,jckm->ijkabc",
-                        t2ab[i0:i1, :, :, :],
-                        eris_OVOO[j0:j1, :, k0:k1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "imab,jckm->ijkabc",
+                    t2ab[i0:i1, :, :, :],
+                    eris_OVOO[j0:j1, :, k0:k1, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "mkab,jcim->ijkabc",
-                        t2ab[:, k0:k1, :, :],
-                        eris_OVoo[j0:j1, :, i0:i1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mkab,jcim->ijkabc",
+                    t2ab[:, k0:k1, :, :],
+                    eris_OVoo[j0:j1, :, i0:i1, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "kmbc,iajm->ijkabc",
                     t2bb[k0:k1, :, :, :],
                     eris_ovOO[i0:i1, :, j0:j1, :],
+                    out=w_blk,
                 )
 
-                w_blk += (
-                    parallel_einsum(
-                        "ikae,jbec->ijkabc",
-                        t2ab[i0:i1, k0:k1, :, :],
-                        eris_OVVV[j0:j1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ikae,jbec->ijkabc",
+                    t2ab[i0:i1, k0:k1, :, :],
+                    eris_OVVV[j0:j1, :, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "ikec,jbea->ijkabc",
-                        t2ab[i0:i1, k0:k1, :, :],
-                        eris_OVvv[j0:j1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ikec,jbea->ijkabc",
+                    t2ab[i0:i1, k0:k1, :, :],
+                    eris_OVvv[j0:j1, :, :, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "kjce,iaeb->ijkabc",
                     t2bb[k0:k1, j0:j1, :, :],
                     eris_ovVV[i0:i1, :, :, :],
+                    out=w_blk,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "imac,jbkm->ijkabc",
-                        t2ab[i0:i1, :, :, :],
-                        eris_OVOO[j0:j1, :, k0:k1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "imac,jbkm->ijkabc",
+                    t2ab[i0:i1, :, :, :],
+                    eris_OVOO[j0:j1, :, k0:k1, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "mkac,jbim->ijkabc",
-                        t2ab[:, k0:k1, :, :],
-                        eris_OVoo[j0:j1, :, i0:i1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mkac,jbim->ijkabc",
+                    t2ab[:, k0:k1, :, :],
+                    eris_OVoo[j0:j1, :, i0:i1, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "kmcb,iajm->ijkabc",
                     t2bb[k0:k1, :, :, :],
                     eris_ovOO[i0:i1, :, j0:j1, :],
+                    out=w_blk, subtract=True,
                 )
 
-                w_blk -= (
-                    parallel_einsum(
-                        "ijae,kbec->ijkabc",
-                        t2ab[i0:i1, j0:j1, :, :],
-                        eris_OVVV[k0:k1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ijae,kbec->ijkabc",
+                    t2ab[i0:i1, j0:j1, :, :],
+                    eris_OVVV[k0:k1, :, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= (
-                    parallel_einsum(
-                        "ijec,kbea->ijkabc",
-                        t2ab[i0:i1, j0:j1, :, :],
-                        eris_OVvv[k0:k1, :, :, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "ijec,kbea->ijkabc",
+                    t2ab[i0:i1, j0:j1, :, :],
+                    eris_OVvv[k0:k1, :, :, :],
+                    out=w_blk, subtract=True, scale=2,
                 )
-                w_blk -= parallel_einsum(
+                w_blk = _w_einsum(
                     "jkce,iaeb->ijkabc",
                     t2bb[j0:j1, k0:k1, :, :],
                     eris_ovVV[i0:i1, :, :, :],
+                    out=w_blk, subtract=True,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "imac,kbjm->ijkabc",
-                        t2ab[i0:i1, :, :, :],
-                        eris_OVOO[k0:k1, :, j0:j1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "imac,kbjm->ijkabc",
+                    t2ab[i0:i1, :, :, :],
+                    eris_OVOO[k0:k1, :, j0:j1, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += (
-                    parallel_einsum(
-                        "mjac,kbim->ijkabc",
-                        t2ab[:, j0:j1, :, :],
-                        eris_OVoo[k0:k1, :, i0:i1, :],
-                    )
-                    * 2
+                w_blk = _w_einsum(
+                    "mjac,kbim->ijkabc",
+                    t2ab[:, j0:j1, :, :],
+                    eris_OVoo[k0:k1, :, i0:i1, :],
+                    out=w_blk, scale=2,
                 )
-                w_blk += parallel_einsum(
+                w_blk = _w_einsum(
                     "jmcb,iakm->ijkabc",
                     t2bb[j0:j1, :, :, :],
                     eris_ovOO[i0:i1, :, k0:k1, :],
+                    out=w_blk,
                 )
-                time3 = log.timer_debug1(block_label + " remaining w contractions", *time3)
-                rw = w_blk / d3
-                time3 = log.timer_debug1(block_label + " rw division", *time3)
+                rw = _mixed_spin_divide(
+                    w_blk, None, eia[i0:i1, :], eIA[j0:j1, :], eIA[k0:k1, :]
+                )
                 gvv += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.25
                 gVV += parallel_einsum("ijkcad,ijkcbd->ab", wvd, rw) * 0.25
                 gVV += parallel_einsum("ijkcda,ijkcdb->ab", wvd, rw) * 0.25
-                log.timer_debug1(block_label + " density updates", *time3)
 
     blksize = min(
         noccb,
@@ -1487,228 +1214,175 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    time2 = logger.process_clock(), logger.perf_counter()
     for c0, c1 in lib.prange(0, nvirb, blksize):
         for k0, k1 in lib.prange(0, noccb, blksize):
-            block_label = f"uccsd_t gamma1 bba off-diagonal c[{c0}:{c1}] k[{k0}:{k1}]"
-            time3 = logger.process_clock(), logger.perf_counter()
-            w_blk = (
-                parallel_einsum(
-                    "ijae,kceb->ijkabc",
-                    t2ab,
-                    eris_OVVV[k0:k1, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "ijae,kceb->ijkabc",
+                t2ab,
+                eris_OVVV[k0:k1, c0:c1, :, :],
+                scale=2,
             )
-            w_blk += (
-                parallel_einsum(
-                    "ijeb,kcea->ijkabc",
-                    t2ab,
-                    eris_OVvv[k0:k1, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "ijeb,kcea->ijkabc",
+                t2ab,
+                eris_OVvv[k0:k1, c0:c1, :, :],
+                out=w_blk, scale=2,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "jkbe,iaec->ijkabc",
                 t2bb[:, k0:k1, :, :],
                 eris_ovVV[:, :, :, c0:c1],
+                out=w_blk,
             )
-            w_blk -= (
-                parallel_einsum(
-                    "imab,kcjm->ijkabc",
-                    t2ab,
-                    eris_OVOO[k0:k1, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "imab,kcjm->ijkabc",
+                t2ab,
+                eris_OVOO[k0:k1, c0:c1, :, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= (
-                parallel_einsum(
-                    "mjab,kcim->ijkabc",
-                    t2ab,
-                    eris_OVoo[k0:k1, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "mjab,kcim->ijkabc",
+                t2ab,
+                eris_OVoo[k0:k1, c0:c1, :, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "jmbc,iakm->ijkabc",
                 t2bb[:, :, :, c0:c1],
                 eris_ovOO[:, :, k0:k1, :],
+                out=w_blk, subtract=True,
             )
-            time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
-            v_blk = parallel_einsum(
-                "jbkc,ia->ijkabc",
+            v_blk = _run_fused(
+                _mixed_spin_v,
                 eris_OVOV[:, :, k0:k1, c0:c1],
                 t1a[:, :],
-            )
-            v_blk += parallel_einsum(
-                "iakc,jb->ijkabc",
-                eris_ovOV[:, :, k0:k1, c0:c1],
+                eris_ovOV[:, :, k0:k1, c0:c1].transpose(2, 3, 0, 1),
                 t1b[:, :],
+                t2bb[:, k0:k1, :, c0:c1],
+                fvo[:, :],
+                t2ab[:, k0:k1, :, c0:c1].transpose(1, 0, 3, 2),
+                fVO[:, :],
             )
-            v_blk += parallel_einsum(
-                "iakc,jb->ijkabc",
-                eris_ovOV[:, :, k0:k1, c0:c1],
-                t1b[:, :],
+            wvd = _mixed_spin_divide(
+                w_blk, v_blk, eia[:, :], eIA[:, :], eIA[k0:k1, c0:c1], 1
             )
-            v_blk += (
-                parallel_einsum(
-                    "JKBC,ai->iJKaBC",
-                    t2bb[:, k0:k1, :, c0:c1],
-                    fvo[:, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "iKaC,BJ->iJKaBC",
-                    t2ab[:, k0:k1, :, c0:c1],
-                    fVO[:, :],
-                )
-                * 2
-            )
-            time3 = log.timer_debug1(block_label + " v contractions", *time3)
-            d3 = lib.direct_sum(
-                "ia+jb+kc->ijkabc", eia[:, :], eIA[:, :], eIA[k0:k1, c0:c1]
-            )
-            wvd = (w_blk + v_blk) / d3
-            time3 = log.timer_debug1(block_label + " denominator and wvd division", *time3)
 
-            w_blk -= (
-                parallel_einsum(
-                    "ikae,jceb->ijkabc",
-                    t2ab[:, k0:k1, :, :],
-                    eris_OVVV[:, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "ikae,jceb->ijkabc",
+                t2ab[:, k0:k1, :, :],
+                eris_OVVV[:, c0:c1, :, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= (
-                parallel_einsum(
-                    "ikeb,jcea->ijkabc",
-                    t2ab[:, k0:k1, :, :],
-                    eris_OVvv[:, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "ikeb,jcea->ijkabc",
+                t2ab[:, k0:k1, :, :],
+                eris_OVvv[:, c0:c1, :, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "kjbe,iaec->ijkabc",
                 t2bb[k0:k1, :, :, :],
                 eris_ovVV[:, :, :, c0:c1],
+                out=w_blk, subtract=True,
             )
-            w_blk += (
-                parallel_einsum(
-                    "imab,jckm->ijkabc",
-                    t2ab[:, :, :, :],
-                    eris_OVOO[:, c0:c1, k0:k1, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "imab,jckm->ijkabc",
+                t2ab[:, :, :, :],
+                eris_OVOO[:, c0:c1, k0:k1, :],
+                out=w_blk, scale=2,
             )
-            w_blk += (
-                parallel_einsum(
-                    "mkab,jcim->ijkabc",
-                    t2ab[:, k0:k1, :, :],
-                    eris_OVoo[:, c0:c1, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "mkab,jcim->ijkabc",
+                t2ab[:, k0:k1, :, :],
+                eris_OVoo[:, c0:c1, :, :],
+                out=w_blk, scale=2,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "kmbc,iajm->ijkabc",
                 t2bb[k0:k1, :, :, c0:c1],
                 eris_ovOO[:, :, :, :],
+                out=w_blk,
             )
 
-            w_blk += (
-                parallel_einsum(
-                    "ikae,jbec->ijkabc",
-                    t2ab[:, k0:k1, :, :],
-                    eris_OVVV[:, :, :, c0:c1],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "ikae,jbec->ijkabc",
+                t2ab[:, k0:k1, :, :],
+                eris_OVVV[:, :, :, c0:c1],
+                out=w_blk, scale=2,
             )
-            w_blk += (
-                parallel_einsum(
-                    "ikec,jbea->ijkabc",
-                    t2ab[:, k0:k1, :, c0:c1],
-                    eris_OVvv[:, :, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "ikec,jbea->ijkabc",
+                t2ab[:, k0:k1, :, c0:c1],
+                eris_OVvv[:, :, :, :],
+                out=w_blk, scale=2,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "kjce,iaeb->ijkabc",
                 t2bb[k0:k1, :, c0:c1, :],
                 eris_ovVV[:, :, :, :],
+                out=w_blk,
             )
-            w_blk -= (
-                parallel_einsum(
-                    "imac,jbkm->ijkabc",
-                    t2ab[:, :, :, c0:c1],
-                    eris_OVOO[:, :, k0:k1, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "imac,jbkm->ijkabc",
+                t2ab[:, :, :, c0:c1],
+                eris_OVOO[:, :, k0:k1, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= (
-                parallel_einsum(
-                    "mkac,jbim->ijkabc",
-                    t2ab[:, k0:k1, :, c0:c1],
-                    eris_OVoo[:, :, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "mkac,jbim->ijkabc",
+                t2ab[:, k0:k1, :, c0:c1],
+                eris_OVoo[:, :, :, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "kmcb,iajm->ijkabc",
                 t2bb[k0:k1, :, c0:c1, :],
                 eris_ovOO[:, :, :, :],
+                out=w_blk, subtract=True,
             )
 
-            w_blk -= (
-                parallel_einsum(
-                    "ijae,kbec->ijkabc",
-                    t2ab[:, :, :, :],
-                    eris_OVVV[k0:k1, :, :, c0:c1],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "ijae,kbec->ijkabc",
+                t2ab[:, :, :, :],
+                eris_OVVV[k0:k1, :, :, c0:c1],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= (
-                parallel_einsum(
-                    "ijec,kbea->ijkabc",
-                    t2ab[:, :, :, c0:c1],
-                    eris_OVvv[k0:k1, :, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "ijec,kbea->ijkabc",
+                t2ab[:, :, :, c0:c1],
+                eris_OVvv[k0:k1, :, :, :],
+                out=w_blk, subtract=True, scale=2,
             )
-            w_blk -= parallel_einsum(
+            w_blk = _w_einsum(
                 "jkce,iaeb->ijkabc",
                 t2bb[:, k0:k1, c0:c1, :],
                 eris_ovVV[:, :, :, :],
+                out=w_blk, subtract=True,
             )
-            w_blk += (
-                parallel_einsum(
-                    "imac,kbjm->ijkabc",
-                    t2ab[:, :, :, c0:c1],
-                    eris_OVOO[k0:k1, :, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "imac,kbjm->ijkabc",
+                t2ab[:, :, :, c0:c1],
+                eris_OVOO[k0:k1, :, :, :],
+                out=w_blk, scale=2,
             )
-            w_blk += (
-                parallel_einsum(
-                    "mjac,kbim->ijkabc",
-                    t2ab[:, :, :, c0:c1],
-                    eris_OVoo[k0:k1, :, :, :],
-                )
-                * 2
+            w_blk = _w_einsum(
+                "mjac,kbim->ijkabc",
+                t2ab[:, :, :, c0:c1],
+                eris_OVoo[k0:k1, :, :, :],
+                out=w_blk, scale=2,
             )
-            w_blk += parallel_einsum(
+            w_blk = _w_einsum(
                 "jmcb,iakm->ijkabc",
                 t2bb[:, :, c0:c1, :],
                 eris_ovOO[:, :, k0:k1, :],
+                out=w_blk,
             )
-            time3 = log.timer_debug1(block_label + " remaining w contractions", *time3)
-            rw = w_blk / d3
-            time3 = log.timer_debug1(block_label + " rw division", *time3)
+            rw = _mixed_spin_divide(
+                w_blk, None, eia[:, :], eIA[:, :], eIA[k0:k1, c0:c1]
+            )
             gVO += parallel_einsum("ikac,ijkabc->bj", t2ab[:, k0:k1, :, c0:c1], rw) * 0.5
             gvo += parallel_einsum("jkbc,ijkabc->ai", t2bb[:, k0:k1, :, c0:c1], rw) * 0.125
-            log.timer_debug1(block_label + " density updates", *time3)
 
-    time1 = logger.process_clock(), logger.perf_counter()
     doo, dOO = d1[0]
     dov, dOV = d1[1]
     dvo, dVO = d1[2]
@@ -1728,8 +1402,6 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     dvo += gvo
     dVO += gVO
 
-    log.timer_debug1("uccsd_t gamma1 finalization", *time1)
-    log.timer_debug1("uccsd_t gamma1 total", *time0)
     return d1, (goo, gOO, gvv, gVV)
 
 

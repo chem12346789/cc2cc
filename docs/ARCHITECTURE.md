@@ -129,10 +129,32 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   use fused Numba kernels, avoiding full-size accumulation temporaries and
   denominator arrays. Kernels preserve accumulation order without fast math,
   use the smaller of the active Numba and PySCF thread counts, and restore the
-  caller's Numba thread mask. First-use DEBUG1 timings include JIT compilation;
+  caller's Numba thread mask. First-use execution includes JIT compilation;
   performance comparisons should use warmed kernels. The 1-RDM combined
   amplitudes use addition/division without the 2-RDM's symmetry operation.
-  Mixed-spin kernels and block-size selection are unchanged.
+  Mixed-spin outer-product chains also use fused kernels, including in-place
+  accumulation through permuted output views. Mixed-spin division computes
+  denominators and numerator combinations in parallel without full-size
+  denominator or numerator temporaries. It preserves the 1-RDM's plain sum,
+  the lambda/2-RDM's doubled-W sum, and left-to-right energy addition.
+  Output traversal follows W's strides; downstream reduction layout can cause
+  roundoff-level differences. The 1-RDM's pre-/post-W-update divisions remain
+  separate. Reduction contractions and block-size selection are unchanged.
+  Restricted 1-/2-RDM triples updates fuse the six disconnected outer products,
+  W/V division, and their combination in one parallel Numba pass over each
+  active block. Both virtual-blocked and occupied-blocked 1-RDM passes retain
+  their original coefficients and addition order. W accumulation reuses the
+  shared parallel update kernel; BLAS reductions, PySCF's compiled triples
+  symmetry routine, and block-size selection remain unchanged. No full-size
+  denominator or disconnected outer-product temporaries are allocated.
+  `W` updates retain BLAS contractions and use a cached parallel Numba
+  kernel for in-place accumulation, fusing scaling when present without a
+  scaled temporary. Traversal follows the destination strides without copying
+  operands; multiplication precedes addition/subtraction without fast math.
+  The caller's Numba thread mask is restored, and the active Numba/PySCF
+  minimum limits parallelism. Initial terms without an accumulation destination
+  retain out-of-place scaling. Per-term and stage profiling instrumentation is
+  removed; standard PySCF solver timing and block-size diagnostics remain.
   The triples debug `max_memory` value is the configured budget minus RSS sampled
   before the passes, not peak usage or system-free RAM. This budget guides block
   sizing rather than reserving memory; orbital dimensions and block-splitting

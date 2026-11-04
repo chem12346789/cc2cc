@@ -20,7 +20,7 @@ MAX_CYCLE = 200000
 RHO_REL_TOL = 1e-2
 I_VALUE_REL_TOL = 1e-4
 I_VALUE_ABS_TOL = 1e-10
-DIIS_SPACE = 128
+DIIS_SPACE = 256
 
 
 def get_zmp(
@@ -79,18 +79,6 @@ def get_zmp(
         zmp_i_value = diff_I_value(mol, dm, dm_tar, grids)
         zmp_dipole = mzmp.dip_moment(mol=mol, dm=dm, unit="A.U.")
         zmp_difference_dipole = np.linalg.norm(zmp_dipole - tar_dipole)
-        print(
-            f"ZMP, rho diff = {zmp_difference:.3e} electrons "
-            f"I value = {zmp_i_value:.3e} (dimensionless) "
-            f"dipole diff = {zmp_difference_dipole:.3e} A.U. ",
-            flush=True,
-        )
-        print(
-            f"DFT, rho diff = {dft_difference:.3e} electrons "
-            f"I value = {dft_i_value:.3e} (dimensionless) "
-            f"dipole diff = {dft_difference_dipole:.3e} A.U. ",
-            flush=True,
-        )
         if best_difference is None or zmp_difference < best_difference:
             best_difference = zmp_difference
         elif zmp_difference > best_difference * 10:
