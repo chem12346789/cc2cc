@@ -124,12 +124,19 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   amplitudes/lambda `1e-10`, and CC/lambda iteration limits of 200.
   Unrestricted lambda intermediates reuse repeated contractions without
   reordering the numerical updates, releasing reused results within each block.
+  Same-spin lambda and unrestricted 1-/2-RDM outer products and triples
+  symmetry/denominator operations
+  use fused Numba kernels, avoiding full-size accumulation temporaries and
+  denominator arrays. Kernels preserve accumulation order without fast math,
+  use the smaller of the active Numba and PySCF thread counts, and restore the
+  caller's Numba thread mask. First-use DEBUG1 timings include JIT compilation;
+  performance comparisons should use warmed kernels. The 1-RDM combined
+  amplitudes use addition/division without the 2-RDM's symmetry operation.
+  Mixed-spin kernels and block-size selection are unchanged.
   The triples debug `max_memory` value is the configured budget minus RSS sampled
   before the passes, not peak usage or system-free RAM. This budget guides block
-  sizing rather than reserving memory. Unrestricted triples lambda and density
-  blocks use the memory-derived size capped by the relevant orbital dimensions,
-  with a minimum size of one; unequal spin dimensions do not force half-size
-  blocks. Restricted triples routines retain their block-splitting heuristics.
+  sizing rather than reserving memory; orbital dimensions and block-splitting
+  heuristics also limit block sizes.
 - `DataBase.py`, `TestDataDFT.py`, `DataRecord.py`, `ModelClass.py`: data
   loading, record keeping, model init, checkpoints, losses
   - Both generators save `coords` in Bohr aligned with their `weights` and

@@ -17,8 +17,8 @@ from cc2cc.utils.tensor_helper import parallel_einsum
 
 LEVEL_SHIFT = 1.5
 MAX_CYCLE = 200000
-RHO_REL_TOL = 1e-1
-I_VALUE_REL_TOL = 1e-3
+RHO_REL_TOL = 1e-2
+I_VALUE_REL_TOL = 1e-4
 DIIS_SPACE = 64
 
 

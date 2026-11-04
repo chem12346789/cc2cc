@@ -1,10 +1,87 @@
 import numpy
+from numba import get_num_threads, njit, prange, set_num_threads
 from pyscf import lib
 from pyscf.lib import logger
 from pyscf.cc import ccsd_lambda
 from pyscf.cc import uccsd_lambda
 
 from cc2cc.utils.tensor_helper import parallel_einsum
+
+
+@njit(parallel=True, cache=True)
+def _same_spin_v(ovov, t1, t2, fvo, b0, b1, c0, c1):
+    nocc, nvir = t1.shape
+    nb, nc = b1 - b0, c1 - c0
+    # Match the ij-a / k-c-b GEMM layout of the connected triples tensor.
+    out = numpy.empty((nocc, nc, nb, nocc, nocc, nvir), dtype=t1.dtype)
+    for row in prange(nocc * nc * nb):
+        b = row % nb
+        c = (row // nb) % nc
+        k = row // (nb * nc)
+        B, C = b0 + b, c0 + c
+        for i in range(nocc):
+            for j in range(nocc):
+                for a in range(nvir):
+                    value = ovov[j, B, k, C] * t1[i, a]
+                    value += ovov[i, a, j, B] * t1[k, C]
+                    value += ovov[k, C, i, a] * t1[j, B]
+                    value += ovov[k, C, j, B] * t1[i, a]
+                    value += ovov[j, B, i, a] * t1[k, C]
+                    value += ovov[i, a, k, C] * t1[j, B]
+                    value += (t2[j, k, B, C] * fvo[a, i]) * 0.5
+                    value += (t2[i, j, a, B] * fvo[C, k]) * 0.5
+                    value += (t2[k, i, C, a] * fvo[B, j]) * 0.5
+                    value += (t2[k, j, C, B] * fvo[a, i]) * 0.5
+                    value += (t2[j, i, B, a] * fvo[C, k]) * 0.5
+                    value += (t2[i, k, a, C] * fvo[B, j]) * 0.5
+                    out[k, c, b, i, j, a] = value
+    return out.transpose(3, 4, 0, 5, 2, 1)
+
+
+@njit(parallel=True, cache=True, error_model="numpy")
+def _same_spin_r6_divide(w, v, eia, b0, c0, symmetrize=True):
+    nocc, _, _, nvir, nb, nc = w.shape
+    out = numpy.empty((nocc, nc, nb, nocc, nocc, nvir), dtype=w.dtype)
+    for row in prange(nocc * nc * nb):
+        b = row % nb
+        c = (row // nb) % nc
+        k = row // (nb * nc)
+        for i in range(nocc):
+            for j in range(nocc):
+                for a in range(nvir):
+                    if v is not None and not symmetrize:
+                        denominator = (eia[i, a] + eia[j, b0 + b]) + eia[k, c0 + c]
+                        out[k, c, b, i, j, a] = (
+                            w[i, j, k, a, b, c] + v[i, j, k, a, b, c]
+                        ) / denominator
+                        continue
+                    x0 = w[i, j, k, a, b, c]
+                    x1 = w[j, k, i, a, b, c]
+                    x2 = w[k, i, j, a, b, c]
+                    x3 = w[k, j, i, a, b, c]
+                    x4 = w[i, k, j, a, b, c]
+                    x5 = w[j, i, k, a, b, c]
+                    if v is not None:
+                        x0 = x0 * 2 + v[i, j, k, a, b, c]
+                        x1 = x1 * 2 + v[j, k, i, a, b, c]
+                        x2 = x2 * 2 + v[k, i, j, a, b, c]
+                        x3 = x3 * 2 + v[k, j, i, a, b, c]
+                        x4 = x4 * 2 + v[i, k, j, a, b, c]
+                        x5 = x5 * 2 + v[j, i, k, a, b, c]
+                    denominator = (eia[i, a] + eia[j, b0 + b]) + eia[k, c0 + c]
+                    out[k, c, b, i, j, a] = (
+                        x0 + x1 + x2 - x3 - x4 - x5
+                    ) / denominator
+    return out.transpose(3, 4, 0, 5, 2, 1)
+
+
+def _run_fused(kernel, *args):
+    threads = get_num_threads()
+    set_num_threads(min(threads, lib.num_threads()))
+    try:
+        return kernel(*args)
+    finally:
+        set_num_threads(threads)
 
 
 def p6(t):
@@ -62,8 +139,11 @@ def kernel(
 
 
 def make_intermediates(mycc, t1, t2, eris):
+    """Build unrestricted lambda intermediates with DEBUG1 CPU/wall stage timers."""
     log = logger.Logger(mycc.stdout, mycc.verbose)
+    time0 = time1 = logger.process_clock(), logger.perf_counter()
     imds = uccsd_lambda.make_intermediates(mycc, t1, t2, eris)
+    time1 = log.timer_debug1("uccsd_t lambda CCSD intermediates", *time1)
 
     t1a, t1b = t1
     t2aa, t2ab, t2bb = t2
@@ -87,7 +167,9 @@ def make_intermediates(mycc, t1, t2, eris):
     eIA = mo_eb[:noccb, None] - mo_eb[noccb:]
     fvo = eris.focka[nocca:, :nocca]
     fVO = eris.fockb[noccb:, :noccb]
+    time1 = log.timer_debug1("uccsd_t lambda integral preparation", *time1)
 
+    sector_time = logger.process_clock(), logger.perf_counter()
     l1a_t = numpy.zeros((nocca, nvira))
     l2aa_t = numpy.zeros((nocca, nocca, nvira, nvira))
 
@@ -97,7 +179,9 @@ def make_intermediates(mycc, t1, t2, eris):
     blksize = min(
         nvira, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**3 * nvira)) ** (1 / 2))
     )
-    blksize = max(blksize, 1)
+    if blksize < nvira:
+        blksize = min(blksize, (nvira + 1) // 2)
+        blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 1 rdm make_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -109,6 +193,8 @@ def make_intermediates(mycc, t1, t2, eris):
     time2 = logger.process_clock(), logger.perf_counter()
     for b0, b1 in lib.prange(0, nvira, blksize):
         for c0, c1 in lib.prange(0, nvira, blksize):
+            block_label = f"uccsd_t lambda aaa b[{b0}:{b1}] c[{c0}:{c1}]"
+            time3 = logger.process_clock(), logger.perf_counter()
             w_blk = parallel_einsum(
                 "ijae,kceb->ijkabc",
                 t2aa[:, :, :, :],
@@ -139,6 +225,7 @@ def make_intermediates(mycc, t1, t2, eris):
                 t2aa[:, :, b0:b1, :],
                 eris_ovvv[:, c0:c1, :, :],
             )
+            time3 = log.timer_debug1(block_label + " w ovvv contractions", *time3)
             w_blk -= parallel_einsum(
                 "mkbc,iajm->ijkabc",
                 t2aa[:, :, b0:b1, c0:c1],
@@ -169,96 +256,22 @@ def make_intermediates(mycc, t1, t2, eris):
                 t2aa[:, :, :, c0:c1],
                 eris_ovoo[:, b0:b1, :, :],
             )
-            v_blk = parallel_einsum(
-                "jbkc,ia->ijkabc",
-                eris_ovov[:, b0:b1, :, c0:c1],
-                t1a[:, :],
-            )
-            v_blk += parallel_einsum(
-                "iajb,kc->ijkabc",
-                eris_ovov[:, :, :, b0:b1],
-                t1a[:, c0:c1],
-            )
-            v_blk += parallel_einsum(
-                "kcia,jb->ijkabc",
-                eris_ovov[:, c0:c1, :, :],
-                t1a[:, b0:b1],
-            )
-            v_blk += parallel_einsum(
-                "kcjb,ia->ijkabc",
-                eris_ovov[:, c0:c1, :, b0:b1],
-                t1a[:, :],
-            )
-            v_blk += parallel_einsum(
-                "jbia,kc->ijkabc",
-                eris_ovov[:, b0:b1, :, :],
-                t1a[:, c0:c1],
-            )
-            v_blk += parallel_einsum(
-                "iakc,jb->ijkabc",
-                eris_ovov[:, :, :, c0:c1],
-                t1a[:, b0:b1],
-            )
-            v_blk += (
-                parallel_einsum(
-                    "jkbc,ai->ijkabc",
-                    t2aa[:, :, b0:b1, c0:c1],
-                    fvo[:, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "ijab,ck->ijkabc",
-                    t2aa[:, :, :, b0:b1],
-                    fvo[c0:c1, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "kica,bj->ijkabc",
-                    t2aa[:, :, c0:c1, :],
-                    fvo[b0:b1, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "kjcb,ai->ijkabc",
-                    t2aa[:, :, c0:c1, b0:b1],
-                    fvo[:, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "jiba,ck->ijkabc",
-                    t2aa[:, :, b0:b1, :],
-                    fvo[c0:c1, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "ikac,bj->ijkabc",
-                    t2aa[:, :, :, c0:c1],
-                    fvo[b0:b1, :],
-                )
-                * 0.5
+            time3 = log.timer_debug1(block_label + " w ovoo contractions", *time3)
+            v_blk = _run_fused(
+                _same_spin_v, eris_ovov, t1a, t2aa, fvo, b0, b1, c0, c1
             )
 
-            d3 = lib.direct_sum(
-                "ia+jb+kc->ijkabc", eia[:, :], eia[:, b0:b1], eia[:, c0:c1]
-            )
-
-            rw = r6(w_blk) / d3
+            time3 = log.timer_debug1(block_label + " v contractions", *time3)
+            rw = _run_fused(_same_spin_r6_divide, w_blk, None, eia, b0, c0)
+            time3 = log.timer_debug1(block_label + " denominator and rw symmetry", *time3)
             l1a_t += parallel_einsum(
                 "ijkabc,jbkc->ia",
                 rw.conj(),
                 eris_ovov[:, b0:b1, :, c0:c1],
             )
-            wvd = r6(w_blk * 2 + v_blk) / d3
+            time3 = log.timer_debug1(block_label + " l1 update", *time3)
+            wvd = _run_fused(_same_spin_r6_divide, w_blk, v_blk, eia, b0, c0)
+            time3 = log.timer_debug1(block_label + " wvd symmetry and division", *time3)
             l2vv = parallel_einsum(
                 "ijkabc,kceb->ijae", wvd, eris_ovvv.conj()[:, c0:c1, :, b0:b1]
             )
@@ -272,20 +285,25 @@ def make_intermediates(mycc, t1, t2, eris):
             del l2vv, l2oo
 
             l2aa_t[:, :, b0:b1, c0:c1] += parallel_einsum("ijkabc,ai->jkbc", rw, fvo)
+            log.timer_debug1(block_label + " l2aa update", *time3)
         time2 = log.timer_debug1(
             "uccsd_t rdm make_intermediates pass1 [%d:%d]" % (b0, b1), *time2
         )
     imds.l1a_t = l1a_t / eia * 0.25
     imds.l2aa_t = l2aa_t.conj() / lib.direct_sum("ia+jb->ijab", eia, eia) * 0.5
+    log.timer_debug1("uccsd_t lambda aaa total", *sector_time)
 
     # bbb
+    sector_time = logger.process_clock(), logger.perf_counter()
     l1b_t = numpy.zeros((noccb, nvirb))
     l2bb_t = numpy.zeros((noccb, noccb, nvirb, nvirb))
 
     blksize = min(
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**3 * nvirb)) ** (1 / 2))
     )
-    blksize = max(blksize, 1)
+    if blksize < nvirb:
+        blksize = min(blksize, (nvirb + 1) // 2)
+        blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 2 rdm make_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -296,6 +314,8 @@ def make_intermediates(mycc, t1, t2, eris):
     time2 = logger.process_clock(), logger.perf_counter()
     for b0, b1 in lib.prange(0, nvirb, blksize):
         for c0, c1 in lib.prange(0, nvirb, blksize):
+            block_label = f"uccsd_t lambda bbb b[{b0}:{b1}] c[{c0}:{c1}]"
+            time3 = logger.process_clock(), logger.perf_counter()
             w_blk = parallel_einsum(
                 "ijae,kceb->ijkabc",
                 t2bb[:, :, :, :],
@@ -326,6 +346,7 @@ def make_intermediates(mycc, t1, t2, eris):
                 t2bb[:, :, b0:b1, :],
                 eris_OVVV[:, c0:c1, :, :],
             )
+            time3 = log.timer_debug1(block_label + " w ovvv contractions", *time3)
             w_blk -= parallel_einsum(
                 "imab,kcjm->ijkabc",
                 t2bb[:, :, :, b0:b1],
@@ -356,96 +377,22 @@ def make_intermediates(mycc, t1, t2, eris):
                 t2bb[:, :, b0:b1, :],
                 eris_OVOO[:, c0:c1, :, :],
             )
-            v_blk = parallel_einsum(
-                "jbkc,ia->ijkabc",
-                eris_OVOV[:, b0:b1, :, c0:c1],
-                t1b[:, :],
-            )
-            v_blk += parallel_einsum(
-                "iajb,kc->ijkabc",
-                eris_OVOV[:, :, :, b0:b1],
-                t1b[:, c0:c1],
-            )
-            v_blk += parallel_einsum(
-                "kcia,jb->ijkabc",
-                eris_OVOV[:, c0:c1, :, :],
-                t1b[:, b0:b1],
-            )
-            v_blk += parallel_einsum(
-                "kcjb,ia->ijkabc",
-                eris_OVOV[:, c0:c1, :, b0:b1],
-                t1b[:, :],
-            )
-            v_blk += parallel_einsum(
-                "jbia,kc->ijkabc",
-                eris_OVOV[:, b0:b1, :, :],
-                t1b[:, c0:c1],
-            )
-            v_blk += parallel_einsum(
-                "iakc,jb->ijkabc",
-                eris_OVOV[:, :, :, c0:c1],
-                t1b[:, b0:b1],
-            )
-            v_blk += (
-                parallel_einsum(
-                    "jkbc,ai->ijkabc",
-                    t2bb[:, :, b0:b1, c0:c1],
-                    fVO[:, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "ijab,ck->ijkabc",
-                    t2bb[:, :, :, b0:b1],
-                    fVO[c0:c1, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "kica,bj->ijkabc",
-                    t2bb[:, :, c0:c1, :],
-                    fVO[b0:b1, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "kjcb,ai->ijkabc",
-                    t2bb[:, :, c0:c1, b0:b1],
-                    fVO[:, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "jiba,ck->ijkabc",
-                    t2bb[:, :, b0:b1, :],
-                    fVO[c0:c1, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "ikac,bj->ijkabc",
-                    t2bb[:, :, :, c0:c1],
-                    fVO[b0:b1, :],
-                )
-                * 0.5
+            time3 = log.timer_debug1(block_label + " w ovoo contractions", *time3)
+            v_blk = _run_fused(
+                _same_spin_v, eris_OVOV, t1b, t2bb, fVO, b0, b1, c0, c1
             )
 
-            d3 = lib.direct_sum(
-                "ia+jb+kc->ijkabc", eIA[:, :], eIA[:, b0:b1], eIA[:, c0:c1]
-            )
-
-            rw = r6(w_blk) / d3
+            time3 = log.timer_debug1(block_label + " v contractions", *time3)
+            rw = _run_fused(_same_spin_r6_divide, w_blk, None, eIA, b0, c0)
+            time3 = log.timer_debug1(block_label + " denominator and rw symmetry", *time3)
             l1b_t += parallel_einsum(
                 "ijkabc,jbkc->ia",
                 rw.conj(),
                 eris_OVOV[:, b0:b1, :, c0:c1],
             )
-            wvd = r6(w_blk * 2 + v_blk) / d3
+            time3 = log.timer_debug1(block_label + " l1 update", *time3)
+            wvd = _run_fused(_same_spin_r6_divide, w_blk, v_blk, eIA, b0, c0)
+            time3 = log.timer_debug1(block_label + " wvd symmetry and division", *time3)
             l2vv = parallel_einsum(
                 "ijkabc,kceb->ijae",
                 wvd,
@@ -466,14 +413,17 @@ def make_intermediates(mycc, t1, t2, eris):
                 rw,
                 fVO,
             )
+            log.timer_debug1(block_label + " l2bb update", *time3)
         time2 = log.timer_debug1(
             "uccsd_t rdm make_intermediates pass2 [%d:%d]" % (b0, b1), *time2
         )
 
     imds.l1b_t = l1b_t / eIA * 0.25
     imds.l2bb_t = l2bb_t.conj() / lib.direct_sum("ia+jb->ijab", eIA, eIA) * 0.5
+    log.timer_debug1("uccsd_t lambda bbb total", *sector_time)
 
     # baa
+    sector_time = logger.process_clock(), logger.perf_counter()
     l1a_t = numpy.zeros((nocca, nvira))
     l1b_t = numpy.zeros((noccb, nvirb))
     l2aa_t = numpy.zeros((nocca, nocca, nvira, nvira))
@@ -483,7 +433,9 @@ def make_intermediates(mycc, t1, t2, eris):
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**2 * noccb)) ** (1 / 3))
     )
     blksize = min(nvira, blksize)
-    blksize = max(blksize, 1)
+    if blksize < nvirb:
+        blksize = min(blksize, (nvirb + 1) // 2)
+        blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 2 rdm make_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -495,6 +447,11 @@ def make_intermediates(mycc, t1, t2, eris):
     for a0, a1 in lib.prange(0, nvirb, blksize):
         for b0, b1 in lib.prange(0, nvira, blksize):
             for c0, c1 in lib.prange(0, nvira, blksize):
+                block_label = (
+                    f"uccsd_t lambda baa a[{a0}:{a1}] "
+                    f"b[{b0}:{b1}] c[{c0}:{c1}]"
+                )
+                time3 = logger.process_clock(), logger.perf_counter()
                 w_blk = (
                     parallel_einsum(
                         "jIeA,kceb->IjkAbc",
@@ -537,6 +494,7 @@ def make_intermediates(mycc, t1, t2, eris):
                     t2aa[:, :, b0:b1, c0:c1],
                     eris_OVoo[:, a0:a1, :, :],
                 )
+                time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
                 v_blk = parallel_einsum(
                     "jbkc,IA->IjkAbc",
                     eris_ovov[:, b0:b1, :, c0:c1],
@@ -568,6 +526,7 @@ def make_intermediates(mycc, t1, t2, eris):
                     * 2
                 )
 
+                time3 = log.timer_debug1(block_label + " initial v contractions", *time3)
                 w_blk -= (
                     parallel_einsum(
                         "kIeA,jceb->IjkAbc",
@@ -787,11 +746,13 @@ def make_intermediates(mycc, t1, t2, eris):
                     * 2
                 )
 
+                time3 = log.timer_debug1(block_label + " remaining w/v contractions", *time3)
                 d3 = lib.direct_sum(
                     "IA+jb+kc->IjkAbc", eIA[:, a0:a1], eia[:, b0:b1], eia[:, c0:c1]
                 )
                 rw = w_blk / d3
                 wvd = (w_blk * 2 + v_blk) / d3
+                time3 = log.timer_debug1(block_label + " denominator and division", *time3)
 
                 l1a_t[:, b0:b1] += parallel_einsum(
                     "ijkabc,kcia->jb",
@@ -803,6 +764,7 @@ def make_intermediates(mycc, t1, t2, eris):
                     rw.conj(),
                     eris_ovov[:, b0:b1, :, c0:c1],
                 )
+                time3 = log.timer_debug1(block_label + " l1 updates", *time3)
                 l2vv = parallel_einsum(
                     "ijkabc,iaec->jkbe",
                     wvd,
@@ -824,6 +786,7 @@ def make_intermediates(mycc, t1, t2, eris):
                     fVO[a0:a1, :],
                 )
 
+                time3 = log.timer_debug1(block_label + " l2aa update", *time3)
                 l2ab_t[:, :, :, a0:a1] += parallel_einsum(
                     "ijkabc,kceb->jiea",
                     wvd,
@@ -849,6 +812,7 @@ def make_intermediates(mycc, t1, t2, eris):
                     rw,
                     fvo[b0:b1, :],
                 )
+                log.timer_debug1(block_label + " l2ab update", *time3)
         time2 = log.timer_debug1(
             "uccsd_t rdm make_intermediates pass3 [%d:%d]" % (a0, a1), *time2
         )
@@ -857,8 +821,10 @@ def make_intermediates(mycc, t1, t2, eris):
     imds.l1b_t += l1b_t / eIA * 0.25
     imds.l2aa_t += l2aa_t.conj() / lib.direct_sum("ia+jb->ijab", eia, eia) * 0.5
     imds.l2ab_t = l2ab_t.conj() / lib.direct_sum("ia+jb->ijab", eia, eIA) * 0.5
+    log.timer_debug1("uccsd_t lambda baa total", *sector_time)
 
     # bba
+    sector_time = logger.process_clock(), logger.perf_counter()
     l1a_t = numpy.zeros((nocca, nvira))
     l1b_t = numpy.zeros((noccb, nvirb))
     l2bb_t = numpy.zeros((noccb, noccb, nvirb, nvirb))
@@ -868,7 +834,10 @@ def make_intermediates(mycc, t1, t2, eris):
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**2 * nocca)) ** (1 / 3))
     )
     blksize = min(nvira, blksize)
-    blksize = max(blksize, 1)
+    if blksize < nvira or blksize < nvirb:
+        blksize = min(blksize, (nvira + 1) // 2)
+        blksize = min(blksize, (nvirb + 1) // 2)
+        blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 2 rdm make_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -880,6 +849,11 @@ def make_intermediates(mycc, t1, t2, eris):
     for a0, a1 in lib.prange(0, nvira, blksize):
         for b0, b1 in lib.prange(0, nvirb, blksize):
             for c0, c1 in lib.prange(0, nvirb, blksize):
+                block_label = (
+                    f"uccsd_t lambda bba a[{a0}:{a1}] "
+                    f"b[{b0}:{b1}] c[{c0}:{c1}]"
+                )
+                time3 = logger.process_clock(), logger.perf_counter()
                 w_blk = (
                     parallel_einsum(
                         "ijae,kceb->ijkabc",
@@ -922,6 +896,7 @@ def make_intermediates(mycc, t1, t2, eris):
                     t2bb[:, :, b0:b1, c0:c1],
                     eris_ovOO[:, a0:a1, :, :],
                 )
+                time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
                 v_blk = parallel_einsum(
                     "jbkc,ia->ijkabc",
                     eris_OVOV[:, b0:b1, :, c0:c1],
@@ -952,6 +927,7 @@ def make_intermediates(mycc, t1, t2, eris):
                     * 2
                 )
 
+                time3 = log.timer_debug1(block_label + " initial v contractions", *time3)
                 w_blk -= (
                     parallel_einsum(
                         "ikae,jceb->ijkabc",
@@ -1171,11 +1147,13 @@ def make_intermediates(mycc, t1, t2, eris):
                     * 2
                 )
 
+                time3 = log.timer_debug1(block_label + " remaining w/v contractions", *time3)
                 d3 = lib.direct_sum(
                     "ia+jb+kc->ijkabc", eia[:, a0:a1], eIA[:, b0:b1], eIA[:, c0:c1]
                 )
                 rw = w_blk / d3
                 wvd = (w_blk * 2 + v_blk) / d3
+                time3 = log.timer_debug1(block_label + " denominator and division", *time3)
                 l1a_t[:, a0:a1] += parallel_einsum(
                     "ijkabc,jbkc->ia",
                     rw.conj(),
@@ -1187,6 +1165,7 @@ def make_intermediates(mycc, t1, t2, eris):
                     eris_ovOV[:, a0:a1, :, c0:c1],
                 )
 
+                time3 = log.timer_debug1(block_label + " l1 updates", *time3)
                 l2vv = parallel_einsum(
                     "ijkabc,iaec->jkbe",
                     wvd,
@@ -1208,6 +1187,7 @@ def make_intermediates(mycc, t1, t2, eris):
                     fvo[a0:a1, :],
                 )
 
+                time3 = log.timer_debug1(block_label + " l2bb update", *time3)
                 l2ab_t[:, :, a0:a1, :] += parallel_einsum(
                     "ijkabc,kceb->ijae",
                     wvd,
@@ -1231,6 +1211,7 @@ def make_intermediates(mycc, t1, t2, eris):
                 l2ab_t[:, :, a0:a1, c0:c1] += parallel_einsum(
                     "ijkabc,bj->ikac", rw, fVO[b0:b1, :]
                 )
+                log.timer_debug1(block_label + " l2ab update", *time3)
         time2 = log.timer_debug1(
             "uccsd_t rdm make_intermediates pass4 [%d:%d]" % (a0, a1), *time2
         )
@@ -1240,6 +1221,8 @@ def make_intermediates(mycc, t1, t2, eris):
     imds.l2bb_t += l2bb_t.conj() / lib.direct_sum("ia+jb->ijab", eIA, eIA) * 0.5
     imds.l2ab_t += l2ab_t.conj() / lib.direct_sum("ia+jb->ijab", eia, eIA) * 0.5
 
+    log.timer_debug1("uccsd_t lambda bba total", *sector_time)
+    log.timer_debug1("uccsd_t lambda make_intermediates total", *time0)
     return imds
 
 

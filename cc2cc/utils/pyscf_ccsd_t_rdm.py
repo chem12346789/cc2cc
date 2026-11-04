@@ -26,7 +26,9 @@ from cc2cc.utils.tensor_helper import parallel_einsum
 
 
 def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
+    """Build 1-RDM intermediates with per-block CPU/wall timings at DEBUG1."""
     log = logger.Logger(mycc.stdout, mycc.verbose)
+    time0 = time1 = logger.process_clock(), logger.perf_counter()
 
     if (
         numpy.iscomplexobj(t1)
@@ -40,6 +42,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
         )
 
     doo, dov, dvo, dvv = ccsd_rdm._gamma1_intermediates(mycc, t1, t2, l1, l2)
+    time1 = log.timer_debug1("ccsd_t rdm gamma1 CCSD intermediates", *time1)
 
     if eris is None:
         eris = mycc.ao2mo()
@@ -50,6 +53,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
 
     mo_e = eris.mo_energy
     eia = lib.direct_sum("i-a->ia", mo_e[:nocc], mo_e[nocc:])
+    time1 = log.timer_debug1("ccsd_t rdm gamma1 integral preparation", *time1)
 
     mem_now = lib.current_memory()[0]
     max_memory = max(0, mycc.max_memory - mem_now)
@@ -68,6 +72,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
     goo = numpy.zeros((nocc, nocc), dtype=t1.dtype)
     w_blk = numpy.empty((blksize, blksize, blksize, nocc, nocc, nocc), dtype=t1.dtype)
     v_blk = numpy.empty((blksize, blksize, blksize, nocc, nocc, nocc), dtype=t1.dtype)
+    log.timer_debug1("ccsd_t rdm gamma1 pass1 buffer allocation", *time1)
 
     time2 = logger.process_clock(), logger.perf_counter()
     for a0, a1 in lib.prange(0, nvir, blksize):
@@ -76,6 +81,11 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
             bb = b1 - b0
             for c0, c1 in lib.prange(0, nvir, blksize):
                 bc = c1 - c0
+                block_label = (
+                    f"ccsd_t rdm gamma1 pass1 a[{a0}:{a1}] "
+                    f"b[{b0}:{b1}] c[{c0}:{c1}]"
+                )
+                time3 = logger.process_clock(), logger.perf_counter()
 
                 w_blk[:ba, :bb, :bc] = parallel_einsum(
                     "iafb,kjcf->abcijk",
@@ -107,6 +117,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
                     eris_ovvv[:, c0:c1, :, b0:b1],
                     t2[:, :, a0:a1, :],
                 )
+                time3 = log.timer_debug1(block_label + " w ovvv contractions", *time3)
                 w_blk[:ba, :bb, :bc] -= parallel_einsum(
                     "iajm,mkbc->abcijk",
                     eris_ovoo[:, a0:a1, :, :],
@@ -138,6 +149,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
                     t2[:, :, b0:b1, a0:a1],
                 )
 
+                time3 = log.timer_debug1(block_label + " w ovoo contractions", *time3)
                 v_blk[:ba, :bb, :bc] = parallel_einsum(
                     "iajb,kc->abcijk", eris_ovov[:, a0:a1, :, b0:b1], t1[:, c0:c1]
                 )
@@ -163,6 +175,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
                     t2[:, :, c0:c1, a0:a1],
                 )
 
+                time3 = log.timer_debug1(block_label + " v contractions", *time3)
                 d3_blk = lib.direct_sum(
                     "ia,jb,kc->abcijk", eia[:, a0:a1], eia[:, b0:b1], eia[:, c0:c1]
                 )
@@ -171,12 +184,15 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
 
                 v_blk += w_blk
 
+                time3 = log.timer_debug1(block_label + " denominator and combine", *time3)
                 t3_symm_ip_py(w_blk, blksize**3, nocc, "4-2-211-2", 1.0, 0.0)
+                time3 = log.timer_debug1(block_label + " triples symmetry", *time3)
                 goo[:, :] += parallel_einsum(
                     "abcikl,abcjkl->ij",
                     v_blk[:ba, :bb, :bc, :, :, :],
                     w_blk[:ba, :bb, :bc, :, :, :],
                 )
+                log.timer_debug1(block_label + " goo update", *time3)
 
         time2 = log.timer_debug1(
             "ccsd_t rdm _gamma1_intermediates pass1 [%d:%d]" % (a0, a1), *time2
@@ -185,6 +201,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
     w_blk = None
     v_blk = None
 
+    time1 = logger.process_clock(), logger.perf_counter()
     mem_now = lib.current_memory()[0]
     max_memory = max(0, mycc.max_memory - mem_now)
     blksize = min(nocc, int(((max_memory * 0.9e6 / 8) / 6.0 / (nvir**3)) ** (1 / 3)))
@@ -202,6 +219,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
     gvv = numpy.zeros((nvir, nvir), dtype=t1.dtype)
     w_blk = numpy.empty((blksize, blksize, blksize, nvir, nvir, nvir), dtype=t1.dtype)
     v_blk = numpy.empty((blksize, blksize, blksize, nvir, nvir, nvir), dtype=t1.dtype)
+    log.timer_debug1("ccsd_t rdm gamma1 pass2 buffer allocation", *time1)
 
     time2 = logger.process_clock(), logger.perf_counter()
     for k0, k1 in lib.prange(0, nocc, blksize):
@@ -210,6 +228,11 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
             bj = j1 - j0
             for i0, i1 in lib.prange(0, nocc, blksize):
                 bi = i1 - i0
+                block_label = (
+                    f"ccsd_t rdm gamma1 pass2 i[{i0}:{i1}] "
+                    f"j[{j0}:{j1}] k[{k0}:{k1}]"
+                )
+                time3 = logger.process_clock(), logger.perf_counter()
 
                 w_blk[:bi, :bj, :bk] = parallel_einsum(
                     "iafb,kjcf->ijkabc",
@@ -241,6 +264,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
                     eris_ovvv[k0:k1, :, :, :],
                     t2[i0:i1, j0:j1, :, :],
                 )
+                time3 = log.timer_debug1(block_label + " w ovvv contractions", *time3)
                 w_blk[:bi, :bj, :bk] -= parallel_einsum(
                     "iajm,mkbc->ijkabc",
                     eris_ovoo[i0:i1, :, j0:j1, :],
@@ -272,6 +296,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
                     t2[:, i0:i1, :, :],
                 )
 
+                time3 = log.timer_debug1(block_label + " w ovoo contractions", *time3)
                 v_blk[:bi, :bj, :bk] = parallel_einsum(
                     "iajb,kc->ijkabc", eris_ovov[i0:i1, :, j0:j1, :], t1[k0:k1, :]
                 )
@@ -291,6 +316,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
                     "bj,kica->ijkabc", eris.fock[nocc:, j0:j1], t2[k0:k1, i0:i1, :, :]
                 )
 
+                time3 = log.timer_debug1(block_label + " v contractions", *time3)
                 d3_blk = lib.direct_sum(
                     "ia,jb,kc->ijkabc", eia[i0:i1, :], eia[j0:j1, :], eia[k0:k1, :]
                 )
@@ -299,18 +325,22 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
 
                 v_blk += w_blk
 
+                time3 = log.timer_debug1(block_label + " denominator and combine", *time3)
                 t3_symm_ip_py(w_blk, blksize**3, nvir, "4-2-211-2", 1.0, 0.0)
+                time3 = log.timer_debug1(block_label + " triples symmetry", *time3)
 
                 gvv[:, :] += parallel_einsum(
                     "ijkacd,ijkbcd->ab",
                     v_blk[:bi, :bj, :bk, :, :, :],
                     w_blk[:bi, :bj, :bk, :, :, :],
                 )
+                time3 = log.timer_debug1(block_label + " gvv update", *time3)
                 dvo[:, k0:k1] += 0.5 * parallel_einsum(
                     "ijab,ijkabc->ck",
                     t2[i0:i1, j0:j1, :, :],
                     w_blk[:bi, :bj, :bk, :, :, :],
                 )
+                log.timer_debug1(block_label + " dvo update", *time3)
 
         time2 = log.timer_debug1(
             "ccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (k0, k1), *time2
@@ -333,12 +363,14 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
     #     doo -= goo * 0.5
     #     dvv += gvv * 0.5
 
+    log.timer_debug1("ccsd_t rdm gamma1 total", *time0)
     return (doo, dov, dvo, dvv), goo, gvv
 
 
 def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
-    """intermediates tensors for gamma2 are sorted in Chemist's notation"""
+    """Build Chemist-ordered 2-RDM intermediates; DEBUG1 logs block CPU/wall times."""
     log = logger.Logger(mycc.stdout, mycc.verbose)
+    time0 = time1 = logger.process_clock(), logger.perf_counter()
 
     if (
         numpy.iscomplexobj(t1)
@@ -354,6 +386,7 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
     dovov, dvvvv, doooo, doovv, dovvo, dvvov, dovvv, dooov = (
         ccsd_rdm._gamma2_intermediates(mycc, t1, t2, l1, l2)
     )
+    time1 = log.timer_debug1("ccsd_t rdm gamma2 CCSD intermediates", *time1)
     if eris is None:
         eris = mycc.ao2mo()
 
@@ -364,6 +397,7 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
 
     mo_e = eris.mo_energy
     eia = lib.direct_sum("i-a->ia", mo_e[:nocc], mo_e[nocc:])
+    time1 = log.timer_debug1("ccsd_t rdm gamma2 integral preparation", *time1)
 
     mem_now = lib.current_memory()[0]
     max_memory = max(0, mycc.max_memory - mem_now)
@@ -381,6 +415,7 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
 
     w_blk = numpy.empty((blksize, blksize, blksize, nocc, nocc, nocc), dtype=t1.dtype)
     v_blk = numpy.empty((blksize, blksize, blksize, nocc, nocc, nocc), dtype=t1.dtype)
+    log.timer_debug1("ccsd_t rdm gamma2 buffer allocation", *time1)
 
     time2 = logger.process_clock(), logger.perf_counter()
     for c0, c1 in lib.prange(0, nvir, blksize):
@@ -389,6 +424,11 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
             bb = b1 - b0
             for a0, a1 in lib.prange(0, nvir, blksize):
                 ba = a1 - a0
+                block_label = (
+                    f"ccsd_t rdm gamma2 a[{a0}:{a1}] "
+                    f"b[{b0}:{b1}] c[{c0}:{c1}]"
+                )
+                time3 = logger.process_clock(), logger.perf_counter()
 
                 w_blk[:ba, :bb, :bc] = parallel_einsum(
                     "iafb,kjcf->abcijk",
@@ -420,6 +460,7 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
                     eris_ovvv[:, c0:c1, :, b0:b1],
                     t2[:, :, a0:a1, :],
                 )
+                time3 = log.timer_debug1(block_label + " w ovvv contractions", *time3)
                 w_blk[:ba, :bb, :bc] -= parallel_einsum(
                     "iajm,mkbc->abcijk",
                     eris_ovoo[:, a0:a1, :, :],
@@ -451,6 +492,7 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
                     t2[:, :, b0:b1, a0:a1],
                 )
 
+                time3 = log.timer_debug1(block_label + " w ovoo contractions", *time3)
                 v_blk[:ba, :bb, :bc] = parallel_einsum(
                     "iajb,kc->abcijk", eris_ovov[:, a0:a1, :, b0:b1], t1[:, c0:c1]
                 )
@@ -476,6 +518,7 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
                     t2[:, :, c0:c1, a0:a1],
                 )
 
+                time3 = log.timer_debug1(block_label + " v contractions", *time3)
                 d3_blk = lib.direct_sum(
                     "ia,jb,kc->abcijk", eia[:, a0:a1], eia[:, b0:b1], eia[:, c0:c1]
                 )
@@ -483,22 +526,27 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
                 v_blk[:ba, :bb, :bc] /= d3_blk
 
                 v_blk += 2.0 * w_blk
+                time3 = log.timer_debug1(block_label + " denominator and combine", *time3)
                 t3_symm_ip_py(v_blk, blksize**3, nocc, "4-2-211-2", 1.0, 0.0)
                 t3_symm_ip_py(w_blk, blksize**3, nocc, "4-2-211-2", 0.5, 0.0)
+                time3 = log.timer_debug1(block_label + " triples symmetry", *time3)
 
                 dovov[:, a0:a1, :, b0:b1] += parallel_einsum(
                     "kc,abcijk->iajb", t1[:, c0:c1], w_blk[:ba, :bb, :bc, :, :, :]
                 )
+                time3 = log.timer_debug1(block_label + " dovov update", *time3)
                 dooov[:, :, :, a0:a1] -= parallel_einsum(
                     "mkbc,abcijk->jmia",
                     t2[:, :, b0:b1, c0:c1],
                     v_blk[:ba, :bb, :bc, :, :, :],
                 )
+                time3 = log.timer_debug1(block_label + " dooov update", *time3)
                 dovvv[:, a0:a1, :, b0:b1] += parallel_einsum(
                     "kjcf,abcijk->iafb",
                     t2[:, :, c0:c1, :],
                     v_blk[:ba, :bb, :bc, :, :, :],
                 )
+                log.timer_debug1(block_label + " dovvv update", *time3)
 
         time2 = log.timer_debug1(
             "ccsd_t rdm _gamma2_intermediates [%d:%d]" % (c0, c1), *time2
@@ -507,6 +555,7 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
     w_blk = None
     v_blk = None
 
+    time1 = logger.process_clock(), logger.perf_counter()
     dvvov = dovvv.transpose(2, 3, 0, 1)
 
     if compress_vvvv:
@@ -518,6 +567,8 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
         dvvvv = lib.take_2d(dvvvv.reshape(nvir**2, nvir**2), vidx, vidx)
         dvvvv *= 0.25
 
+    log.timer_debug1("ccsd_t rdm gamma2 finalization", *time1)
+    log.timer_debug1("ccsd_t rdm gamma2 total", *time0)
     return dovov, dvvvv, doooo, doovv, dovvo, dvvov, dovvv, dooov
 
 

@@ -4,11 +4,19 @@ from pyscf.lib import logger
 from pyscf.cc import uccsd_rdm
 
 from cc2cc.utils.tensor_helper import parallel_einsum
+from cc2cc.utils.pyscf_uccsd_t_lambda import (
+    _run_fused,
+    _same_spin_r6_divide,
+    _same_spin_v,
+)
 
 
 def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
+    """Build unrestricted 1-RDM intermediates with DEBUG1 CPU/wall stage timers."""
     log = logger.Logger(mycc.stdout, mycc.verbose)
+    time0 = time1 = logger.process_clock(), logger.perf_counter()
     d1 = uccsd_rdm._gamma1_intermediates(mycc, t1, t2, l1, l2)
+    time1 = log.timer_debug1("uccsd_t gamma1 CCSD intermediates", *time1)
 
     if eris is None:
         eris = mycc.ao2mo()
@@ -33,6 +41,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     eIA = mo_eb[:noccb, None] - mo_eb[noccb:]
     fvo = eris.focka[nocca:, :nocca]
     fVO = eris.fockb[noccb:, :noccb]
+    log.timer_debug1("uccsd_t gamma1 integral preparation", *time1)
 
     goo = numpy.zeros((nocca, nocca), dtype=t1a.dtype)
     gvv = numpy.zeros((nvira, nvira), dtype=t1a.dtype)
@@ -47,7 +56,9 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     blksize = min(
         nvira, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**3 * nvira)) ** (1 / 2))
     )
-    blksize = max(blksize, 1)
+    if blksize < nvira:
+        blksize = min(blksize, (nvira + 1) // 2)
+        blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 1 rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -59,6 +70,8 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     time2 = logger.process_clock(), logger.perf_counter()
     for b0, b1 in lib.prange(0, nvira, blksize):
         for c0, c1 in lib.prange(0, nvira, blksize):
+            block_label = f"uccsd_t gamma1 aaa b[{b0}:{b1}] c[{c0}:{c1}]"
+            time3 = logger.process_clock(), logger.perf_counter()
             w_blk = parallel_einsum(
                 "ijae,kceb->ijkabc",
                 t2aa[:, :, :, :],
@@ -119,94 +132,22 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 t2aa[:, :, :, c0:c1],
                 eris_ovoo[:, b0:b1, :, :],
             )
-            v_blk = parallel_einsum(
-                "jbkc,ia->ijkabc",
-                eris_ovov[:, b0:b1, :, c0:c1],
-                t1a[:, :],
-            )
-            v_blk += parallel_einsum(
-                "iajb,kc->ijkabc",
-                eris_ovov[:, :, :, b0:b1],
-                t1a[:, c0:c1],
-            )
-            v_blk += parallel_einsum(
-                "kcia,jb->ijkabc",
-                eris_ovov[:, c0:c1, :, :],
-                t1a[:, b0:b1],
-            )
-            v_blk += parallel_einsum(
-                "kcjb,ia->ijkabc",
-                eris_ovov[:, c0:c1, :, b0:b1],
-                t1a[:, :],
-            )
-            v_blk += parallel_einsum(
-                "jbia,kc->ijkabc",
-                eris_ovov[:, b0:b1, :, :],
-                t1a[:, c0:c1],
-            )
-            v_blk += parallel_einsum(
-                "iakc,jb->ijkabc",
-                eris_ovov[:, :, :, c0:c1],
-                t1a[:, b0:b1],
-            )
-            v_blk += (
-                parallel_einsum(
-                    "jkbc,ai->ijkabc",
-                    t2aa[:, :, b0:b1, c0:c1],
-                    fvo[:, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "ijab,ck->ijkabc",
-                    t2aa[:, :, :, b0:b1],
-                    fvo[c0:c1, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "kica,bj->ijkabc",
-                    t2aa[:, :, c0:c1, :],
-                    fvo[b0:b1, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "kjcb,ai->ijkabc",
-                    t2aa[:, :, c0:c1, b0:b1],
-                    fvo[:, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "jiba,ck->ijkabc",
-                    t2aa[:, :, b0:b1, :],
-                    fvo[c0:c1, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "ikac,bj->ijkabc",
-                    t2aa[:, :, :, c0:c1],
-                    fvo[b0:b1, :],
-                )
-                * 0.5
+            time3 = log.timer_debug1(block_label + " w contractions", *time3)
+            v_blk = _run_fused(
+                _same_spin_v, eris_ovov, t1a, t2aa, fvo, b0, b1, c0, c1
             )
 
-            d3 = lib.direct_sum(
-                "ia+jb+kc->ijkabc", eia[:, :], eia[:, b0:b1], eia[:, c0:c1]
+            time3 = log.timer_debug1(block_label + " v contractions", *time3)
+            rw = _run_fused(_same_spin_r6_divide, w_blk, None, eia, b0, c0)
+            wvd = _run_fused(
+                _same_spin_r6_divide, w_blk, v_blk, eia, b0, c0, False
             )
-            rw = r6(w_blk) / d3
-            wvd = (w_blk + v_blk) / d3
+            time3 = log.timer_debug1(block_label + " denominator and symmetry/division", *time3)
 
             goo += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.125
             gvv += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.125
             gvo += parallel_einsum("jkbc,ijkabc->ai", t2aa[:, :, b0:b1, c0:c1], rw) * 0.125
+            log.timer_debug1(block_label + " density updates", *time3)
         time2 = log.timer_debug1(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (b0, b1), *time2
         )
@@ -215,7 +156,9 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     blksize = min(
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**3 * nvirb)) ** (1 / 2))
     )
-    blksize = max(blksize, 1)
+    if blksize < nvirb:
+        blksize = min(blksize, (nvirb + 1) // 2)
+        blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 2 rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -226,6 +169,8 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     time2 = logger.process_clock(), logger.perf_counter()
     for b0, b1 in lib.prange(0, nvirb, blksize):
         for c0, c1 in lib.prange(0, nvirb, blksize):
+            block_label = f"uccsd_t gamma1 bbb b[{b0}:{b1}] c[{c0}:{c1}]"
+            time3 = logger.process_clock(), logger.perf_counter()
             w_blk = parallel_einsum(
                 "ijae,kceb->ijkabc",
                 t2bb[:, :, :, :],
@@ -286,94 +231,22 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 t2bb[:, :, b0:b1, :],
                 eris_OVOO[:, c0:c1, :, :],
             )
-            v_blk = parallel_einsum(
-                "jbkc,ia->ijkabc",
-                eris_OVOV[:, b0:b1, :, c0:c1],
-                t1b[:, :],
-            )
-            v_blk += parallel_einsum(
-                "iajb,kc->ijkabc",
-                eris_OVOV[:, :, :, b0:b1],
-                t1b[:, c0:c1],
-            )
-            v_blk += parallel_einsum(
-                "kcia,jb->ijkabc",
-                eris_OVOV[:, c0:c1, :, :],
-                t1b[:, b0:b1],
-            )
-            v_blk += parallel_einsum(
-                "kcjb,ia->ijkabc",
-                eris_OVOV[:, c0:c1, :, b0:b1],
-                t1b[:, :],
-            )
-            v_blk += parallel_einsum(
-                "jbia,kc->ijkabc",
-                eris_OVOV[:, b0:b1, :, :],
-                t1b[:, c0:c1],
-            )
-            v_blk += parallel_einsum(
-                "iakc,jb->ijkabc",
-                eris_OVOV[:, :, :, c0:c1],
-                t1b[:, b0:b1],
-            )
-            v_blk += (
-                parallel_einsum(
-                    "jkbc,ai->ijkabc",
-                    t2bb[:, :, b0:b1, c0:c1],
-                    fVO[:, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "ijab,ck->ijkabc",
-                    t2bb[:, :, :, b0:b1],
-                    fVO[c0:c1, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "kica,bj->ijkabc",
-                    t2bb[:, :, c0:c1, :],
-                    fVO[b0:b1, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "kjcb,ai->ijkabc",
-                    t2bb[:, :, c0:c1, b0:b1],
-                    fVO[:, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "jiba,ck->ijkabc",
-                    t2bb[:, :, b0:b1, :],
-                    fVO[c0:c1, :],
-                )
-                * 0.5
-            )
-            v_blk += (
-                parallel_einsum(
-                    "ikac,bj->ijkabc",
-                    t2bb[:, :, :, c0:c1],
-                    fVO[b0:b1, :],
-                )
-                * 0.5
+            time3 = log.timer_debug1(block_label + " w contractions", *time3)
+            v_blk = _run_fused(
+                _same_spin_v, eris_OVOV, t1b, t2bb, fVO, b0, b1, c0, c1
             )
 
-            d3 = lib.direct_sum(
-                "ia+jb+kc->ijkabc", eIA[:, :], eIA[:, b0:b1], eIA[:, c0:c1]
+            time3 = log.timer_debug1(block_label + " v contractions", *time3)
+            rw = _run_fused(_same_spin_r6_divide, w_blk, None, eIA, b0, c0)
+            wvd = _run_fused(
+                _same_spin_r6_divide, w_blk, v_blk, eIA, b0, c0, False
             )
-            rw = r6(w_blk) / d3
-            wvd = (w_blk + v_blk) / d3
+            time3 = log.timer_debug1(block_label + " denominator and symmetry/division", *time3)
 
             gOO += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.125
             gVV += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.125
             gVO += parallel_einsum("jkbc,ijkabc->ai", t2bb[:, :, b0:b1, c0:c1], rw) * 0.125
+            log.timer_debug1(block_label + " density updates", *time3)
         time2 = log.timer_debug1(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (b0, b1), *time2
         )
@@ -383,7 +256,9 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**2 * noccb)) ** (1 / 3))
     )
     blksize = min(nvira, blksize)
-    blksize = max(blksize, 1)
+    if blksize < nvirb:
+        blksize = min(blksize, (nvirb + 1) // 2)
+        blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 2 rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -395,6 +270,11 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     for a0, a1 in lib.prange(0, nvirb, blksize):
         for b0, b1 in lib.prange(0, nvira, blksize):
             for c0, c1 in lib.prange(0, nvira, blksize):
+                block_label = (
+                    f"uccsd_t gamma1 baa occupied-density a[{a0}:{a1}] "
+                    f"b[{b0}:{b1}] c[{c0}:{c1}]"
+                )
+                time3 = logger.process_clock(), logger.perf_counter()
                 w_blk = (
                     parallel_einsum(
                         "jIeA,kceb->IjkAbc",
@@ -437,6 +317,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     t2aa[:, :, b0:b1, c0:c1],
                     eris_OVoo[:, a0:a1, :, :],
                 )
+                time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
                 v_blk = parallel_einsum(
                     "jbkc,IA->IjkAbc", eris_ovov[:, b0:b1, :, c0:c1], t1b[:, a0:a1]
                 )
@@ -459,10 +340,12 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     * 2
                 )
 
+                time3 = log.timer_debug1(block_label + " v contractions", *time3)
                 d3 = lib.direct_sum(
                     "IA+jb+kc->IjkAbc", eIA[:, a0:a1], eia[:, b0:b1], eia[:, c0:c1]
                 )
                 wvd = (w_blk + v_blk) / d3
+                time3 = log.timer_debug1(block_label + " denominator and wvd division", *time3)
 
                 w_blk -= (
                     parallel_einsum(
@@ -593,10 +476,13 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     eris_OVoo[:, a0:a1, :, :],
                 )
 
+                time3 = log.timer_debug1(block_label + " remaining w contractions", *time3)
                 rw = w_blk / d3
+                time3 = log.timer_debug1(block_label + " rw division", *time3)
                 goo += parallel_einsum("kilabc,kjlabc->ij", wvd, rw) * 0.25
                 goo += parallel_einsum("kliabc,kljabc->ij", wvd, rw) * 0.25
                 gOO += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.25
+                log.timer_debug1(block_label + " density updates", *time3)
         time2 = log.timer_debug1(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (a0, a1), *time2
         )
@@ -605,7 +491,10 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nvira**2 * nvirb)) ** (1 / 3))
     )
     blksize = min(nocca, blksize)
-    blksize = max(blksize, 1)
+    if blksize < nocca or blksize < noccb:
+        blksize = min(blksize, (nocca + 1) // 2)
+        blksize = min(blksize, (noccb + 1) // 2)
+        blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = (%d,%d), (%d,%d)  blksize = %d",
         max_memory,
@@ -619,6 +508,11 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     for i0, i1 in lib.prange(0, noccb, blksize):
         for j0, j1 in lib.prange(0, nocca, blksize):
             for k0, k1 in lib.prange(0, nocca, blksize):
+                block_label = (
+                    f"uccsd_t gamma1 baa virtual-density i[{i0}:{i1}] "
+                    f"j[{j0}:{j1}] k[{k0}:{k1}]"
+                )
+                time3 = logger.process_clock(), logger.perf_counter()
                 w_blk = (
                     parallel_einsum(
                         "jIeA,kceb->IjkAbc",
@@ -661,6 +555,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     t2aa[j0:j1, :, :, :],
                     eris_OVoo[i0:i1, :, k0:k1:, :],
                 )
+                time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
                 v_blk = parallel_einsum(
                     "jbkc,IA->IjkAbc",
                     eris_ovov[j0:j1, :, k0:k1, :],
@@ -692,10 +587,12 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     )
                     * 2
                 )
+                time3 = log.timer_debug1(block_label + " v contractions", *time3)
                 d3 = lib.direct_sum(
                     "IA+jb+kc->IjkAbc", eIA[i0:i1, :], eia[j0:j1, :], eia[k0:k1, :]
                 )
                 wvd = (w_blk + v_blk) / d3
+                time3 = log.timer_debug1(block_label + " denominator and wvd division", *time3)
 
                 w_blk -= (
                     parallel_einsum(
@@ -825,10 +722,13 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     t2aa[j0:j1, :, :, :],
                     eris_OVoo[i0:i1, :, k0:k1:, :],
                 )
+                time3 = log.timer_debug1(block_label + " remaining w contractions", *time3)
                 rw = w_blk / d3
+                time3 = log.timer_debug1(block_label + " rw division", *time3)
                 gvv += parallel_einsum("ijkcad,ijkcbd->ab", wvd, rw) * 0.25
                 gvv += parallel_einsum("ijkcda,ijkcdb->ab", wvd, rw) * 0.25
                 gVV += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.25
+                log.timer_debug1(block_label + " density updates", *time3)
         time2 = log.timer_debug1(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (i0, i1), *time2
         )
@@ -841,7 +741,10 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         ),
     )
     blksize = min(nocca, blksize)
-    blksize = max(blksize, 1)
+    if blksize < noccb or blksize < nocca:
+        blksize = min(blksize, (nocca + 1) // 2)
+        blksize = min(blksize, (noccb + 1) // 2)
+        blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = (%d,%d), (%d,%d)  blksize = %d",
         max_memory,
@@ -854,6 +757,8 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     time2 = logger.process_clock(), logger.perf_counter()
     for c0, c1 in lib.prange(0, nvira, blksize):
         for k0, k1 in lib.prange(0, nocca, blksize):
+            block_label = f"uccsd_t gamma1 baa off-diagonal c[{c0}:{c1}] k[{k0}:{k1}]"
+            time3 = logger.process_clock(), logger.perf_counter()
             w_blk = (
                 parallel_einsum(
                     "jIeA,kceb->IjkAbc",
@@ -896,6 +801,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 t2aa[:, :, :, c0:c1],
                 eris_OVoo[:, :, k0:k1, :],
             )
+            time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
             v_blk = parallel_einsum(
                 "jbkc,IA->IjkAbc",
                 eris_ovov[:, :, k0:k1, c0:c1],
@@ -927,10 +833,12 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 )
                 * 2
             )
+            time3 = log.timer_debug1(block_label + " v contractions", *time3)
             d3 = lib.direct_sum(
                 "IA+jb+kc->IjkAbc", eIA[:, :], eia[:, :], eia[k0:k1, c0:c1]
             )
             wvd = (w_blk + v_blk) / d3
+            time3 = log.timer_debug1(block_label + " denominator and wvd division", *time3)
 
             w_blk -= (
                 parallel_einsum(
@@ -1060,9 +968,12 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 t2aa[:, :, c0:c1, :],
                 eris_OVoo[:, :, k0:k1, :],
             )
+            time3 = log.timer_debug1(block_label + " remaining w contractions", *time3)
             rw = w_blk / d3
+            time3 = log.timer_debug1(block_label + " rw division", *time3)
             gvo += parallel_einsum("kica,ijkabc->bj", t2ab[k0:k1, :, c0:c1, :], rw) * 0.5
             gVO += parallel_einsum("jkbc,ijkabc->ai", t2aa[:, k0:k1, :, c0:c1], rw) * 0.125
+            log.timer_debug1(block_label + " density updates", *time3)
         time2 = log.timer_debug1(
             "uccsd_t rdm _gamma1_intermediates pass2 [%d:%d]" % (c0, c1), *time2
         )
@@ -1072,7 +983,10 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**2 * nocca)) ** (1 / 3))
     )
     blksize = min(nvira, blksize)
-    blksize = max(blksize, 1)
+    if blksize < nvira or blksize < nvirb:
+        blksize = min(blksize, (nvira + 1) // 2)
+        blksize = min(blksize, (nvirb + 1) // 2)
+        blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t spin 2 rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
@@ -1084,6 +998,11 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     for a0, a1 in lib.prange(0, nvira, blksize):
         for b0, b1 in lib.prange(0, nvirb, blksize):
             for c0, c1 in lib.prange(0, nvirb, blksize):
+                block_label = (
+                    f"uccsd_t gamma1 bba occupied-density a[{a0}:{a1}] "
+                    f"b[{b0}:{b1}] c[{c0}:{c1}]"
+                )
+                time3 = logger.process_clock(), logger.perf_counter()
                 w_blk = (
                     parallel_einsum(
                         "ijae,kceb->ijkabc",
@@ -1126,6 +1045,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     t2bb[:, :, b0:b1, c0:c1],
                     eris_ovOO[:, a0:a1, :, :],
                 )
+                time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
                 v_blk = parallel_einsum(
                     "jbkc,ia->ijkabc",
                     eris_OVOV[:, b0:b1, :, c0:c1],
@@ -1157,10 +1077,12 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     )
                     * 2
                 )
+                time3 = log.timer_debug1(block_label + " v contractions", *time3)
                 d3 = lib.direct_sum(
                     "ia+jb+kc->ijkabc", eia[:, a0:a1], eIA[:, b0:b1], eIA[:, c0:c1]
                 )
                 wvd = (w_blk + v_blk) / d3
+                time3 = log.timer_debug1(block_label + " denominator and wvd division", *time3)
 
                 w_blk -= (
                     parallel_einsum(
@@ -1290,10 +1212,13 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     t2bb[:, :, c0:c1, b0:b1],
                     eris_ovOO[:, a0:a1, :, :],
                 )
+                time3 = log.timer_debug1(block_label + " remaining w contractions", *time3)
                 rw = w_blk / d3
+                time3 = log.timer_debug1(block_label + " rw division", *time3)
                 goo += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.25
                 gOO += parallel_einsum("kilabc,kjlabc->ij", wvd, rw) * 0.25
                 gOO += parallel_einsum("kliabc,kljabc->ij", wvd, rw) * 0.25
+                log.timer_debug1(block_label + " density updates", *time3)
         time2 = log.timer_debug1(
             "uccsd_t spin 2 rdm _gamma1_intermediates pass2 [%d:%d]" % (a0, a1), *time2
         )
@@ -1302,7 +1227,10 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nvirb**2 * nvira)) ** (1 / 3))
     )
     blksize = min(nocca, blksize)
-    blksize = max(blksize, 1)
+    if blksize < nocca or blksize < noccb:
+        blksize = min(blksize, (nocca + 1) // 2)
+        blksize = min(blksize, (noccb + 1) // 2)
+        blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = (%d,%d), (%d,%d)  blksize = %d",
         max_memory,
@@ -1316,6 +1244,11 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     for i0, i1 in lib.prange(0, nocca, blksize):
         for j0, j1 in lib.prange(0, noccb, blksize):
             for k0, k1 in lib.prange(0, noccb, blksize):
+                block_label = (
+                    f"uccsd_t gamma1 bba virtual-density i[{i0}:{i1}] "
+                    f"j[{j0}:{j1}] k[{k0}:{k1}]"
+                )
+                time3 = logger.process_clock(), logger.perf_counter()
                 w_blk = (
                     parallel_einsum(
                         "ijae,kceb->ijkabc",
@@ -1358,6 +1291,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     t2bb[j0:j1, :, :, :],
                     eris_ovOO[i0:i1, :, k0:k1, :],
                 )
+                time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
                 v_blk = parallel_einsum(
                     "jbkc,ia->ijkabc",
                     eris_OVOV[j0:j1, :, k0:k1, :],
@@ -1389,10 +1323,12 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     )
                     * 2
                 )
+                time3 = log.timer_debug1(block_label + " v contractions", *time3)
                 d3 = lib.direct_sum(
                     "ia+jb+kc->ijkabc", eia[i0:i1, :], eIA[j0:j1, :], eIA[k0:k1, :]
                 )
                 wvd = (w_blk + v_blk) / d3
+                time3 = log.timer_debug1(block_label + " denominator and wvd division", *time3)
 
                 w_blk -= (
                     parallel_einsum(
@@ -1522,10 +1458,13 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                     t2bb[j0:j1, :, :, :],
                     eris_ovOO[i0:i1, :, k0:k1, :],
                 )
+                time3 = log.timer_debug1(block_label + " remaining w contractions", *time3)
                 rw = w_blk / d3
+                time3 = log.timer_debug1(block_label + " rw division", *time3)
                 gvv += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.25
                 gVV += parallel_einsum("ijkcad,ijkcbd->ab", wvd, rw) * 0.25
                 gVV += parallel_einsum("ijkcda,ijkcdb->ab", wvd, rw) * 0.25
+                log.timer_debug1(block_label + " density updates", *time3)
 
     blksize = min(
         noccb,
@@ -1535,7 +1474,10 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         ),
     )
     blksize = min(nocca, blksize)
-    blksize = max(blksize, 1)
+    if blksize < noccb or blksize < nocca:
+        blksize = min(blksize, (nocca + 1) // 2)
+        blksize = min(blksize, (noccb + 1) // 2)
+        blksize = max(blksize, 1)
     log.debug1(
         "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = (%d,%d), (%d,%d)  blksize = %d",
         max_memory,
@@ -1548,6 +1490,8 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     time2 = logger.process_clock(), logger.perf_counter()
     for c0, c1 in lib.prange(0, nvirb, blksize):
         for k0, k1 in lib.prange(0, noccb, blksize):
+            block_label = f"uccsd_t gamma1 bba off-diagonal c[{c0}:{c1}] k[{k0}:{k1}]"
+            time3 = logger.process_clock(), logger.perf_counter()
             w_blk = (
                 parallel_einsum(
                     "ijae,kceb->ijkabc",
@@ -1590,6 +1534,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 t2bb[:, :, :, c0:c1],
                 eris_ovOO[:, :, k0:k1, :],
             )
+            time3 = log.timer_debug1(block_label + " initial w contractions", *time3)
             v_blk = parallel_einsum(
                 "jbkc,ia->ijkabc",
                 eris_OVOV[:, :, k0:k1, c0:c1],
@@ -1621,10 +1566,12 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 )
                 * 2
             )
+            time3 = log.timer_debug1(block_label + " v contractions", *time3)
             d3 = lib.direct_sum(
                 "ia+jb+kc->ijkabc", eia[:, :], eIA[:, :], eIA[k0:k1, c0:c1]
             )
             wvd = (w_blk + v_blk) / d3
+            time3 = log.timer_debug1(block_label + " denominator and wvd division", *time3)
 
             w_blk -= (
                 parallel_einsum(
@@ -1754,10 +1701,14 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 t2bb[:, :, c0:c1, :],
                 eris_ovOO[:, :, k0:k1, :],
             )
+            time3 = log.timer_debug1(block_label + " remaining w contractions", *time3)
             rw = w_blk / d3
+            time3 = log.timer_debug1(block_label + " rw division", *time3)
             gVO += parallel_einsum("ikac,ijkabc->bj", t2ab[:, k0:k1, :, c0:c1], rw) * 0.5
             gvo += parallel_einsum("jkbc,ijkabc->ai", t2bb[:, k0:k1, :, c0:c1], rw) * 0.125
+            log.timer_debug1(block_label + " density updates", *time3)
 
+    time1 = logger.process_clock(), logger.perf_counter()
     doo, dOO = d1[0]
     dov, dOV = d1[1]
     dvo, dVO = d1[2]
@@ -1777,6 +1728,8 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     dvo += gvo
     dVO += gVO
 
+    log.timer_debug1("uccsd_t gamma1 finalization", *time1)
+    log.timer_debug1("uccsd_t gamma1 total", *time0)
     return d1, (goo, gOO, gvv, gVV)
 
 
