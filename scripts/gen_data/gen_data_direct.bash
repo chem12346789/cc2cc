@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --array=[0]%1
+#SBATCH --array=[0-3]%4
 # CLUSTER-ONLY: This script is configured for this cluster; do not run it elsewhere.
 
 if [[ "$(hostname)" == "user-MZ73-LM1-000" ]]; then
@@ -31,7 +31,7 @@ export DFT2CC_CUBE_USE=3
 export PYSCF_TMPDIR=~/raid/tmp
 
 # Resource limits
-export NUMBER_OF_THREADS=32
+export NUMBER_OF_THREADS=16
 export PYSCF_MAX_MEMORY=120000
 export OMP_NUM_THREADS=${NUMBER_OF_THREADS}
 export MKL_NUM_THREADS=${NUMBER_OF_THREADS}
