@@ -26,7 +26,7 @@ def parallel_einsum(subscripts, *tensors):
     return expression(*tensors, backend="numpy")
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=False)
 def _accumulate_w(out, source, scale, subtract):
     n0, n1, n2, n3, n4, n5 = out.shape
     for row in prange(n0 * n1 * n2):

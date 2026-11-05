@@ -8,7 +8,20 @@ from pyscf.cc import uccsd_lambda
 from cc2cc.utils.tensor_helper import parallel_einsum, _w_einsum
 
 
-@njit(parallel=True, cache=True)
+def _triples_block_size(max_memory, extent, denominator, exponent):
+    """Keep the loop step positive when a spin sector is empty."""
+    if not denominator:
+        return 1
+    return max(
+        1,
+        min(
+            extent,
+            int(((max_memory * 0.9e6 / 8) / 6.0 / denominator) ** exponent),
+        ),
+    )
+
+
+@njit(parallel=True, cache=False)
 def _same_spin_v(ovov, t1, t2, fvo, b0, b1, c0, c1):
     nocc, nvir = t1.shape
     nb, nc = b1 - b0, c1 - c0
@@ -38,7 +51,7 @@ def _same_spin_v(ovov, t1, t2, fvo, b0, b1, c0, c1):
     return out.transpose(3, 4, 0, 5, 2, 1)
 
 
-@njit(parallel=True, cache=True, error_model="numpy")
+@njit(parallel=True, cache=False, error_model="numpy")
 def _same_spin_r6_divide(w, v, eia, b0, c0, symmetrize=True):
     nocc, _, _, nvir, nb, nc = w.shape
     out = numpy.empty((nocc, nc, nb, nocc, nocc, nvir), dtype=w.dtype)
@@ -75,7 +88,7 @@ def _same_spin_r6_divide(w, v, eia, b0, c0, symmetrize=True):
     return out.transpose(3, 4, 0, 5, 2, 1)
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=False)
 def _mixed_spin_v(
     ovov, t1, ovOV, t1_same, t2_same, f_other, t2_mixed, f_same,
     out=None, subtract=False,
@@ -121,7 +134,7 @@ def _mixed_spin_v(
     return out
 
 
-@njit(parallel=True, cache=True, error_model="numpy")
+@njit(parallel=True, cache=False, error_model="numpy")
 def _mixed_spin_divide_kernel(w, v, e0, e1, e2, inverse, factor):
     out = numpy.empty_like(w)
     n0, n1, n2, n3, n4, n5 = w.shape
@@ -229,6 +242,10 @@ def make_intermediates(mycc, t1, t2, eris):
     t2aa, t2ab, t2bb = t2
     nocca, noccb, nvira, nvirb = t2ab.shape
     nocca, noccb = t2ab.shape[:2]
+
+    has_alpha = nocca > 0 and nvira > 0
+    has_beta = noccb > 0 and nvirb > 0
+    has_mixed = has_alpha and has_beta
     mo_ea, mo_eb = eris.mo_energy
 
     eris_ovvv = numpy.asarray(eris.get_ovvv())
@@ -254,8 +271,8 @@ def make_intermediates(mycc, t1, t2, eris):
     # aaa
     mem_now = lib.current_memory()[0]
     max_memory = max(0, mycc.max_memory - mem_now)
-    blksize = min(
-        nvira, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**3 * nvira)) ** (1 / 2))
+    blksize = _triples_block_size(
+        max_memory, nvira, nocca**3 * nvira, 1 / 2
     )
     if blksize < nvira:
         blksize = min(blksize, (nvira + 1) // 2)
@@ -268,7 +285,7 @@ def make_intermediates(mycc, t1, t2, eris):
         blksize,
     )
 
-    for b0, b1 in lib.prange(0, nvira, blksize):
+    for b0, b1 in lib.prange(0, nvira if has_alpha else 0, blksize):
         for c0, c1 in lib.prange(0, nvira, blksize):
             w_blk = _w_einsum(
                 "ijae,kceb->ijkabc",
@@ -372,8 +389,8 @@ def make_intermediates(mycc, t1, t2, eris):
     l1b_t = numpy.zeros((noccb, nvirb))
     l2bb_t = numpy.zeros((noccb, noccb, nvirb, nvirb))
 
-    blksize = min(
-        nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**3 * nvirb)) ** (1 / 2))
+    blksize = _triples_block_size(
+        max_memory, nvirb, noccb**3 * nvirb, 1 / 2
     )
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
@@ -385,7 +402,7 @@ def make_intermediates(mycc, t1, t2, eris):
         nvirb,
         blksize,
     )
-    for b0, b1 in lib.prange(0, nvirb, blksize):
+    for b0, b1 in lib.prange(0, nvirb if has_beta else 0, blksize):
         for c0, c1 in lib.prange(0, nvirb, blksize):
             w_blk = _w_einsum(
                 "ijae,kceb->ijkabc",
@@ -499,10 +516,10 @@ def make_intermediates(mycc, t1, t2, eris):
     l2aa_t = numpy.zeros((nocca, nocca, nvira, nvira))
     l2ab_t = numpy.zeros((nocca, noccb, nvira, nvirb))
 
-    blksize = min(
-        nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**2 * noccb)) ** (1 / 3))
+    blksize = _triples_block_size(
+        max_memory, nvirb, nocca**2 * noccb, 1 / 3
     )
-    blksize = min(nvira, blksize)
+    blksize = max(1, min(nvira, blksize))
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
@@ -513,7 +530,7 @@ def make_intermediates(mycc, t1, t2, eris):
         nvirb,
         blksize,
     )
-    for a0, a1 in lib.prange(0, nvirb, blksize):
+    for a0, a1 in lib.prange(0, nvirb if has_mixed else 0, blksize):
         for b0, b1 in lib.prange(0, nvira, blksize):
             for c0, c1 in lib.prange(0, nvira, blksize):
                 w_blk = _w_einsum(
@@ -790,10 +807,10 @@ def make_intermediates(mycc, t1, t2, eris):
     l2bb_t = numpy.zeros((noccb, noccb, nvirb, nvirb))
     l2ab_t = numpy.zeros((nocca, noccb, nvira, nvirb))
 
-    blksize = min(
-        nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**2 * nocca)) ** (1 / 3))
+    blksize = _triples_block_size(
+        max_memory, nvirb, noccb**2 * nocca, 1 / 3
     )
-    blksize = min(nvira, blksize)
+    blksize = max(1, min(nvira, blksize))
     if blksize < nvira or blksize < nvirb:
         blksize = min(blksize, (nvira + 1) // 2)
         blksize = min(blksize, (nvirb + 1) // 2)
@@ -805,7 +822,7 @@ def make_intermediates(mycc, t1, t2, eris):
         nvirb,
         blksize,
     )
-    for a0, a1 in lib.prange(0, nvira, blksize):
+    for a0, a1 in lib.prange(0, nvira if has_mixed else 0, blksize):
         for b0, b1 in lib.prange(0, nvirb, blksize):
             for c0, c1 in lib.prange(0, nvirb, blksize):
                 w_blk = _w_einsum(

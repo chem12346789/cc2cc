@@ -22,6 +22,7 @@ UT   = unit test
 - No edits to vendor/, third_party/, *_pb2.py
 - if file > 50 lines: ask before delete
 - No dependency add/remove/upgrade without asking
+- Do not use cache in numba.
 - No data generation/training/Slurm/long jobs unless explicitly requested
 - Never claim a check passed unless it was actually run
 - No raw train*.log — filter: rg -iv 'warning|key|Loading|Adjusted' <f> | sed '/^$/d'
