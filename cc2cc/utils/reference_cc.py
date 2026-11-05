@@ -51,12 +51,9 @@ def ccsd_t_target_density(mycc, eris, *, unrestricted=False, reference=False):
     time = lib.logger.timer(mycc, "CCSD(T) lambda", *time)
     if reference and not converged:
         raise RuntimeError("Reference CCSD(T) lambda equations did not converge.")
+
     if unrestricted:
-        print("uccsd_t_lambda DONE", flush=True)
-        d1, (goo, gOO, gvv, gVV) = u_gamma1_intermediates(
-            mycc, t1, t2, l1, l2, eris
-        )
-        print("u_gamma1_intermediates DONE", flush=True)
+        d1, (goo, gOO, gvv, gVV) = u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
         (doo, dOO), (dov, dOV), (dvo, dVO), (dvv, dVV) = d1
         d1_grad = (
             (doo - goo, dOO - gOO),
@@ -72,13 +69,14 @@ def ccsd_t_target_density(mycc, eris, *, unrestricted=False, reference=False):
         d1_grad = (doo - goo * 0.5, dov, dvo, dvv + gvv * 0.5)
         corrections = ((doo, -goo * 0.5), (dvv, gvv * 0.5))
         rdm = ccsd_rdm
+    time = lib.logger.timer(mycc, "CCSD(T) gamma1", *time)
+
     for block, correction in corrections:
         block[np.diag_indices_from(block)] += correction.diagonal()
-    dm_mo = np.asarray(
-        rdm._make_rdm1(mycc, d1, with_frozen=True, ao_repr=False)
-    )
+    dm_mo = np.asarray(rdm._make_rdm1(mycc, d1, with_frozen=True, ao_repr=False))
     coeff = np.asarray(mycc.mo_coeff)
     dm_ao = coeff @ dm_mo @ coeff.swapaxes(-1, -2).conj()
+    time = lib.logger.timer(mycc, "CCSD(T) density", *time)
     return l1, l2, d1, d1_grad, dm_mo, dm_ao
 
 

@@ -16,7 +16,7 @@ from cc2cc.utils.zmp import RZMP, UZMP
 from cc2cc.utils.tensor_helper import parallel_einsum
 
 LEVEL_SHIFT = 2
-MAX_CYCLE = 200000
+MAX_CYCLE = 5000
 RHO_REL_TOL = 1e-2
 I_VALUE_REL_TOL = 1e-4
 I_VALUE_ABS_TOL = 1e-10
@@ -42,7 +42,6 @@ def get_zmp(
         return None, None
     zmp_class = RZMP if np.ndim(dm_tar) == 2 else UZMP
     mzmp = zmp_class(mol, dm_tar, grids, dftxc=1, xc="b3lyp")
-    mzmp.diis_space = DIIS_SPACE
     mzmp.verbose = verbose
     mzmp.max_cycle = max_cycle
 
@@ -71,6 +70,7 @@ def get_zmp(
     best_difference = None
     previous_dm = None
     for exponent in range(start_l, max_l + 1):
+        mzmp.diis_space = min(DIIS_SPACE, 2**exponent)
         mzmp.level_shift = LEVEL_SHIFT**exponent
         print(f"Running ZMP with lambda_ZMP = {2**exponent}")
         mzmp.zscf(2**exponent)
@@ -114,10 +114,14 @@ def get_zmp(
                 f"{label:<12} | {unit:<12} | {dft_value:>12.3e} | "
                 f"{zmp_value:>12.3e}"
             )
-        if mzmp.converged and (
-            zmp_difference <= RHO_REL_TOL * dft_difference
-            or zmp_i_value <= I_VALUE_REL_TOL * dft_i_value
-            or zmp_i_value <= I_VALUE_ABS_TOL
+        if (
+            mzmp.converged
+            and exponent > 12
+            and (
+                zmp_difference <= RHO_REL_TOL * dft_difference
+                or zmp_i_value <= I_VALUE_REL_TOL * dft_i_value
+                or zmp_i_value <= I_VALUE_ABS_TOL
+            )
         ):
             print(
                 f"ZMP density converged at lambda_ZMP = {2**exponent}: "
