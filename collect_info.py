@@ -7,8 +7,6 @@ import os
 import pandas as pd
 import numpy as np
 
-from cc2cc.utils.tensor_helper import parallel_einsum
-
 AU2KCALMOL = 627.5094740631
 DIET_DATASETS = {"gmtkn-diet30-def2", "gmtkn-diet100-def2"}
 DATA_FRAME_NAMES = {
@@ -214,7 +212,7 @@ class Collect_info:
             self.name_subset_list, dft_type
         ] = wtmad_2_subset
 
-        set_wtmad_2 = parallel_einsum("i,ij->j", wtmad_2_subset, subset2set)
+        set_wtmad_2 = np.einsum("i,ij->j", wtmad_2_subset, subset2set)
         self.data_frame_dict["wtmad_2_df"].loc["summary", dft_type] = np.sum(
             set_wtmad_2
         )
@@ -399,17 +397,13 @@ class Collect_info:
         )
         log_print(f"Number of reactions process/done in each subset: {status_subset}")
 
-        precent_counts_subset = parallel_einsum(
+        precent_counts_subset = np.einsum(
             "i,ij->j", total_counts_subset, subset2set
         ) / np.sum(total_counts_subset)
 
         completed_counts_set = (status_subset == "DONE").astype(int)
-        completed_counts_set = parallel_einsum(
-            "i,ij->j", completed_counts_set, subset2set
-        )
-        total_counts_set = parallel_einsum(
-            "i,ij->j", np.ones_like(status_subset), subset2set
-        )
+        completed_counts_set = np.einsum("i,ij->j", completed_counts_set, subset2set)
+        total_counts_set = np.einsum("i,ij->j", np.ones_like(status_subset), subset2set)
         status_set = self._format_status(completed_counts_set, total_counts_set)
         log_print(
             f"Number of reactions process/done in each set: {completed_counts_set}"
@@ -429,7 +423,7 @@ class Collect_info:
                 df.loc["summary", "Processed"] = status_summary
 
         # mae: mean_relative_abs_energies
-        mean_relative_abs_energies = parallel_einsum(
+        mean_relative_abs_energies = np.einsum(
             "i,ij,j->j",
             np.abs(reference_energy),
             reactions_to_subset,
@@ -452,12 +446,12 @@ class Collect_info:
                 continue
             data_dft_ene = self.data[dft_type].to_numpy() * AU2KCALMOL
 
-            reaction_energy_dft = parallel_einsum(
+            reaction_energy_dft = np.einsum(
                 "ji,i->j",
                 molecules_to_reactions,
                 data_dft_ene,
             )
-            mean_reaction_energy = parallel_einsum(
+            mean_reaction_energy = np.einsum(
                 "i,ij,j->j",
                 np.abs(reference_energy - reaction_energy_dft),
                 reactions_to_subset,
@@ -471,7 +465,7 @@ class Collect_info:
 
                 wtmad_1_subset = wtmad_1_multiplier * mean_reaction_energy
                 self.data_frame_dict["wtmad_1_df"].loc[self.name_set_list, dft_type] = (
-                    parallel_einsum("i,ij->j", wtmad_1_subset, subset2set)
+                    np.einsum("i,ij->j", wtmad_1_subset, subset2set)
                     / len(self.name_subset_list)
                 )
                 self.data_frame_dict["wtmad_1_df"].loc["summary", dft_type] = np.sum(
@@ -480,7 +474,7 @@ class Collect_info:
                 self.data_frame_dict["subset_mean_df"].loc[
                     self.name_subset_list, dft_type
                 ] = mean_reaction_energy
-                wtmad_2_subset = mean_absolute_deviation * parallel_einsum(
+                wtmad_2_subset = mean_absolute_deviation * np.einsum(
                     "i,i,i->i",
                     total_counts_subset,
                     inverse_mae,
@@ -493,7 +487,7 @@ class Collect_info:
                 delta = reference_energy - reaction_energy_dft
                 self.data_frame_dict["subset_mpd_df"].loc[
                     self.name_subset_list, dft_type
-                ] = 100 * parallel_einsum(
+                ] = 100 * np.einsum(
                     "i,ij,j,j->j",
                     delta,
                     reactions_to_subset,
@@ -502,7 +496,7 @@ class Collect_info:
                 )
                 self.data_frame_dict["subset_mapd_df"].loc[
                     self.name_subset_list, dft_type
-                ] = 100 * parallel_einsum(
+                ] = 100 * np.einsum(
                     "i,ij,j,j->j",
                     np.abs(delta),
                     reactions_to_subset,
@@ -512,7 +506,7 @@ class Collect_info:
                 self.data_frame_dict["subset_rmsd_df"].loc[
                     self.name_subset_list, dft_type
                 ] = 100 * np.sqrt(
-                    parallel_einsum(
+                    np.einsum(
                         "i,ij,j,j->j",
                         delta**2,
                         reactions_to_subset,
@@ -524,7 +518,7 @@ class Collect_info:
                 wtmad_2_subset = (
                     1
                     / np.sum(total_counts_subset)
-                    * parallel_einsum(
+                    * np.einsum(
                         "i,i,i->i",
                         total_counts_subset,
                         weight_list,
