@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=2400:00:00
-#SBATCH -a [0-54]%3
+#SBATCH -a [0-54]%2
 #SBATCH -J validate-diet100
 
 SCRIPT_DIR="scripts"
@@ -31,7 +31,7 @@ export DFT2CC_PROFILE_XC=1
 export basis_args="def2-QZVP(D)"
 select_molecule_profile gmtkn55
 
-setup_gpu_test_job 256000 20000
+setup_gpu_test_job 256000 40000
 # Arguments: PySCF memory (MiB); minimum free GPU memory (MiB).
 echo "NUMBER_OF_THREADS=${NUMBER_OF_THREADS}"
 
