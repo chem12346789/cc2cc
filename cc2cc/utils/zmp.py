@@ -292,7 +292,8 @@ class UZMP(_DFHF, pyscf.dft.uks.UKS):
                 self.mo_energy[1][self.nelec[1] - 1],
             )
             LUMO = np.minimum(
-                self.mo_energy[0][self.nelec[0]], self.mo_energy[1][self.nelec[1]]
+                self.mo_energy[0][self.nelec[0]],
+                self.mo_energy[1][self.nelec[1]],
             )
             gap = LUMO - HOMO
 

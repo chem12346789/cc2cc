@@ -70,7 +70,7 @@ def get_zmp(
     best_difference = None
     previous_dm = None
     for exponent in range(start_l, max_l + 1):
-        mzmp.diis_space = min(DIIS_SPACE, 2**exponent)
+        mzmp.diis_space = DIIS_SPACE
         mzmp.level_shift = LEVEL_SHIFT**exponent
         print(f"Running ZMP with lambda_ZMP = {2**exponent}")
         mzmp.zscf(2**exponent)
