@@ -1,6 +1,5 @@
 #!/bin/bash
-#SBATCH --array=[0-2]%3
-#SBATCH --cpus-per-task=24
+#SBATCH --array=[0]%1
 # CLUSTER-ONLY: This script is configured for this cluster; do not run it elsewhere.
 
 if [[ "$(hostname)" == "user-MZ73-LM1-000" ]]; then
@@ -14,9 +13,9 @@ fi
 export DATASET="gmtkn-def2"
 export basis_args="def2-QZVPPD"
 export MD_NUMBER=0
-export GEN_CONFIG="gen_test.json"
+# export GEN_CONFIG="gen_test.json"
 # export GEN_CONFIG="gen_mol_addon.json"
-# export GEN_CONFIG="gen_mol2.json"
+export GEN_CONFIG="gen_mol2.json"
 export IF_CONTINUE=1
 
 # Slurm array task

@@ -20,7 +20,7 @@ MAX_CYCLE = 200000
 RHO_REL_TOL = 1e-2
 I_VALUE_REL_TOL = 1e-4
 I_VALUE_ABS_TOL = 1e-10
-DIIS_SPACE = 256
+DIIS_SPACE = 128
 
 
 def get_zmp(
@@ -114,17 +114,14 @@ def get_zmp(
                 f"{label:<12} | {unit:<12} | {dft_value:>12.3e} | "
                 f"{zmp_value:>12.3e}"
             )
-        if (
-            mzmp.converged
-            and zmp_difference <= RHO_REL_TOL * dft_difference
-            and zmp_i_value <= I_VALUE_REL_TOL * dft_i_value
-            and zmp_i_value <= I_VALUE_ABS_TOL
+        if mzmp.converged and (
+            zmp_difference <= RHO_REL_TOL * dft_difference
+            or zmp_i_value <= I_VALUE_REL_TOL * dft_i_value
+            or zmp_i_value <= I_VALUE_ABS_TOL
         ):
             print(
                 f"ZMP density converged at lambda_ZMP = {2**exponent}: "
-                f"rho diff <= {RHO_REL_TOL:g} * DFT rho diff and "
-                f"I value <= {I_VALUE_REL_TOL:g} * DFT I value.",
-                flush=True,
+                f"rho diff = {zmp_difference:.3e}, I value = {zmp_i_value:.3e}",
             )
             return mzmp, dm
         previous_dm = np.array(dm, copy=True)
