@@ -27,7 +27,7 @@ from cc2cc.utils.tensor_helper import parallel_einsum, _w_einsum
 from cc2cc.utils.pyscf_uccsd_t_lambda import _run_fused
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=False)
 def _restricted_v_divide(
     w, v, ovov, t1, t2, fvo, eia, start0, start1, start2, occupied, w_factor
 ):

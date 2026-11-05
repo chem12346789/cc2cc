@@ -21,7 +21,7 @@ def _triples_block_size(max_memory, extent, denominator, exponent):
     )
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=False)
 def _same_spin_v(ovov, t1, t2, fvo, b0, b1, c0, c1):
     nocc, nvir = t1.shape
     nb, nc = b1 - b0, c1 - c0
@@ -51,7 +51,7 @@ def _same_spin_v(ovov, t1, t2, fvo, b0, b1, c0, c1):
     return out.transpose(3, 4, 0, 5, 2, 1)
 
 
-@njit(parallel=True, cache=True, error_model="numpy")
+@njit(parallel=True, cache=False, error_model="numpy")
 def _same_spin_r6_divide(w, v, eia, b0, c0, symmetrize=True):
     nocc, _, _, nvir, nb, nc = w.shape
     out = numpy.empty((nocc, nc, nb, nocc, nocc, nvir), dtype=w.dtype)
@@ -88,7 +88,7 @@ def _same_spin_r6_divide(w, v, eia, b0, c0, symmetrize=True):
     return out.transpose(3, 4, 0, 5, 2, 1)
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=False)
 def _mixed_spin_v(
     ovov, t1, ovOV, t1_same, t2_same, f_other, t2_mixed, f_same,
     out=None, subtract=False,
@@ -134,7 +134,7 @@ def _mixed_spin_v(
     return out
 
 
-@njit(parallel=True, cache=True, error_model="numpy")
+@njit(parallel=True, cache=False, error_model="numpy")
 def _mixed_spin_divide_kernel(w, v, e0, e1, e2, inverse, factor):
     out = numpy.empty_like(w)
     n0, n1, n2, n3, n4, n5 = w.shape
