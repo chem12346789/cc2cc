@@ -10,6 +10,7 @@ from cc2cc.utils.pyscf_uccsd_t_lambda import (
     _run_fused,
     _same_spin_r6_divide,
     _same_spin_v,
+    _triples_block_size,
 )
 
 
@@ -24,6 +25,9 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     t1a, t1b = t1
     t2aa, t2ab, t2bb = t2
     nocca, noccb, nvira, nvirb = t2ab.shape
+    has_alpha = nocca > 0 and nvira > 0
+    has_beta = noccb > 0 and nvirb > 0
+    has_mixed = has_alpha and has_beta
     mo_ea, mo_eb = eris.mo_energy
     eris_ovvv = numpy.asarray(eris.get_ovvv())
     eris_ovoo = numpy.asarray(eris.ovoo)
@@ -52,8 +56,8 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
     # aaa
     mem_now = lib.current_memory()[0]
     max_memory = max(0, mycc.max_memory - mem_now)
-    blksize = min(
-        nvira, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**3 * nvira)) ** (1 / 2))
+    blksize = _triples_block_size(
+        max_memory, nvira, nocca**3 * nvira, 1 / 2
     )
     if blksize < nvira:
         blksize = min(blksize, (nvira + 1) // 2)
@@ -66,7 +70,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         blksize,
     )
 
-    for b0, b1 in lib.prange(0, nvira, blksize):
+    for b0, b1 in lib.prange(0, nvira if has_alpha else 0, blksize):
         for c0, c1 in lib.prange(0, nvira, blksize):
             w_blk = _w_einsum(
                 "ijae,kceb->ijkabc",
@@ -153,8 +157,8 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
             gvo += parallel_einsum("jkbc,ijkabc->ai", t2aa[:, :, b0:b1, c0:c1], rw) * 0.125
 
     # bbb
-    blksize = min(
-        nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**3 * nvirb)) ** (1 / 2))
+    blksize = _triples_block_size(
+        max_memory, nvirb, noccb**3 * nvirb, 1 / 2
     )
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
@@ -166,7 +170,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    for b0, b1 in lib.prange(0, nvirb, blksize):
+    for b0, b1 in lib.prange(0, nvirb if has_beta else 0, blksize):
         for c0, c1 in lib.prange(0, nvirb, blksize):
             w_blk = _w_einsum(
                 "ijae,kceb->ijkabc",
@@ -253,10 +257,10 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
             gVO += parallel_einsum("jkbc,ijkabc->ai", t2bb[:, :, b0:b1, c0:c1], rw) * 0.125
 
     # baa
-    blksize = min(
-        nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**2 * noccb)) ** (1 / 3))
+    blksize = _triples_block_size(
+        max_memory, nvirb, nocca**2 * noccb, 1 / 3
     )
-    blksize = min(nvira, blksize)
+    blksize = max(1, min(nvira, blksize))
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
@@ -267,7 +271,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    for a0, a1 in lib.prange(0, nvirb, blksize):
+    for a0, a1 in lib.prange(0, nvirb if has_mixed else 0, blksize):
         for b0, b1 in lib.prange(0, nvira, blksize):
             for c0, c1 in lib.prange(0, nvira, blksize):
                 w_blk = _w_einsum(
@@ -440,10 +444,10 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 goo += parallel_einsum("kliabc,kljabc->ij", wvd, rw) * 0.25
                 gOO += parallel_einsum("iklabc,jklabc->ij", wvd, rw) * 0.25
 
-    blksize = min(
-        noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nvira**2 * nvirb)) ** (1 / 3))
+    blksize = _triples_block_size(
+        max_memory, noccb, nvira**2 * nvirb, 1 / 3
     )
-    blksize = min(nocca, blksize)
+    blksize = max(1, min(nocca, blksize))
     if blksize < nocca or blksize < noccb:
         blksize = min(blksize, (nocca + 1) // 2)
         blksize = min(blksize, (noccb + 1) // 2)
@@ -457,7 +461,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    for i0, i1 in lib.prange(0, noccb, blksize):
+    for i0, i1 in lib.prange(0, noccb if has_mixed else 0, blksize):
         for j0, j1 in lib.prange(0, nocca, blksize):
             for k0, k1 in lib.prange(0, nocca, blksize):
                 w_blk = _w_einsum(
@@ -628,14 +632,10 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 gvv += parallel_einsum("ijkcda,ijkcdb->ab", wvd, rw) * 0.25
                 gVV += parallel_einsum("ijkacd,ijkbcd->ab", wvd, rw) * 0.25
 
-    blksize = min(
-        noccb,
-        int(
-            ((max_memory * 0.9e6 / 8) / 6.0 / (nocca * noccb * nvira * nvirb))
-            ** (1 / 3)
-        ),
+    blksize = _triples_block_size(
+        max_memory, noccb, nocca * noccb * nvira * nvirb, 1 / 3
     )
-    blksize = min(nocca, blksize)
+    blksize = max(1, min(nocca, blksize))
     if blksize < noccb or blksize < nocca:
         blksize = min(blksize, (nocca + 1) // 2)
         blksize = min(blksize, (noccb + 1) // 2)
@@ -649,7 +649,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    for c0, c1 in lib.prange(0, nvira, blksize):
+    for c0, c1 in lib.prange(0, nvira if has_mixed else 0, blksize):
         for k0, k1 in lib.prange(0, nocca, blksize):
             w_blk = _w_einsum(
                 "jIeA,kceb->IjkAbc",
@@ -819,10 +819,10 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
             gVO += parallel_einsum("jkbc,ijkabc->ai", t2aa[:, k0:k1, :, c0:c1], rw) * 0.125
 
     # bba
-    blksize = min(
-        nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**2 * nocca)) ** (1 / 3))
+    blksize = _triples_block_size(
+        max_memory, nvirb, noccb**2 * nocca, 1 / 3
     )
-    blksize = min(nvira, blksize)
+    blksize = max(1, min(nvira, blksize))
     if blksize < nvira or blksize < nvirb:
         blksize = min(blksize, (nvira + 1) // 2)
         blksize = min(blksize, (nvirb + 1) // 2)
@@ -834,7 +834,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    for a0, a1 in lib.prange(0, nvira, blksize):
+    for a0, a1 in lib.prange(0, nvira if has_mixed else 0, blksize):
         for b0, b1 in lib.prange(0, nvirb, blksize):
             for c0, c1 in lib.prange(0, nvirb, blksize):
                 w_blk = _w_einsum(
@@ -1005,10 +1005,10 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 gOO += parallel_einsum("kilabc,kjlabc->ij", wvd, rw) * 0.25
                 gOO += parallel_einsum("kliabc,kljabc->ij", wvd, rw) * 0.25
 
-    blksize = min(
-        noccb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nvirb**2 * nvira)) ** (1 / 3))
+    blksize = _triples_block_size(
+        max_memory, noccb, nvirb**2 * nvira, 1 / 3
     )
-    blksize = min(nocca, blksize)
+    blksize = max(1, min(nocca, blksize))
     if blksize < nocca or blksize < noccb:
         blksize = min(blksize, (nocca + 1) // 2)
         blksize = min(blksize, (noccb + 1) // 2)
@@ -1022,7 +1022,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    for i0, i1 in lib.prange(0, nocca, blksize):
+    for i0, i1 in lib.prange(0, nocca if has_mixed else 0, blksize):
         for j0, j1 in lib.prange(0, noccb, blksize):
             for k0, k1 in lib.prange(0, noccb, blksize):
                 w_blk = _w_einsum(
@@ -1193,14 +1193,10 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
                 gVV += parallel_einsum("ijkcad,ijkcbd->ab", wvd, rw) * 0.25
                 gVV += parallel_einsum("ijkcda,ijkcdb->ab", wvd, rw) * 0.25
 
-    blksize = min(
-        noccb,
-        int(
-            ((max_memory * 0.9e6 / 8) / 6.0 / (nocca * noccb * nvira * nvirb))
-            ** (1 / 3)
-        ),
+    blksize = _triples_block_size(
+        max_memory, noccb, nocca * noccb * nvira * nvirb, 1 / 3
     )
-    blksize = min(nocca, blksize)
+    blksize = max(1, min(nocca, blksize))
     if blksize < noccb or blksize < nocca:
         blksize = min(blksize, (nocca + 1) // 2)
         blksize = min(blksize, (noccb + 1) // 2)
@@ -1214,7 +1210,7 @@ def u_gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None, for_grad=False):
         nvirb,
         blksize,
     )
-    for c0, c1 in lib.prange(0, nvirb, blksize):
+    for c0, c1 in lib.prange(0, nvirb if has_mixed else 0, blksize):
         for k0, k1 in lib.prange(0, noccb, blksize):
             w_blk = _w_einsum(
                 "ijae,kceb->ijkabc",

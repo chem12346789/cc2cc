@@ -10,6 +10,7 @@ from cc2cc.utils.pyscf_uccsd_t_lambda import (
     _run_fused,
     _same_spin_r6_divide,
     _same_spin_v,
+    _triples_block_size,
 )
 
 
@@ -33,6 +34,9 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
     t1a, t1b = t1
     t2aa, t2ab, t2bb = t2
     nocca, noccb, nvira, nvirb = t2ab.shape
+    has_alpha = nocca > 0 and nvira > 0
+    has_beta = noccb > 0 and nvirb > 0
+    has_mixed = has_alpha and has_beta
     nmoa = eris.focka.shape[0]
     nmob = eris.fockb.shape[0]
     mo_ea, mo_eb = eris.mo_energy
@@ -57,8 +61,8 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
     # aaa
     mem_now = lib.current_memory()[0]
     max_memory = max(0, mycc.max_memory - mem_now)
-    blksize = min(
-        nvira, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**3 * nvira)) ** (1 / 2))
+    blksize = _triples_block_size(
+        max_memory, nvira, nocca**3 * nvira, 1 / 2
     )
     if blksize < nvira:
         blksize = min(blksize, (nvira + 1) // 2)
@@ -71,7 +75,7 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
         blksize,
     )
 
-    for b0, b1 in lib.prange(0, nvira, blksize):
+    for b0, b1 in lib.prange(0, nvira if has_alpha else 0, blksize):
         for c0, c1 in lib.prange(0, nvira, blksize):
             w_blk = _w_einsum(
                 "ijae,kceb->ijkabc",
@@ -165,8 +169,8 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
             )
 
     # bbb
-    blksize = min(
-        nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**3 * nvirb)) ** (1 / 2))
+    blksize = _triples_block_size(
+        max_memory, nvirb, noccb**3 * nvirb, 1 / 2
     )
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
@@ -178,7 +182,7 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
         nvirb,
         blksize,
     )
-    for b0, b1 in lib.prange(0, nvirb, blksize):
+    for b0, b1 in lib.prange(0, nvirb if has_beta else 0, blksize):
         for c0, c1 in lib.prange(0, nvirb, blksize):
             w_blk = _w_einsum(
                 "ijae,kceb->ijkabc",
@@ -270,10 +274,10 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
             )
 
     # baa
-    blksize = min(
-        nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (nocca**2 * noccb)) ** (1 / 3))
+    blksize = _triples_block_size(
+        max_memory, nvirb, nocca**2 * noccb, 1 / 3
     )
-    blksize = min(nvira, blksize)
+    blksize = max(1, min(nvira, blksize))
     if blksize < nvirb:
         blksize = min(blksize, (nvirb + 1) // 2)
         blksize = max(blksize, 1)
@@ -284,7 +288,7 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
         nvirb,
         blksize,
     )
-    for a0, a1 in lib.prange(0, nvirb, blksize):
+    for a0, a1 in lib.prange(0, nvirb if has_mixed else 0, blksize):
         for b0, b1 in lib.prange(0, nvira, blksize):
             for c0, c1 in lib.prange(0, nvira, blksize):
                 w_blk = _w_einsum(
@@ -525,10 +529,10 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
                 )
 
     # bba
-    blksize = min(
-        nvirb, int(((max_memory * 0.9e6 / 8) / 6.0 / (noccb**2 * nocca)) ** (1 / 3))
+    blksize = _triples_block_size(
+        max_memory, nvirb, noccb**2 * nocca, 1 / 3
     )
-    blksize = min(nvira, blksize)
+    blksize = max(1, min(nvira, blksize))
     if blksize < nvira or blksize < nvirb:
         blksize = min(blksize, (nvira + 1) // 2)
         blksize = min(blksize, (nvirb + 1) // 2)
@@ -540,7 +544,7 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
         nvirb,
         blksize,
     )
-    for a0, a1 in lib.prange(0, nvira, blksize):
+    for a0, a1 in lib.prange(0, nvira if has_mixed else 0, blksize):
         for b0, b1 in lib.prange(0, nvirb, blksize):
             for c0, c1 in lib.prange(0, nvirb, blksize):
                 w_blk = _w_einsum(
