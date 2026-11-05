@@ -31,7 +31,7 @@ export DFT2CC_PROFILE_XC=1
 export basis_args="def2-QZVP(D)"
 select_molecule_profile gmtkn55
 
-setup_gpu_test_job 256000 24000
+setup_gpu_test_job 256000 20000
 # Arguments: PySCF memory (MiB); minimum free GPU memory (MiB).
 echo "NUMBER_OF_THREADS=${NUMBER_OF_THREADS}"
 
@@ -45,8 +45,8 @@ if [[ "${load_model_args:-}" =~ --test_mode[[:space:]=]+([^[:space:]]+) ]]; then
     test_mode="${BASH_REMATCH[1]}"
 fi
 if [[ "${test_mode}" == "post-b3lyp-d3" ]]; then
-    run_test_job --max_memory_gpu 8000 --max_cycle 50
+    run_test_job --max_memory_gpu 4000 --max_cycle 50
 else
-    run_test_job --max_memory_gpu 8000 --max_cycle 50 --s6 1.0 --a1 0.8 --s8 -1.0725 --a2 0.15 --alp 14.0 --s9 1.0
+    run_test_job --max_memory_gpu 4000 --max_cycle 50 --s6 1.0 --a1 0.8 --s8 -1.0725 --a2 0.15 --alp 14.0 --s9 1.0
 fi
 finish_test_job
