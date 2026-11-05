@@ -116,7 +116,7 @@ def get_zmp(
             )
         if (
             mzmp.converged
-            and exponent > 12
+            and exponent > 15
             and (
                 zmp_difference <= RHO_REL_TOL * dft_difference
                 or zmp_i_value <= I_VALUE_REL_TOL * dft_i_value
