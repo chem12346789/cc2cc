@@ -201,7 +201,8 @@ def get_post_vv10_data(
     check_post_vv10_gradient=False,
 ):
     """Compute post-DFT VV10 on the supplied RKS or UKS density."""
-    dm_tot = dm_dft if mol.spin == 0 else dm_dft[0] + dm_dft[1]
+    unrestricted = np.ndim(dm_dft) == 3
+    dm_tot = dm_dft[0] + dm_dft[1] if unrestricted else dm_dft
     exc_post_vv10_grid = eval_nlc_exc_density(mol, grids, dm_tot, "vv10")
     enlc = np.dot(exc_post_vv10_grid, grids.weights)
     _, enlc_check, _ = pyscf.dft.numint.NumInt().nr_nlc_vxc(mol, grids, "vv10", dm_tot)
@@ -226,8 +227,10 @@ def get_post_vv10_data(
             raise RuntimeError("Post-DFT VV10 B3LYP reference did not converge.")
         data["grad_post_vv10"] = post_dft_vv10_gradient(mf_dft, grids)
         if not evaluate and check_post_vv10_gradient:
+            # Seed displaced SCFs from the same spin-broken solution.
+            dm_reference = mf_dft.make_rdm1()
             data["grad_post_vv10_fd"] = post_vv10_finite_difference_gradient(
-                mol, args.grid_level
+                mol, args.grid_level, unrestricted=unrestricted, dm0=dm_reference
             )
             grad_error = np.max(
                 np.abs(data["grad_post_vv10"] - data["grad_post_vv10_fd"])
@@ -239,7 +242,12 @@ def get_post_vv10_data(
             grad_dft = mf_dft.nuc_grad_method()
             grad_dft.grid_response = True
             grad_dft_error = np.max(
-                np.abs(grad_dft.kernel() - b3lyp_finite_difference_gradient(mol))
+                np.abs(
+                    grad_dft.kernel()
+                    - b3lyp_finite_difference_gradient(
+                        mol, unrestricted=unrestricted, dm0=dm_reference
+                    )
+                )
             )
             print(
                 "DFT (B3LYP) analytical/FD gradient max difference "
@@ -285,10 +293,10 @@ def get_scf_vv10_data(mol, grids, dm_dft, dm_cc, args, evaluate=False):
     return data
 
 
-def post_vv10_total_energy(mol, grid_level):
-    mf = converged_b3lyp(mol)
+def post_vv10_total_energy(mol, grid_level, *, unrestricted=None, dm0=None):
+    mf = converged_b3lyp(mol, dm0=dm0, unrestricted=unrestricted)
     dm = mf.make_rdm1()
-    dm_tot = dm if mol.spin == 0 else dm[0] + dm[1]
+    dm_tot = dm[0] + dm[1] if np.ndim(dm) == 3 else dm
     grids = Grid(mol, grid_level, 7)
     enlc = np.dot(
         eval_nlc_exc_density(mol, grids, dm_tot, "vv10"),
@@ -297,8 +305,17 @@ def post_vv10_total_energy(mol, grid_level):
     return float(mf.e_tot) + enlc
 
 
-def post_vv10_finite_difference_gradient(mol, grid_level, step=1e-3):
+def post_vv10_finite_difference_gradient(
+    mol, grid_level, step=1e-3, *, unrestricted=None, dm0=None,
+):
     """Central-difference reference gradient in Hartree/Bohr; step in Bohr."""
+    energy_kwargs = {} if unrestricted is None else {"unrestricted": unrestricted}
+    if dm0 is not None:
+        energy_kwargs["dm0"] = dm0
     return finite_difference_gradient(
-        mol, lambda displaced: post_vv10_total_energy(displaced, grid_level), step
+        mol,
+        lambda displaced: post_vv10_total_energy(
+            displaced, grid_level, **energy_kwargs
+        ),
+        step,
     )

@@ -23,7 +23,6 @@ from cc2cc.utils import (
 from cc2cc.utils.reference_vv10 import get_vv10_data
 from cc2cc.utils.parser import gen_name_args, str2bool
 from cc2cc.gen_cc import cc
-from cc2cc.gen_ucc import ucc
 from cc2cc.utils.zmp_constraints import (
     get_zmp_constraint_data,
     refresh_zmp_constraint_metadata,
@@ -194,9 +193,13 @@ if __name__ == "__main__":
                 print(f"SKIP: {name} already exists.")
             else:
                 if mol.spin == 0:
-                    cc(mol, grids, name, args, evaluate=evaluate)
+                    unrestricted = False
                 else:
-                    ucc(mol, grids, name, args, evaluate=evaluate)
+                    unrestricted = True
+                cc(
+                    mol, grids, name, args, evaluate=evaluate,
+                    unrestricted=unrestricted,
+                )
 
         except (KeyError, ValueError, RuntimeError) as e:
             print(f"ERROR: {name_mol} {args.md_number}")

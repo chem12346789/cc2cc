@@ -6,7 +6,9 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 ## Full Repository Layout
 
 ### `cc2cc/` — importable package
-- `gen_cc.py`, `gen_ucc.py`: closed-/open-shell CC data generation
+- `gen_cc.py`: shared restricted/unrestricted CC data generation. `cc()` takes
+  an explicit `unrestricted` argument, defaulting to `False`. Restricted CCSD(T)
+  requires `mol.spin == 0`; unrestricted CCSD(T) can also use spin-zero systems.
 - `train_model.py`: training loop, W&B logging, distributed barriers
 - `test_model_rks.py`, `test_model_uks.py`: model-in-SCF validation, including
   post-SCF VV10 energy corrections
@@ -29,6 +31,11 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     `--if_continue` skips existing archives.
     UKS supplies its two spin densities to LibXC with `spin=1`, including
     net-spin-zero unrestricted states.
+  - The `nuc_*_grids` use the point-nucleus potential, except that
+    contributions within 1e-8 Bohr are omitted. The `exc_kinl` diagnostics use
+    these grids with the gradient-based kinetic-energy density. Newly generated
+    archives no longer include `nuc_erf_*_grids`; existing archives may retain
+    them, and `--if_continue` skips existing files.
   - The nonlocal pseudopotential uses the AO-projected gauge
     `phi(r)^T S^-1 V_pp D phi(r)`, with `V_pp = hcore - kinetic - nuclear`.
     Its integral is `Tr(V_pp D)` up to grid quadrature error; it is not a
@@ -286,11 +293,12 @@ permission bits; run only when validation writers are stopped. No backups are
 created, and failures may occur after earlier files have been updated.
 
 - `gen_data.py`: molecule selection → `gen_mole()` → optional MD/rotation →
-  `Grid` → `cc()`/`ucc()` → `.npz` grid data
-  - `cc()` and `ucc()` call the shared `get_vv10_data()` helper in
-    `utils/reference_vv10.py` and save Post-DFT VV10 and SCF-VV10 energies,
-    `dm1_scf_vv10`, and gradients in the main archive. They also
-    save separate VV10 results based on `dm1_zmp` with `_zmp`-suffixed keys.
+  `Grid` → `cc(..., unrestricted=unrestricted)` → `.npz` grid data.
+  It passes `unrestricted=False` for zero spin and `True` otherwise.
+  - `cc()` calls the shared `get_vv10_data()` helper in
+    `utils/reference_vv10.py` and saves Post-DFT VV10 and SCF-VV10 energies,
+    `dm1_scf_vv10`, and gradients in the main archive. It also
+    saves separate VV10 results based on `dm1_zmp` with `_zmp`-suffixed keys.
     The helper separates `get_post_vv10_data()` and `get_scf_vv10_data()`.
     Shared B3LYP SCF and finite-difference helpers live in
     `utils/reference_b3lyp.py`.

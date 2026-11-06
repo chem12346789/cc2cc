@@ -55,8 +55,8 @@ python -m cc2cc.utils.reference_zmp \
 ```
 
 Use `--spin` for open-shell systems (alpha minus beta electron count).
-This reruns RHF/UHF, B3LYP, the same CCSD(T) target-density construction as
-`gen_cc.cc`/`gen_ucc.ucc`, and RZMP/UZMP at every displaced geometry. It does
+This reruns RHF/UHF, B3LYP, the same CCSD(T) target-density
+construction as `gen_cc.cc`, and RZMP/UZMP at every displaced geometry. It does
 not generate training
 data or change the existing generation workflow. Every SCF, CC/lambda, and ZMP
 stage must converge; failures raise instead of returning a previous density.
@@ -73,8 +73,8 @@ level and `--max-l` before treating results as converged. A low `--max-l` is
 only a smoke check, not the production inversion limit. Comparing with B3LYP
 does not eliminate ZMP orbital response. No analytical ZMP response is assumed.
 
-Training-mode `cc()` and `ucc()` also use this full-pipeline numerical method
-for `grad_zmp`, with a 0.001 Bohr central-difference step, the supplied grid's
+Training-mode `cc()` also uses this full-pipeline numerical method for
+`grad_zmp`, with a 0.001 Bohr central-difference step, the supplied grid's
 level, and a fixed inversion schedule through `max_l=20`. This costs six full
 energy pipelines per atom; isolated-atom gradients are zero by translation
 invariance. Evaluation mode still skips gradients. The reference requires at
@@ -91,8 +91,8 @@ tolerances and require every stage to converge; normal generation retains
 its divergence-stop behavior.
 
 CCSD solver settings, triples-corrected lambda solving, and target one-particle
-density construction are shared by `cc()`, `ucc()`, and displaced references
-through `cc2cc/utils/reference_cc.py`. Change CC iteration/tolerance parameters
+density construction are shared by `cc()` and displaced references through
+`cc2cc/utils/reference_cc.py`. Change CC iteration/tolerance parameters
 and lambda iteration/tolerance parameters there. Generation and displaced
 references use identical CC settings: energy tolerance `1e-12`, amplitude and
 lambda tolerances `1e-10`, and 200 iterations for both CC and lambda solvers.

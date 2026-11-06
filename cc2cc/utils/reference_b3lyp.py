@@ -7,12 +7,14 @@ import numpy as np
 import pyscf.dft
 
 
-def converged_b3lyp(mol, dm0=None, *, nlc="", grids=None, verbose=0, use_gpu=False):
-    mf = (
-        pyscf.dft.RKS(mol, xc="b3lyp")
-        if mol.spin == 0
-        else pyscf.dft.UKS(mol, xc="b3lyp")
-    )
+def converged_b3lyp(
+    mol, dm0=None, *, nlc="", grids=None, verbose=0, use_gpu=False,
+    unrestricted=None,
+):
+    if unrestricted is None:
+        unrestricted = mol.spin != 0 or (dm0 is not None and np.ndim(dm0) == 3)
+    mf_class = pyscf.dft.UKS if unrestricted else pyscf.dft.RKS
+    mf = mf_class(mol, xc="b3lyp")
     mf = mf.density_fit()
     if grids is not None:
         mf.grids = grids
@@ -25,10 +27,14 @@ def converged_b3lyp(mol, dm0=None, *, nlc="", grids=None, verbose=0, use_gpu=Fal
     return mf
 
 
-def b3lyp_finite_difference_gradient(mol, step=1e-3):
+def b3lyp_finite_difference_gradient(mol, step=1e-3, *, unrestricted=None, dm0=None):
     """Central-difference B3LYP gradient in Hartree/Bohr; step in Bohr."""
     return finite_difference_gradient(
-        mol, lambda displaced: converged_b3lyp(displaced).e_tot, step
+        mol,
+        lambda displaced: converged_b3lyp(
+            displaced, dm0=dm0, unrestricted=unrestricted
+        ).e_tot,
+        step,
     )
 
 

@@ -247,7 +247,7 @@ def refresh_zmp_constraint_metadata(mol, grids, name, args):
 
     from pyscf import dft
 
-    mf_class = dft.RKS if mol.spin == 0 else dft.UKS
+    mf_class = dft.UKS if dm_zmp.ndim == 3 else dft.RKS
     mf = mf_class(mol, xc="b3lyp").density_fit()
     metadata_args = copy.copy(args)
     metadata_args.zmp_constraint_metadata = True

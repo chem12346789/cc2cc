@@ -36,6 +36,10 @@ unless explicitly asked otherwise.
   conversion, or CPU round-trips in differentiable paths.
 - Do not silently change physical units, spin conventions, normalization, or
   tensor ordering.
+- Pass `unrestricted` explicitly as a function argument. Never infer or override
+  it from `mol.spin` inside reusable functions. Only the main entry point
+  (for example, `gen_data.py`) may select `False` for `mol.spin == 0` and `True`
+  otherwise before calling those functions.
 
 ## Library Reuse
 

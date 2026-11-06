@@ -59,16 +59,23 @@ CUDA kernels; test the installed stack on the actual compute node.
 3. Validate or benchmark with scripts in `scripts/test/`.
 4. Inspect outputs in `validate*` and `checkpoints/`.
 
-Direct calls to `cc()` and `ucc()` calculate Post-DFT VV10 and self-consistent
-SCF-VV10 energies and save `e_post_vv10`, `e_scf_vv10`, and `dm1_scf_vv10` in
-the main data archive. Unsuffixed VV10 results also save `grad_post_vv10` and
+Direct calls to `cc()` select restricted CCSD(T) by default; pass
+`unrestricted=True` for unrestricted CCSD(T), including when `mol.spin == 0`.
+Restricted CCSD(T) requires `mol.spin == 0`. `gen_data.py` passes
+`unrestricted=False` for zero spin and `True` otherwise.
+Output filenames do not include the method, so `--if_continue true` skips an
+existing archive regardless of which method produced it.
+The generator calculates Post-DFT VV10 and self-consistent SCF-VV10 energies
+and saves `e_post_vv10`, `e_scf_vv10`, and `dm1_scf_vv10` in the main archive.
+Unsuffixed VV10 results also save `grad_post_vv10` and
 `grad_scf_vv10` in Hartree/Bohr; forces are their negatives.
 `gen_data.py --if_continue true` uses the same calculation for cached data,
 saving results in the addon archive.
 For multi-atom molecules, unsuffixed VV10 calculations additionally report
 analytical/central-finite-difference maximum gradient differences for Post-DFT
 VV10 and B3LYP and saves `grad_post_vv10_fd`. Each check uses a 0.001 Bohr
-displacement and six additional B3LYP calculations per atom.
+displacement and six additional B3LYP calculations per atom, starting from the
+converged reference density to track the selected spin solution.
 VV10 policy depends on the result suffix, independently of `--if_eval`.
 The default suffix `""` enables all VV10 calculations and checks. The `"_zmp"`
 suffix saves post-DFT energy and `grad_post_vv10_zmp` but skips SCF-VV10,
