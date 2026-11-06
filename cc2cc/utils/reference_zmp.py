@@ -16,7 +16,7 @@ from cc2cc.utils.zmp import RZMP, UZMP
 from cc2cc.utils.tensor_helper import parallel_einsum
 
 LEVEL_SHIFT = 2
-MAX_CYCLE = 5000
+MAX_CYCLE = 50000
 RHO_REL_TOL = 1e-2
 I_VALUE_REL_TOL = 1e-4
 I_VALUE_ABS_TOL = 1e-10
@@ -79,12 +79,7 @@ def get_zmp(
         zmp_i_value = diff_I_value(mol, dm, dm_tar, grids)
         zmp_dipole = mzmp.dip_moment(mol=mol, dm=dm, unit="A.U.")
         zmp_difference_dipole = np.linalg.norm(zmp_dipole - tar_dipole)
-        if best_difference is None or zmp_difference < best_difference:
-            best_difference = zmp_difference
-        elif zmp_difference > best_difference * 10:
-            print("Warning: rho difference increased significantly, may be diverged.")
-            print("Warning: ZMP did not converge within the specified lambda range.")
-            return mzmp, previous_dm
+
         hartree, nuclear = energy_grids(dm)
         print("Differences from CCSD target:")
         print(f"{'Metric':<12} | {'Unit':<12} | {'DFT':>12} | {'ZMP':>12}")
@@ -114,6 +109,14 @@ def get_zmp(
                 f"{label:<12} | {unit:<12} | {dft_value:>12.3e} | "
                 f"{zmp_value:>12.3e}"
             )
+
+        if best_difference is None or zmp_difference < best_difference:
+            best_difference = zmp_difference
+        elif zmp_difference > best_difference * 10:
+            print("Warning: rho difference increased significantly, may be diverged.")
+            print("Warning: ZMP did not converge within the specified lambda range.")
+            return mzmp, previous_dm
+
         if (
             mzmp.converged
             and exponent > 15

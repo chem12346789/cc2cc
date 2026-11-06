@@ -4,6 +4,7 @@ import gc
 import numpy as np
 
 import pyscf
+import pyscf.dft
 import pyscf.cc
 import pyscf.grad
 from pyscf.cc import uccsd_t
@@ -22,7 +23,6 @@ from cc2cc.utils.get_dft_energy_uks import get_cc_energy, get_dft_energy, get_hf
 from cc2cc.utils.get_dft_grad_uks import get_dft_grad, get_dft_input
 from cc2cc.utils.reference_zmp import get_zmp, zmp_baseline_gradient
 from cc2cc.utils.zmp_constraints import get_zmp_constraint_data
-from cc2cc.utils.reference_b3lyp import converged_b3lyp
 from cc2cc.utils.reference_vv10 import get_vv10_data
 
 def ucc(mol, grids, name, args, evaluate=False):
@@ -46,7 +46,12 @@ def ucc(mol, grids, name, args, evaluate=False):
     e_hf = mf.e_tot
 
     # DFT calculation
-    mdft = converged_b3lyp(mol, dm0=mf.make_rdm1(), verbose=4)
+    mdft = pyscf.dft.uks.UKS(mol, xc="b3lyp")
+    mdft.conv_tol = 1e-12
+    mdft.conv_tol_grad = 1e-8
+    mdft.max_cycle = 200
+    mdft.verbose = 4
+    mdft.kernel(mf.make_rdm1())
     if args.check_convergence and not mdft.converged:
         raise ValueError("UKS not converged.")
     dm1_dft = mdft.make_rdm1(ao_repr=True)
