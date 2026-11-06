@@ -68,7 +68,7 @@ def block_loop_rdm2(nao):
         j_slice = slice(n_slices * j_batch, n_slices * j_batch + nao_slice_j)
         k_slice = slice(n_slices * k_batch, n_slices * k_batch + nao_slice_k)
         l_slice = slice(n_slices * l_batch, n_slices * l_batch + nao_slice_l)
-        yield i_slice, j_slice, k_slice, l_slice, nao_slice_i, nao_slice_j, nao_slice_k, nao_slice_l
+        yield i_slice, j_slice, k_slice, l_slice
 
 
 def get_cc_energy(
@@ -105,10 +105,6 @@ def get_cc_energy(
         j_slice,
         k_slice,
         l_slice,
-        nao_slice_i,
-        nao_slice_j,
-        nao_slice_k,
-        nao_slice_l,
     ) in block_loop_rdm2(mol.nao):
         dm12_cc = 0.5 * dm2_cc[
             i_slice, j_slice, k_slice, l_slice
@@ -140,11 +136,7 @@ def get_cc_energy(
     print("Start hatree part...")
     hatree_cc_grids = np.zeros_like(grids.weights)
     int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
-    vele = parallel_einsum(
-        "pij,ij->p",
-        int1e_grids,
-        dm1_cc,
-    )
+    vele = parallel_einsum("pij,ij->p", int1e_grids, dm1_cc)
     hatree_cc_grids += 0.5 * vele * rho_cc[0]
 
     # kinetic part
@@ -204,7 +196,7 @@ def get_cc_energy(
 def get_dft_energy(
     mol,
     grids,
-    mdft,
+    dft_mo_coeff,
     dm1_dft,
     evaluate=False,
 ):
@@ -222,7 +214,6 @@ def get_dft_energy(
 
     rho_dft = pyscf.dft.numint.eval_rho(mol, ao_value, dm1_dft, xctype="GGA")
     ecp_dft_grids = _ecp_energy_density(mol, ao_value[0], dm1_dft)
-    dft_mo_coeff = mdft.mo_coeff
     exc_dft_grids = pyscf.dft.libxc.eval_xc("b3lyp", rho_dft)[0] * rho_dft[0]
 
     # K part from dm1_dft
@@ -237,10 +228,6 @@ def get_dft_energy(
         j_slice,
         k_slice,
         l_slice,
-        nao_slice_i,
-        nao_slice_j,
-        nao_slice_k,
-        nao_slice_l,
     ) in block_loop_rdm2(mol.nao):
         for i, coord in enumerate(grids.coords):
             if i * 10 % len(grids.coords) == 0:
@@ -264,11 +251,7 @@ def get_dft_energy(
     print("Start hatree part...")
     int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
     hatree_dft_grids = np.zeros_like(grids.weights)
-    vele = parallel_einsum(
-        "pij,ij->p",
-        int1e_grids,
-        dm1_dft,
-    )
+    vele = parallel_einsum("pij,ij->p", int1e_grids, dm1_dft)
     hatree_dft_grids += 0.5 * vele * rho_dft[0]
     print("Hatree part done.\n")
 
@@ -370,10 +353,6 @@ def get_hf_energy(
         j_slice,
         k_slice,
         l_slice,
-        nao_slice_i,
-        nao_slice_j,
-        nao_slice_k,
-        nao_slice_l,
     ) in block_loop_rdm2(mol.nao):
         for i, coord in enumerate(grids.coords):
             if i * 10 % len(grids.coords) == 0:
@@ -396,11 +375,7 @@ def get_hf_energy(
     print("Start hatree part...")
     int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
     hatree_hf_grids = np.zeros_like(grids.weights)
-    vele = parallel_einsum(
-        "pij,ij->p",
-        int1e_grids,
-        dm1_hf,
-    )
+    vele = parallel_einsum("pij,ij->p", int1e_grids, dm1_hf)
     hatree_hf_grids += 0.5 * vele * rho_hf[0]
     print("Hatree part done.\n")
 

@@ -116,7 +116,8 @@ def ucc(mol, grids, name, args, evaluate=False):
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} A.U. (CCSD vs DFT)")
 
     mzmp, dm1_zmp = get_zmp(mol, dm1_cc, dm1_dft, grids, max_l=20)
-    e_zmp = mzmp.energy_tot(dm1_zmp)
+    # Match the exact Coulomb and exchange integrals used by the grid labels.
+    e_zmp = mdft.energy_tot(dm1_zmp)
 
     # Generate input data
     data_dict = {}
@@ -135,7 +136,7 @@ def ucc(mol, grids, name, args, evaluate=False):
     data_append_dict = get_dft_energy(
         mol,
         grids,
-        mdft,
+        mdft.mo_coeff,
         dm1_dft,
         evaluate=evaluate,
     )
@@ -157,7 +158,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         data_append_dict = get_dft_energy(
             mol,
             grids,
-            mzmp,
+            mzmp.mo_coeff,
             dm1_zmp,
             evaluate=evaluate,
         )
@@ -191,7 +192,7 @@ def ucc(mol, grids, name, args, evaluate=False):
         gdft_d3bj = mdft_d3bj.Gradients()
         grad_dft_d3bj = gdft_d3bj.kernel()
 
-        grad_zmp = zmp_baseline_gradient(mzmp, dm1_zmp)
+        grad_zmp = zmp_baseline_gradient(mdft, dm1_zmp)
 
         data_dict["grad_cc_train"] = grad_cc - grad_dft
         data_dict["grad_hf"] = grad_hf

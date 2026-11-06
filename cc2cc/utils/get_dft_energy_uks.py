@@ -53,10 +53,6 @@ def get_cc_energy(
             j_slice,
             k_slice,
             l_slice,
-            nao_slice_i,
-            nao_slice_j,
-            nao_slice_k,
-            nao_slice_l,
         ) in block_loop_rdm2(mol.nao):
             dm12_cc = (
                 0.5 * dm2_cc[0][i_slice, j_slice, k_slice, l_slice]
@@ -143,7 +139,9 @@ def get_cc_energy(
                         / distance
                     )
         real_nuc_cc = parallel_einsum(
-            "pq,pq->", mol.intor("int1e_nuc"), dm1_cc[0] + dm1_cc[1],
+            "pq,pq->",
+            mol.intor("int1e_nuc"),
+            dm1_cc[0] + dm1_cc[1],
         )
         nuc_erf_cc_scale = real_nuc_cc / np.sum(nuc_erf_cc_grids * grids.weights)
         nuc_erf_cc_grids *= nuc_erf_cc_scale
@@ -151,11 +149,7 @@ def get_cc_energy(
         print("Nuclear part done.\n")
 
         tol_cc_grids = (
-            exc_cc_grids
-            + hatree_cc_grids
-            + kin_cc_grids
-            + nuc_cc_grids
-            + ecp_cc_grids
+            exc_cc_grids + hatree_cc_grids + kin_cc_grids + nuc_cc_grids + ecp_cc_grids
         )
 
         return {
@@ -173,7 +167,7 @@ def get_cc_energy(
 def get_dft_energy(
     mol,
     grids,
-    mdft,
+    dft_mo_coeff,
     dm1_dft,
     evaluate=False,
 ):
@@ -194,12 +188,11 @@ def get_dft_energy(
     if evaluate:
         return {}
     else:
-        dft_mo_coeff = mdft.mo_coeff
         ecp_dft_grids = _ecp_energy_density(mol, ao_value[0], dm1_dft[0] + dm1_dft[1])
 
-        exc_dft_grids = pyscf.dft.libxc.eval_xc(
-            "b3lyp", rho_dft, spin=1
-        )[0] * (rho_dft[0][0] + rho_dft[1][0])
+        exc_dft_grids = pyscf.dft.libxc.eval_xc("b3lyp", rho_dft, spin=1)[0] * (
+            rho_dft[0][0] + rho_dft[1][0]
+        )
 
         # K part from dm1_dft
         # exchange part
@@ -212,10 +205,6 @@ def get_dft_energy(
             j_slice,
             k_slice,
             l_slice,
-            nao_slice_i,
-            nao_slice_j,
-            nao_slice_k,
-            nao_slice_l,
         ) in block_loop_rdm2(mol.nao):
             dm12_cc = parallel_einsum(
                 "pr,qs->pqrs",
@@ -295,7 +284,9 @@ def get_dft_energy(
                         / distance
                     )
         real_nuc_dft = parallel_einsum(
-            "pq,pq->", mol.intor("int1e_nuc"), dm1_dft[0] + dm1_dft[1],
+            "pq,pq->",
+            mol.intor("int1e_nuc"),
+            dm1_dft[0] + dm1_dft[1],
         )
         nuc_erf_dft_scale = real_nuc_dft / np.sum(nuc_erf_dft_grids * grids.weights)
         nuc_erf_dft_grids *= nuc_erf_dft_scale
@@ -362,10 +353,6 @@ def get_hf_energy(
             j_slice,
             k_slice,
             l_slice,
-            nao_slice_i,
-            nao_slice_j,
-            nao_slice_k,
-            nao_slice_l,
         ) in block_loop_rdm2(mol.nao):
             dm12_cc = parallel_einsum(
                 "pr,qs->pqrs",
@@ -444,7 +431,9 @@ def get_hf_energy(
                         / distance
                     )
         real_nuc_hf = parallel_einsum(
-            "pq,pq->", mol.intor("int1e_nuc"), dm1_hf[0] + dm1_hf[1],
+            "pq,pq->",
+            mol.intor("int1e_nuc"),
+            dm1_hf[0] + dm1_hf[1],
         )
         nuc_erf_hf_scale = real_nuc_hf / np.sum(nuc_erf_hf_grids * grids.weights)
         nuc_erf_hf_grids *= nuc_erf_hf_scale

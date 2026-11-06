@@ -34,14 +34,15 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     Its integral is `Tr(V_pp D)` up to grid quadrature error; it is not a
     pointwise local potential times the electron density.
 - `reference_zmp.py`: shared ZMP inversion and diagnostic prints. Generation
-  stores `grad_zmp` using
-  `zmp_baseline_gradient(mzmp, dm1_zmp)`: an analytic B3LYP baseline gradient
-  using the same density-fitted object as `e_zmp`, with moving-grid and
-  auxiliary-basis response at the supplied ZMP determinant and a baseline
-  occupied-Fock-block energy-weighted density for the Pulay term. It excludes
-  rebuilt-ZMP orbital response; the learned correction must contribute its
-  explicit derivative, Pulay term, and grid response separately. Existing
-  cached `grad_zmp` values must be regenerated before using this convention.
+  evaluates `e_zmp` with the non-density-fitted B3LYP reference at the ZMP
+  density, matching the exact Coulomb and exchange energy-density grids. It
+  stores `grad_zmp` using `zmp_baseline_gradient(mdft, dm1_zmp)`: an analytic
+  baseline gradient with moving-grid response and an occupied-Fock-block
+  energy-weighted density for the Pulay term. It excludes rebuilt-ZMP orbital
+  response; the learned correction must contribute its explicit derivative,
+  Pulay term, and grid response separately. Regenerate archives from the old
+  density-fitted baseline to update `e_zmp`, `grad_zmp`, `energy_train`, and
+  `e_post_vv10_zmp`; `--if_continue` skips existing archives.
   No dedicated full-pipeline ZMP finite-difference routine is currently implemented.
   Generation stops at an SCF-converged stage once the integrated
   density error is at most 10% of the DFT error and the I-value error is at
@@ -54,10 +55,9 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   native `_DFHF` mixin, as its dynamically generated DFRKS/DFUKS classes do.
   Their DIIS extrapolation uses all available Fock/error pairs, up to the
   configured `diis_space`; history starts on the second SCF cycle.
-  Both Coulomb J and exchange K now use the standard `.density_fit()` auxiliary
-  basis and shared `with_df` object, including baseline energies and gradients.
-  This replaces the previous internal J-only fitting with exact exchange;
-  cached ZMP energies and gradients must be regenerated.
+  Both Coulomb J and exchange K in the inversion use the standard
+  `.density_fit()` auxiliary basis and shared `with_df` object. Dataset
+  baseline energies and gradients instead use the non-density-fitted reference.
 - `zmp_constraints.py`: optional full-OV stationarity and compact observable
   constraints for ZMP generation and training.
   Both `--zmp_feature_ov` and `--zmp_observable_response` default to `true`;
