@@ -1,5 +1,4 @@
 import gc
-from math import erf
 from itertools import product
 
 import numpy as np
@@ -10,6 +9,7 @@ import pyscf.dft
 
 from cc2cc.utils.get_dft_energy_rks import (
     _ecp_energy_density,
+    _nuclear_energy_density,
     _orbital_gradient_squared,
     block_loop_rdm2,
 )
@@ -121,31 +121,7 @@ def get_cc_energy(
 
         # nuclear part
         print("Start nuclear part...")
-        nuc_cc_grids = np.zeros_like(grids.weights)
-        nuc_erf_cc_grids = np.zeros_like(grids.weights)
-        for i, coord in enumerate(grids.coords):
-            for i_atom in range(mol.natm):
-                distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
-                if distance > 1e-8:
-                    nuc_cc_grids[i] -= (
-                        (rho_cc[0][0][i] + rho_cc[1][0][i])
-                        * mol.atom_charges()[i_atom]
-                        / distance
-                    )
-                    nuc_erf_cc_grids[i] -= (
-                        (rho_cc[0][0][i] + rho_cc[1][0][i])
-                        * mol.atom_charges()[i_atom]
-                        * erf(1e2 * distance)
-                        / distance
-                    )
-        real_nuc_cc = parallel_einsum(
-            "pq,pq->",
-            mol.intor("int1e_nuc"),
-            dm1_cc[0] + dm1_cc[1],
-        )
-        nuc_erf_cc_scale = real_nuc_cc / np.sum(nuc_erf_cc_grids * grids.weights)
-        nuc_erf_cc_grids *= nuc_erf_cc_scale
-        print("Nuclear scale factors (cc/dft/hf):", nuc_erf_cc_scale)
+        nuc_cc_grids = _nuclear_energy_density(mol, grids, rho_cc[0][0] + rho_cc[1][0])
         print("Nuclear part done.\n")
 
         tol_cc_grids = (
@@ -158,7 +134,6 @@ def get_cc_energy(
             "kin_cc_grids": kin_cc_grids,
             "kinl_cc_grids": kinl_cc_grids,
             "nuc_cc_grids": nuc_cc_grids,
-            "nuc_erf_cc_grids": nuc_erf_cc_grids,
             "ecp_cc_grids": ecp_cc_grids,
             "tol_cc_grids": tol_cc_grids,
         }
@@ -266,31 +241,9 @@ def get_dft_energy(
 
         # nuclear part
         print("Start nuclear part...")
-        nuc_dft_grids = np.zeros_like(grids.weights)
-        nuc_erf_dft_grids = np.zeros_like(grids.weights)
-        for i, coord in enumerate(grids.coords):
-            for i_atom in range(mol.natm):
-                distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
-                if distance > 1e-8:
-                    nuc_dft_grids[i] -= (
-                        (rho_dft[0][0][i] + rho_dft[1][0][i])
-                        * mol.atom_charges()[i_atom]
-                        / distance
-                    )
-                    nuc_erf_dft_grids[i] -= (
-                        (rho_dft[0][0][i] + rho_dft[1][0][i])
-                        * mol.atom_charges()[i_atom]
-                        * erf(1e2 * distance)
-                        / distance
-                    )
-        real_nuc_dft = parallel_einsum(
-            "pq,pq->",
-            mol.intor("int1e_nuc"),
-            dm1_dft[0] + dm1_dft[1],
+        nuc_dft_grids = _nuclear_energy_density(
+            mol, grids, rho_dft[0][0] + rho_dft[1][0]
         )
-        nuc_erf_dft_scale = real_nuc_dft / np.sum(nuc_erf_dft_grids * grids.weights)
-        nuc_erf_dft_grids *= nuc_erf_dft_scale
-        print("Nuclear scale factors (cc/dft/hf):", nuc_erf_dft_scale)
         print("Nuclear part done.\n")
 
         tol_dft_grids = (
@@ -309,7 +262,6 @@ def get_dft_energy(
             "kin_dft_grids": kin_dft_grids,
             "kinl_dft_grids": kinl_dft_grids,
             "nuc_dft_grids": nuc_dft_grids,
-            "nuc_erf_dft_grids": nuc_erf_dft_grids,
             "ecp_dft_grids": ecp_dft_grids,
             "tol_dft_grids": tol_dft_grids,
         }
@@ -413,31 +365,7 @@ def get_hf_energy(
 
         # nuclear part
         print("Start nuclear part from HF...")
-        nuc_hf_grids = np.zeros_like(grids.weights)
-        nuc_erf_hf_grids = np.zeros_like(grids.weights)
-        for i, coord in enumerate(grids.coords):
-            for i_atom in range(mol.natm):
-                distance = np.linalg.norm(mol.atom_coords()[i_atom] - coord)
-                if distance > 1e-8:
-                    nuc_hf_grids[i] -= (
-                        (rho_hf[0][0][i] + rho_hf[1][0][i])
-                        * mol.atom_charges()[i_atom]
-                        / distance
-                    )
-                    nuc_erf_hf_grids[i] -= (
-                        (rho_hf[0][0][i] + rho_hf[1][0][i])
-                        * mol.atom_charges()[i_atom]
-                        * erf(1e2 * distance)
-                        / distance
-                    )
-        real_nuc_hf = parallel_einsum(
-            "pq,pq->",
-            mol.intor("int1e_nuc"),
-            dm1_hf[0] + dm1_hf[1],
-        )
-        nuc_erf_hf_scale = real_nuc_hf / np.sum(nuc_erf_hf_grids * grids.weights)
-        nuc_erf_hf_grids *= nuc_erf_hf_scale
-        print("Nuclear scale factors (cc/dft/hf):", nuc_erf_hf_scale)
+        nuc_hf_grids = _nuclear_energy_density(mol, grids, rho_hf[0][0] + rho_hf[1][0])
         print("Nuclear part done.\n")
 
         return {
@@ -446,6 +374,5 @@ def get_hf_energy(
             "kin_hf_grids": kin_hf_grids,
             "kinl_hf_grids": kinl_hf_grids,
             "nuc_hf_grids": nuc_hf_grids,
-            "nuc_erf_hf_grids": nuc_erf_hf_grids,
             "ecp_hf_grids": ecp_hf_grids,
         }
