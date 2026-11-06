@@ -32,7 +32,7 @@ export OUTPUT_ARG="--output_target tol_delta_grids"
 # Loss terms
 # =========================
 export IF_ATOMIC=1
-export IF_GRAD=0
+export IF_GRAD=1
 export IF_ABS=1
 
 export ENE_ARG="--loss_multiplier_ene 1 --if_relative_weight_ene 1"
