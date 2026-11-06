@@ -1,21 +1,13 @@
 """ZMP inversion and projected analytic baseline gradients."""
 
-import argparse
-import json
-from pathlib import Path
-
 import numpy as np
-from pyscf import gto, lib, scf
 
-from cc2cc.utils.Grids import Grid
-from cc2cc.utils.reference_b3lyp import converged_b3lyp
 from cc2cc.utils.mol import AU2KCALMOL
 from cc2cc.utils.TestDataDFT import diff_rho, diff_I_value
-from cc2cc.utils.reference_cc import make_ccsd, ccsd_t_target_density
 from cc2cc.utils.zmp import RZMP, UZMP
 from cc2cc.utils.tensor_helper import parallel_einsum
 
-LEVEL_SHIFT = 2
+LEVEL_SHIFT = 3
 MAX_CYCLE = 50000
 RHO_REL_TOL = 1e-2
 I_VALUE_REL_TOL = 1e-4
