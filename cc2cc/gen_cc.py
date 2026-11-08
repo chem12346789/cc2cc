@@ -14,7 +14,9 @@ from pyscf.cc import uccsd_t
 from pyscf.cc import uccsd_rdm
 
 from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
-from cc2cc.utils.pyscf_uccsd_t_u_gamma2_intermediates import u_gamma2_intermediates
+from cc2cc.utils.ccsd_t.pyscf_uccsd_t_u_gamma2_intermediates import (
+    u_gamma2_intermediates,
+)
 
 from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
@@ -22,17 +24,13 @@ from cc2cc.utils.reference_cc import (
     make_ccsd,
     ccsd_t_target_density,
     ccsd_t_target_gradient,
+    get_cc_energy,
 )
-from cc2cc.utils.get_dft_energy_rks import get_cc_energy, get_dft_energy, get_hf_energy
-from cc2cc.utils.get_dft_grad_rks import get_dft_grad, get_dft_input
-from cc2cc.utils.get_dft_energy_uks import (
-    get_cc_energy as get_ucc_energy,
-    get_dft_energy as get_uks_energy,
-    get_hf_energy as get_uhf_energy,
-)
-from cc2cc.utils.get_dft_grad_uks import (
-    get_dft_grad as get_uks_grad,
-    get_dft_input as get_uks_input,
+from cc2cc.utils.reference_hf import get_hf_energy
+from cc2cc.utils.reference_b3lyp import (
+    get_dft_energy,
+    get_dft_grad,
+    get_dft_input,
 )
 from cc2cc.utils.reference_zmp import get_zmp, zmp_baseline_gradient
 from cc2cc.utils.zmp_constraints import get_zmp_constraint_data
@@ -65,11 +63,6 @@ def cc(
         u_gamma2_intermediates if unrestricted else _gamma2_intermediates
     )
     rdm = uccsd_rdm if unrestricted else ccsd_rdm
-    cc_energy = get_ucc_energy if unrestricted else get_cc_energy
-    dft_energy = get_uks_energy if unrestricted else get_dft_energy
-    hf_energy = get_uhf_energy if unrestricted else get_hf_energy
-    dft_grad = get_uks_grad if unrestricted else get_dft_grad
-    dft_input = get_uks_input if unrestricted else get_dft_input
     hf_grad = pyscf.grad.uhf.Gradients if unrestricted else pyscf.grad.rhf.Gradients
     print(f"Generate data for {name}, spin {mol.spin}")
 
@@ -164,7 +157,7 @@ def cc(
     data_dict = {}
 
     # Calculate the (exchange-correlation energy - DFT energy) on the grids and the grad to force matrix
-    data_append_dict = cc_energy(
+    data_append_dict = get_cc_energy(
         mol,
         grids,
         mf,
@@ -172,22 +165,25 @@ def cc(
         dm1_cc_mo,
         dm2_cc,
         evaluate=evaluate,
+        unrestricted=unrestricted,
     )
     data_dict.update(data_append_dict)
-    data_append_dict = dft_energy(
+    data_append_dict = get_dft_energy(
         mol,
         grids,
         mdft.mo_coeff,
         dm1_dft,
         evaluate=evaluate,
+        unrestricted=unrestricted,
     )
     data_dict.update(data_append_dict)
-    data_append_dict = hf_energy(
+    data_append_dict = get_hf_energy(
         mol,
         grids,
         mf,
         dm1_hf,
         evaluate=evaluate,
+        unrestricted=unrestricted,
     )
     data_dict.update(data_append_dict)
     if "tol_cc_grids" in data_dict and "tol_dft_grids" in data_dict:
@@ -195,12 +191,13 @@ def cc(
             data_dict["tol_cc_grids"] - data_dict["tol_dft_grids"]
         )
     if not evaluate:
-        data_append_dict = dft_energy(
+        data_append_dict = get_dft_energy(
             mol,
             grids,
             mzmp.mo_coeff,
             dm1_zmp,
             evaluate=evaluate,
+            unrestricted=unrestricted,
         )
         for key in data_append_dict:
             key_zmp = key.replace("dft", "zmp")
@@ -211,9 +208,9 @@ def cc(
         )
 
     if not evaluate:
-        data_append_dict = dft_grad(mol, grids, dm1_dft)
+        data_append_dict = get_dft_grad(mol, grids, dm1_dft, unrestricted=unrestricted)
         data_dict.update(data_append_dict)
-        data_append_dict = dft_grad(mol, grids, dm1_zmp)
+        data_append_dict = get_dft_grad(mol, grids, dm1_zmp, unrestricted=unrestricted)
         for key in data_append_dict:
             if "dft" in key:
                 key_zmp = key.replace("dft", "zmp")
@@ -242,9 +239,9 @@ def cc(
         data_dict["grad_dft_d3bj"] = grad_dft_d3bj
         data_dict["grad_zmp"] = grad_zmp
     else:
-        data_append_dict = dft_input(mol, grids, dm1_dft)
+        data_append_dict = get_dft_input(mol, grids, dm1_dft, unrestricted=unrestricted)
         data_dict.update(data_append_dict)
-        data_append_dict = dft_input(mol, grids, dm1_zmp)
+        data_append_dict = get_dft_input(mol, grids, dm1_zmp, unrestricted=unrestricted)
         for key in data_append_dict:
             key_zmp = key.replace("dft", "zmp")
             data_dict[key_zmp] = data_append_dict[key]

@@ -4,7 +4,7 @@ from pyscf.lib import logger
 from pyscf.cc import uccsd_rdm
 
 from cc2cc.utils.tensor_helper import parallel_einsum, _w_einsum
-from cc2cc.utils.pyscf_uccsd_t_lambda import (
+from cc2cc.utils.ccsd_t.pyscf_uccsd_t_lambda import (
     _mixed_spin_divide,
     _mixed_spin_v,
     _run_fused,

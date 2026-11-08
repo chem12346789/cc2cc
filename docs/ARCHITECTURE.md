@@ -22,7 +22,15 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   default; keep GPU classes lazily imported
 - `modelscf_rks.py`, `modelscf_uks.py`, `_gpu` variants: custom effective-
   potential/gradient hooks for PySCF SCF
-- `get_dft_energy_*.py`, `get_dft_grad_*.py`: energy and gradient helpers
+- `ccsd_t/`: PySCF CCSD(T) density and lambda helper modules.
+- `reference_cc.py`: shared CCSD(T) setup, target densities and gradients,
+  and restricted/unrestricted CC energy grids; callers pass `unrestricted`.
+- `reference_hf.py`: shared restricted/unrestricted HF energy grids; callers
+  pass `unrestricted` explicitly.
+- `reference_b3lyp.py`: shared restricted/unrestricted DFT energy, grid input,
+  and gradient helpers; callers pass `unrestricted` explicitly.
+  `get_dft_energy_rks.py` retains shared grid-energy helpers, and the original
+  spin-specific DFT energy entry points forward to the shared implementation.
   - Restricted and unrestricted energy helpers return `ecp_cc_grids`,
     `ecp_dft_grids`, and `ecp_hf_grids` for scalar pseudopotentials, or zeros
     for all-electron molecules. CC and DFT totals include these terms; the

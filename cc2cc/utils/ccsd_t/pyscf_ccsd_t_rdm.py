@@ -24,7 +24,7 @@ from pyscf.lib import logger
 from pyscf.cc import ccsd_rdm, _ccsd
 
 from cc2cc.utils.tensor_helper import parallel_einsum, _w_einsum
-from cc2cc.utils.pyscf_uccsd_t_lambda import _run_fused
+from cc2cc.utils.ccsd_t.pyscf_uccsd_t_lambda import _run_fused
 
 
 @njit(parallel=True, cache=False)

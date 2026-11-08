@@ -1,12 +1,12 @@
-"""Shared CCSD(T) settings, triples-corrected target densities and gradients."""
+"""Shared CCSD(T) settings, target densities, gradients, and grid energies."""
 
 import numpy as np
 from pyscf import cc, lib
 from pyscf.cc import ccsd_rdm, ccsd_t_lambda, uccsd_rdm
 from pyscf.grad import ccsd as ccsd_grad, uccsd as uccsd_grad
 
-from cc2cc.utils.pyscf_ccsd_t_rdm import _gamma1_intermediates
-from cc2cc.utils.pyscf_uccsd_t_lambda import kernel as uccsd_t_lambda_kernel
+from cc2cc.utils.ccsd_t.pyscf_ccsd_t_rdm import _gamma1_intermediates
+from cc2cc.utils.ccsd_t.pyscf_uccsd_t_lambda import kernel as uccsd_t_lambda_kernel
 from cc2cc.utils.pyscf_uccsd_t_u_gamma1_intermediates import u_gamma1_intermediates
 
 CC_MAX_CYCLE = 200
@@ -145,3 +145,133 @@ def ccsd_t_target_gradient(mycc, eris, l1, l2, d1_grad, d2, *, unrestricted=Fals
         gradient = cc_grad.de
     print("Grad done.", flush=True)
     return gradient
+
+
+def get_cc_energy(
+    mol, grids, mf, dm1_cc, dm1_cc_mo, dm2_cc, evaluate=False, *, unrestricted,
+):
+    """Calculate CC energy-density components on the supplied grid."""
+    if evaluate and not unrestricted:
+        return {}
+
+    import gc
+    import torch
+    import pyscf.dft
+
+    from cc2cc.utils.get_dft_energy_rks import (
+        _ecp_energy_density,
+        _nuclear_energy_density,
+        _orbital_gradient_squared,
+        block_loop_rdm2,
+    )
+    from cc2cc.utils.tensor_helper import parallel_einsum
+
+    print("Using backend: numpy for get_dft_energy\n")
+    ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
+    ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
+    ao_value = ao_value[:4]
+    ao_1 = ao_value[1:4]
+
+    if evaluate:
+        return {}
+
+    if unrestricted:
+        dm_total = dm1_cc[0] + dm1_cc[1]
+        rho_total = (
+            pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[0], xctype="GGA")[0]
+            + pyscf.dft.numint.eval_rho(mol, ao_value, dm1_cc[1], xctype="GGA")[0]
+        )
+    else:
+        dm_total = dm1_cc
+        rho_total = pyscf.dft.numint.eval_rho(
+            mol, ao_value, dm1_cc, xctype="GGA"
+        )[0]
+    ecp_cc_grids = _ecp_energy_density(mol, ao_value[0], dm_total)
+
+    print("Start exchange part...")
+    exc_cc_grids = np.zeros_like(grids.weights)
+    for i_slice, j_slice, k_slice, l_slice in block_loop_rdm2(mol.nao):
+        if unrestricted:
+            # The beta-alpha block is the pair-transposed alpha-beta block.
+            dm12_cc = (
+                0.5 * dm2_cc[0][i_slice, j_slice, k_slice, l_slice]
+                + 0.5 * dm2_cc[1][i_slice, j_slice, k_slice, l_slice]
+                + 0.5
+                * dm2_cc[1].transpose(2, 3, 0, 1)[
+                    i_slice, j_slice, k_slice, l_slice
+                ]
+                + 0.5 * dm2_cc[2][i_slice, j_slice, k_slice, l_slice]
+            )
+        else:
+            dm12_cc = 0.5 * dm2_cc[i_slice, j_slice, k_slice, l_slice]
+        dm12_cc = dm12_cc - 0.5 * parallel_einsum(
+            "pq,rs->pqrs",
+            dm_total[i_slice, j_slice],
+            dm_total[k_slice, l_slice],
+        )
+
+        for i, coord in enumerate(grids.coords):
+            if i * 10 % len(grids.coords) == 0:
+                print(f"Progress: {(i*100)/len(grids.coords):.1f}%", flush=True)
+            ao_0_i = ao_value[0][i]
+            with mol.with_rinv_origin(coord):
+                rinv = mol.intor("int1e_rinv")
+                exc_cc_grids[i] += parallel_einsum(
+                    "ijkl,i,j,kl->",
+                    dm12_cc,
+                    ao_0_i[i_slice],
+                    ao_0_i[j_slice],
+                    rinv[k_slice, l_slice],
+                )
+        del dm12_cc
+        gc.collect()
+        torch.cuda.empty_cache()
+    print("Exchange part done.\n")
+
+    print("Start hatree part...")
+    hatree_cc_grids = np.zeros_like(grids.weights)
+    int1e_grids = mol.intor("int1e_grids", grids=grids.coords)
+    vele = parallel_einsum("pij,ij->p", int1e_grids, dm_total)
+    hatree_cc_grids += 0.5 * vele * rho_total
+    print("Hatree part done.\n")
+
+    print("Start kinetic part...")
+    kin_cc_grids = np.zeros_like(grids.weights)
+    kinl_cc_grids = np.zeros_like(grids.weights)
+    for i_spin in range(2 if unrestricted else 1):
+        coeff = mf.mo_coeff[i_spin] if unrestricted else mf.mo_coeff
+        density = dm1_cc_mo[i_spin] if unrestricted else dm1_cc_mo
+        eigs_e_dm1, eigs_v_dm1 = np.linalg.eigh(density)
+        eigs_v_dm1 = coeff @ eigs_v_dm1
+        for i in range(np.shape(eigs_v_dm1)[1]):
+            part = parallel_einsum(
+                "pm,m,n,pn->p",
+                ao_value[0],
+                eigs_v_dm1[:, i],
+                eigs_v_dm1[:, i],
+                ao_2_diag,
+            )
+            kin_cc_grids -= part * eigs_e_dm1[i] / 2
+            kinl_cc_grids += (
+                _orbital_gradient_squared(ao_1, eigs_v_dm1[:, i])
+                * eigs_e_dm1[i]
+                / 2
+            )
+    print("Kinetic part done.\n")
+
+    print("Start nuclear part...")
+    nuc_cc_grids = _nuclear_energy_density(mol, grids, rho_total)
+    print("Nuclear part done.\n")
+
+    tol_cc_grids = (
+        exc_cc_grids + hatree_cc_grids + kin_cc_grids + nuc_cc_grids + ecp_cc_grids
+    )
+    return {
+        "exc_cc_grids": exc_cc_grids,
+        "hatree_cc_grids": hatree_cc_grids,
+        "kin_cc_grids": kin_cc_grids,
+        "kinl_cc_grids": kinl_cc_grids,
+        "nuc_cc_grids": nuc_cc_grids,
+        "ecp_cc_grids": ecp_cc_grids,
+        "tol_cc_grids": tol_cc_grids,
+    }
