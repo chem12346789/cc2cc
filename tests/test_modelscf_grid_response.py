@@ -9,8 +9,7 @@ import torch
 from cc2cc.utils.Grids import Grid
 from cc2cc.utils.helper.runtime.env_var import EDGE_SIZE
 from cc2cc.utils.ModelClass import ModelClass
-from cc2cc.utils.modelscf_rks import get_veff_grad_modified_rks
-from cc2cc.utils.modelscf_uks import get_veff_grad_modified_uks
+from cc2cc.utils.modelscf import get_veff_grad_modified
 
 
 class ToyFunctional:
@@ -95,9 +94,9 @@ class TestModelGridResponse(unittest.TestCase):
                     custom = mf.Gradients()
                     custom.grids = mf.grids
                     custom.grid_response = enabled
-                    modify = (get_veff_grad_modified_rks if spin == 0
-                              else get_veff_grad_modified_uks)
-                    modify(custom, functional)
+                    get_veff_grad_modified(
+                        custom, functional, unrestricted=spin != 0
+                    )
                     np.testing.assert_allclose(
                         custom.kernel(), expected, rtol=0, atol=1e-10
                     )
@@ -128,10 +127,10 @@ class TestModelGridResponse(unittest.TestCase):
                     (3, mol.nao, mol.nao) if spin == 0
                     else (2, 3, mol.nao, mol.nao)
                 )
-                modify = (get_veff_grad_modified_rks if spin == 0
-                          else get_veff_grad_modified_uks)
                 original_grad_elec = grad.grad_elec.__func__
-                modify(grad, functional)
+                get_veff_grad_modified(
+                    grad, functional, unrestricted=spin != 0
+                )
                 self.assertIs(grad.grad_elec.__func__, original_grad_elec)
                 self.assertFalse(grad.grid_response)
                 with patch.object(functional, "eval_xc_eff",
