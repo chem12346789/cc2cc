@@ -7,7 +7,6 @@ from cc2cc.utils.helper.runtime.env_var import EDGE_SIZE
 
 MODEL_MODULES = (
     "cc2cc.utils.model.transformer+dense_mix_e3nn_4_correct",
-    "cc2cc.utils.model.transformer+dense_mix_e3nn_4_correct3",
     "cc2cc.utils.model.transformer+dense_mix_e3nn_4_correct_f",
 )
 
