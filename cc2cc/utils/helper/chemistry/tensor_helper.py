@@ -56,7 +56,7 @@ def _parallel_accumulate_w(out, source, scale, subtract):
         set_num_threads(threads)
 
 
-def _w_einsum(
+def w_einsum(
     subscripts, *tensors,
     out=None, scale=None, subtract=False,
 ):

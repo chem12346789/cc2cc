@@ -18,7 +18,7 @@ from torch.nn.parallel import DistributedDataParallel
 from cc2cc.utils.DataBase import DataBase
 from cc2cc.utils.helper.runtime.env_var import CHECKPOINTS_PATH, CUBE_MIDDLE, MAIN_PATH
 from cc2cc.utils.helper.workflow.schedulers import CosineAnnealingWarmRestarts2
-from cc2cc.utils.mol import AU2KCALMOL
+from cc2cc.utils.helper.units import AU2KCALMOL
 
 CUBE_INDEX = {
     "cube5": np.array(
@@ -64,7 +64,7 @@ DEBUG = 0
 
 
 @contextmanager
-def _training_stage(stage, batch=None):
+def training_stage(stage, batch=None):
     setting = os.environ.get("DFT2CC_TRACE_TRAIN", "0")
     if setting not in ("0", "1"):
         raise ValueError("DFT2CC_TRACE_TRAIN must be 0 or 1")
@@ -692,7 +692,7 @@ class ModelClass:
         else:
             input_ = input_.detach()
 
-        with _training_stage("forward" if if_train else "eval-forward", batch):
+        with training_stage("forward" if if_train else "eval-forward", batch):
             input_, output = self.model_output(input_, weight)
         if not if_train:
             output = output.detach()
@@ -767,7 +767,7 @@ class ModelClass:
                     },
                     device=self.local_rank,
                 )
-                with _training_stage(f"atomic-forward:{name_atom}", atomic_batch):
+                with training_stage(f"atomic-forward:{name_atom}", atomic_batch):
                     _, atomic_output = self.model_output(
                         atomic_batch["input"],
                         atomic_batch["weight"],
@@ -824,7 +824,7 @@ class ModelClass:
 
         batches = iter(self.database_train.data_gpu)
         for step in range(len(self.database_train.data_gpu)):
-            with _training_stage(f"train-fetch:{step}"):
+            with training_stage(f"train-fetch:{step}"):
                 batch = next(batches)
             if profile_memory:
                 torch.cuda.synchronize(memory_device)
@@ -832,9 +832,9 @@ class ModelClass:
                 start_allocated = torch.cuda.memory_allocated(memory_device)
             batch = self.database_train.process_batch(batch, device=self.local_rank)
             tot_loss, data_record, event = self.loss(batch, if_grad=if_grad)
-            with _training_stage("backward", batch):
+            with training_stage("backward", batch):
                 tot_loss.backward()
-            with _training_stage("optimizer", batch):
+            with training_stage("optimizer", batch):
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
                 self.optimizer.step()
                 self.scheduler.step()
@@ -884,7 +884,7 @@ class ModelClass:
 
         batches = iter(self.database_eval.data_gpu)
         for step in range(len(self.database_eval.data_gpu)):
-            with _training_stage(f"eval-fetch:{step}"):
+            with training_stage(f"eval-fetch:{step}"):
                 batch = next(batches)
             batch = self.database_eval.process_batch(batch, device=self.local_rank)
             _, data_record, event = self.loss(batch, if_train=False)

@@ -9,7 +9,7 @@ import pyscf.dft
 from pyscf.grad import rks as rks_grad
 
 from cc2cc.utils.Grids import Grid
-from cc2cc.utils.mol import AU2KCALMOL
+from cc2cc.utils.helper.units import AU2KCALMOL
 from cc2cc.utils.helper.chemistry.density_metrics import diff_rho
 from cc2cc.utils.reference.reference_b3lyp import (
     b3lyp_finite_difference_gradient,

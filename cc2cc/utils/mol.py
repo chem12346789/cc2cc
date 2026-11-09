@@ -7,175 +7,27 @@ import re
 
 import numpy as np
 
-import basis_set_exchange
 import pyscf
-from pyscf.gto.basis.bse import get_basis
-from pyscf.gto.basis.bse import _ecp_basis
 
+from cc2cc.utils.helper.chemistry.basis import (
+    aug_cc_atom_list,
+    aug_cc_pp_atom_list,
+    cc_atom_list,
+    cc_pp_atom_list,
+    def_ecp_list,
+    gen_basis,
+    gen_ecp,
+    get_ecp,
+    special_atom_list,
+)
 from cc2cc.utils.helper.chemistry.rotate import rotate
-from cc2cc.utils.helper.chemistry.addon_basis import addon_basis
+from cc2cc.utils.helper.units import AU2DEBYE, AU2KCALMOL
 
-AU2KCALMOL = 627.5094733748099
-AU2DEBYE = 2.541746472
 dataset = {}
 json_dir = Path(__file__).resolve().parent / "mol_dataset"
 for dataset_name_ in json_dir.glob("*.json"):
     with dataset_name_.open("r", encoding="utf-8") as f:
         dataset[dataset_name_.stem] = json.load(f)
-
-
-def get_ecp(name, elements):
-    """
-    Obtain the effective core potential (ECP) from Basis Set Exchange.
-
-    Args:
-        name : str
-            Name of the basis set, case insensitive.
-        elements : str, int or list
-
-    Returns:
-        A dict of ECP data for the specified elements.
-    """
-    basis = basis_set_exchange.api.get_basis(name, elements)
-    return _ecp_basis(basis)
-
-
-def_ecp_list = [
-    "Rb",
-    "Sr",
-    "Y",
-    "Zr",
-    "Nb",
-    "Mo",
-    "Tc",
-    "Ru",
-    "Rh",
-    "Pd",
-    "Ag",
-    "Cd",
-    "In",
-    "Sn",
-    "Sb",
-    "Te",
-    "I",
-    "Xe",
-    "Cs",
-    "Ba",
-    "La",
-    "Hf",
-    "Ta",
-    "W",
-    "Re",
-    "Os",
-    "Ir",
-    "Pt",
-    "Au",
-    "Hg",
-    "Tl",
-    "Pb",
-    "Bi",
-    "Po",
-    "At",
-    "Rn",
-]
-aug_cc_atom_list = [
-    "H",
-    "He",
-    "Li",
-    "Be",
-    "B",
-    "C",
-    "N",
-    "O",
-    "F",
-    "Ne",
-    "Na",
-    "Mg",
-    "Al",
-    "Si",
-    "P",
-    "S",
-    "Cl",
-    "Ar",
-    "K",
-    "Ca",
-    "V",
-    "Cr",
-    "Mn",
-    "Fe",
-    "Co",
-    "Ni",
-    "Cu",
-    "Zn",
-    "Ga",
-    "Ge",
-    "As",
-    "Se",
-    "Br",
-    "Kr",
-]
-aug_cc_pp_atom_list = def_ecp_list.copy()
-aug_cc_pp_atom_list.remove("Rb")
-aug_cc_pp_atom_list.remove("Sr")
-aug_cc_pp_atom_list.remove("Cs")
-aug_cc_pp_atom_list.remove("Ba")
-aug_cc_pp_atom_list.remove("La")
-aug_cc_atom_list.remove("K")
-aug_cc_atom_list.remove("Ca")
-special_atom_list = ["K", "Ca"]
-cc_atom_list = aug_cc_atom_list.copy()
-cc_pp_atom_list = aug_cc_pp_atom_list.copy()
-
-
-def gen_basis(basis: str, atom_list: list):
-    """
-    Function to generate the basis
-    """
-    if "def2" in basis:
-        return basis
-    if "cc-" in basis:
-        dict_ = {}
-        for atom in atom_list:
-            if atom in dict_:
-                continue
-            if "aug-" in basis:
-                if atom in aug_cc_atom_list:
-                    dict_.update(get_basis(basis, atom))
-                if atom in aug_cc_pp_atom_list:
-                    dict_.update(get_basis(basis + "-PP", atom))
-                if atom in special_atom_list:
-                    dict_.update(addon_basis[atom][basis])
-            else:
-                if atom in cc_atom_list:
-                    dict_.update(get_basis(basis, atom))
-                if atom in cc_pp_atom_list:
-                    dict_.update(get_basis(basis + "-PP", atom))
-                if atom in special_atom_list:
-                    dict_.update(addon_basis[atom][basis])
-        return dict_
-
-
-def gen_ecp(basis: str, atom_list: list) -> dict:
-    """
-    Function to generate the ecp
-    """
-    if "def2" in basis:
-        dict_ = {}
-        for atom in def_ecp_list:
-            dict_[atom] = basis
-        return dict_
-    if "cc-" in basis:
-        dict_ = {}
-        for atom in atom_list:
-            if atom in dict_:
-                continue
-            if "aug-" in basis:
-                if atom in aug_cc_pp_atom_list:
-                    dict_.update(get_ecp(basis + "-PP", atom))
-            else:
-                if atom in cc_pp_atom_list:
-                    dict_.update(get_ecp(basis + "-PP", atom))
-        return dict_
 
 
 def rotate_mol(

@@ -28,8 +28,8 @@ from cc2cc.utils.modelscf_gpu import (
     get_veff_modified_rks_gpu as get_veff_modified_rks_gpu,
     get_veff_modified_uks_gpu as get_veff_modified_uks_gpu,
 )
-from cc2cc.utils.mol import AU2DEBYE as AU2DEBYE
-from cc2cc.utils.mol import AU2KCALMOL as AU2KCALMOL
+from cc2cc.utils.helper.units import AU2DEBYE as AU2DEBYE
+from cc2cc.utils.helper.units import AU2KCALMOL as AU2KCALMOL
 from cc2cc.utils.mol import gen_mole as gen_mole
 from cc2cc.utils.parser import add_args as add_args
 from cc2cc.utils.parser import config_list as config_list

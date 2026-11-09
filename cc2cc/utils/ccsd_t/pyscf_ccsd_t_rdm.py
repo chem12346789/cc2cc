@@ -23,8 +23,8 @@ from pyscf import lib
 from pyscf.lib import logger
 from pyscf.cc import ccsd_rdm, _ccsd
 
-from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum, _w_einsum
-from cc2cc.utils.ccsd_t.pyscf_uccsd_t_lambda import _run_fused
+from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum, w_einsum
+from cc2cc.utils.ccsd_t.pyscf_uccsd_t_lambda import run_fused
 
 
 @njit(parallel=True, cache=False)
@@ -63,7 +63,7 @@ def _restricted_v_divide(
                     w[x, y, z, p, q, r] = w_value
 
 
-def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
+def gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
     """Build restricted 1-RDM intermediates with fused triples updates."""
     log = logger.Logger(mycc.stdout, mycc.verbose)
 
@@ -75,7 +75,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
         or numpy.iscomplexobj(l2)
     ):
         raise ValueError(
-            "_gamma1_intermediates does not support complex-valued inputs (t1, t2, l1, l2, or eris)"
+            "gamma1_intermediates does not support complex-valued inputs (t1, t2, l1, l2, or eris)"
         )
 
     doo, dov, dvo, dvv = ccsd_rdm._gamma1_intermediates(mycc, t1, t2, l1, l2)
@@ -97,7 +97,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
         blksize = min(blksize, (nvir + 1) // 2)
         blksize = max(blksize, 1)
     log.debug1(
-        "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
+        "ccsd_t rdm gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         nocc,
         nvir,
@@ -120,74 +120,74 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
                     eris_ovvv[:, a0:a1, :, b0:b1],
                     t2[:, :, c0:c1, :],
                 )
-                _w_einsum(
+                w_einsum(
                     "iafc,jkbf->abcijk",
                     eris_ovvv[:, a0:a1, :, c0:c1],
                     t2[:, :, b0:b1, :],
                     out=w_blk[:ba, :bb, :bc],
                 )
-                _w_einsum(
+                w_einsum(
                     "jbfa,kicf->abcijk",
                     eris_ovvv[:, b0:b1, :, a0:a1],
                     t2[:, :, c0:c1, :],
                     out=w_blk[:ba, :bb, :bc],
                 )
-                _w_einsum(
+                w_einsum(
                     "jbfc,ikaf->abcijk",
                     eris_ovvv[:, b0:b1, :, c0:c1],
                     t2[:, :, a0:a1, :],
                     out=w_blk[:ba, :bb, :bc],
                 )
-                _w_einsum(
+                w_einsum(
                     "kcfa,jibf->abcijk",
                     eris_ovvv[:, c0:c1, :, a0:a1],
                     t2[:, :, b0:b1, :],
                     out=w_blk[:ba, :bb, :bc],
                 )
-                _w_einsum(
+                w_einsum(
                     "kcfb,ijaf->abcijk",
                     eris_ovvv[:, c0:c1, :, b0:b1],
                     t2[:, :, a0:a1, :],
                     out=w_blk[:ba, :bb, :bc],
                 )
-                _w_einsum(
+                w_einsum(
                     "iajm,mkbc->abcijk",
                     eris_ovoo[:, a0:a1, :, :],
                     t2[:, :, b0:b1, c0:c1],
                     out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "iakm,mjcb->abcijk",
                     eris_ovoo[:, a0:a1, :, :],
                     t2[:, :, c0:c1, b0:b1],
                     out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "jbim,mkac->abcijk",
                     eris_ovoo[:, b0:b1, :, :],
                     t2[:, :, a0:a1, c0:c1],
                     out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "jbkm,mica->abcijk",
                     eris_ovoo[:, b0:b1, :, :],
                     t2[:, :, c0:c1, a0:a1],
                     out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "kcim,mjab->abcijk",
                     eris_ovoo[:, c0:c1, :, :],
                     t2[:, :, a0:a1, b0:b1],
                     out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "kcjm,miba->abcijk",
                     eris_ovoo[:, c0:c1, :, :],
                     t2[:, :, b0:b1, a0:a1],
                     out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
 
-                _run_fused(
+                run_fused(
                     _restricted_v_divide,
                     w_blk[:ba, :bb, :bc], v_blk[:ba, :bb, :bc],
                     eris_ovov, t1, t2, eris.fock[nocc:, :nocc], eia,
@@ -212,7 +212,7 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
         blksize = min(blksize, (nocc + 1) // 2)
         blksize = max(blksize, 1)
     log.debug1(
-        "ccsd_t rdm _gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
+        "ccsd_t rdm gamma1_intermediates: max_memory %d MB,  nocc,nvir = %d,%d  blksize = %d",
         max_memory,
         nocc,
         nvir,
@@ -235,74 +235,74 @@ def _gamma1_intermediates(mycc, t1, t2, l1, l2, eris=None):
                     eris_ovvv[i0:i1, :, :, :],
                     t2[k0:k1, j0:j1, :, :],
                 )
-                _w_einsum(
+                w_einsum(
                     "iafc,jkbf->ijkabc",
                     eris_ovvv[i0:i1, :, :, :],
                     t2[j0:j1, k0:k1, :, :],
                     out=w_blk[:bi, :bj, :bk],
                 )
-                _w_einsum(
+                w_einsum(
                     "jbfa,kicf->ijkabc",
                     eris_ovvv[j0:j1, :, :, :],
                     t2[k0:k1, i0:i1, :, :],
                     out=w_blk[:bi, :bj, :bk],
                 )
-                _w_einsum(
+                w_einsum(
                     "jbfc,ikaf->ijkabc",
                     eris_ovvv[j0:j1, :, :, :],
                     t2[i0:i1, k0:k1, :, :],
                     out=w_blk[:bi, :bj, :bk],
                 )
-                _w_einsum(
+                w_einsum(
                     "kcfa,jibf->ijkabc",
                     eris_ovvv[k0:k1, :, :, :],
                     t2[j0:j1, i0:i1, :, :],
                     out=w_blk[:bi, :bj, :bk],
                 )
-                _w_einsum(
+                w_einsum(
                     "kcfb,ijaf->ijkabc",
                     eris_ovvv[k0:k1, :, :, :],
                     t2[i0:i1, j0:j1, :, :],
                     out=w_blk[:bi, :bj, :bk],
                 )
-                _w_einsum(
+                w_einsum(
                     "iajm,mkbc->ijkabc",
                     eris_ovoo[i0:i1, :, j0:j1, :],
                     t2[:, k0:k1, :, :],
                     out=w_blk[:bi, :bj, :bk], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "iakm,mjcb->ijkabc",
                     eris_ovoo[i0:i1, :, k0:k1, :],
                     t2[:, j0:j1, :, :],
                     out=w_blk[:bi, :bj, :bk], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "jbim,mkac->ijkabc",
                     eris_ovoo[j0:j1, :, i0:i1, :],
                     t2[:, k0:k1, :, :],
                     out=w_blk[:bi, :bj, :bk], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "jbkm,mica->ijkabc",
                     eris_ovoo[j0:j1, :, k0:k1, :],
                     t2[:, i0:i1, :, :],
                     out=w_blk[:bi, :bj, :bk], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "kcim,mjab->ijkabc",
                     eris_ovoo[k0:k1, :, i0:i1, :],
                     t2[:, j0:j1, :, :],
                     out=w_blk[:bi, :bj, :bk], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "kcjm,miba->ijkabc",
                     eris_ovoo[k0:k1, :, j0:j1, :],
                     t2[:, i0:i1, :, :],
                     out=w_blk[:bi, :bj, :bk], subtract=True,
                 )
 
-                _run_fused(
+                run_fused(
                     _restricted_v_divide,
                     w_blk[:bi, :bj, :bk], v_blk[:bi, :bj, :bk],
                     eris_ovov, t1, t2, eris.fock[nocc:, :nocc], eia,
@@ -401,74 +401,74 @@ def _gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False):
                     eris_ovvv[:, a0:a1, :, b0:b1],
                     t2[:, :, c0:c1, :],
                 )
-                _w_einsum(
+                w_einsum(
                     "iafc,jkbf->abcijk",
                     eris_ovvv[:, a0:a1, :, c0:c1],
                     t2[:, :, b0:b1, :],
                     out=w_blk[:ba, :bb, :bc],
                 )
-                _w_einsum(
+                w_einsum(
                     "jbfa,kicf->abcijk",
                     eris_ovvv[:, b0:b1, :, a0:a1],
                     t2[:, :, c0:c1, :],
                     out=w_blk[:ba, :bb, :bc],
                 )
-                _w_einsum(
+                w_einsum(
                     "jbfc,ikaf->abcijk",
                     eris_ovvv[:, b0:b1, :, c0:c1],
                     t2[:, :, a0:a1, :],
                     out=w_blk[:ba, :bb, :bc],
                 )
-                _w_einsum(
+                w_einsum(
                     "kcfa,jibf->abcijk",
                     eris_ovvv[:, c0:c1, :, a0:a1],
                     t2[:, :, b0:b1, :],
                     out=w_blk[:ba, :bb, :bc],
                 )
-                _w_einsum(
+                w_einsum(
                     "kcfb,ijaf->abcijk",
                     eris_ovvv[:, c0:c1, :, b0:b1],
                     t2[:, :, a0:a1, :],
                     out=w_blk[:ba, :bb, :bc],
                 )
-                _w_einsum(
+                w_einsum(
                     "iajm,mkbc->abcijk",
                     eris_ovoo[:, a0:a1, :, :],
                     t2[:, :, b0:b1, c0:c1],
                     out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "iakm,mjcb->abcijk",
                     eris_ovoo[:, a0:a1, :, :],
                     t2[:, :, c0:c1, b0:b1],
                     out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "jbim,mkac->abcijk",
                     eris_ovoo[:, b0:b1, :, :],
                     t2[:, :, a0:a1, c0:c1],
                     out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "jbkm,mica->abcijk",
                     eris_ovoo[:, b0:b1, :, :],
                     t2[:, :, c0:c1, a0:a1],
                     out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "kcim,mjab->abcijk",
                     eris_ovoo[:, c0:c1, :, :],
                     t2[:, :, a0:a1, b0:b1],
                     out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
-                _w_einsum(
+                w_einsum(
                     "kcjm,miba->abcijk",
                     eris_ovoo[:, c0:c1, :, :],
                     t2[:, :, b0:b1, a0:a1],
                     out=w_blk[:ba, :bb, :bc], subtract=True,
                 )
 
-                _run_fused(
+                run_fused(
                     _restricted_v_divide,
                     w_blk[:ba, :bb, :bc], v_blk[:ba, :bb, :bc],
                     eris_ovov, t1, t2, eris.fock[nocc:, :nocc], eia,

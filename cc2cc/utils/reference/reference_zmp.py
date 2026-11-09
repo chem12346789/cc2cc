@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from cc2cc.utils.mol import AU2KCALMOL
+from cc2cc.utils.helper.units import AU2KCALMOL
 from cc2cc.utils.helper.chemistry.density_metrics import diff_rho, diff_I_value
 from cc2cc.utils.zmp.zmp import RZMP, UZMP
 from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum

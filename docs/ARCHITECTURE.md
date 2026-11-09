@@ -19,7 +19,8 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 ### `cc2cc/utils/` — shared utilities and domain logic
 - `parser.py`: CLI arg definitions; reuse `add_args()` / `gen_name_args()`
 - `helper/runtime/env_var.py`: project paths, grid env settings, thread/GPU info
-- `mol.py`: molecule/dataset definitions — source of truth for molecule names
+- `mol.py`: dataset loading, molecule rotation, and PySCF molecule construction;
+  source of truth for molecule names
 - `Grids.py`, `GridsGPU.py`: CPU/GPU grid construction. `Grid` is CPU by
   default; keep GPU classes lazily imported
 - `grids/`: `Grids_rotate.py` and `GridsGPU_rotate.py` grid variants; the GPU
@@ -32,12 +33,17 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   gradients are not implemented.
 - `reference/`: shared B3LYP, CCSD(T), HF, VV10, and ZMP reference modules,
   plus cached DFT reference data utilities.
-- `helper/chemistry/`: basis, grid energy, geometry, tensor, and density helpers.
+- `helper/units.py`: energy and dipole conversion factors.
+- `helper/chemistry/basis.py`: basis/ECP element tables and generation.
+- `helper/chemistry/`: basis/ECP generation, grid energy, geometry, tensor, and
+  density helpers.
+- `helper/chemistry/tensor_helper.py`: public `parallel_einsum` and `w_einsum`
+  contractions shared by CCSD(T) modules.
 - `helper/workflow/`: data records, run support, and schedulers.
 - `helper/runtime/`: environment, system information, timing, and opt-in XC
   profiling. Import helper modules from their subpackages.
 - `ccsd_t/`: PySCF CCSD(T) density and lambda helper modules, including
-  unrestricted 1- and 2-RDM intermediates.
+  unrestricted 1- and 2-RDM intermediates and public shared fused helpers.
 - `zmp/`: inversion, constraint generation, and occupied-virtual training modules.
 - `reference/reference_cc.py`: shared CCSD(T) setup, target densities and gradients,
   and restricted/unrestricted CC energy grids; callers pass `unrestricted`.
@@ -190,7 +196,8 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   before the passes, not peak usage or system-free RAM. This budget guides block
   sizing rather than reserving memory; orbital dimensions and block-splitting
   heuristics also limit block sizes.
-- `DataBase.py`, `ModelClass.py`: data loading, model init, checkpoints, losses
+- `DataBase.py`, `ModelClass.py`: data loading, model init, checkpoints, losses.
+  The `training_stage` context manager is shared with the training entry point.
 - `reference/test_data_dft.py`: cached DFT reference generation.
 - `helper/chemistry/density_metrics.py`: density comparisons.
 - `helper/workflow/DataRecord.py`: CSV record keeping
@@ -402,7 +409,11 @@ created, and failures may occur after earlier files have been updated.
     Other `TEST_MODE` values can also override these defaults.
 - `benchmark_dft.py`: baseline DFT benchmarking
 - `d3_para.py`: D3 parameter fitting/testing
-- `collect_info.py`: collect validation CSV summaries
+- `collect_info.py`: collect validation CSV summaries using the shared
+  `AU2KCALMOL` conversion from `helper/units.py` (previously 627.5094740631).
+  Importing it now initializes `cc2cc.utils` and its scientific dependencies.
+  Existing completed cache entries and saved summaries are not recalculated.
+  The density-effects analysis script also uses `Collect_info.subset_alias()`.
   - Select the corrected model energy with
     `--energy_column post_scf_vv10_ene` (Python:
     `Collect_info(..., energy_column="post_scf_vv10_ene")`).

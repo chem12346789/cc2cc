@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 
 from cc2cc.utils.mol import gen_mole
 from cc2cc.utils.helper.runtime.env_var import DATA_PATH
-from cc2cc.utils.mol import AU2KCALMOL
+from cc2cc.utils.helper.units import AU2KCALMOL
 
 MAX_ERROR_ENERGY = 0.01  # kcal/mol per atom, if the error energy is larger than this value, we set the absolute loss multiplier to 0 to avoid the numerical instability in training.
 MAX_GRAD_BATCH_SIZE = 250000  # if the number of gradients is larger than this value, we split the batch into smaller batches to avoid the memory overflow in training.

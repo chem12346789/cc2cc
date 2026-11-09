@@ -38,7 +38,7 @@ def build_reactions(dataset):
         if not key.startswith("reaction-"):
             continue
         subset = key.removeprefix("reaction-")
-        alias = Collect_info._subset_alias(subset)
+        alias = Collect_info.subset_alias(subset)
         references = [float(entry["reference"]) for entry in entries.values()]
         mean_reference = np.mean(np.abs(references))
         for reaction_id, entry in entries.items():

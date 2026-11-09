@@ -7,7 +7,8 @@ import os
 import pandas as pd
 import numpy as np
 
-AU2KCALMOL = 627.5094740631
+from cc2cc.utils.helper.units import AU2KCALMOL
+
 DIET_DATASETS = {"gmtkn-diet30-def2", "gmtkn-diet100-def2"}
 DATA_FRAME_NAMES = {
     "gmtkn-def2": [
@@ -183,7 +184,7 @@ class Collect_info:
             print("No data found to aggregate.")
 
     @staticmethod
-    def _subset_alias(subset_name):
+    def subset_alias(subset_name):
         if subset_name == "BH76RC":
             return "BH76"
         for prefix in ("S66x8", "S22x5"):
@@ -295,7 +296,7 @@ class Collect_info:
         weight_list = []
 
         for i_subset, subset_name in enumerate(self.name_subset_list):
-            i_subset_name = self._subset_alias(subset_name)
+            i_subset_name = self.subset_alias(subset_name)
 
             reaction_dict = data_set_json[f"reaction-{subset_name}"]
             total_counts_subset.append(len(reaction_dict))

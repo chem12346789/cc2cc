@@ -5,7 +5,7 @@ from pyscf import cc, lib
 from pyscf.cc import ccsd_rdm, ccsd_t_lambda, uccsd_rdm
 from pyscf.grad import ccsd as ccsd_grad, uccsd as uccsd_grad
 
-from cc2cc.utils.ccsd_t.pyscf_ccsd_t_rdm import _gamma1_intermediates
+from cc2cc.utils.ccsd_t.pyscf_ccsd_t_rdm import gamma1_intermediates
 from cc2cc.utils.ccsd_t.pyscf_uccsd_t_lambda import kernel as uccsd_t_lambda_kernel
 from cc2cc.utils.ccsd_t.pyscf_uccsd_t_u_gamma1_intermediates import (
     u_gamma1_intermediates,
@@ -66,7 +66,7 @@ def ccsd_t_target_density(mycc, eris, *, unrestricted=False, reference=False):
         corrections = ((doo, -goo), (dOO, -gOO), (dvv, gvv), (dVV, gVV))
         rdm = uccsd_rdm
     else:
-        d1, goo, gvv = _gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
+        d1, goo, gvv = gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
         doo, dov, dvo, dvv = d1
         d1_grad = (doo - goo * 0.5, dov, dvo, dvv + gvv * 0.5)
         corrections = ((doo, -goo * 0.5), (dvv, gvv * 0.5))

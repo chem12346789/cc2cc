@@ -15,8 +15,8 @@ NO_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "config_list": ("cc2cc.utils.parser", "config_list"),
     "process_config": ("cc2cc.utils.parser", "process_config"),
     "gen_mole": ("cc2cc.utils.mol", "gen_mole"),
-    "AU2KCALMOL": ("cc2cc.utils.mol", "AU2KCALMOL"),
-    "AU2DEBYE": ("cc2cc.utils.mol", "AU2DEBYE"),
+    "AU2KCALMOL": ("cc2cc.utils.helper.units", "AU2KCALMOL"),
+    "AU2DEBYE": ("cc2cc.utils.helper.units", "AU2DEBYE"),
     "DATA_PATH": ("cc2cc.utils.helper.runtime.env_var", "DATA_PATH"),
     "MAIN_PATH": ("cc2cc.utils.helper.runtime.env_var", "MAIN_PATH"),
     "print_computer_info": (
