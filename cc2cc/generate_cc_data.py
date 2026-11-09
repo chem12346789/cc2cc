@@ -18,8 +18,9 @@ from cc2cc.utils.ccsd_t.pyscf_uccsd_t_u_gamma2_intermediates import (
     u_gamma2_intermediates,
 )
 
-from cc2cc.utils import diff_rho
-from cc2cc.utils import DATA_PATH, AU2KCALMOL
+from cc2cc.utils.helper.chemistry.density_metrics import diff_rho
+from cc2cc.utils.helper.runtime.env_var import DATA_PATH
+from cc2cc.utils.helper.units import AU2KCALMOL
 from cc2cc.utils.reference.reference_cc import (
     make_ccsd,
     ccsd_t_target_density,

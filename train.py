@@ -1,12 +1,13 @@
 import argparse
 
-from cc2cc.utils import (
+from cc2cc.utils.helper.runtime.computer_info import print_computer_info
+from cc2cc.utils.parser import (
     add_args,
-    print_computer_info,
     config_list,
+    gen_name_args,
     process_config,
+    str2bool,
 )
-from cc2cc.utils.parser import gen_name_args, str2bool
 from cc2cc.train_model import train_model
 
 if __name__ == "__main__":

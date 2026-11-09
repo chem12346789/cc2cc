@@ -13,8 +13,11 @@ except Exception:  # pragma: no cover
 import pyscf
 import pyscf.dft
 
-import cc2cc.utils as utils
+from cc2cc.utils.helper.chemistry.density_metrics import diff_rho
+from cc2cc.utils.helper.runtime.env_var import DATA_PATH
+from cc2cc.utils.helper.units import AU2KCALMOL
 from cc2cc.utils.helper.workflow.run_helpers import load_post_scf_density, load_post_scf_vv10
+from cc2cc.utils.reference.test_data_dft import TestDataDFT
 
 pyscf.lib.logger.TIMER_LEVEL = 4
 VERBOSE = 4
@@ -39,19 +42,23 @@ def validate_model(
     scf_class = pyscf.dft.UKS if unrestricted else pyscf.dft.RKS
     method = "UKS" if unrestricted else "RKS"
     if torch.cuda.is_available() and not args.if_grad and not args.cpu:
+        from cc2cc.utils.GridsGPU import GridGPU as Grid
+        from cc2cc.utils.modelscf_gpu import get_veff_modified_gpu
+
         print("Use GPU for DFT calculation.")
         use_gpu = True
         mdft = scf_class(mol).to_gpu().density_fit()
-        Grid = utils.GridGPU
-        utils.get_veff_modified_gpu(
+        get_veff_modified_gpu(
             mdft, modeldict, args.max_memory_gpu, unrestricted=unrestricted
         )
     else:
+        from cc2cc.utils.Grids import GridCPU as Grid
+        from cc2cc.utils.modelscf import get_veff_modified
+
         print("Use CPU for DFT calculation.")
         use_gpu = False
         mdft = scf_class(mol).density_fit()
-        Grid = utils.GridCPU
-        utils.get_veff_modified(mdft, modeldict, unrestricted=unrestricted)
+        get_veff_modified(mdft, modeldict, unrestricted=unrestricted)
 
     if args.baseline == "b3lyp-vv10" or test_mode in (
         "post-b3lyp-nl",
@@ -93,7 +100,7 @@ def validate_model(
         if args.max_cycle == -1:
             mdft.max_cycle = -1
             if_retry = False
-            test_data = utils.TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
+            test_data = TestDataDFT(mol, name, xc_code=mdft.xc, disp=None)
             mdft.kernel(dm0=test_data.dm1_dft)
         else:
             mdft.max_cycle = args.max_cycle
@@ -145,9 +152,13 @@ def validate_model(
         g.xc = "b3lyp"
         g.grids = mdft.grids
         if torch.cuda.is_available() and (not args.if_grad):
-            utils.get_veff_grad_modified_gpu(g, modeldict, unrestricted=unrestricted)
+            from cc2cc.utils.modelscf_gpu import get_veff_grad_modified_gpu
+
+            get_veff_grad_modified_gpu(g, modeldict, unrestricted=unrestricted)
         else:
-            utils.get_veff_grad_modified(g, modeldict, unrestricted=unrestricted)
+            from cc2cc.utils.modelscf import get_veff_grad_modified
+
+            get_veff_grad_modified(g, modeldict, unrestricted=unrestricted)
         grad_mdft = g.kernel()
         if not unrestricted:
             grad_mdft = np.array(grad_mdft)
@@ -183,8 +194,8 @@ def validate_model(
         else:
             dict_.update({"scf_grad": 0})
 
-    if (utils.DATA_PATH / f"data_{name}.npz").exists():
-        data = np.load(utils.DATA_PATH / f"data_{name}.npz", allow_pickle=True)
+    if (DATA_PATH / f"data_{name}.npz").exists():
+        data = np.load(DATA_PATH / f"data_{name}.npz", allow_pickle=True)
         if not unrestricted:
             print("\n\n" + "=" * 40)
             print("Molecule from data:")
@@ -193,21 +204,21 @@ def validate_model(
             print("Molecule from PySCF:")
         print(mol.tostring(format="xyz"))
         print(
-            f"energy (ai vs dft) {(e_scf - data['e_dft']) * utils.AU2KCALMOL} Kcal/mol"
+            f"energy (ai vs dft) {(e_scf - data['e_dft']) * AU2KCALMOL} Kcal/mol"
         )
-        print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * utils.AU2KCALMOL} Kcal/mol")
+        print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * AU2KCALMOL} Kcal/mol")
 
         dm1_dft = data["dm1_dft"]
         dm1_cc = data["dm1_cc"]
         dm1_ai = dm1_scf
         print(
-            f"electronic density (ai vs dft) {utils.diff_rho(mol, dm1_dft, dm1_ai, mdft.grids)}"
+            f"electronic density (ai vs dft) {diff_rho(mol, dm1_dft, dm1_ai, mdft.grids)}"
         )
         print(
-            f"electronic density (ai vs cc) {utils.diff_rho(mol, dm1_cc, dm1_ai, mdft.grids)}"
+            f"electronic density (ai vs cc) {diff_rho(mol, dm1_cc, dm1_ai, mdft.grids)}"
         )
         print(
-            f"electronic density (dft vs cc) {utils.diff_rho(mol, dm1_cc, dm1_dft, mdft.grids)}"
+            f"electronic density (dft vs cc) {diff_rho(mol, dm1_cc, dm1_dft, mdft.grids)}"
         )
         dipole_dft = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
         dipole_cc = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")

@@ -15,7 +15,7 @@ from scipy.optimize import Bounds, minimize
 from torch_dftd.torch_dftd3_calculator import TorchDFTD3Calculator
 from torch_dftd.dftd3_xc_params import get_dftd3_default_params
 
-from cc2cc.utils import AU2KCALMOL
+from cc2cc.utils.helper.units import AU2KCALMOL
 
 DTYPE = torch.float64
 DEFAULT_DEVICE = "cuda"

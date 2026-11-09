@@ -10,7 +10,9 @@ import numpy as np
 import pyscf
 import pyscf.dft
 
-from cc2cc.utils import AU2KCALMOL, Grid, eval_nlc_exc_density
+from cc2cc.utils.Grids import Grid
+from cc2cc.utils.helper.units import AU2KCALMOL
+from cc2cc.utils.reference.reference_vv10 import eval_nlc_exc_density
 
 
 class TestNlcExcDensity(unittest.TestCase):

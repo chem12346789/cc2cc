@@ -8,20 +8,19 @@ import numpy as np
 import pyscf
 import pyscf.md
 
-from cc2cc.utils import (
-    gen_mole,
-    print_computer_info,
+from cc2cc.utils.Grids import Grid
+from cc2cc.utils.helper.runtime.computer_info import print_computer_info
+from cc2cc.utils.helper.runtime.env_var import DATA_PATH
+from cc2cc.utils.mol import gen_mole
+from cc2cc.utils.parser import (
     add_args,
     config_list,
+    gen_name_args,
     process_config,
+    str2bool,
 )
 from cc2cc.utils.helper.chemistry.rotate import rotate
-from cc2cc.utils import (
-    Grid,
-    DATA_PATH,
-)
 from cc2cc.utils.reference.reference_vv10 import get_vv10_data
-from cc2cc.utils.parser import gen_name_args, str2bool
 from cc2cc.generate_cc_data import cc
 
 if __name__ == "__main__":

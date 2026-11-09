@@ -43,7 +43,10 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   unrestricted 1- and 2-RDM intermediates and public shared fused helpers.
 - `zmp/`: inversion, constraint generation, and occupied-virtual training modules.
 - The reorganized utility packages expose their public symbols and submodules
-  lazily. The existing `cc2cc.utils` CPU exports remain eager. Rotated
+  lazily. The root `cc2cc.utils` package has no re-exports or eager imports;
+  import symbols from their defining modules, for example
+  `from cc2cc.utils.helper.units import AU2KCALMOL` or
+  `from cc2cc.utils.Grids import Grid`. Rotated
   `grids.GridGPU` is opt-in and requires CuPy and GPU4PySCF.
 - `helper.chemistry.rotate` and `helper.workflow.DataRecord` remain submodules;
   their function and class are also available as `helper.rotate` and

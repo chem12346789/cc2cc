@@ -5,13 +5,11 @@ Other parameter are from the argparse.
 
 import argparse
 
-from cc2cc.utils import (
-    DataRecord,
-    TestDataDFT,
-    add_args,
-    gen_mole,
-    print_computer_info,
-)
+from cc2cc.utils.helper.runtime.computer_info import print_computer_info
+from cc2cc.utils.helper.workflow.DataRecord import DataRecord
+from cc2cc.utils.mol import gen_mole
+from cc2cc.utils.parser import add_args
+from cc2cc.utils.reference.test_data_dft import TestDataDFT
 from cc2cc.utils.helper.workflow.run_helpers import (
     build_record_path,
     release_memory,
