@@ -91,16 +91,19 @@ recomputed by this policy are preserved.
 ### Custom model gradients
 
 CPU RKS/UKS model gradients retain PySCF's default `grid_response=False`.
-After installing the model gradient with `get_veff_grad_modified_rks` or
-`get_veff_grad_modified_uks`, set `g.grid_response = True` before `g.kernel()`
-to include atom-centered grid motion and Becke-weight derivatives.
+Install `get_veff_grad_modified(g, modeldict, unrestricted=False)` for RKS, or
+pass `unrestricted=True` for UKS. Set
+`g.grid_response = True` before `g.kernel()` to include atom-centered grid
+motion and Becke-weight derivatives.
 AO-overlap Pulay terms remain handled by PySCF in either mode.
-This option does not add grid response to the separate GPU implementations.
+GPU model gradients remain unimplemented.
 
 ### GPU SCF integration
 
 The GPU RKS/UKS hooks exchange model inputs and outputs with PyTorch through
 stream-aware DLPack, without staging model outputs through CPU NumPy arrays.
+Use `get_veff_modified_gpu(..., unrestricted=False)` for RKS or
+`unrestricted=True` for UKS.
 CPU model callers still receive NumPy arrays by default.
 The numerical-integration optimizer is reused on each grid object across SCF
 iterations and rebuilt when molecular integral data or the CUDA device changes.

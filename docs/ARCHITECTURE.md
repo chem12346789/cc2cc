@@ -20,8 +20,16 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 - `mol.py`: molecule/dataset definitions — source of truth for molecule names
 - `Grids.py`, `GridsGPU.py`: CPU/GPU grid construction. `Grid` is CPU by
   default; keep GPU classes lazily imported
-- `modelscf_rks.py`, `modelscf_uks.py`, `_gpu` variants: custom effective-
-  potential/gradient hooks for PySCF SCF
+- `modelscf.py`: shared CPU model potential and gradient hooks with an explicit
+  `unrestricted` argument; spin-specific entry points in the same module
+  forward to these hooks.
+- `modelscf_gpu.py`: shared GPU model potential hooks with explicit spin mode.
+  Spin-specific entry points in the same module forward to these hooks; GPU
+  gradients are not implemented.
+- `reference/`: reserved for reference calculation modules; existing
+  `reference_*.py` modules remain in `utils/`.
+- `helper/`: reserved for shared helper modules; existing utilities remain in
+  `utils/`.
 - `ccsd_t/`: PySCF CCSD(T) density and lambda helper modules.
 - `reference_cc.py`: shared CCSD(T) setup, target densities and gradients,
   and restricted/unrestricted CC energy grids; callers pass `unrestricted`.

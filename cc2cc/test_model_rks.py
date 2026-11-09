@@ -41,15 +41,15 @@ def test_model_rks(
         use_gpu = True
         mdft = pyscf.dft.RKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
-        utils.get_veff_modified_rks_gpu(mdft, modeldict, args.max_memory_gpu)
+        utils.get_veff_modified_gpu(
+            mdft, modeldict, args.max_memory_gpu, unrestricted=False
+        )
     else:
         print("Use CPU for DFT calculation.")
         use_gpu = False
         mdft = pyscf.dft.RKS(mol).density_fit()
         Grid = utils.GridCPU
-        from cc2cc.utils.modelscf_rks import get_veff_modified_rks
-
-        get_veff_modified_rks(mdft, modeldict)
+        utils.get_veff_modified(mdft, modeldict, unrestricted=False)
 
     if args.baseline == "b3lyp-vv10" or test_mode in (
         "post-b3lyp-nl",
@@ -140,9 +140,9 @@ def test_model_rks(
         g.xc = "b3lyp"
         g.grids = mdft.grids
         if torch.cuda.is_available() and (not args.if_grad):
-            utils.get_veff_grad_modified_rks_gpu(g, modeldict)
+            utils.get_veff_grad_modified_gpu(g, modeldict, unrestricted=False)
         else:
-            utils.get_veff_grad_modified_rks(g, modeldict)
+            utils.get_veff_grad_modified(g, modeldict, unrestricted=False)
         grad_mdft = np.array(g.kernel())
         print(f"Net force check: {np.sum(grad_mdft, axis=0)}")
     else:

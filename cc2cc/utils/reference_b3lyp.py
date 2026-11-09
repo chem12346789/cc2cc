@@ -200,7 +200,7 @@ def get_dft_energy(
 
 
 def get_dft_input(mol, grids, dm1_dft, max_memory=8000, *, unrestricted=False):
-    """Calculate B3LYP grid inputs without the force mapping."""
+    """Calculate B3LYP grid inputs with first-order AO derivatives in both modes."""
     if dm1_dft is None:
         return {}
 
@@ -222,7 +222,7 @@ def get_dft_input(mol, grids, dm1_dft, max_memory=8000, *, unrestricted=False):
         cube_rho = (
             gridcube.gen_cube_rho_uks if unrestricted else gridcube.gen_cube_rho_rks
         )
-        rho_part, _, _ = cube_rho(ni, dm1_dft, ao_deriv=2 if unrestricted else 1)
+        rho_part, _, _ = cube_rho(ni, dm1_dft, ao_deriv=1)
         rho_cube_dft[p0:p1] = rho_part
 
     return {
@@ -239,12 +239,8 @@ def get_dft_grad(mol, grids, dm1_dft, max_memory=8000, *, unrestricted=False):
 
     from pyscf import lib
     from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
+    from cc2cc.utils.modelscf import get_veff_grad_modified_zeros
     from cc2cc.utils.tensor_helper import parallel_einsum
-
-    if unrestricted:
-        from cc2cc.utils.modelscf_uks import get_veff_grad_modified_zeros
-    else:
-        from cc2cc.utils.modelscf_rks import get_veff_grad_modified_zeros
 
     mdft = converged_b3lyp(
         mol, dm0=dm1_dft, grids=grids if unrestricted else None,
@@ -252,7 +248,7 @@ def get_dft_grad(mol, grids, dm1_dft, max_memory=8000, *, unrestricted=False):
     )
     gdft = mdft.Gradients()
     grad_dft = gdft.kernel()
-    get_veff_grad_modified_zeros(gdft)
+    get_veff_grad_modified_zeros(gdft, unrestricted=unrestricted)
     grad_dft_zeros = gdft.kernel()
 
     atmlst = range(mol.natm)

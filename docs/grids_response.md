@@ -15,8 +15,7 @@ grid response, not separate alternatives to it.
 
 The CPU RKS/UKS gradient hooks pass the standard PySCF gradient object's
 `grid_response` flag through the model gradient evaluators in
-[modelscf_rks.py](../cc2cc/utils/modelscf_rks.py) and
-[modelscf_uks.py](../cc2cc/utils/modelscf_uks.py).
+[modelscf.py](../cc2cc/utils/modelscf.py), with `unrestricted` passed explicitly.
 They retain standard PySCF J/K, hybrid, NLC and total-gradient assembly.
 
 - **Off (`0`):** baseline and learned correction use fixed quadrature

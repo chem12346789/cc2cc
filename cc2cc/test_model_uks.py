@@ -41,15 +41,15 @@ def test_model_uks(
         use_gpu = True
         mdft = pyscf.dft.UKS(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
-        utils.get_veff_modified_uks_gpu(mdft, modeldict, args.max_memory_gpu)
+        utils.get_veff_modified_gpu(
+            mdft, modeldict, args.max_memory_gpu, unrestricted=True
+        )
     else:
         print("Use CPU for DFT calculation.")
         use_gpu = False
         mdft = pyscf.dft.UKS(mol).density_fit()
         Grid = utils.GridCPU
-        from cc2cc.utils.modelscf_uks import get_veff_modified_uks
-
-        get_veff_modified_uks(mdft, modeldict)
+        utils.get_veff_modified(mdft, modeldict, unrestricted=True)
 
     if args.baseline == "b3lyp-vv10" or test_mode in (
         "post-b3lyp-nl",
@@ -140,9 +140,9 @@ def test_model_uks(
         g.xc = "b3lyp"
         g.grids = mdft.grids
         if torch.cuda.is_available() and not args.if_grad:
-            utils.get_veff_grad_modified_uks_gpu(g, modeldict)
+            utils.get_veff_grad_modified_gpu(g, modeldict, unrestricted=True)
         else:
-            utils.get_veff_grad_modified_uks(g, modeldict)
+            utils.get_veff_grad_modified(g, modeldict, unrestricted=True)
         grad_mdft = g.kernel()
         print(f"Net force check: {np.sum(grad_mdft, axis=0)}")
     else:
