@@ -28,11 +28,10 @@ from cc2cc.utils.parser import config_list as config_list
 from cc2cc.utils.parser import process_config as process_config
 from cc2cc.utils.helper.runtime.timer import Timer as Timer
 
-NO_LAZY_EXPORTS: dict[str, tuple[str, str]]
-_LAZY_EXPORTS: dict[str, tuple[str, str]]
-_GPU_EXPORTS: dict[str, tuple[str, str]]
+NO_LAZY_EXPORTS: dict[str, tuple[str, str | None]]
+_LAZY_EXPORTS: dict[str, tuple[str, str | None]]
+_GPU_EXPORTS: dict[str, tuple[str, str | None]]
 __all__: list[str]
 
-def _load_symbol(name: str, table: dict[str, tuple[str, str]]) -> Any: ...
 def __getattr__(name: str) -> Any: ...
 def __dir__() -> list[str]: ...

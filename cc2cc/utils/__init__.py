@@ -6,11 +6,11 @@ remain lazy.
 
 from __future__ import annotations
 
-from importlib import import_module
-from importlib.util import find_spec
 from typing import Any
 
-NO_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
+from cc2cc.utils._lazy_exports import load_lazy_export as _load_lazy_export
+
+NO_LAZY_EXPORTS: dict[str, tuple[str, str | None]] = {
     "add_args": ("cc2cc.utils.parser", "add_args"),
     "config_list": ("cc2cc.utils.parser", "config_list"),
     "process_config": ("cc2cc.utils.parser", "process_config"),
@@ -42,7 +42,7 @@ NO_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "should_skip": ("cc2cc.utils.helper.workflow.run_helpers", "should_skip"),
 }
 
-_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
+_LAZY_EXPORTS: dict[str, tuple[str, str | None]] = {
     "get_veff_modified": (
         "cc2cc.utils.modelscf",
         "get_veff_modified",
@@ -53,7 +53,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     ),
 }
 
-_GPU_EXPORTS: dict[str, tuple[str, str]] = {
+_GPU_EXPORTS: dict[str, tuple[str, str | None]] = {
     "GridGPU": ("cc2cc.utils.GridsGPU", "GridGPU"),
     "get_veff_modified_gpu": (
         "cc2cc.utils.modelscf_gpu",
@@ -66,32 +66,14 @@ _GPU_EXPORTS: dict[str, tuple[str, str]] = {
 }
 
 
-def _load_symbol(name: str, table: dict[str, tuple[str, str]]) -> Any:
-    module_name, attr_name = table[name]
-    value = getattr(import_module(module_name), attr_name)
-    globals()[name] = value
-    return value
-
-
 for _name in NO_LAZY_EXPORTS:
-    _load_symbol(_name, NO_LAZY_EXPORTS)
+    _load_lazy_export(_name, globals(), NO_LAZY_EXPORTS)
 
 __all__ = list(NO_LAZY_EXPORTS) + list(_LAZY_EXPORTS)
 
 
 def __getattr__(name: str) -> Any:
-    if name in _LAZY_EXPORTS:
-        return _load_symbol(name, _LAZY_EXPORTS)
-    if name in _GPU_EXPORTS:
-        if find_spec("cupy") is None:
-            raise ImportError(
-                f"GPU dependency cupy is not available. Cannot import {name}"
-            )
-        value = _load_symbol(name, _GPU_EXPORTS)
-        if name not in __all__:
-            __all__.append(name)
-        return value
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    return _load_lazy_export(name, globals(), _LAZY_EXPORTS, _GPU_EXPORTS)
 
 
 def __dir__() -> list[str]:

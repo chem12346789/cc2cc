@@ -42,6 +42,12 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 - `ccsd_t/`: PySCF CCSD(T) density and lambda helper modules, including
   unrestricted 1- and 2-RDM intermediates and public shared fused helpers.
 - `zmp/`: inversion, constraint generation, and occupied-virtual training modules.
+- The reorganized utility packages expose their public symbols and submodules
+  lazily. The existing `cc2cc.utils` CPU exports remain eager. Rotated
+  `grids.GridGPU` is opt-in and requires CuPy and GPU4PySCF.
+- `helper.chemistry.rotate` and `helper.workflow.DataRecord` remain submodules;
+  their function and class are also available as `helper.rotate` and
+  `helper.DataRecord`.
 - `reference/reference_cc.py`: shared CCSD(T) setup, target densities and gradients,
   and restricted/unrestricted CC energy grids; callers pass `unrestricted`.
 - `reference/reference_hf.py`: shared restricted/unrestricted HF energy grids; callers
