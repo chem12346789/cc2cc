@@ -5,7 +5,7 @@ from pyscf.lib import logger
 from pyscf.cc import ccsd_lambda
 from pyscf.cc import uccsd_lambda
 
-from cc2cc.utils.tensor_helper import parallel_einsum, _w_einsum
+from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum, _w_einsum
 
 
 def _triples_block_size(max_memory, extent, denominator, exponent):

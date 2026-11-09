@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import numpy as np
 import torch
 
-from cc2cc.utils.env_var import DATA_PATH, EDGE_LEN, EDGE_SIZE
+from cc2cc.utils.helper.runtime.env_var import DATA_PATH, EDGE_LEN, EDGE_SIZE
 
 
 class GaussianOrbitalCache:

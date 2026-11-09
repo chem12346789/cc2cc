@@ -1,7 +1,7 @@
 import torch
 from e3nn import o3
 
-from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
+from cc2cc.utils.helper.runtime.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 
 # E3NN-based octahedral equivariant network for 3D scalar field prediction.
 

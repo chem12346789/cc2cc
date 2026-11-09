@@ -16,7 +16,7 @@ from pyscf.dft import gen_grid, numint, radi
 from pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 from pyscf.grad.rks import grids_response_cc
 
-from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
+from cc2cc.utils.helper.runtime.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 
 GridsCPU = gen_grid.Grids
 OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)

@@ -12,7 +12,11 @@ from cc2cc.utils import (
     gen_mole,
     print_computer_info,
 )
-from cc2cc.utils.run_helpers import build_record_path, release_memory, should_skip
+from cc2cc.utils.helper.workflow.run_helpers import (
+    build_record_path,
+    release_memory,
+    should_skip,
+)
 
 
 def _benchmark_dft(

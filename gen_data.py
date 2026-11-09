@@ -15,15 +15,15 @@ from cc2cc.utils import (
     config_list,
     process_config,
 )
-from cc2cc.utils.rotate import rotate
+from cc2cc.utils.helper.chemistry.rotate import rotate
 from cc2cc.utils import (
     Grid,
     DATA_PATH,
 )
-from cc2cc.utils.reference_vv10 import get_vv10_data
+from cc2cc.utils.reference.reference_vv10 import get_vv10_data
 from cc2cc.utils.parser import gen_name_args, str2bool
-from cc2cc.gen_cc import cc
-from cc2cc.utils.zmp_constraints import (
+from cc2cc.generate_cc_data import cc
+from cc2cc.utils.zmp.zmp_constraints import (
     get_zmp_constraint_data,
     refresh_zmp_constraint_metadata,
 )

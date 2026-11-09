@@ -153,13 +153,14 @@ class TestForceValidation(TestCase):
 
     def test_runner_convergence_gate(self):
         for spin in ("rks", "uks"):
-            path = ROOT / f"cc2cc/test_model_{spin}.py"
+            path = ROOT / "cc2cc/test_model.py"
             tree = ast.parse(path.read_text())
             block = next(node for node in ast.walk(tree)
                          if isinstance(node, ast.If)
                          and ast.unparse(node.test) == "mdft.converged is False")
             code = compile(ast.Module(body=[block], type_ignores=[]), str(path), "exec")
             namespace = dict(mdft=SimpleNamespace(converged=False), name="test",
+                             method=spin.upper(),
                              args=SimpleNamespace(require_convergence=True))
             with self.assertRaisesRegex(RuntimeError, "did not converge"):
                 exec(code, namespace)

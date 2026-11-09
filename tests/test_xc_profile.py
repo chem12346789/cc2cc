@@ -10,7 +10,9 @@ import numpy as np
 
 
 UTILS = Path(__file__).resolve().parents[1] / "cc2cc" / "utils"
-spec = importlib.util.spec_from_file_location("xc_profile", UTILS / "xc_profile.py")
+spec = importlib.util.spec_from_file_location(
+    "xc_profile", UTILS / "helper" / "runtime" / "xc_profile.py"
+)
 profiling = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(profiling)
 

@@ -13,18 +13,20 @@ from cc2cc.utils import (
     print_computer_info,
 )
 from cc2cc.utils.parser import str2bool
-from cc2cc.utils.run_helpers import build_record_path, release_memory, should_skip
+from cc2cc.utils.helper.workflow.run_helpers import (
+    build_record_path,
+    release_memory,
+    should_skip,
+)
 
 
-def _run_one(mol, name, modeldict, data_record, args):
+def _run_one(mol, name, modeldict, data_record, args, *, unrestricted: bool):
     if modeldict is None:
         raise ValueError("ModelClass is required for model validation mode.")
 
-    from cc2cc.test_model_rks import test_model_rks
-    from cc2cc.test_model_uks import test_model_uks
+    from cc2cc.test_model import validate_model
 
-    runner = test_model_rks if mol.spin == 0 else test_model_uks
-    runner(mol, name, modeldict, data_record, args)
+    validate_model(mol, name, modeldict, data_record, args, unrestricted=unrestricted)
 
 
 def main():
@@ -207,6 +209,7 @@ def main():
                 modeldict,
                 data_record,
                 args,
+                unrestricted=mol.spin != 0,
             )
         finally:
             del mol

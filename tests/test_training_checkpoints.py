@@ -13,7 +13,7 @@ from torch.optim.lr_scheduler import (
     CosineAnnealingWarmRestarts,
 )
 
-from cc2cc.utils.schedulers import CosineAnnealingWarmRestarts2
+from cc2cc.utils.helper.workflow.schedulers import CosineAnnealingWarmRestarts2
 
 
 training = importlib.import_module("cc2cc.train_model")

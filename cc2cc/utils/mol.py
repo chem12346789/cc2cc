@@ -12,8 +12,8 @@ import pyscf
 from pyscf.gto.basis.bse import get_basis
 from pyscf.gto.basis.bse import _ecp_basis
 
-from cc2cc.utils.rotate import rotate
-from cc2cc.utils.addon_basis import addon_basis
+from cc2cc.utils.helper.chemistry.rotate import rotate
+from cc2cc.utils.helper.chemistry.addon_basis import addon_basis
 
 AU2KCALMOL = 627.5094733748099
 AU2DEBYE = 2.541746472

@@ -3,7 +3,7 @@ import unittest
 
 import torch
 
-from cc2cc.utils.env_var import EDGE_SIZE
+from cc2cc.utils.helper.runtime.env_var import EDGE_SIZE
 
 MODEL_MODULES = (
     "cc2cc.utils.model.transformer+dense_mix_e3nn_4_correct",

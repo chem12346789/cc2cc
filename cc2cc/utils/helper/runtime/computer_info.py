@@ -5,7 +5,7 @@ Separated from ``env_var`` so path/constants can be imported without heavy deps.
 
 import os
 
-from cc2cc.utils.env_var import (
+from cc2cc.utils.helper.runtime.env_var import (
     CHECKPOINTS_PATH,
     CUBE_MIDDLE,
     DATA_PATH,

@@ -20,21 +20,21 @@ from cc2cc.utils.ccsd_t.pyscf_uccsd_t_u_gamma2_intermediates import (
 
 from cc2cc.utils import diff_rho
 from cc2cc.utils import DATA_PATH, AU2KCALMOL
-from cc2cc.utils.reference_cc import (
+from cc2cc.utils.reference.reference_cc import (
     make_ccsd,
     ccsd_t_target_density,
     ccsd_t_target_gradient,
     get_cc_energy,
 )
-from cc2cc.utils.reference_hf import get_hf_energy
-from cc2cc.utils.reference_b3lyp import (
+from cc2cc.utils.reference.reference_hf import get_hf_energy
+from cc2cc.utils.reference.reference_b3lyp import (
     get_dft_energy,
     get_dft_grad,
     get_dft_input,
 )
-from cc2cc.utils.reference_zmp import get_zmp, zmp_baseline_gradient
-from cc2cc.utils.zmp_constraints import get_zmp_constraint_data
-from cc2cc.utils.reference_vv10 import get_vv10_data
+from cc2cc.utils.reference.reference_zmp import get_zmp, zmp_baseline_gradient
+from cc2cc.utils.zmp.zmp_constraints import get_zmp_constraint_data
+from cc2cc.utils.reference.reference_vv10 import get_vv10_data
 
 
 def is_hermitian(matrix, tol=1e-8):
@@ -50,7 +50,7 @@ def cc(
     *,
     unrestricted=False,
 ):
-    """Generate CCSD(T) data with the explicitly selected spin formalism."""
+    """Generate CCSD(T) reference data with the explicitly selected spin formalism."""
     if not unrestricted and mol.spin != 0:
         raise ValueError(
             "Restricted CCSD(T) requires mol.spin == 0; set unrestricted=True."

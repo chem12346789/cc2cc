@@ -11,8 +11,8 @@ from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 import swanlab
 
 from cc2cc.utils.ModelClass import ModelClass, _training_stage
-from cc2cc.utils.computer_info import print_computer_info
-from cc2cc.utils.timer import Timer
+from cc2cc.utils.helper.runtime.computer_info import print_computer_info
+from cc2cc.utils.helper.runtime.timer import Timer
 
 
 class BestLoss:

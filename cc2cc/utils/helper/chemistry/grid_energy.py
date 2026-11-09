@@ -5,10 +5,10 @@ import numpy as np
 import pyscf
 import pyscf.scf
 
-from cc2cc.utils.tensor_helper import parallel_einsum
+from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
 
-def _nuclear_energy_density(mol, grids, density):
+def nuclear_energy_density(mol, grids, density):
     """Return the point-nucleus attraction energy-density grid."""
     nuclear = np.zeros_like(grids.weights)
     atom_coords = mol.atom_coords()
@@ -21,7 +21,7 @@ def _nuclear_energy_density(mol, grids, density):
     return nuclear
 
 
-def _ecp_energy_density(mol, ao, dm):
+def ecp_energy_density(mol, ao, dm):
     """Return the pseudopotential correction in the AO-projected gauge."""
     if not mol.has_ecp():
         return np.zeros(ao.shape[0], dtype=ao.dtype)
@@ -34,7 +34,7 @@ def _ecp_energy_density(mol, ao, dm):
     return parallel_einsum("pi,ij,pj->p", ao, projected_dm, ao)
 
 
-def _orbital_gradient_squared(ao_gradient, orbital_coeff):
+def orbital_gradient_squared(ao_gradient, orbital_coeff):
     orbital_gradient = parallel_einsum(
         "xpm,m->xp",
         ao_gradient,
@@ -88,7 +88,9 @@ def get_dft_energy(
     evaluate=False,
 ):
     """Calculate restricted B3LYP energy-density components."""
-    from cc2cc.utils.reference_b3lyp import get_dft_energy as shared_dft_energy
+    from cc2cc.utils.reference.reference_b3lyp import (
+        get_dft_energy as shared_dft_energy,
+    )
 
     return shared_dft_energy(
         mol, grids, dft_mo_coeff, dm1_dft,

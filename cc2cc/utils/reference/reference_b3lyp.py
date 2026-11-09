@@ -71,13 +71,13 @@ def get_dft_energy(
     import gc
     import torch
 
-    from cc2cc.utils.get_dft_energy_rks import (
-        _ecp_energy_density,
-        _nuclear_energy_density,
-        _orbital_gradient_squared,
+    from cc2cc.utils.helper.chemistry.grid_energy import (
+        ecp_energy_density,
+        nuclear_energy_density,
+        orbital_gradient_squared,
         block_loop_rdm2,
     )
-    from cc2cc.utils.tensor_helper import parallel_einsum
+    from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
     print("Using backend: numpy for get_dft_energy\n")
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
@@ -100,7 +100,7 @@ def get_dft_energy(
     if evaluate:
         return {}
 
-    ecp_dft_grids = _ecp_energy_density(mol, ao_value[0], dm_total)
+    ecp_dft_grids = ecp_energy_density(mol, ao_value[0], dm_total)
     exc_dft_grids = (
         pyscf.dft.libxc.eval_xc("b3lyp", rho_dft, spin=int(unrestricted))[0]
         * rho_total
@@ -172,11 +172,11 @@ def get_dft_energy(
                 ao_2_diag,
             )
             kin_dft_grids -= factor * part
-            kinl_dft_grids += factor * _orbital_gradient_squared(ao_1, coeff[:, i])
+            kinl_dft_grids += factor * orbital_gradient_squared(ao_1, coeff[:, i])
     print("Kinetic part done.\n")
 
     print("Start nuclear part...")
-    nuc_dft_grids = _nuclear_energy_density(mol, grids, rho_total)
+    nuc_dft_grids = nuclear_energy_density(mol, grids, rho_total)
     print("Nuclear part done.\n")
 
     tol_dft_grids = (
@@ -205,7 +205,7 @@ def get_dft_input(mol, grids, dm1_dft, max_memory=8000, *, unrestricted=False):
         return {}
 
     from pyscf import lib
-    from cc2cc.utils.env_var import EDGE_SIZE
+    from cc2cc.utils.helper.runtime.env_var import EDGE_SIZE
 
     mdft = converged_b3lyp(
         mol, dm0=dm1_dft, grids=grids if unrestricted else None,
@@ -238,9 +238,9 @@ def get_dft_grad(mol, grids, dm1_dft, max_memory=8000, *, unrestricted=False):
         return {}
 
     from pyscf import lib
-    from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_SIZE
+    from cc2cc.utils.helper.runtime.env_var import CUBE_MIDDLE, EDGE_SIZE
     from cc2cc.utils.modelscf import get_veff_grad_modified_zeros
-    from cc2cc.utils.tensor_helper import parallel_einsum
+    from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
     mdft = converged_b3lyp(
         mol, dm0=dm1_dft, grids=grids if unrestricted else None,

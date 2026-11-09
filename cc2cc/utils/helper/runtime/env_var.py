@@ -26,7 +26,7 @@ if TEST is None:
 
 MAIN_PATH = os.environ.get("DFT2CC_MAIN_PATH")
 if MAIN_PATH is None:
-    MAIN_PATH = Path(__file__).parent.parent.parent
+    MAIN_PATH = Path(__file__).parent.parent.parent.parent.parent
 else:
     MAIN_PATH = Path(MAIN_PATH)
 

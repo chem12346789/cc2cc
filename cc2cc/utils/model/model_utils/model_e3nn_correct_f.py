@@ -12,7 +12,7 @@ from typing import cast
 import torch
 from e3nn import o3
 
-from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_LEN, EDGE_SIZE
+from cc2cc.utils.helper.runtime.env_var import CUBE_MIDDLE, EDGE_LEN, EDGE_SIZE
 
 
 class E3nn(torch.nn.Module):

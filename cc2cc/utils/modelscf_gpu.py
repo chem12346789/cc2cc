@@ -15,8 +15,8 @@ from cc2cc.utils.GridsGPU import (
     iterate_grid_segments,
 )
 from cc2cc.utils.ModelClass import ModelClass
-from cc2cc.utils.env_var import MAX_GPU_JK_NAO
-from cc2cc.utils.xc_profile import XCStageProfiler
+from cc2cc.utils.helper.runtime.env_var import MAX_GPU_JK_NAO
+from cc2cc.utils.helper.runtime.xc_profile import XCStageProfiler
 
 
 def get_veff_modified_gpu(

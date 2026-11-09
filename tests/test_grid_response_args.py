@@ -38,7 +38,7 @@ class TestGridResponseArgs(TestCase):
 
     def test_runners_set_response_before_kernel(self):
         for spin in ("rks", "uks"):
-            source = ROOT / "cc2cc" / f"test_model_{spin}.py"
+            source = ROOT / "cc2cc" / "test_model.py"
             tree = ast.parse(source.read_text())
             block = next(
                 node for node in ast.walk(tree)
@@ -66,6 +66,7 @@ class TestGridResponseArgs(TestCase):
                         "utils": Mock(),
                         "modeldict": Mock(),
                         "np": np,
+                        "unrestricted": spin == "uks",
                     }
                     with contextlib.redirect_stdout(io.StringIO()):
                         exec(code, namespace)

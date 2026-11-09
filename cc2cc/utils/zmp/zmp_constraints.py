@@ -5,8 +5,8 @@ from pathlib import Path
 
 import numpy as np
 
-from cc2cc.utils.env_var import DATA_PATH, EDGE_LEN
-from cc2cc.utils.tensor_helper import parallel_einsum
+from cc2cc.utils.helper.runtime.env_var import DATA_PATH, EDGE_LEN
+from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
 
 def _observable_operators(mol, grids, ni, block_size):

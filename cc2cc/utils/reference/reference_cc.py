@@ -7,7 +7,9 @@ from pyscf.grad import ccsd as ccsd_grad, uccsd as uccsd_grad
 
 from cc2cc.utils.ccsd_t.pyscf_ccsd_t_rdm import _gamma1_intermediates
 from cc2cc.utils.ccsd_t.pyscf_uccsd_t_lambda import kernel as uccsd_t_lambda_kernel
-from cc2cc.utils.pyscf_uccsd_t_u_gamma1_intermediates import u_gamma1_intermediates
+from cc2cc.utils.ccsd_t.pyscf_uccsd_t_u_gamma1_intermediates import (
+    u_gamma1_intermediates,
+)
 
 CC_MAX_CYCLE = 200
 CC_CONV_TOL = 1e-12
@@ -158,13 +160,13 @@ def get_cc_energy(
     import torch
     import pyscf.dft
 
-    from cc2cc.utils.get_dft_energy_rks import (
-        _ecp_energy_density,
-        _nuclear_energy_density,
-        _orbital_gradient_squared,
+    from cc2cc.utils.helper.chemistry.grid_energy import (
+        ecp_energy_density,
+        nuclear_energy_density,
+        orbital_gradient_squared,
         block_loop_rdm2,
     )
-    from cc2cc.utils.tensor_helper import parallel_einsum
+    from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
     print("Using backend: numpy for get_dft_energy\n")
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
@@ -186,7 +188,7 @@ def get_cc_energy(
         rho_total = pyscf.dft.numint.eval_rho(
             mol, ao_value, dm1_cc, xctype="GGA"
         )[0]
-    ecp_cc_grids = _ecp_energy_density(mol, ao_value[0], dm_total)
+    ecp_cc_grids = ecp_energy_density(mol, ao_value[0], dm_total)
 
     print("Start exchange part...")
     exc_cc_grids = np.zeros_like(grids.weights)
@@ -253,14 +255,14 @@ def get_cc_energy(
             )
             kin_cc_grids -= part * eigs_e_dm1[i] / 2
             kinl_cc_grids += (
-                _orbital_gradient_squared(ao_1, eigs_v_dm1[:, i])
+                orbital_gradient_squared(ao_1, eigs_v_dm1[:, i])
                 * eigs_e_dm1[i]
                 / 2
             )
     print("Kinetic part done.\n")
 
     print("Start nuclear part...")
-    nuc_cc_grids = _nuclear_energy_density(mol, grids, rho_total)
+    nuc_cc_grids = nuclear_energy_density(mol, grids, rho_total)
     print("Nuclear part done.\n")
 
     tol_cc_grids = (

@@ -10,13 +10,13 @@ from pyscf.grad import rks as rks_grad
 
 from cc2cc.utils.Grids import Grid
 from cc2cc.utils.mol import AU2KCALMOL
-from cc2cc.utils.TestDataDFT import diff_rho
-from cc2cc.utils.reference_b3lyp import (
+from cc2cc.utils.helper.chemistry.density_metrics import diff_rho
+from cc2cc.utils.reference.reference_b3lyp import (
     b3lyp_finite_difference_gradient,
     converged_b3lyp,
     finite_difference_gradient,
 )
-from cc2cc.utils.tensor_helper import parallel_einsum
+from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
 
 def eval_nlc_exc_density(

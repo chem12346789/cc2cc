@@ -13,7 +13,7 @@ from pyscf.lib import logger
 
 from cc2cc.utils.Grids import iterate_grid_response_segments, iterate_grid_segments
 from cc2cc.utils.ModelClass import ModelClass
-from cc2cc.utils.tensor_helper import parallel_einsum
+from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
 
 def get_veff_modified(ks, modeldict: ModelClass, *, unrestricted: bool) -> None:

@@ -6,39 +6,47 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 ## Full Repository Layout
 
 ### `cc2cc/` — importable package
-- `gen_cc.py`: shared restricted/unrestricted CC data generation. `cc()` takes
+- `generate_cc_data.py`: shared restricted/unrestricted CC data generation. `cc()` takes
   an explicit `unrestricted` argument, defaulting to `False`. Restricted CCSD(T)
   requires `mol.spin == 0`; unrestricted CCSD(T) can also use spin-zero systems.
 - `train_model.py`: training loop, W&B logging, distributed barriers
-- `test_model_rks.py`, `test_model_uks.py`: model-in-SCF validation, including
-  post-SCF VV10 energy corrections
+- `test_model.py`: shared restricted/unrestricted model-in-SCF validation,
+  including post-SCF VV10 energy corrections. `validate_model()` takes an
+  explicit `unrestricted` argument; the `test_model_rks` and `test_model_uks`
+  entry points forward to it.
 - `benchmark_rks.py`, `benchmark_uks.py`: benchmark helpers
 
 ### `cc2cc/utils/` — shared utilities and domain logic
 - `parser.py`: CLI arg definitions; reuse `add_args()` / `gen_name_args()`
-- `env_var.py`: project paths, grid env settings, thread/GPU info
+- `helper/runtime/env_var.py`: project paths, grid env settings, thread/GPU info
 - `mol.py`: molecule/dataset definitions — source of truth for molecule names
 - `Grids.py`, `GridsGPU.py`: CPU/GPU grid construction. `Grid` is CPU by
   default; keep GPU classes lazily imported
+- `grids/`: `Grids_rotate.py` and `GridsGPU_rotate.py` grid variants; the GPU
+  variant is opt-in.
 - `modelscf.py`: shared CPU model potential and gradient hooks with an explicit
   `unrestricted` argument; spin-specific entry points in the same module
   forward to these hooks.
 - `modelscf_gpu.py`: shared GPU model potential hooks with explicit spin mode.
   Spin-specific entry points in the same module forward to these hooks; GPU
   gradients are not implemented.
-- `reference/`: reserved for reference calculation modules; existing
-  `reference_*.py` modules remain in `utils/`.
-- `helper/`: reserved for shared helper modules; existing utilities remain in
-  `utils/`.
-- `ccsd_t/`: PySCF CCSD(T) density and lambda helper modules.
-- `reference_cc.py`: shared CCSD(T) setup, target densities and gradients,
+- `reference/`: shared B3LYP, CCSD(T), HF, VV10, and ZMP reference modules,
+  plus cached DFT reference data utilities.
+- `helper/chemistry/`: basis, grid energy, geometry, tensor, and density helpers.
+- `helper/workflow/`: data records, run support, and schedulers.
+- `helper/runtime/`: environment, system information, timing, and opt-in XC
+  profiling. Import helper modules from their subpackages.
+- `ccsd_t/`: PySCF CCSD(T) density and lambda helper modules, including
+  unrestricted 1- and 2-RDM intermediates.
+- `zmp/`: inversion, constraint generation, and occupied-virtual training modules.
+- `reference/reference_cc.py`: shared CCSD(T) setup, target densities and gradients,
   and restricted/unrestricted CC energy grids; callers pass `unrestricted`.
-- `reference_hf.py`: shared restricted/unrestricted HF energy grids; callers
+- `reference/reference_hf.py`: shared restricted/unrestricted HF energy grids; callers
   pass `unrestricted` explicitly.
-- `reference_b3lyp.py`: shared restricted/unrestricted DFT energy, grid input,
+- `reference/reference_b3lyp.py`: shared restricted/unrestricted DFT energy, grid input,
   and gradient helpers; callers pass `unrestricted` explicitly.
-  `get_dft_energy_rks.py` retains shared grid-energy helpers, and the original
-  spin-specific DFT energy entry points forward to the shared implementation.
+  `helper/chemistry/grid_energy.py` contains shared grid-energy helpers and the legacy
+  restricted energy entry point. The separate UKS wrapper has been removed.
   - Restricted and unrestricted energy helpers return `ecp_cc_grids`,
     `ecp_dft_grids`, and `ecp_hf_grids` for scalar pseudopotentials, or zeros
     for all-electron molecules. CC and DFT totals include these terms; the
@@ -56,7 +64,7 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     `phi(r)^T S^-1 V_pp D phi(r)`, with `V_pp = hcore - kinetic - nuclear`.
     Its integral is `Tr(V_pp D)` up to grid quadrature error; it is not a
     pointwise local potential times the electron density.
-- `reference_zmp.py`: shared ZMP inversion and diagnostic prints. Generation
+- `reference/reference_zmp.py`: shared ZMP inversion and diagnostic prints. Generation
   evaluates `e_zmp` with the non-density-fitted B3LYP reference at the ZMP
   density, matching the exact Coulomb and exchange energy-density grids. It
   stores `grad_zmp` using `zmp_baseline_gradient(mdft, dm1_zmp)`: an analytic
@@ -74,14 +82,14 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   first satisfy both at lambda 128--1024, before later stagnation or divergence.
   Comparisons use scaled DFT errors rather than division; a zero DFT error
   requires zero ZMP error. The existing divergence fallback is unchanged.
-  `zmp.py` implements the inversion SCF equations. RZMP and UZMP use PySCF's
+  `zmp/zmp.py` implements the inversion SCF equations. RZMP and UZMP use PySCF's
   native `_DFHF` mixin, as its dynamically generated DFRKS/DFUKS classes do.
   Their DIIS extrapolation uses all available Fock/error pairs, up to the
   configured `diis_space`; history starts on the second SCF cycle.
   Both Coulomb J and exchange K in the inversion use the standard
   `.density_fit()` auxiliary basis and shared `with_df` object. Dataset
   baseline energies and gradients instead use the non-density-fitted reference.
-- `zmp_constraints.py`: optional full-OV stationarity and compact observable
+- `zmp/zmp_constraints.py`: optional full-OV stationarity and compact observable
   constraints for ZMP generation and training.
   Both `--zmp_feature_ov` and `--zmp_observable_response` default to `true`;
   pass `false` explicitly to disable either option.
@@ -137,7 +145,7 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   blocks, not disk size or model autograd memory. No training losses or force
   conventions are changed by these generation options.
 - `--zmp_ov_loss true` is no longer supported and is rejected.
-- `reference_cc.py`: shared CCSD solver settings, CCSD(T) lambda solving,
+- `reference/reference_cc.py`: shared CCSD solver settings, CCSD(T) lambda solving,
   triples-corrected target density and CC-gradient one-particle intermediates.
   `ccsd_t_target_gradient()` handles restricted/unrestricted two-particle
   intermediate compression, electronic/nuclear gradient assembly, and symmetry
@@ -182,8 +190,10 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   before the passes, not peak usage or system-free RAM. This budget guides block
   sizing rather than reserving memory; orbital dimensions and block-splitting
   heuristics also limit block sizes.
-- `DataBase.py`, `TestDataDFT.py`, `DataRecord.py`, `ModelClass.py`: data
-  loading, record keeping, model init, checkpoints, losses
+- `DataBase.py`, `ModelClass.py`: data loading, model init, checkpoints, losses
+- `reference/test_data_dft.py`: cached DFT reference generation.
+- `helper/chemistry/density_metrics.py`: density comparisons.
+- `helper/workflow/DataRecord.py`: CSV record keeping
   - Both generators save `coords` in Bohr aligned with their `weights` and
     feature grid (not a separately reconstructed B3LYP SCF grid), as well as
     PySCF `grid_atom_indices` (parent atom per quadrature entry; -1 is fixed
@@ -312,12 +322,12 @@ created, and failures may occur after earlier files have been updated.
   `Grid` → `cc(..., unrestricted=unrestricted)` → `.npz` grid data.
   It passes `unrestricted=False` for zero spin and `True` otherwise.
   - `cc()` calls the shared `get_vv10_data()` helper in
-    `utils/reference_vv10.py` and saves Post-DFT VV10 and SCF-VV10 energies,
+    `utils/reference/reference_vv10.py` and saves Post-DFT VV10 and SCF-VV10 energies,
     `dm1_scf_vv10`, and gradients in the main archive. It also
     saves separate VV10 results based on `dm1_zmp` with `_zmp`-suffixed keys.
     The helper separates `get_post_vv10_data()` and `get_scf_vv10_data()`.
     Shared B3LYP SCF and finite-difference helpers live in
-    `utils/reference_b3lyp.py`.
+    `utils/reference/reference_b3lyp.py`.
     `get_vv10_data()` derives its policy from `suffix`, not caller flags:
     `"_zmp"` sets evaluation on, SCF-VV10 off, and gradient checks off;
     the default `""` enables SCF-VV10, all gradients, and gradient checks.

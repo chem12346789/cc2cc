@@ -7,7 +7,7 @@ import pyscf
 import torch
 
 from cc2cc.utils.Grids import Grid
-from cc2cc.utils.env_var import EDGE_SIZE
+from cc2cc.utils.helper.runtime.env_var import EDGE_SIZE
 from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.modelscf_rks import get_veff_grad_modified_rks
 from cc2cc.utils.modelscf_uks import get_veff_grad_modified_uks

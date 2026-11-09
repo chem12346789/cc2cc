@@ -1,4 +1,4 @@
-"""Test the model. Restrict Khon-Sham (no spin)."""
+"""Test restricted and unrestricted Kohn-Sham models."""
 
 import timeit
 import numpy as np
@@ -14,42 +14,44 @@ import pyscf
 import pyscf.dft
 
 import cc2cc.utils as utils
-from cc2cc.utils.run_helpers import load_post_scf_density, load_post_scf_vv10
+from cc2cc.utils.helper.workflow.run_helpers import load_post_scf_density, load_post_scf_vv10
 
 pyscf.lib.logger.TIMER_LEVEL = 4
 VERBOSE = 4
 
 
-def test_model_rks(
+def validate_model(
     mol,
     name,
     modeldict,
     data_record,
     args,
+    *,
+    unrestricted: bool,
 ):
-    """
-    Test the model. Restrict Khon-Sham (no spin).
-    """
+    """Test the model with the requested Kohn-Sham spin treatment."""
     # 2.0 Prepare
     time_ai_start = timeit.default_timer()
     test_mode = getattr(args, "test_mode", "scf")
     post_scf = test_mode != "scf"
     if post_scf and args.if_grad:
         raise ValueError("Post-SCF density modes do not support nuclear gradients.")
+    scf_class = pyscf.dft.UKS if unrestricted else pyscf.dft.RKS
+    method = "UKS" if unrestricted else "RKS"
     if torch.cuda.is_available() and not args.if_grad and not args.cpu:
         print("Use GPU for DFT calculation.")
         use_gpu = True
-        mdft = pyscf.dft.RKS(mol).to_gpu().density_fit()
+        mdft = scf_class(mol).to_gpu().density_fit()
         Grid = utils.GridGPU
         utils.get_veff_modified_gpu(
-            mdft, modeldict, args.max_memory_gpu, unrestricted=False
+            mdft, modeldict, args.max_memory_gpu, unrestricted=unrestricted
         )
     else:
         print("Use CPU for DFT calculation.")
         use_gpu = False
-        mdft = pyscf.dft.RKS(mol).density_fit()
+        mdft = scf_class(mol).density_fit()
         Grid = utils.GridCPU
-        utils.get_veff_modified(mdft, modeldict, unrestricted=False)
+        utils.get_veff_modified(mdft, modeldict, unrestricted=unrestricted)
 
     if args.baseline == "b3lyp-vv10" or test_mode in (
         "post-b3lyp-nl",
@@ -100,13 +102,16 @@ def test_model_rks(
 
         for factor in [1.0]:
             if mdft.converged is False and if_retry:
-                print(f"RKS not converged. Add level shift with factor {factor}.")
+                shift = "dynamic level shift" if unrestricted else "level shift"
+                print(f"{method} not converged. Add {shift} with factor {factor}.")
                 mdft.level_shift = factor
+                if unrestricted:
+                    mdft.max_cycle = args.max_cycle * 5
                 mdft.kernel()
         if mdft.converged is False:
             if args.require_convergence:
-                raise RuntimeError(f"RKS did not converge for {name}")
-            print("Error: RKS not converged!!! Just use the unconvergence output.")
+                raise RuntimeError(f"{method} did not converge for {name}")
+            print(f"Error: {method} not converged!!! Just use the unconvergence output.")
 
         dm1_scf = mdft.make_rdm1()
         e_scf = mdft.e_tot
@@ -140,10 +145,12 @@ def test_model_rks(
         g.xc = "b3lyp"
         g.grids = mdft.grids
         if torch.cuda.is_available() and (not args.if_grad):
-            utils.get_veff_grad_modified_gpu(g, modeldict, unrestricted=False)
+            utils.get_veff_grad_modified_gpu(g, modeldict, unrestricted=unrestricted)
         else:
-            utils.get_veff_grad_modified(g, modeldict, unrestricted=False)
-        grad_mdft = np.array(g.kernel())
+            utils.get_veff_grad_modified(g, modeldict, unrestricted=unrestricted)
+        grad_mdft = g.kernel()
+        if not unrestricted:
+            grad_mdft = np.array(grad_mdft)
         print(f"Net force check: {np.sum(grad_mdft, axis=0)}")
     else:
         grad_mdft = None
@@ -178,10 +185,12 @@ def test_model_rks(
 
     if (utils.DATA_PATH / f"data_{name}.npz").exists():
         data = np.load(utils.DATA_PATH / f"data_{name}.npz", allow_pickle=True)
-        print("\n\n" + "=" * 40)
-        print("Molecule from data:")
+        if not unrestricted:
+            print("\n\n" + "=" * 40)
+            print("Molecule from data:")
         print(data["mol"])
-        print("Molecule from PySCF:")
+        if not unrestricted:
+            print("Molecule from PySCF:")
         print(mol.tostring(format="xyz"))
         print(
             f"energy (ai vs dft) {(e_scf - data['e_dft']) * utils.AU2KCALMOL} Kcal/mol"
@@ -215,3 +224,13 @@ def test_model_rks(
 
     data_record.add_data(dict_)
     data_record.save_csv()
+
+
+def test_model_rks(mol, name, modeldict, data_record, args):
+    """Test the model with restricted Kohn-Sham."""
+    return validate_model(mol, name, modeldict, data_record, args, unrestricted=False)
+
+
+def test_model_uks(mol, name, modeldict, data_record, args):
+    """Test the model with unrestricted Kohn-Sham."""
+    return validate_model(mol, name, modeldict, data_record, args, unrestricted=True)

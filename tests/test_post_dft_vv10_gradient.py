@@ -10,9 +10,9 @@ import numpy as np
 import pyscf
 
 import gen_data
-from cc2cc.utils.reference_b3lyp import converged_b3lyp
+from cc2cc.utils.reference.reference_b3lyp import converged_b3lyp
 from cc2cc.utils import Grid
-from cc2cc.utils.reference_vv10 import post_dft_vv10_gradient
+from cc2cc.utils.reference.reference_vv10 import post_dft_vv10_gradient
 
 
 class TestPostDftVv10Gradient(unittest.TestCase):

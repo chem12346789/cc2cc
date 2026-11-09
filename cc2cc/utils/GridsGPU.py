@@ -16,7 +16,7 @@ from gpu4pyscf.dft.numint import _GDFTOpt
 from gpu4pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 from gpu4pyscf.lib.cupy_helper import asarray
 
-from cc2cc.utils.env_var import CUBE_MIDDLE, EDGE_LEN, EDGE_SIZE
+from cc2cc.utils.helper.runtime.env_var import CUBE_MIDDLE, EDGE_LEN, EDGE_SIZE
 
 GridsGPU = gen_grid.Grids
 OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)

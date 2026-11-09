@@ -1,6 +1,6 @@
 import torch
 
-from cc2cc.utils.env_var import EDGE_SIZE
+from cc2cc.utils.helper.runtime.env_var import EDGE_SIZE
 from cc2cc.utils.model.model_utils import DenseNet
 
 

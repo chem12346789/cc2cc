@@ -5,7 +5,7 @@ from __future__ import annotations
 import gc
 from pathlib import Path
 
-from cc2cc.utils.env_var import MAIN_PATH
+from cc2cc.utils.helper.runtime.env_var import MAIN_PATH
 
 try:
     import cupy as cp
@@ -55,8 +55,8 @@ def load_post_scf_density(mol, name, test_mode, *, grid_level=None, use_gpu=None
     import numpy as np
     from pyscf.dft.gen_grid import Grids
 
-    from cc2cc.utils.reference_b3lyp import converged_b3lyp
-    from cc2cc.utils.env_var import DATA_TEST_PATH
+    from cc2cc.utils.reference.reference_b3lyp import converged_b3lyp
+    from cc2cc.utils.helper.runtime.env_var import DATA_TEST_PATH
 
     vv10 = test_mode == "post-b3lyp-vv10"
     key = "dm1_scf_vv10" if vv10 else "dm1_dft-b3lyp"
@@ -116,7 +116,7 @@ def load_post_scf_vv10(mf, name, density):
 
     import numpy as np
 
-    from cc2cc.utils.env_var import DATA_TEST_PATH
+    from cc2cc.utils.helper.runtime.env_var import DATA_TEST_PATH
 
     def as_numpy(value):
         if cp is not None and isinstance(value, cp.ndarray):

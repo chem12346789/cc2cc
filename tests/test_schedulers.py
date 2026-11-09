@@ -4,7 +4,7 @@ import torch
 from torch.optim import SGD
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
-from cc2cc.utils.schedulers import CosineAnnealingWarmRestarts2
+from cc2cc.utils.helper.workflow.schedulers import CosineAnnealingWarmRestarts2
 
 
 class CosineWarm2Tests(unittest.TestCase):

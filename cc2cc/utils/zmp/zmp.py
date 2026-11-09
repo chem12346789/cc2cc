@@ -14,7 +14,7 @@ from pyscf.lib import logger
 import pyscf.dft
 from pyscf.dft.numint import _dot_ao_ao_dense
 
-from cc2cc.utils.tensor_helper import parallel_einsum
+from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
 CONV_TOL_DM = 1e-8
 CONV_TOL_DIIS = 1e-3

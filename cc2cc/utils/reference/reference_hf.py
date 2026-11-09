@@ -12,13 +12,13 @@ def get_hf_energy(mol, grids, mf, dm1_hf, evaluate=False, *, unrestricted):
     import gc
     import torch
 
-    from cc2cc.utils.get_dft_energy_rks import (
-        _ecp_energy_density,
-        _nuclear_energy_density,
-        _orbital_gradient_squared,
+    from cc2cc.utils.helper.chemistry.grid_energy import (
+        ecp_energy_density,
+        nuclear_energy_density,
+        orbital_gradient_squared,
         block_loop_rdm2,
     )
-    from cc2cc.utils.tensor_helper import parallel_einsum
+    from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
     print("Using backend: numpy for get_hf_energy\n")
     ao_value = pyscf.dft.numint.eval_ao(mol, grids.coords, deriv=2)
@@ -42,7 +42,7 @@ def get_hf_energy(mol, grids, mf, dm1_hf, evaluate=False, *, unrestricted):
         rho_total = pyscf.dft.numint.eval_rho(
             mol, ao_value, dm1_hf, xctype="GGA"
         )[0]
-    ecp_hf_grids = _ecp_energy_density(mol, ao_value[0], dm_total)
+    ecp_hf_grids = ecp_energy_density(mol, ao_value[0], dm_total)
 
     print("Start K part from HF...")
     exc_k_hf_grids = np.zeros_like(grids.weights)
@@ -109,11 +109,11 @@ def get_hf_energy(mol, grids, mf, dm1_hf, evaluate=False, *, unrestricted):
                 ao_2_diag,
             )
             kin_hf_grids -= factor * part
-            kinl_hf_grids += factor * _orbital_gradient_squared(ao_1, coeff[:, i])
+            kinl_hf_grids += factor * orbital_gradient_squared(ao_1, coeff[:, i])
     print("Kinetic part done.\n")
 
     print("Start nuclear part from HF...")
-    nuc_hf_grids = _nuclear_energy_density(mol, grids, rho_total)
+    nuc_hf_grids = nuclear_energy_density(mol, grids, rho_total)
     print("Nuclear part done.\n")
 
     return {

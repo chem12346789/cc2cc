@@ -13,8 +13,8 @@ from pyscf import __config__
 from pyscf.dft import gen_grid, numint, radi
 from pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 
-from cc2cc.utils.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
-from cc2cc.utils.tensor_helper import parallel_einsum
+from cc2cc.utils.helper.runtime.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
+from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
 GridsCPU = gen_grid.Grids
 OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)

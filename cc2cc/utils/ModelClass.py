@@ -16,9 +16,9 @@ import torch.optim as optim
 from torch.nn.parallel import DistributedDataParallel
 
 from cc2cc.utils.DataBase import DataBase
-from cc2cc.utils.env_var import CHECKPOINTS_PATH, CUBE_MIDDLE, MAIN_PATH
+from cc2cc.utils.helper.runtime.env_var import CHECKPOINTS_PATH, CUBE_MIDDLE, MAIN_PATH
+from cc2cc.utils.helper.workflow.schedulers import CosineAnnealingWarmRestarts2
 from cc2cc.utils.mol import AU2KCALMOL
-from cc2cc.utils.schedulers import CosineAnnealingWarmRestarts2
 
 CUBE_INDEX = {
     "cube5": np.array(
