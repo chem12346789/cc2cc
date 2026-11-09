@@ -1,11 +1,10 @@
 """Fixed-reference orbital and compact observable constraints for generation."""
 
-import copy
 from pathlib import Path
 
 import numpy as np
 
-from cc2cc.utils.helper.runtime.env_var import DATA_PATH, EDGE_LEN
+from cc2cc.utils.helper.runtime.env_var import EDGE_LEN
 from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
 
@@ -206,65 +205,3 @@ def get_zmp_constraint_data(mf, grids, dm_zmp, dm_target, cache_prefix, args):
         array.flush()
         Path(str(path) + ".partial").replace(path)
     return data
-
-
-def refresh_zmp_constraint_metadata(mol, grids, name, args):
-    """Write training metadata beside an existing ZMP archive without rerunning CC."""
-    data_path = DATA_PATH / f"data_{name}.npz"
-    addon_path = DATA_PATH / f"data_{name}_addon.npz"
-    metadata_path = DATA_PATH / f"data_{name}_zmp_metadata.npz"
-    if not data_path.exists():
-        raise FileNotFoundError(f"ZMP dataset not found: {data_path}")
-
-    with np.load(data_path, allow_pickle=True) as archive:
-        dm_zmp = np.asarray(archive["dm1_zmp"], dtype=np.float64)
-        weights = np.asarray(archive["weights"], dtype=np.float64)
-        if "coords" in archive:
-            coords = np.asarray(archive["coords"], dtype=np.float64)
-        else:
-            if not addon_path.exists():
-                raise FileNotFoundError(
-                    f"{name}: no saved ZMP grid coordinates in {data_path}; "
-                    f"addon not found: {addon_path}"
-                )
-            with np.load(addon_path, allow_pickle=True) as addon:
-                if "coords" not in addon:
-                    raise ValueError(
-                        f"{name}: neither {data_path} nor {addon_path} has "
-                        "saved ZMP grid coordinates."
-                    )
-                coords = np.asarray(addon["coords"], dtype=np.float64)
-
-    if coords.shape != (len(weights), 3):
-        raise ValueError(f"{name}: saved ZMP coordinates and weights differ.")
-    if mol.nao != dm_zmp.shape[-1]:
-        raise ValueError(
-            f"{name}: regenerated molecule basis differs from the saved ZMP density."
-        )
-
-    grids.coords = coords
-    grids.weights = weights
-
-    from pyscf import dft
-
-    mf_class = dft.UKS if dm_zmp.ndim == 3 else dft.RKS
-    mf = mf_class(mol, xc="b3lyp").density_fit()
-    metadata_args = copy.copy(args)
-    metadata_args.zmp_constraint_metadata = True
-    metadata_args.zmp_feature_ov = False
-    metadata_args.zmp_observable_response = False
-    metadata = get_zmp_constraint_data(
-        mf,
-        grids,
-        dm_zmp,
-        None,
-        DATA_PATH / f"data_{name}_zmp",
-        metadata_args,
-    )
-    if not metadata:
-        raise RuntimeError(f"{name}: failed to create ZMP constraint metadata.")
-
-    temporary_path = metadata_path.with_name(metadata_path.name + ".partial")
-    with temporary_path.open("wb") as stream:
-        np.savez_compressed(stream, **metadata)
-    temporary_path.replace(metadata_path)

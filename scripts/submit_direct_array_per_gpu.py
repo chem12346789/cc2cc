@@ -182,31 +182,6 @@ def get_partition_nodes_split(
     return usable_nodes, list(dict.fromkeys(all_nodes))
 
 
-def extract_load_model_arg(script_text: str, key: str) -> str | None:
-    for raw_line in script_text.splitlines():
-        line = raw_line.strip()
-        if (
-            not line
-            or line.startswith("#")
-            or "load_model_args" not in line
-            or "--load" not in line
-        ):
-            continue
-        tokens = shlex.split(line, comments=True)
-        for value in [
-            token.split("=", 1)[1]
-            for token in tokens
-            if token.startswith("load_model_args=")
-        ] or [line]:
-            value_tokens = shlex.split(value, comments=True)
-            for idx, token in enumerate(value_tokens):
-                if token == f"--{key}" and idx + 1 < len(value_tokens):
-                    return value_tokens[idx + 1]
-                if token.startswith(f"--{key}="):
-                    return token.split("=", 1)[1]
-    return None
-
-
 def extract_load_model_args(script_text: str) -> list[str]:
     values: list[str] = []
     for raw_line in script_text.splitlines():

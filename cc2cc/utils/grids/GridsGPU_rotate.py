@@ -9,35 +9,12 @@ opt in to GPU4PySCF explicitly.
 from __future__ import annotations
 
 import cupy as cp
-from pyscf import __config__
 from gpu4pyscf.dft import gen_grid, numint, radi
-from gpu4pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 from gpu4pyscf.lib.cupy_helper import asarray
 
 from cc2cc.utils.helper.runtime.env_var import CUBE_MIDDLE, EDGE_LEN, EDGE_SIZE
 
 GridsGPU = gen_grid.Grids
-OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
-SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
-
-
-def iterate_grid_segments(mol, grids, nao, deriv, max_memory):
-    """Iterate grid blocks using GPU4PySCF grid arrays.
-
-    The yielded ``coords`` and ``weight`` objects keep the backend used by
-    ``grids`` (normally CuPy for GPU4PySCF grids).
-    """
-    ngrids = grids.coords.shape[0]
-    comp = (deriv + 1) * (deriv + 2) * (deriv + 3) // 6
-    blksize = int(max_memory * 1e6 / ((comp + 1) * nao * 8 * BLKSIZE))
-    blksize = max(4, min(blksize, ngrids // BLKSIZE + 1, 1200)) * BLKSIZE
-    assert blksize % BLKSIZE == 0
-
-    for ip0 in range(0, ngrids, blksize):
-        ip1 = min(ip0 + blksize, ngrids)
-        coords = grids.coords[ip0:ip1]
-        weight = grids.weights[ip0:ip1]
-        yield weight, coords
 
 
 def rho_evaluator(
@@ -95,78 +72,6 @@ def gen_cube_njit(coords, coor_cube):
 def gen_cube5_njit(coords, coor_cube):
     """CPU-compatible signature that writes five-point coordinates in-place."""
     coor_cube[...] = gen_cube5_cp(coords)
-
-
-def eval_rho_cube(mol, ao, dm, rho_in_1, rho_in_2):
-    """Accumulate density gradient/Hessian terms for cube orientation."""
-    if getattr(dm, "mo_coeff", None) is not None:
-        mo_coeff = asarray(dm.mo_coeff)
-        mo_occ = asarray(dm.mo_occ)
-        pos = mo_occ > OCCDROP
-        if bool(cp.any(pos)):
-            cpos = mo_coeff[:, pos] * cp.sqrt(mo_occ[pos])
-            c0 = numint._dot_ao_dm(mol, ao[0], cpos, None, None, None)
-            c1 = numint._dot_ao_dm(mol, ao[1], cpos, None, None, None)
-            c2 = numint._dot_ao_dm(mol, ao[2], cpos, None, None, None)
-            c3 = numint._dot_ao_dm(mol, ao[3], cpos, None, None, None)
-            rho_in_1[0, :] += 2 * numint._contract_rho(c1, c0)
-            rho_in_1[1, :] += 2 * numint._contract_rho(c2, c0)
-            rho_in_1[2, :] += 2 * numint._contract_rho(c3, c0)
-
-            c4 = numint._dot_ao_dm(mol, ao[4], cpos, None, None, None)
-            c5 = numint._dot_ao_dm(mol, ao[5], cpos, None, None, None)
-            c6 = numint._dot_ao_dm(mol, ao[6], cpos, None, None, None)
-            c7 = numint._dot_ao_dm(mol, ao[7], cpos, None, None, None)
-            c8 = numint._dot_ao_dm(mol, ao[8], cpos, None, None, None)
-            c9 = numint._dot_ao_dm(mol, ao[9], cpos, None, None, None)
-
-            rho_in_2[0, 0, :] += numint._contract_rho(c4, c0) + numint._contract_rho(
-                c1, c1
-            )
-            rho_in_2[0, 1, :] += numint._contract_rho(c5, c0) + numint._contract_rho(
-                c1, c2
-            )
-            rho_in_2[0, 2, :] += numint._contract_rho(c6, c0) + numint._contract_rho(
-                c1, c3
-            )
-            rho_in_2[1, 1, :] += numint._contract_rho(c7, c0) + numint._contract_rho(
-                c2, c2
-            )
-            rho_in_2[1, 2, :] += numint._contract_rho(c8, c0) + numint._contract_rho(
-                c2, c3
-            )
-            rho_in_2[2, 2, :] += numint._contract_rho(c9, c0) + numint._contract_rho(
-                c3, c3
-            )
-    else:
-        dm = asarray(dm)
-        c0 = numint._dot_ao_dm(mol, ao[0], dm, None, None, None)
-        rho_in_1[0, :] += 2 * numint._contract_rho(ao[1], c0)
-        rho_in_1[1, :] += 2 * numint._contract_rho(ao[2], c0)
-        rho_in_1[2, :] += 2 * numint._contract_rho(ao[3], c0)
-
-        c1 = numint._dot_ao_dm(mol, ao[1], dm, None, None, None)
-        c2 = numint._dot_ao_dm(mol, ao[2], dm, None, None, None)
-        c3 = numint._dot_ao_dm(mol, ao[3], dm, None, None, None)
-
-        rho_in_2[0, 0, :] += numint._contract_rho(ao[4], c0) + numint._contract_rho(
-            ao[1], c1
-        )
-        rho_in_2[0, 1, :] += numint._contract_rho(ao[5], c0) + numint._contract_rho(
-            ao[1], c2
-        )
-        rho_in_2[0, 2, :] += numint._contract_rho(ao[6], c0) + numint._contract_rho(
-            ao[1], c3
-        )
-        rho_in_2[1, 1, :] += numint._contract_rho(ao[7], c0) + numint._contract_rho(
-            ao[2], c2
-        )
-        rho_in_2[1, 2, :] += numint._contract_rho(ao[8], c0) + numint._contract_rho(
-            ao[2], c3
-        )
-        rho_in_2[2, 2, :] += numint._contract_rho(ao[9], c0) + numint._contract_rho(
-            ao[3], c3
-        )
 
 
 class Grid(GridsGPU):

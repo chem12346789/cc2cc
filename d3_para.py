@@ -319,23 +319,6 @@ def build_reaction_tensors(
     )
 
 
-def train_loss(
-    model: D3Model,
-    input_batch: Dict[str, torch.Tensor],
-    reaction_tensors: ReactionTensors,
-    data_dft_ene_kcalmol: torch.Tensor,
-) -> torch.Tensor:
-    e_disp_kcalmol = model.dispersion_energy_kcalmol(input_batch)
-    reaction_energy = torch.einsum(
-        "ji,i->j",
-        reaction_tensors.molecules_to_reactions,
-        e_disp_kcalmol + data_dft_ene_kcalmol,
-    )
-    if reaction_tensors.reaction_weight is not None:
-        reaction_energy = reaction_energy * reaction_tensors.reaction_weight
-    return torch.mean(torch.abs(reaction_tensors.reference_energy - reaction_energy))
-
-
 def reaction_residuals(
     model: D3Model,
     input_batch: Dict[str, torch.Tensor],

@@ -78,21 +78,3 @@ def block_loop_rdm2(nao):
         k_slice = slice(n_slices * k_batch, n_slices * k_batch + nao_slice_k)
         l_slice = slice(n_slices * l_batch, n_slices * l_batch + nao_slice_l)
         yield i_slice, j_slice, k_slice, l_slice
-
-
-def get_dft_energy(
-    mol,
-    grids,
-    dft_mo_coeff,
-    dm1_dft,
-    evaluate=False,
-):
-    """Calculate restricted B3LYP energy-density components."""
-    from cc2cc.utils.reference.reference_b3lyp import (
-        get_dft_energy as shared_dft_energy,
-    )
-
-    return shared_dft_energy(
-        mol, grids, dft_mo_coeff, dm1_dft,
-        evaluate=evaluate, unrestricted=False,
-    )

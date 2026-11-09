@@ -12,8 +12,7 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 - `train_model.py`: training loop, W&B logging, distributed barriers
 - `test_model.py`: shared restricted/unrestricted model-in-SCF validation,
   including post-SCF VV10 energy corrections. `validate_model()` takes an
-  explicit `unrestricted` argument; the `test_model_rks` and `test_model_uks`
-  entry points forward to it.
+  explicit `unrestricted` argument.
 - `benchmark_rks.py`, `benchmark_uks.py`: benchmark helpers
 
 ### `cc2cc/utils/` — shared utilities and domain logic
@@ -26,11 +25,9 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 - `grids/`: `Grids_rotate.py` and `GridsGPU_rotate.py` grid variants; the GPU
   variant is opt-in.
 - `modelscf.py`: shared CPU model potential and gradient hooks with an explicit
-  `unrestricted` argument; spin-specific entry points in the same module
-  forward to these hooks.
+  `unrestricted` argument.
 - `modelscf_gpu.py`: shared GPU model potential hooks with explicit spin mode.
-  Spin-specific entry points in the same module forward to these hooks; GPU
-  gradients are not implemented.
+  GPU gradients are not implemented.
 - `reference/`: shared B3LYP, CCSD(T), HF, VV10, and ZMP reference modules,
   plus cached DFT reference data utilities.
 - `helper/units.py`: energy and dipole conversion factors.
@@ -51,8 +48,7 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   pass `unrestricted` explicitly.
 - `reference/reference_b3lyp.py`: shared restricted/unrestricted DFT energy, grid input,
   and gradient helpers; callers pass `unrestricted` explicitly.
-  `helper/chemistry/grid_energy.py` contains shared grid-energy helpers and the legacy
-  restricted energy entry point. The separate UKS wrapper has been removed.
+  `helper/chemistry/grid_energy.py` contains shared grid-energy helpers.
   - Restricted and unrestricted energy helpers return `ecp_cc_grids`,
     `ecp_dft_grids`, and `ecp_hf_grids` for scalar pseudopotentials, or zeros
     for all-electron molecules. CC and DFT totals include these terms; the
@@ -139,14 +135,11 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   overlap, serialized molecule/basis/ECP and density-fitting auxiliary molecule,
   both quadrature grids and cube layout.
   Sidecar filenames are relative to the dataset directory; keep them together.
-  `gen_data.py --if_continue true --zmp_constraint_metadata true
-  --zmp_feature_ov false --zmp_observable_response false` refreshes the fixed
-  reference metadata from cached ZMP density and grid coordinates without
-  rerunning CC or rewriting cached archives. Coordinates are read from
-  `data_<name>.npz`, or from `data_<name>_addon.npz` for legacy caches. It writes
-  `data_<name>_zmp_metadata.npz`; the model training loop does not consume
-  this sidecar. Legacy caches use the standard density-fitted B3LYP baseline,
-  and its actual settings are recorded anew.
+  `--zmp_constraint_metadata true --zmp_feature_ov false
+  --zmp_observable_response false` includes fixed-reference metadata when
+  generating datasets without the other ZMP constraints. Existing datasets are
+  skipped with `--if_continue true`; regenerating them requires
+  `--if_continue false` and reruns the CC calculation.
   `--zmp_response_block_size` (default 32 centers) bounds transient Jacobian
   blocks, not disk size or model autograd memory. No training losses or force
   conventions are changed by these generation options.

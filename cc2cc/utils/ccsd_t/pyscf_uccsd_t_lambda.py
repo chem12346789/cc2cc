@@ -179,34 +179,6 @@ def run_fused(kernel, *args):
         set_num_threads(threads)
 
 
-def p6(t):
-    return (
-        t
-        + t.transpose(1, 2, 0, 4, 5, 3)
-        + t.transpose(2, 0, 1, 5, 3, 4)
-        + t.transpose(0, 2, 1, 3, 5, 4)
-        + t.transpose(2, 1, 0, 5, 4, 3)
-        + t.transpose(1, 0, 2, 4, 3, 5)
-    )
-
-
-def r6(w):
-    return (
-        w
-        + w.transpose(2, 0, 1, 3, 4, 5)
-        + w.transpose(1, 2, 0, 3, 4, 5)
-        - w.transpose(2, 1, 0, 3, 4, 5)
-        - w.transpose(0, 2, 1, 3, 4, 5)
-        - w.transpose(1, 0, 2, 3, 4, 5)
-    )
-
-
-def r4(w):
-    w = w - w.transpose(0, 2, 1, 3, 4, 5)
-    w = w + w.transpose(0, 2, 1, 3, 5, 4)
-    return w
-
-
 def kernel(
     mycc,
     eris=None,

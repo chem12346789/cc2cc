@@ -37,10 +37,6 @@ from cc2cc.utils.zmp.zmp_constraints import get_zmp_constraint_data
 from cc2cc.utils.reference.reference_vv10 import get_vv10_data
 
 
-def is_hermitian(matrix, tol=1e-8):
-    return np.allclose(matrix, matrix.conj().T, atol=tol)
-
-
 def cc(
     mol: pyscf.gto.Mole,
     grids,

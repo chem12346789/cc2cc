@@ -812,14 +812,3 @@ def u_gamma2_intermediates(mycc, t1, t2, l1, l2, eris=None, compress_vvvv=False)
         )
 
     return d2
-
-
-def r6(w):
-    return (
-        w
-        + w.transpose(2, 0, 1, 3, 4, 5)
-        + w.transpose(1, 2, 0, 3, 4, 5)
-        - w.transpose(2, 1, 0, 3, 4, 5)
-        - w.transpose(0, 2, 1, 3, 4, 5)
-        - w.transpose(1, 0, 2, 3, 4, 5)
-    )

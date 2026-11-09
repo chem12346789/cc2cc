@@ -274,33 +274,13 @@ def get_veff_grad_modified_gpu(
     ks_grad, modeldict: ModelClass, *, unrestricted: bool
 ) -> None:
     """GPU model gradients are not implemented for either spin treatment."""
-    mode = "uks" if unrestricted else "rks"
+    mode = "UKS" if unrestricted else "RKS"
     raise NotImplementedError(
-        f"get_veff_grad_modified_{mode}_gpu is not implemented yet"
+        f"GPU model gradients are not implemented for {mode}"
     )
-
-
-def get_veff_modified_rks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
-    return get_veff_modified_gpu(ks, modeldict, max_memory_gpu, unrestricted=False)
-
-
-def get_veff_grad_modified_rks_gpu(ks_grad, modeldict):
-    return get_veff_grad_modified_gpu(ks_grad, modeldict, unrestricted=False)
-
-
-def get_veff_modified_uks_gpu(ks, modeldict: ModelClass, max_memory_gpu=4000):
-    return get_veff_modified_gpu(ks, modeldict, max_memory_gpu, unrestricted=True)
-
-
-def get_veff_grad_modified_uks_gpu(ks_grad, modeldict: ModelClass):
-    return get_veff_grad_modified_gpu(ks_grad, modeldict, unrestricted=True)
 
 
 __all__ = [
     "get_veff_modified_gpu",
     "get_veff_grad_modified_gpu",
-    "get_veff_modified_rks_gpu",
-    "get_veff_grad_modified_rks_gpu",
-    "get_veff_modified_uks_gpu",
-    "get_veff_grad_modified_uks_gpu",
 ]

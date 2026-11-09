@@ -14,19 +14,11 @@ from cc2cc.utils.helper.runtime.env_var import DATA_PATH as DATA_PATH
 from cc2cc.utils.helper.runtime.env_var import MAIN_PATH as MAIN_PATH
 from cc2cc.utils.modelscf import (
     get_veff_grad_modified as get_veff_grad_modified,
-    get_veff_grad_modified_rks as get_veff_grad_modified_rks,
-    get_veff_grad_modified_uks as get_veff_grad_modified_uks,
     get_veff_modified as get_veff_modified,
-    get_veff_modified_rks as get_veff_modified_rks,
-    get_veff_modified_uks as get_veff_modified_uks,
 )
 from cc2cc.utils.modelscf_gpu import (
     get_veff_grad_modified_gpu as get_veff_grad_modified_gpu,
-    get_veff_grad_modified_rks_gpu as get_veff_grad_modified_rks_gpu,
-    get_veff_grad_modified_uks_gpu as get_veff_grad_modified_uks_gpu,
     get_veff_modified_gpu as get_veff_modified_gpu,
-    get_veff_modified_rks_gpu as get_veff_modified_rks_gpu,
-    get_veff_modified_uks_gpu as get_veff_modified_uks_gpu,
 )
 from cc2cc.utils.helper.units import AU2DEBYE as AU2DEBYE
 from cc2cc.utils.helper.units import AU2KCALMOL as AU2KCALMOL

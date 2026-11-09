@@ -11,42 +11,13 @@ from numba import njit
 import pyscf
 from pyscf import __config__
 from pyscf.dft import gen_grid, numint, radi
-from pyscf.dft.gen_grid import BLKSIZE, NBINS, ALIGNMENT_UNIT
 
 from cc2cc.utils.helper.runtime.env_var import EDGE_SIZE, EDGE_LEN, CUBE_MIDDLE
 from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
 GridsCPU = gen_grid.Grids
 OCCDROP = getattr(__config__, "dft_numint_occdrop", 1e-12)
-SWITCH_SIZE = getattr(__config__, "dft_numint_switch_size", 800)
 pyscf.lib.logger.TIMER_LEVEL = 4
-
-
-def iterate_grid_segments(mol, grids, nao, deriv, max_memory, non0tab=None):
-    ngrids = grids.coords.shape[0]
-    comp = (deriv + 1) * (deriv + 2) * (deriv + 3) // 6
-    blksize = int(max_memory * 1e6 / ((comp + 1) * nao * 8 * BLKSIZE))
-    blksize = max(4, min(blksize, ngrids // BLKSIZE + 1, 1200)) * BLKSIZE
-    assert blksize % BLKSIZE == 0
-
-    if mol is grids.mol:
-        non0tab = grids.non0tab
-    if non0tab is None:
-        non0tab = np.empty(
-            ((ngrids + BLKSIZE - 1) // BLKSIZE, mol.nbas), dtype=np.uint8
-        )
-        non0tab[:] = NBINS + 1
-    screen_index = non0tab
-
-    allow_sparse = ngrids % ALIGNMENT_UNIT == 0 and nao > SWITCH_SIZE
-    for ip0 in range(0, ngrids, blksize):
-        ip1 = min(ip0 + blksize, ngrids)
-        coords = grids.coords[ip0:ip1]
-        weight = grids.weights[ip0:ip1]
-        mask = screen_index[ip0 // BLKSIZE :]
-        if not allow_sparse:
-            mask = None
-        yield mask, weight, coords
 
 
 def rho_evaluator(

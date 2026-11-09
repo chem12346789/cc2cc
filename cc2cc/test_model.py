@@ -224,13 +224,3 @@ def validate_model(
 
     data_record.add_data(dict_)
     data_record.save_csv()
-
-
-def test_model_rks(mol, name, modeldict, data_record, args):
-    """Test the model with restricted Kohn-Sham."""
-    return validate_model(mol, name, modeldict, data_record, args, unrestricted=False)
-
-
-def test_model_uks(mol, name, modeldict, data_record, args):
-    """Test the model with unrestricted Kohn-Sham."""
-    return validate_model(mol, name, modeldict, data_record, args, unrestricted=True)

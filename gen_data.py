@@ -23,10 +23,6 @@ from cc2cc.utils import (
 from cc2cc.utils.reference.reference_vv10 import get_vv10_data
 from cc2cc.utils.parser import gen_name_args, str2bool
 from cc2cc.generate_cc_data import cc
-from cc2cc.utils.zmp.zmp_constraints import (
-    get_zmp_constraint_data,
-    refresh_zmp_constraint_metadata,
-)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -74,7 +70,7 @@ if __name__ == "__main__":
         "--zmp_constraint_metadata",
         type=str2bool,
         default=False,
-        help="Refresh fixed-reference orbital metadata when continuing a dataset.",
+        help="Generate fixed-reference orbital metadata without other ZMP constraints.",
     )
     parser.add_argument(
         "--zmp_response_block_size", type=int, default=32,

@@ -51,22 +51,6 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "cc2cc.utils.modelscf",
         "get_veff_grad_modified",
     ),
-    "get_veff_modified_rks": (
-        "cc2cc.utils.modelscf",
-        "get_veff_modified_rks",
-    ),
-    "get_veff_grad_modified_rks": (
-        "cc2cc.utils.modelscf",
-        "get_veff_grad_modified_rks",
-    ),
-    "get_veff_modified_uks": (
-        "cc2cc.utils.modelscf",
-        "get_veff_modified_uks",
-    ),
-    "get_veff_grad_modified_uks": (
-        "cc2cc.utils.modelscf",
-        "get_veff_grad_modified_uks",
-    ),
 }
 
 _GPU_EXPORTS: dict[str, tuple[str, str]] = {
@@ -78,22 +62,6 @@ _GPU_EXPORTS: dict[str, tuple[str, str]] = {
     "get_veff_grad_modified_gpu": (
         "cc2cc.utils.modelscf_gpu",
         "get_veff_grad_modified_gpu",
-    ),
-    "get_veff_modified_rks_gpu": (
-        "cc2cc.utils.modelscf_gpu",
-        "get_veff_modified_rks_gpu",
-    ),
-    "get_veff_grad_modified_rks_gpu": (
-        "cc2cc.utils.modelscf_gpu",
-        "get_veff_grad_modified_rks_gpu",
-    ),
-    "get_veff_modified_uks_gpu": (
-        "cc2cc.utils.modelscf_gpu",
-        "get_veff_modified_uks_gpu",
-    ),
-    "get_veff_grad_modified_uks_gpu": (
-        "cc2cc.utils.modelscf_gpu",
-        "get_veff_grad_modified_uks_gpu",
     ),
 }
 

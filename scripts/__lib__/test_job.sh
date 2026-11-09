@@ -149,18 +149,6 @@ run_test_job() {
         "$@"
 }
 
-run_model_detail_job() {
-    "${PYTHON_BIN}" "${REPO_ROOT}/test_model_detail.py" \
-        --basis "${basis_args}" \
-        --precision float64 \
-        ${load_model_args} \
-        --name_mol_reverse "${name_mol_reverse}" \
-        --dataset "${DATASET}" \
-        --name_mol "${name_mol_input}" \
-        --if_continue "${if_continue_args}" \
-        "$@"
-}
-
 run_cpu_benchmark_job() {
     "${PYTHON_BIN}" "${REPO_ROOT}/benchmark_dft.py" \
         --basis "${basis_args}" \

@@ -2,52 +2,16 @@
 
 from __future__ import annotations
 
-from collections import ChainMap
-from contextlib import ExitStack
-from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
 import torch
 
-from cc2cc.utils.helper.runtime.env_var import DATA_PATH, EDGE_LEN, EDGE_SIZE
+from cc2cc.utils.helper.runtime.env_var import EDGE_LEN, EDGE_SIZE
 
 
 class GaussianOrbitalCache:
     """Keep the complete fixed-reference grid factors resident on one device."""
-
-    @classmethod
-    def from_archive(
-        cls, name, input_cpu, weight_cpu, device, block_size, input_tolerance=5e-8
-    ):
-        data_path = DATA_PATH / f"data_{name}.npz"
-        addon_path = DATA_PATH / f"data_{name}_addon.npz"
-        metadata_path = DATA_PATH / f"data_{name}_zmp_metadata.npz"
-        if not data_path.exists():
-            raise FileNotFoundError(f"ZMP dataset not found: {data_path}")
-        with ExitStack() as stack:
-            archives = [
-                stack.enter_context(np.load(data_path, allow_pickle=True))
-            ]
-            if addon_path.exists():
-                archives.insert(
-                    0,
-                    stack.enter_context(np.load(addon_path, allow_pickle=True)),
-                )
-            if metadata_path.exists():
-                archives.insert(
-                    0,
-                    stack.enter_context(np.load(metadata_path, allow_pickle=True)),
-                )
-            return cls(
-                name,
-                input_cpu,
-                weight_cpu,
-                ChainMap(*archives),
-                device,
-                block_size,
-                input_tolerance,
-            )
 
     def __init__(
         self,
@@ -79,9 +43,8 @@ class GaussianOrbitalCache:
         missing = [key for key in required if key not in data]
         if missing:
             raise ValueError(
-                f"{name}: missing ZMP orbital metadata {missing}; run "
-                "gen_data.py --if_continue true --zmp_constraint_metadata true "
-                "--zmp_feature_ov false --zmp_observable_response false."
+                f"{name}: missing ZMP orbital metadata {missing}; regenerate "
+                "the dataset with --if_continue false --zmp_constraint_metadata true."
             )
 
         input_cpu = input_cpu.detach().to(device="cpu")
@@ -317,85 +280,3 @@ class GaussianOrbitalCache:
             self.chain[start:stop] = torch.as_tensor(
                 chain, dtype=self.dtype, device=self.device
             )
-
-    def fock_tile(self, feature_gradient, start):
-        stop = start + len(feature_gradient)
-        batch = len(feature_gradient)
-        ao = torch.zeros(
-            (batch, self.ncube, 4, self.coeff.shape[0]),
-            dtype=self.dtype,
-            device=self.device,
-        )
-        sample_coords = self.sample_coords[start:stop]
-
-        for shell in self.shells:
-            delta = sample_coords - self.atom_coords[shell["atom"]]
-            radial = self.radial[start:stop].index_select(
-                -1, shell["radial_ids"]
-            )
-            contracted = radial @ shell["coeff"]
-            powers = shell["powers"]
-            cartesian = torch.prod(
-                delta.unsqueeze(-2).pow(powers), dim=-1
-            )
-            angular = cartesian @ shell["transform"]
-            shell_width = 2 * shell["angular"] + 1
-            for contraction in range(shell["coeff"].shape[1]):
-                ao_start = shell["start"] + contraction * shell_width
-                ao_stop = ao_start + shell_width
-                values = contracted[:, :, contraction, None] * angular
-                ao[:, :, 0, ao_start:ao_stop] = values
-                for axis in range(3):
-                    reduced_powers = powers.clone()
-                    derivative_order = reduced_powers[:, axis].clone()
-                    reduced_powers[:, axis] = torch.clamp(
-                        reduced_powers[:, axis] - 1, min=0
-                    )
-                    dcartesian = (
-                        torch.prod(
-                            delta.unsqueeze(-2).pow(reduced_powers), dim=-1
-                        )
-                        * derivative_order
-                    )
-                    dangular = dcartesian @ shell["transform"]
-                    dradial = (
-                        radial
-                        * (
-                            -2
-                            * delta[:, :, axis, None]
-                            * shell["exponents"][None, None, :]
-                        )
-                    ) @ shell["coeff"]
-                    derivative = (
-                        dradial[:, :, contraction, None] * angular
-                        + contracted[:, :, contraction, None] * dangular
-                    )
-                    ao[:, :, axis + 1, ao_start:ao_stop] = derivative
-
-        chain = self.chain[start:stop]
-        weighted_density = torch.einsum(
-            "blq,blqd->bqd", feature_gradient, chain
-        )
-        phi = ao[:, :, 0, :]
-        fock = torch.einsum(
-            "bq,bqi,bqj->ij", weighted_density[:, :, 0], phi, phi
-        )
-        for axis in range(1, 4):
-            derivative = ao[:, :, axis, :]
-            fock = fock + torch.einsum(
-                "bq,bqi,bqj->ij",
-                weighted_density[:, :, axis],
-                derivative,
-                phi,
-            )
-            fock = fock + torch.einsum(
-                "bq,bqi,bqj->ij",
-                weighted_density[:, :, axis],
-                phi,
-                derivative,
-            )
-        return fock
-
-    def batches(self):
-        for start in range(0, self.ncenter, self.block_size):
-            yield start, min(start + self.block_size, self.ncenter)

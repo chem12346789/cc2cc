@@ -347,19 +347,3 @@ def get_veff_grad_modified_zeros(ks_grad, *, unrestricted: bool) -> None:
         return lib.tag_array(vxc, exc1_grid=exc1_grid)
 
     ks_grad.get_veff = types.MethodType(get_veff, ks_grad)
-
-
-def get_veff_modified_rks(ks, modeldict):
-    return get_veff_modified(ks, modeldict, unrestricted=False)
-
-
-def get_veff_grad_modified_rks(ks_grad, modeldict):
-    return get_veff_grad_modified(ks_grad, modeldict, unrestricted=False)
-
-
-def get_veff_modified_uks(ks, modeldict: ModelClass):
-    return get_veff_modified(ks, modeldict, unrestricted=True)
-
-
-def get_veff_grad_modified_uks(ks_grad, modeldict: ModelClass):
-    return get_veff_grad_modified(ks_grad, modeldict, unrestricted=True)
