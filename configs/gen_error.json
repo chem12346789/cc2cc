@@ -1,0 +1,30 @@
+{
+    "train": [
+        "G21IP-c+",
+        "G21IP-n+",
+        "W4_11-b",
+        "W4_11-f",
+        "W4_11-no",
+        "G21EA-EA_o-",
+        "G21IP-cl+",
+        "HEAVYSB11-br",
+        "W4_11-s",
+        "W4_11-cf",
+        "W4_11-clo",
+        "W4_11-hs",
+        "G21EA-EA_p-",
+        "G21IP-f+",
+        "W4_11-c",
+        "W4_11-si",
+        "W4_11-ch",
+        "W4_11-of",
+        "W4_11-sif",
+        "W4_11-cch",
+        "ADDON-Ge",
+        "ADDON-I",
+        "ADDON-Pb",
+        "ADDON-Se",
+        "ADDON-Te"
+    ],
+    "eval": []
+}

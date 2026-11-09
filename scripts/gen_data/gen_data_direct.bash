@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --array=[0]%1
+#SBATCH --array=[0-3]%4
 # CLUSTER-ONLY: This script is configured for this cluster; do not run it elsewhere.
 
 if [[ "$(hostname)" == "user-MZ73-LM1-000" ]]; then
@@ -10,11 +10,14 @@ else
 fi
 
 # Generation settings
+# export GEN_CONFIG="gen_mol_addon.json"
+# export GEN_CONFIG="gen_mol2.json"
+export GEN_CONFIG="gen_error.json"
+export CONVERGENCE=0
+
 export DATASET="gmtkn-def2"
 export basis_args="def2-QZVPPD"
 export MD_NUMBER=0
-export GEN_CONFIG="gen_mol_addon.json"
-# export GEN_CONFIG="gen_mol2.json"
 export IF_CONTINUE=1
 
 # Slurm array task
@@ -58,5 +61,6 @@ exec ~/anaconda3/envs/pyscf/bin/python gen_data.py \
     --zmp_feature_ov false --zmp_observable_response false \
     --zmp_constraint_metadata true \
     --gen_config "${GEN_CONFIG}" \
+    --check_convergence "${CONVERGENCE}" \
     >"${log_file}" \
     2>"${err_file}"
