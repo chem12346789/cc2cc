@@ -4,7 +4,7 @@ import io
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pyscf
@@ -12,119 +12,113 @@ import pyscf.dft
 
 from cc2cc.utils.Grids import Grid
 from cc2cc.utils.helper.units import AU2KCALMOL
+import cc2cc.utils.reference.reference_vv10 as vv10
 from cc2cc.utils.reference.reference_vv10 import eval_nlc_exc_density
 
 
 class TestNlcExcDensity(unittest.TestCase):
-    def test_post_dft_grid_saved_to_addon_preserving_fields(self):
-        source = Path(__file__).resolve().parents[1] / "gen_data.py"
+    def test_post_dft_grid_saved_to_base_preserving_fields(self):
+        source = Path(__file__).resolve().parents[1] / "cc2cc" / "generate_cc_data.py"
         tree = ast.parse(source.read_text())
-        comparison = next(
-            node for node in ast.walk(tree)
-            if isinstance(node, ast.If)
-            and isinstance(node.test, ast.BoolOp)
-            and ast.unparse(node.test).startswith("args.if_continue")
+        generation = next(
+            node for node in tree.body
+            if isinstance(node, ast.FunctionDef) and node.name == "cc"
         )
         start = next(
-            i for i, node in enumerate(comparison.body)
-            if isinstance(node, ast.Assign)
-            and ast.unparse(node.targets[0]) == "addon_path"
+            i for i, node in enumerate(generation.body)
+            if isinstance(node, ast.Expr)
+            and ast.unparse(node.value).startswith("data_dict.update(get_vv10_data(")
         )
         stop = next(
-            i + 1 for i, node in enumerate(comparison.body[start:], start)
+            i + 1 for i, node in enumerate(generation.body[start:], start)
             if isinstance(node, ast.Expr)
             and ast.unparse(node.value).startswith("np.savez(")
         )
-        block = ast.Module(body=comparison.body[start:stop], type_ignores=[])
+        # Exercise the save path without running coupled-cluster data generation.
+        block = ast.Module(body=generation.body[start:stop], type_ignores=[])
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "data_AHB21-1A_def2-QZVPPD_addon.npz"
-            for existing in (False, True):
-                with self.subTest(existing=existing):
-                    if existing:
-                        np.savez(path, e_dft_d3bj_0=-1.5, exc_post_grid=np.zeros(2))
+            path = Path(directory) / "data_AHB21-1A_def2-QZVPPD.npz"
+            for check_fd in (False, True):
+                with self.subTest(check_fd=check_fd):
                     exc_post_vv10_grid = np.array([0.1, 0.2], dtype=np.float64)
-                    namespace = dict(
+                    vv10_data = dict(
+                        exc_post_vv10_grid=exc_post_vv10_grid, e_post_vv10=-0.3,
                         grad_post_vv10=np.zeros((2, 3), dtype=np.float64),
-                        grad_post_vv10_fd=None,
+                    )
+                    if check_fd:
+                        vv10_data["grad_post_vv10_fd"] = np.full((2, 3), 1e-7)
+                    zmp_data = {
+                        f"{key}_zmp": value for key, value in vv10_data.items()
+                        if key != "grad_post_vv10_fd"
+                    }
+                    namespace = dict(
                         np=np, DATA_PATH=Path(directory),
                         name="AHB21-1A_def2-QZVPPD",
-                        exc_post_vv10_grid=exc_post_vv10_grid, enlc_post=-0.3,
+                        data_dict={"e_dft_d3bj": -1.5},
+                        get_vv10_data=Mock(side_effect=[vv10_data, zmp_data]),
+                        get_zmp_constraint_data=Mock(return_value={}),
+                        mol=object(), grids=object(), dm1_dft=object(),
+                        e_dft=-1.0, dm1_cc=object(), args=object(),
+                        dm1_zmp=object(), e_zmp=-0.9, mdft=object(),
                     )
                     exec(compile(block, str(source), "exec"), namespace)
-                    with np.load(path) as addon:
-                        self.assertNotIn("exc_post_grid", addon)
-                        np.testing.assert_array_equal(
-                            addon["exc_post_vv10_grid"], exc_post_vv10_grid
-                        )
-                        self.assertEqual(addon["exc_post_vv10_grid"].dtype, np.float64)
-                        self.assertEqual(addon["enlc_post"], -0.3)
-                        np.testing.assert_array_equal(
-                            addon["grad_post_vv10"], namespace["grad_post_vv10"]
-                        )
-                        if existing:
-                            self.assertEqual(addon["e_dft_d3bj_0"], -1.5)
-                    namespace["grad_post_vv10_fd"] = np.full((2, 3), 1e-7)
-                    exec(compile(block, str(source), "exec"), namespace)
-                    with np.load(path) as addon:
-                        np.testing.assert_array_equal(
-                            addon["grad_post_vv10_fd"], namespace["grad_post_vv10_fd"]
-                        )
+                    with np.load(path) as data:
+                        self.assertEqual(data["e_dft_d3bj"], -1.5)
+                        self.assertEqual(data["exc_post_vv10_grid"].dtype, np.float64)
+                        self.assertEqual("grad_post_vv10_fd" in data, check_fd)
+                        for key, value in {**vv10_data, **zmp_data}.items():
+                            np.testing.assert_array_equal(data[key], value)
 
     def test_post_dft_nlc_check_reports_and_rejects_mismatch(self):
-        source = Path(__file__).resolve().parents[1] / "gen_data.py"
-        tree = ast.parse(source.read_text())
-        comparison = next(
-            node for node in ast.walk(tree)
-            if isinstance(node, ast.If)
-            and isinstance(node.test, ast.BoolOp)
-            and ast.unparse(node.test).startswith("args.if_continue")
-        )
-        start = next(
-            i for i, node in enumerate(comparison.body)
-            if isinstance(node, ast.Assign)
-            and ast.unparse(node.targets[0]) == "enlc_post"
-        )
-        block = ast.Module(body=comparison.body[start:start + 5], type_ignores=[])
+        mol = Mock(natm=1)
+        grids = Mock(weights=np.array([1.0, 2.0]))
+        density = np.eye(1, dtype=np.float64)
+        exc_density = np.array([0.1, 0.1], dtype=np.float64)
         for reference, fails in ((0.3, False), (0.4, True), (np.nan, True)):
             with self.subTest(reference=reference):
-                mock_pyscf = Mock()
-                mock_pyscf.dft.numint.NumInt.return_value.nr_nlc_vxc.return_value = (
-                    2, reference, None
-                )
-                namespace = dict(
-                    np=np, pyscf=mock_pyscf, mol=object(), name="test",
-                    nlcgrids=Mock(weights=np.array([1.0, 2.0])),
-                    dm_dft_tot=object(), exc_post_vv10_grid=np.array([0.1, 0.1]),
-                    e_dft=-1.0, AU2KCALMOL=AU2KCALMOL,
-                )
                 output = io.StringIO()
-                with contextlib.redirect_stdout(output):
+                with (
+                    patch.object(vv10, "eval_nlc_exc_density", return_value=exc_density),
+                    patch.object(
+                        pyscf.dft.numint.NumInt, "nr_nlc_vxc",
+                        return_value=(2, reference, None),
+                    ),
+                    contextlib.redirect_stdout(output),
+                ):
                     if fails:
                         with self.assertRaisesRegex(RuntimeError, "disagrees"):
-                            exec(compile(block, str(source), "exec"), namespace)
+                            vv10.get_post_vv10_data(
+                                mol, grids, density, -1.0, density, None, evaluate=True,
+                            )
                     else:
-                        exec(compile(block, str(source), "exec"), namespace)
-                        self.assertAlmostEqual(namespace["e_post_vv10"], -0.7)
-                difference = (namespace["enlc_post"] - reference) * AU2KCALMOL
+                        data = vv10.get_post_vv10_data(
+                            mol, grids, density, -1.0, density, None, evaluate=True,
+                        )
+                        self.assertAlmostEqual(data["e_post_vv10"], -0.7)
+                difference = (np.dot(exc_density, grids.weights) - reference) * AU2KCALMOL
                 self.assertIn(
                     f"NLC energy check (kcal/mol): difference = {difference:.12e}",
                     output.getvalue(),
                 )
 
     def test_post_dft_nlc_reuses_existing_grid(self):
-        source = Path(__file__).resolve().parents[1] / "gen_data.py"
-        tree = ast.parse(source.read_text())
-        assignment = next(
-            node for node in ast.walk(tree)
-            if isinstance(node, ast.Assign)
-            and isinstance(node.targets[0], ast.Name)
-            and node.targets[0].id == "nlcgrids"
-        )
-        grids = object()
-        namespace = {"grids": grids}
-        block = ast.Module(body=[assignment], type_ignores=[])
-        exec(compile(block, str(source), "exec"), namespace)
-        self.assertIs(namespace["nlcgrids"], grids)
+        mol = Mock(natm=1)
+        grids = Mock(weights=np.array([1.0, 2.0]))
+        density = np.eye(1, dtype=np.float64)
+        with (
+            patch.object(
+                vv10, "eval_nlc_exc_density", return_value=np.array([0.1, 0.1]),
+            ) as evaluate,
+            patch.object(
+                pyscf.dft.numint.NumInt, "nr_nlc_vxc", return_value=(2, 0.3, None),
+            ) as integrate,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            vv10.get_post_vv10_data(
+                mol, grids, density, -1.0, density, None, evaluate=True,
+            )
+        evaluate.assert_called_once_with(mol, grids, density, "vv10")
+        integrate.assert_called_once_with(mol, grids, "vv10", density)
 
     def test_grid_energy_density_integrates_to_pyscf_nlc_energy(self):
         mol = pyscf.M(

@@ -98,8 +98,10 @@ class TestXCStageProfiler(unittest.TestCase):
         profile.report(logger, owner)
         self.assertEqual(logger.info.call_args_list[1].args[2:],
                          ("density", 2, 4.0, 0.5))
-        self.assertEqual(logger.info.call_args_list[-2].args[2:], (1, 2, 6))
-        self.assertEqual(logger.info.call_args_list[-1].args[2:], (2, 1, 3))
+        self.assertEqual(profile.blocks, [(2, 6), (1, 3)])
+        logger.info.assert_called_with(
+            owner, "XC profile total staged wall=%.6f s", 4.0,
+        )
 
 
 class TestProfiledIntegration(unittest.TestCase):
