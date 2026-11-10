@@ -45,8 +45,8 @@ class TestCalculatorDiet100(TestCase):
                 script = source
                 if custom:
                     script = script.replace(
-                        '"atom-dft:1000:scf_d3bj_ene"',
-                        '"atom-dft:1000:scf_d3bj_ene"\n'
+                        "export model_load_epoch_pairs=(",
+                        'export model_load_epoch_pairs=(\n'
                         '    "atom-dft:1000:post_scf_vv10_ene"\n'
                         '    "atom-dft:1000:other_ene"',
                         1,
@@ -113,7 +113,7 @@ class TestCalculatorDiet100(TestCase):
                     note = fields[3] if len(fields) > 3 else ""
                     values = [cell.strip() for cell in row.split("|")[1:-1]]
                     self.assertEqual(len(values), 8)
-                    self.assertEqual(values[:2], [model, epoch])
+                    self.assertEqual(values[:2], [model.removeprefix("atom-"), epoch])
                     self.assertEqual(values[2:4], ["1.00", "2.00"])
                     self.assertEqual(values[4], "DONE")
                     self.assertEqual(values[5], "" if epoch == "1000" else "1/1")

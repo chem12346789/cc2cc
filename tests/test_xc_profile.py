@@ -10,6 +10,7 @@ import numpy as np
 
 
 UTILS = Path(__file__).resolve().parents[1] / "cc2cc" / "utils"
+MODEL_SCF_GPU = UTILS / "modelscf_gpu.py"
 spec = importlib.util.spec_from_file_location(
     "xc_profile", UTILS / "helper" / "runtime" / "xc_profile.py"
 )
@@ -97,8 +98,10 @@ class TestXCStageProfiler(unittest.TestCase):
         profile.report(logger, owner)
         self.assertEqual(logger.info.call_args_list[1].args[2:],
                          ("density", 2, 4.0, 0.5))
-        self.assertEqual(logger.info.call_args_list[-2].args[2:], (1, 2, 6))
-        self.assertEqual(logger.info.call_args_list[-1].args[2:], (2, 1, 3))
+        self.assertEqual(profile.blocks, [(2, 6), (1, 3)])
+        logger.info.assert_called_with(
+            owner, "XC profile total staged wall=%.6f s", 4.0,
+        )
 
 
 class TestProfiledIntegration(unittest.TestCase):
@@ -137,13 +140,13 @@ class TestProfiledIntegration(unittest.TestCase):
                     grid.gen_cube = lambda mol, dm, coords: cube_class(
                         np.repeat(coords[:, None, :], 3, axis=1), grid, mol,
                     )
-                    path = UTILS / f"modelscf_{spin}_gpu.py"
+                    path = MODEL_SCF_GPU
                     wrapper = next(node for node in ast.parse(path.read_text()).body
                                    if isinstance(node, ast.FunctionDef)
-                                   and node.name == f"get_veff_modified_{spin}_gpu")
+                                   and node.name == "get_veff_modified_gpu")
                     nr = next(node for node in wrapper.body
                               if isinstance(node, ast.FunctionDef)
-                              and node.name == f"nr_{spin}")
+                              and node.name == "nr_model")
                     logger = Mock()
                     profiles = []
 
@@ -162,6 +165,9 @@ class TestProfiledIntegration(unittest.TestCase):
 
                     ns = dict(
                         cp=np, ks=object(), logger=logger,
+                        unrestricted=spin == "uks",
+                        nspin=2 if spin == "uks" else 1,
+                        modeldict=SimpleNamespace(model=SimpleNamespace(cube_size=3)),
                         XCStageProfiler=make_profile,
                         get_cached_gdftopt=lambda grid, mol: opt,
                         tag_array=lambda data, **kwargs: data,
@@ -173,14 +179,12 @@ class TestProfiledIntegration(unittest.TestCase):
                         (rho.sum(axis=(1, 2)) * weights, np.ones_like(rho)),
                         _scale_ao=scale_ao,
                         transpose_sum=lambda mat: mat + mat.transpose(0, 2, 1),
-                        _hermi_sum=lambda mat: mat + mat.transpose(0, 2, 1),
                     )
                     load_nodes(path, [nr], ns)
                     dm = np.eye(2) if spin == "rks" else np.stack([np.eye(2)] * 2)
-                    args = (SimpleNamespace(model=SimpleNamespace(cube_size=3)),
-                            ni, mol, grid, "b3lyp", dm, 4000)
+                    args = (ni, mol, grid, "b3lyp", dm, 4000)
                     with patch.dict(os.environ, {"DFT2CC_PROFILE_XC": "0"}):
-                        expected = ns[f"nr_{spin}"](*args)
+                        expected = ns["nr_model"](*args)
                     self.assertEqual(len(buffers), 2 if spin == "rks" else 4)
                     self.assertTrue(all(buf is buffers[0] for buf in buffers))
                     # With these constant AO/rho fixtures the original dot-and-add
@@ -193,7 +197,7 @@ class TestProfiledIntegration(unittest.TestCase):
                     cp, torch, *_ = fake_backends()
                     with patch.dict(os.environ, {"DFT2CC_PROFILE_XC": "1"}), \
                             patch.dict("sys.modules", {"cupy": cp, "torch": torch}):
-                        actual = ns[f"nr_{spin}"](*args)
+                        actual = ns["nr_model"](*args)
                     for before, after in zip(expected, actual):
                         np.testing.assert_array_equal(before, after)
                     stages = profiles[-1].totals
@@ -234,31 +238,30 @@ class TestCudaProfile(unittest.TestCase):
         rng = np.random.default_rng(42)
         device = cp.cuda.Device().id
         with cp.cuda.Device(device), cp.cuda.Stream(non_blocking=True):
-            for spin, shape in (("rks", (1, 7, 7)), ("uks", (2, 1, 7, 7))):
-                path = UTILS / f"modelscf_{spin}_gpu.py"
+            for nspin in (1, 2):
+                path = MODEL_SCF_GPU
                 assembly = next(node for node in ast.walk(ast.parse(path.read_text()))
                                 if isinstance(node, ast.For)
                                 and isinstance(node.iter, ast.Call)
                                 and isinstance(node.iter.func, ast.Name)
                                 and node.iter.func.id == "block_loop")
                 blocks = []
-                actual = cp.asarray(rng.normal(size=shape), dtype=cp.float64)
+                actual = cp.asarray(
+                    rng.normal(size=(nspin, 1, 7, 7)), dtype=cp.float64
+                )
                 expected = actual.copy()
                 for points in (11, 5, 13):
                     ao = cp.asarray(rng.normal(size=(4, 7, points)), dtype=cp.float64)
-                    wshape = (4, points) if spin == "rks" else (2, 4, points)
-                    wv = cp.asarray(rng.normal(size=wshape), dtype=cp.float64)
+                    wv = cp.asarray(
+                        rng.normal(size=(nspin, 4, points)), dtype=cp.float64
+                    )
                     blocks.append((ao, wv))
                     weights = wv.copy()
-                    if spin == "rks":
-                        weights[0] *= 0.5
-                        expected[0] += cp.dot(ao[0], _scale_ao(ao, weights).T)
-                    else:
-                        weights[:, 0] *= 0.5
-                        for s in range(2):
-                            expected[s, 0] += cp.dot(
-                                ao[0], _scale_ao(ao, weights[s]).T,
-                            )
+                    weights[:, 0] *= 0.5
+                    for spin in range(nspin):
+                        expected[spin, 0] += cp.dot(
+                            ao[0], _scale_ao(ao, weights[spin]).T,
+                        )
                 buffers = []
 
                 def scale_ao(ao, wv, *, out):
@@ -270,10 +273,10 @@ class TestCudaProfile(unittest.TestCase):
                 ns = dict(
                     cp=cp, _scale_ao=scale_ao, vmat=actual,
                     block_loop=lambda deriv: iter(blocks), ao_deriv=1,
-                    aow_buffer=None, profile=Mock(),
+                    aow_buffer=None, nspin=nspin, profile=Mock(),
                 )
                 load_nodes(path, [assembly], ns)
-                per_block = 1 if spin == "rks" else 2
+                per_block = nspin
                 self.assertEqual(len(buffers), 3 * per_block)
                 self.assertTrue(all(buf is buffers[0] for buf in buffers[:2 * per_block]))
                 self.assertIsNot(buffers[-1], buffers[0])
@@ -289,30 +292,29 @@ class TestCudaProfile(unittest.TestCase):
         device = cp.cuda.Device().id
         rng = np.random.default_rng(14)
         with cp.cuda.Device(device), cp.cuda.Stream(non_blocking=True):
-            for spin, shape in (("rks", (1, 7, 7)), ("uks", (2, 1, 7, 7))):
-                path = UTILS / f"modelscf_{spin}_gpu.py"
+            for nspin in (1, 2):
+                path = MODEL_SCF_GPU
                 calls = [node for node in ast.walk(ast.parse(path.read_text()))
                          if isinstance(node, ast.AugAssign)
                          and isinstance(node.value, ast.Call)
                          and isinstance(node.value.func, ast.Attribute)
                          and node.value.func.attr == "dot"]
-                self.assertEqual(len(calls), 1 if spin == "rks" else 2)
-                actual = cp.asarray(rng.normal(size=shape), dtype=cp.float64)
+                self.assertEqual(len(calls), 1)
+                actual = cp.asarray(
+                    rng.normal(size=(nspin, 1, 7, 7)), dtype=cp.float64
+                )
                 expected = actual.copy()
                 pointer = actual.data.ptr
                 for points in (11, 5, 13):
                     ao = cp.asarray(rng.normal(size=(4, 7, points)), dtype=cp.float64)
-                    aowa = cp.asarray(rng.normal(size=(7, points)), dtype=cp.float64)
-                    aowb = cp.asarray(rng.normal(size=(7, points)), dtype=cp.float64)
-                    if spin == "rks":
-                        expected[0] += cp.dot(ao[0], aowa.T)
-                    else:
-                        expected[0, 0] += cp.dot(ao[0], aowa.T)
-                        expected[1, 0] += cp.dot(ao[0], aowb.T)
-                    load_nodes(path, calls, dict(
-                        cp=cp, ao=ao, aow=aowa, aowa=aowa, aowb=aowb,
-                        vmat=actual,
-                    ))
+                    for spin in range(nspin):
+                        aow = cp.asarray(
+                            rng.normal(size=(7, points)), dtype=cp.float64
+                        )
+                        expected[spin, 0] += cp.dot(ao[0], aow.T)
+                        load_nodes(path, calls, dict(
+                            cp=cp, ao=ao, aow=aow, spin=spin, vmat=actual,
+                        ))
                     self.assertEqual(actual.data.ptr, pointer)
                     cp.testing.assert_allclose(actual, expected, rtol=1e-13, atol=1e-13)
 

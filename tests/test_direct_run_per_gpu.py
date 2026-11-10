@@ -118,6 +118,7 @@ class DirectRunTests(unittest.TestCase):
             helper = direct.submit.ROOT / "scripts" / "__lib__" / "test_job.sh"
             script = root / "job.bash"
             script.write_text(
+                "#SBATCH -a [0]%1\n"
                 f'source "{helper}"\n'
                 f'REPO_ROOT="{root}"\n'
                 'load_model_args="--load atom-test --load_epoch 1"\n'
@@ -187,9 +188,9 @@ class DirectRunTests(unittest.TestCase):
             query.assert_not_called()
             launch.assert_not_called()
             lines = [str(call.args[0]) for call in output.call_args_list]
-            self.assertIn("jobs=220", lines[0])
-            self.assertIn("concurrency=3/GPU total-concurrency=6 cpus/job=8", lines[0])
-            self.assertEqual(len([line for line in lines if "[DRY-RUN]" in line]), 220)
+            self.assertIn("jobs=110", lines[0])
+            self.assertIn("concurrency=2/GPU total-concurrency=4 cpus/job=8", lines[0])
+            self.assertEqual(len([line for line in lines if "[DRY-RUN]" in line]), 110)
             self.assertIn("SLURM_ARRAY_TASK_ID=54", lines[-1])
 
     def test_timing_order_zero_skip_models_and_concurrency_override(self):
@@ -256,31 +257,40 @@ class DirectRunTests(unittest.TestCase):
                 'if [ "$SLURM_ARRAY_TASK_ID" = 1 ]; then exit 7; fi\n'
             )
             logs = root / "logs"
-            with (
-                patch.object(direct, "query_gpus", return_value={"0": "GPU-a", "1": "GPU-b"}),
-                patch.dict(os.environ, {"PYSCF_TMPDIR": str(root / "scratch")}),
-                patch("builtins.print"),
-            ):
-                status = direct.main([
-                    "--script", str(script), "--gpus", "0,1", "--log-dir", str(logs),
-                    "--poll-interval", "0.01", "--model-indices", "0,1",
-                    "--foreground",
-                ])
-            self.assertEqual(status, 1)
-            self.assertEqual(len(list(logs.glob("*.out"))), 6)
-            scratch_paths = set()
+            smi = root / "nvidia-smi"
+            smi.write_text(
+                "#!/bin/sh\nprintf '0, GPU-a, 24000, 10\\n1, GPU-b, 24000, 10\\n'\n"
+            )
+            smi.chmod(0o755)
+            env = os.environ.copy()
+            env.update(PATH=f"{root}:{env['PATH']}", PYSCF_TMPDIR=str(root / "scratch"))
+            result = subprocess.run(
+                [sys.executable, str(Path(direct.__file__).resolve()),
+                 "--script", str(script), "--gpus", "0,1", "--log-dir", str(logs),
+                 "--poll-interval", "0.01", "--model-indices", "0,1",
+                 "--foreground"],
+                env=env, text=True, capture_output=True, timeout=5,
+            )
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("[SUMMARY] jobs=6 failed=2", result.stdout)
+            self.assertEqual(list(logs.glob("model-*-task-*.*")), [])
+            rows = [line.split("|") for line in result.stdout.splitlines() if "|" in line]
+            self.assertEqual(len(rows), 6)
+            outputs = {tuple(fields[:2]): fields for fields in rows}
+            scratch_paths = {Path(line) for line in result.stderr.splitlines()}
+            self.assertEqual(len(scratch_paths), 6)
+            self.assertTrue(all(path.is_dir() for path in scratch_paths))
+            self.assertEqual(
+                {path.name for path in scratch_paths},
+                {f"model-{model}-task-{task}" for model in range(2) for task in range(3)},
+            )
             for model in range(2):
                 for task in range(3):
-                    stem = f"model-{model}-task-{task}"
-                    fields = (logs / f"{stem}.out").read_text().strip().split("|")
+                    fields = outputs[(str(model), str(task))]
                     self.assertEqual(fields[:3], [str(model), str(task), "3"])
                     self.assertIn(fields[3], ("GPU-a", "GPU-b"))
                     self.assertEqual(fields[3], fields[4])
                     self.assertEqual(fields[5], str(direct.submit.ROOT))
-                    scratch = (logs / f"{stem}.err").read_text().strip()
-                    self.assertTrue(Path(scratch).is_dir())
-                    scratch_paths.add(scratch)
-            self.assertEqual(len(scratch_paths), 6)
 
     def check_scheduler(self, concurrency_per_gpu):
         with tempfile.TemporaryDirectory() as directory:

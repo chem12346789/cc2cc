@@ -102,20 +102,25 @@ class TrainingMemoryTests(unittest.TestCase):
             self.assertNotIn("grad2force", archive.accessed)
         torch.testing.assert_close(
             batch["input"],
-            torch.tensor([1.0, 2.0], dtype=torch.float64, device="cpu").reshape(2, 1, 1),
+            torch.tensor(
+                [1.0, 0.0, 2.0], dtype=torch.float64, device="cpu",
+            ).reshape(3, 1, 1),
         )
         self.assertEqual(batch["input"].device.type, "cpu")
 
-    def test_enabled_targets_keep_filtering_and_values(self):
+    def test_enabled_targets_keep_grid_alignment_and_values(self):
         database = self.make_database(if_abs=True, if_grad=True)
         base = self.make_archive()
         _, batch = self.load_archives(database, base)
         self.assertTrue(base.closed)
         torch.testing.assert_close(
             batch["output"],
-            torch.tensor([[2.0], [3.0]], dtype=torch.float64, device="cpu"),
+            torch.tensor([[2.0], [0.0], [3.0]], dtype=torch.float64, device="cpu"),
         )
-        self.assertEqual(batch["grad2force"].shape, (2, 1, 1, 1))
+        torch.testing.assert_close(
+            batch["weight"], torch.ones((3, 1), dtype=torch.float64, device="cpu"),
+        )
+        self.assertEqual(batch["grad2force"].shape, (3, 1, 1, 1))
         torch.testing.assert_close(
             batch["grad_cc_train"],
             torch.tensor([1.0], dtype=torch.float64, device="cpu"),
@@ -172,12 +177,16 @@ class TrainingMemoryTests(unittest.TestCase):
                 loss, _, _ = wrapper.loss(batch, if_grad=requested)
                 active = configured and requested and available
                 self.assertEqual(batch["input"].requires_grad, active)
-                expected = torch.tensor(24.5, dtype=torch.float64, device="cpu")
+                expected = torch.tensor(
+                    25.0 if active else 24.5, dtype=torch.float64, device="cpu",
+                )
                 torch.testing.assert_close(loss, expected)
                 loss.backward()
                 torch.testing.assert_close(
                     wrapper.model.scale.grad,
-                    torch.tensor(-42.0, dtype=torch.float64, device="cpu"),
+                    torch.tensor(
+                        -36.0 if active else -42.0, dtype=torch.float64, device="cpu",
+                    ),
                 )
 
     def test_force_loss_preserves_second_derivatives(self):
@@ -187,11 +196,11 @@ class TrainingMemoryTests(unittest.TestCase):
         loss, _, _ = wrapper.loss(batch)
         loss.backward()
         torch.testing.assert_close(
-            loss, torch.tensor(26.5, dtype=torch.float64, device="cpu")
+            loss, torch.tensor(25.0, dtype=torch.float64, device="cpu")
         )
         torch.testing.assert_close(
             wrapper.model.scale.grad,
-            torch.tensor(-50.0, dtype=torch.float64, device="cpu"),
+            torch.tensor(-48.0, dtype=torch.float64, device="cpu"),
         )
 
     def test_absolute_loss_preserves_parameter_gradients(self):
@@ -261,16 +270,20 @@ class TrainingMemoryTests(unittest.TestCase):
         state_dict = {
             "large": torch.ones(150000, dtype=torch.float64, device="cpu")
         }
+        rng_state = wrapper.capture_rng_state()
         payload = {
             "state_dict": state_dict, "model": wrapper.args.model,
             "optimizer": wrapper.optimizer.state_dict(),
+            "rng_state": rng_state,
         }
         with BytesIO() as actual, model_module._CheckpointSizeBuffer() as counter:
             torch.save(payload, actual)
             torch.save(payload, counter)
             self.assertEqual(counter.size, actual.tell())
             self.assertEqual(counter.getbuffer().nbytes, 0)
-            self.assertEqual(wrapper._estimate_checkpoint_size(state_dict), actual.tell())
+            self.assertEqual(
+                wrapper._estimate_checkpoint_size(state_dict, rng_state), actual.tell(),
+            )
 
     def test_real_npz_tensors_remain_valid_after_archive_close(self):
         database = self.make_database()
