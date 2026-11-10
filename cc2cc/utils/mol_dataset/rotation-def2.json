@@ -2,22 +2,30 @@
     "molecule": [
         "Rotation-ch4-reference", "Rotation-ch4-y45", "Rotation-ch4-x30-z45",
         "Rotation-h2o-reference", "Rotation-h2o-y45", "Rotation-h2o-x30-z45",
-        "Rotation-oh-reference", "Rotation-oh-y45", "Rotation-oh-x30-z45"
+        "Rotation-oh-reference", "Rotation-oh-y45", "Rotation-oh-x30-z45",
+        "Rotation-hal59-brbr_fcch-reference", "Rotation-hal59-brbr_fcch-y45", "Rotation-hal59-brbr_fcch-x30-z45",
+        "Rotation-w4_11-sif4-reference", "Rotation-w4_11-sif4-y45", "Rotation-w4_11-sif4-x30-z45"
     ],
     "molecule_Rotation": [
         "Rotation-ch4-reference", "Rotation-ch4-y45", "Rotation-ch4-x30-z45",
         "Rotation-h2o-reference", "Rotation-h2o-y45", "Rotation-h2o-x30-z45",
-        "Rotation-oh-reference", "Rotation-oh-y45", "Rotation-oh-x30-z45"
+        "Rotation-oh-reference", "Rotation-oh-y45", "Rotation-oh-x30-z45",
+        "Rotation-hal59-brbr_fcch-reference", "Rotation-hal59-brbr_fcch-y45", "Rotation-hal59-brbr_fcch-x30-z45",
+        "Rotation-w4_11-sif4-reference", "Rotation-w4_11-sif4-y45", "Rotation-w4_11-sif4-x30-z45"
     ],
     "charge": {
         "Rotation-ch4-reference": 0, "Rotation-ch4-y45": 0, "Rotation-ch4-x30-z45": 0,
         "Rotation-h2o-reference": 0, "Rotation-h2o-y45": 0, "Rotation-h2o-x30-z45": 0,
-        "Rotation-oh-reference": 0, "Rotation-oh-y45": 0, "Rotation-oh-x30-z45": 0
+        "Rotation-oh-reference": 0, "Rotation-oh-y45": 0, "Rotation-oh-x30-z45": 0,
+        "Rotation-hal59-brbr_fcch-reference": 0, "Rotation-hal59-brbr_fcch-y45": 0, "Rotation-hal59-brbr_fcch-x30-z45": 0,
+        "Rotation-w4_11-sif4-reference": 0, "Rotation-w4_11-sif4-y45": 0, "Rotation-w4_11-sif4-x30-z45": 0
     },
     "spin": {
         "Rotation-ch4-reference": 0, "Rotation-ch4-y45": 0, "Rotation-ch4-x30-z45": 0,
         "Rotation-h2o-reference": 0, "Rotation-h2o-y45": 0, "Rotation-h2o-x30-z45": 0,
-        "Rotation-oh-reference": 1, "Rotation-oh-y45": 1, "Rotation-oh-x30-z45": 1
+        "Rotation-oh-reference": 1, "Rotation-oh-y45": 1, "Rotation-oh-x30-z45": 1,
+        "Rotation-hal59-brbr_fcch-reference": 0, "Rotation-hal59-brbr_fcch-y45": 0, "Rotation-hal59-brbr_fcch-x30-z45": 0,
+        "Rotation-w4_11-sif4-reference": 0, "Rotation-w4_11-sif4-y45": 0, "Rotation-w4_11-sif4-x30-z45": 0
     },
     "Rotation-ch4-reference": [["H", 0.0, -1.085725, 0.0], ["C", 0.0, 0.0, 0.0], ["H", -0.678881, 0.362633, 0.768858], ["H", -0.32641, 0.362633, -0.972357], ["H", 1.005291, 0.362633, 0.203499]],
     "Rotation-ch4-y45": [["H", 0.0, -1.085725, 0.0], ["C", 0.0, 0.0, 0.0], ["H", 0.063623346851, 0.362633, 1.023706064288], ["H", -0.918366952881, 0.362633, -0.456753503987], ["H", 0.85474360603, 0.362633, -0.566952560301]],
@@ -28,6 +36,12 @@
     "Rotation-oh-reference": [["O", 0.0, 0.0, 0.107851], ["H", 0.0, 0.0, -0.862809]],
     "Rotation-oh-y45": [["O", 0.076262173458, 0.0, 0.076262173458], ["H", -0.610098094769, 0.0, -0.610098094769]],
     "Rotation-oh-x30-z45": [["O", 0.038131086729, -0.038131086729, 0.093401705824], ["H", -0.305049047384, 0.305049047384, -0.747214512614]],
+    "Rotation-hal59-brbr_fcch-reference": [["Br", 0.0, 0.0, 0.17938], ["Br", 0.0, 0.0, 2.456257], ["F", 0.0, 0.0, -3.011826], ["C", 0.0, 0.0, -4.28935], ["C", 0.0, 0.0, -5.477561], ["H", 0.0, 0.0, -6.539389]],
+    "Rotation-hal59-brbr_fcch-y45": [["Br", 0.126840814409, 0.0, 0.126840814409], ["Br", 1.736835981037, 0.0, 1.736835981037], ["F", -2.129682588354, 0.0, -2.129682588354], ["C", -3.033028471883, 0.0, -3.033028471883], ["C", -3.873220527463, 0.0, -3.873220527463], ["H", -4.624046306717, 0.0, -4.624046306717]],
+    "Rotation-hal59-brbr_fcch-x30-z45": [["Br", 0.063420407205, -0.063420407205, 0.155347636931], ["Br", 0.868417990518, -0.868417990518, 2.127180960223], ["F", -1.064841294177, 1.064841294177, -2.608317827778], ["C", -1.516514235941, 1.516514235941, -3.714686065723], ["C", -1.936610263731, 1.936610263731, -4.743706976779], ["H", -2.312023153358, 2.312023153358, -5.663276999229]],
+    "Rotation-w4_11-sif4-reference": [["F", 0.900915, 0.900915, 0.900915], ["Si", 0.0, 0.0, 0.0], ["F", -0.900915, -0.900915, 0.900915], ["F", -0.900915, 0.900915, -0.900915], ["F", 0.900915, -0.900915, -0.900915]],
+    "Rotation-w4_11-sif4-y45": [["F", 1.274086211545, 0.900915, 0.0], ["Si", 0.0, 0.0, 0.0], ["F", 0.0, -0.900915, 1.274086211545], ["F", -1.274086211545, 0.900915, 0.0], ["F", 0.0, -0.900915, -1.274086211545]],
+    "Rotation-w4_11-sif4-x30-z45": [["F", 0.403869145754, 0.870217065791, 1.23067277665], ["Si", 0.0, 0.0, 0.0], ["F", 0.233173960019, -1.507260171564, 0.32975777665], ["F", -1.507260171564, 0.233173960019, -0.32975777665], ["F", 0.870217065791, 0.403869145754, -1.23067277665]],
     "rotation_validation": {
         "source_dataset": "force-def2",
         "coordinate_unit": "Angstrom",
@@ -40,7 +54,9 @@
         "sources": {
             "ch4": "Force-ch4-center",
             "h2o": "Force-h2o-center",
-            "oh": "Force-oh-center"
+            "oh": "Force-oh-center",
+            "hal59-brbr_fcch": "Force-hal59-brbr_fcch-center",
+            "w4_11-sif4": "Force-w4_11-sif4-center"
         }
     }
 }

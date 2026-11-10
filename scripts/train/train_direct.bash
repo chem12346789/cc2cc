@@ -17,12 +17,12 @@ export BASIS_ARGS="def2-QZVPPD"
 export RHO_INPUT="dft_vv10"
 # export RHO_INPUT="zmp"
 
-# export SPLIT_CONFIG="mol1_add.json"
-export SPLIT_CONFIG="mol2_ex_add.json"
+export SPLIT_CONFIG="mol1_add.json"
+# export SPLIT_CONFIG="mol2_ex_add.json"
 # export SPLIT_CONFIG="test.json"
 # export SPLIT_CONFIG="mini.json"
-export MOL0_WEIGHTING=4
-export APPEND_MOL0=9
+export MOL0_WEIGHTING=1
+export APPEND_MOL0=1
 export RELATIVE_WEIGHT_EPSILON=1e-10
 
 export OUTPUT_ARG="--output_target tol_delta_grids"
@@ -61,7 +61,7 @@ export SCHEDULER="--optimizer AdamW --scheduler cosine_warm --cosine_eta_min ${C
 # Hardware and environment
 # =========================
 export NUMBER_OF_GPU=1
-export CUDA_VISIBLE_DEVICES=4
+export CUDA_VISIBLE_DEVICES=7
 
 if [ ${NUMBER_OF_GPU} -gt 1 ]; then
 	export DISTRIBUTED="--distributed 1"

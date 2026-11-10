@@ -13,11 +13,10 @@ source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
-    (0) export load_model_args="--load atom-393567 --load_epoch 1115" ;;
-    # (0) export load_model_args="--load atom-35580 --load_epoch 2395" ;;
+    (0) export load_model_args="--load atom-3259973 --load_epoch 2395" ;;
 esac
 
-export if_continue_args=0
+export if_continue_args=1
 export name_mol_reverse=0
 export IF_GRAD=1
 export GRID_RESPONSE="${GRID_RESPONSE:-1}"
@@ -30,10 +29,10 @@ export name_mol_input="${FORCE_SET:-molecule_Force}"
 # export basis_args="def2-TZVP"
 # export name_mol_input="molecule_Force"
 
-setup_gpu_test_job 16000 15000
+setup_gpu_test_job 256000 16000
 # Arguments: PySCF memory (MiB); minimum free GPU memory (MiB).
 
 sleep $SLURM_ARRAY_TASK_ID
 begin_test_job
-run_test_job --max_cycle 50
+run_test_job --max_memory_gpu 8000 --max_cycle 50
 finish_test_job
