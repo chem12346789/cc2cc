@@ -1,8 +1,8 @@
 # Meaning of `grid_response`
 
 In this project, `grid_response=1` means **standard PySCF grid response**.
-The CPU RKS/UKS model gradient hooks include the corresponding response of
-the learned-model XC energy.
+The CPU and GPU RKS/UKS model gradient hooks include the corresponding
+response of the learned-model XC energy.
 
 ## Standard PySCF response
 
@@ -11,12 +11,14 @@ atom-centered quadrature weights and the motion of the quadrature points
 when evaluating the conventional XC functional. These are parts of standard
 grid response, not separate alternatives to it.
 
-## Current CPU model implementation
+## Model implementation
 
-The CPU RKS/UKS gradient hooks pass the standard PySCF gradient object's
+The CPU and GPU RKS/UKS gradient hooks pass the standard gradient object's
 `grid_response` flag through the model gradient evaluators in
-[modelscf.py](../cc2cc/utils/modelscf.py), with `unrestricted` passed explicitly.
-They retain standard PySCF J/K, hybrid, NLC and total-gradient assembly.
+[modelscf.py](../cc2cc/utils/modelscf.py) and
+[modelscf_gpu.py](../cc2cc/utils/modelscf_gpu.py), with `unrestricted` passed
+explicitly. They retain the respective PySCF or GPU4PySCF J/K, hybrid, NLC and
+total-gradient assembly.
 
 - **Off (`0`):** baseline and learned correction use fixed quadrature
   coordinates and weights.

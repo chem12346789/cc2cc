@@ -41,7 +41,7 @@ def validate_model(
         raise ValueError("Post-SCF density modes do not support nuclear gradients.")
     scf_class = pyscf.dft.UKS if unrestricted else pyscf.dft.RKS
     method = "UKS" if unrestricted else "RKS"
-    if torch.cuda.is_available() and not args.if_grad and not args.cpu:
+    if torch.cuda.is_available() and args.device == "cuda" and not args.cpu:
         from cc2cc.utils.GridsGPU import GridGPU as Grid
         from cc2cc.utils.modelscf_gpu import get_veff_modified_gpu
 
@@ -151,10 +151,12 @@ def validate_model(
         g.grid_response = bool(args.grid_response)
         g.xc = "b3lyp"
         g.grids = mdft.grids
-        if torch.cuda.is_available() and (not args.if_grad):
+        if torch.cuda.is_available() and args.device == "cuda" and not args.cpu:
             from cc2cc.utils.modelscf_gpu import get_veff_grad_modified_gpu
 
-            get_veff_grad_modified_gpu(g, modeldict, unrestricted=unrestricted)
+            get_veff_grad_modified_gpu(
+                g, modeldict, args.max_memory_gpu, unrestricted=unrestricted
+            )
         else:
             from cc2cc.utils.modelscf import get_veff_grad_modified
 

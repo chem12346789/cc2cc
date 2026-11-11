@@ -26,8 +26,8 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   variant is opt-in.
 - `modelscf.py`: shared CPU model potential and gradient hooks with an explicit
   `unrestricted` argument.
-- `modelscf_gpu.py`: shared GPU model potential hooks with explicit spin mode.
-  GPU gradients are not implemented.
+- `modelscf_gpu.py`: shared GPU model potential and gradient hooks with an
+  explicit spin mode.
 - `reference/`: shared B3LYP, CCSD(T), HF, VV10, and ZMP reference modules,
   plus cached DFT reference data utilities.
 - `helper/units.py`: energy and dipole conversion factors.
@@ -213,7 +213,7 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     and both archives close after loading each system. Grid targets are retained
     only for absolute loss. Atomic forwards transfer model inputs and weights.
     Model XC evaluation returns energy and feature derivatives, with optional
-    weight derivatives for the CPU RKS/UKS moving-grid gradient hooks.
+    weight derivatives for the CPU/GPU RKS/UKS moving-grid gradient hooks.
   - Loaded checkpoint references are released after model/optimizer restoration.
     Checkpoint-size checks stream serialization into a byte counter rather than
     retaining a full serialized checkpoint in RAM.
@@ -481,25 +481,27 @@ created, and failures may occur after earlier files have been updated.
   `log/<checkpoint>/<epoch>/Force_0.out` and `.err`, like the other profiles.
   For rotation checks, use `--script test/test_rotate.bash --gpus 0`.
   The `rotate` profile selects `molecule_Rotation` from `rotation-def2.json`:
-  the CH4, H2O and open-shell OH center geometries from `force-def2.json`,
+  the CH4, H2O, open-shell OH, HAL59-BrBr_FCCH, and W4_11-sif4 center geometries
+  from `force-def2.json`,
   each in its reference orientation, rotated 45 degrees about y, and rotated
   30 degrees about x followed by 45 degrees about z (active rotations about
   the origin, coordinates in Angstrom). Charges, spins and atom order are
-  preserved. Distinct molecule names keep results for all nine geometries.
+  preserved. Distinct molecule names keep results for all 15 geometries.
   The script defaults to energy-only evaluation (`IF_GRAD=0`); optionally use
   `IF_GRAD=1 GRID_RESPONSE=1` for moving-grid response, or
-  `GRID_RESPONSE=0` for fixed-grid CPU gradient evaluation.
+  `GRID_RESPONSE=0` for fixed-grid gradient evaluation.
   `ROTATION_SET` overrides the selected molecule/group. No extra runtime
   rotation is applied. Rotations rebuild atom-centered quadrature grids;
   numerical energy differences therefore include grid discretization effects.
   Matching rotation energies/forces are not asserted automatically.
-  `notebooks/dgx1_test_rotate.ipynb` reads the rotation log, reports energy
-  differences and optional gradient covariance (`g_rotated = g_reference @ R.T`).
-  `notebooks/dgx1_test_force.ipynb` uses `force-def2` and checks Cartesian
-  finite differences only when all required converged runs are available.
-  Both are analysis-only: missing runs are reported as PENDING and neither
-  notebook launches SCF. The shared log parser accepts explicitly logged CLI
-  convergence settings when GPU4PySCF UKS omits its per-run SCF banner.
+  `scripts/rotation_validation.py` and `notebooks/dgx1_test_rotate.ipynb`
+  read the rotation CSV and report energy differences and optional gradient
+  covariance (`g_rotated = g_reference @ R.T`).
+  `notebooks/dgx1_test_force.ipynb` reads a force CSV, uses `force-def2`, and
+  checks Cartesian finite differences only when all required converged runs are available.
+  Both are analysis-only: incomplete runs are skipped or reported as PENDING,
+  and neither notebook launches SCF. CSVs do not record the numerical settings
+  or SCF tolerances; verify these separately.
   Dry runs always stay foreground.
 
 ### Script directories (Slurm/HPC)

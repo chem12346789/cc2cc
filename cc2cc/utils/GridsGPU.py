@@ -8,6 +8,8 @@ opt in to GPU4PySCF explicitly.
 
 from __future__ import annotations
 
+import copy
+
 import cupy as cp
 import torch
 from pyscf import __config__
@@ -35,12 +37,13 @@ def get_cached_gdftopt(grids, mol):
     return grids._model_gdftopt
 
 
-def eval_xc_eff_gpu(modeldict, rho_cube, weights):
+def eval_xc_eff_gpu(modeldict, rho_cube, weights, weight_response=False):
     """Use stream-aware DLPack exchange without staging through host memory."""
     rho_tensor = torch.utils.dlpack.from_dlpack(rho_cube)
     weight_tensor = torch.utils.dlpack.from_dlpack(weights)
     outputs = modeldict.eval_xc_eff(
-        rho_tensor, weight_tensor, return_tensors=True
+        rho_tensor, weight_tensor,
+        weight_response=weight_response, return_tensors=True,
     )
     return tuple(cp.from_dlpack(output) for output in outputs)
 
@@ -62,6 +65,37 @@ def iterate_grid_segments(mol, grids, nao, deriv, max_memory):
         coords = grids.coords[ip0:ip1]
         weight = grids.weights[ip0:ip1]
         yield weight, coords
+
+
+def iterate_grid_response_segments(mol, grids, nao, deriv, max_memory):
+    """Atom-centered GPU blocks with Becke-weight nuclear derivatives."""
+    from gpu4pyscf.hessian.rks import get_dweight_dA
+
+    if (
+        getattr(grids, "atm_idx", None) is None
+        or getattr(grids, "quadrature_weights", None) is None
+    ):
+        raise ValueError("GPU grid response requires atom indices and quadrature weights")
+
+    for atom in range(mol.natm):
+        indices = cp.flatnonzero(grids.atm_idx == atom)
+        atom_grid = copy.copy(grids)
+        atom_grid.coords = grids.coords[indices]
+        atom_grid.weights = grids.weights[indices]
+        atom_grid.atm_idx = grids.atm_idx[indices]
+        atom_grid.quadrature_weights = grids.quadrature_weights[indices]
+        start = 0
+        for weights, coords in iterate_grid_segments(
+            mol, atom_grid, nao, deriv, max_memory
+        ):
+            stop = start + len(weights)
+            block_grid = copy.copy(atom_grid)
+            block_grid.coords = coords
+            block_grid.weights = weights
+            block_grid.atm_idx = atom_grid.atm_idx[start:stop]
+            block_grid.quadrature_weights = atom_grid.quadrature_weights[start:stop]
+            yield atom, weights, coords, get_dweight_dA(mol, block_grid)
+            start = stop
 
 
 def rho_evaluator(

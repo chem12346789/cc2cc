@@ -939,7 +939,7 @@ class ModelClass:
                 torch.sum(exc_cube), (density_input, weights_mat)
             )
         else:
-            middle_cube = torch.autograd.grad(torch.sum(exc_cube), input_mat)[0]
+            middle_cube = torch.autograd.grad(torch.sum(exc_cube), density_input)[0]
             weight_derivative = None
         outputs = (exc_cube.detach().squeeze(-1), middle_cube.detach())
         if weight_response:

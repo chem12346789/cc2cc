@@ -128,14 +128,40 @@ When invoking `test.py` directly, use
 `--if_grad 1 --grid_response 1` (enabled) or `--if_grad 1 --grid_response 0`
 (disabled). The grid-response setting has no effect without force calculations.
 
+## Rotation validation
+
+Analyze the rotation CSV without running SCF:
+
+```bash
+python -m scripts.rotation_validation \
+    --csv path/to/rotation-results.csv \
+    --dataset cc2cc/utils/mol_dataset/rotation-def2.json \
+    --basis def2-QZVPPD
+```
+
+The report compares `scf_ene` to each reference in Hartree and kcal/mol and,
+when present, compares rotated `scf_grad` in Hartree/Bohr. Diagnostic energy
+and maximum-component gradient tolerances default to 1e-5; adjust them with
+`--energy-tol` and `--gradient-tol`. Energy-only comparisons mark gradients
+unavailable; partially missing gradient pairs are pending. `--require-gradients`
+also marks energy-only comparisons pending. `--completed-only` reports available
+comparisons and marks missing or unconverged runs pending. The command exits 1
+for any tolerance failure, otherwise 2 for pending results, and 0 when all
+available comparisons pass.
+
+The CSV cannot verify model, grid, SCF tolerances, precision, geometry/atom
+order, units, or grid-response settings; check these separately. Rotations rebuild
+the quadrature grid, so energy differences include numerical integration effects.
+Tighten SCF and grid settings before interpreting the diagnostic tolerances.
+
 ## Detailed force validation
 
 `force-def2` retains the five original methane geometries in
-`molecule_Force_legacy`. Its default `molecule_Force` now includes 188 geometries:
-those five plus three centers and 180 displacements. The new cases are methane,
-distorted water (closed shell), and OH (open shell). Each Cartesian component has
-positive and negative steps of 0.004, 0.002, and 0.001 Bohr.
-`molecule_Force_centers` contains only the three new centers.
+`molecule_Force_legacy`. Its default `molecule_Force` now includes 388 geometries:
+those five plus five centers and 378 displacements. The new cases are methane,
+distorted water, OH, HAL59-BrBr_FCCH, and W4_11-sif4; only OH is open shell.
+Each Cartesian component has positive and negative steps of 0.004, 0.002, and
+0.001 Bohr. `molecule_Force_centers` contains only the five new centers.
 The water geometry starts from `W4_11-h2o` with atom 1 shifted by
 (0.13, 0.08, 0.04) Angstrom to break equal-bond symmetry.
 
@@ -144,34 +170,47 @@ The force wrapper uses `--conv_tol 1e-11 --conv_tol_grad 1e-7
 retain the original tolerances and unconverged-result policy by default.
 No validation jobs are launched by generating the dataset or opening the notebook.
 
-The shared launcher overwrites its group log. Run these jobs **sequentially**,
-waiting for each to finish and checking its error log before copying the output:
+When generating both force sets, run these jobs **sequentially**, waiting for
+each to finish. They write separate full-set and center-only CSVs:
 
 ```bash
 sbatch --export=ALL,GRID_RESPONSE=1 scripts/test/test_force.bash
-# After completion:
-cp log/atom-7297/1115/Force_0.out log/atom-7297/1115/Force_validation_on.out
+# After completion of the first job:
 sbatch --export=ALL,GRID_RESPONSE=0,FORCE_SET=molecule_Force_centers scripts/test/test_force.bash
-# After completion:
-cp log/atom-7297/1115/Force_centers_0.out log/atom-7297/1115/Force_validation_off.out
 ```
 
-The notebook `notebooks/dgx1_test_force.ipynb` reads these two saved logs and reports
-max/RMS Cartesian errors, step convergence, on/off comparisons using the same
-energies, net gradient, and torque. Missing or unconverged required calculations
-must be completed; the historical loose-SCF log is not sufficient.
-Start with an absolute gradient target of 1e-5 Hartree/Bohr; verify stability
-against tighter SCF and grid settings, particularly when decreasing the step.
-Energy uncertainty is amplified by division by the displacement.
-On/off logs must use the same model checkpoint, basis, grid, and precision.
+The notebook `notebooks/dgx1_test_force.ipynb` reads a validation CSV and reports
+max/RMS Cartesian errors, net gradient, and torque for completed steps. Set
+`CSV_PATH` and `BASIS` for the calculation to inspect. The CSV reader uses
+`scf_ene` in Hartree and `scf_grad` in Hartree/Bohr (without D3) and ignores
+unconverged runs when `completed_only=True`. Missing calculations must be
+completed for a full report.
 
-The notebook also supports checking an existing `Force_0.out` immediately:
-its default `ON_LOGS` selects that file and permits the historical SCF limits
-(1e-7 energy, 1e-3 orbital gradient), printing an explicit accuracy warning.
-Set `SCF_CONV_TOL=1e-11` and `SCF_CONV_TOL_GRAD=1e-7` after tighter reruns.
-The OFF log is optional: its absence skips only the on/off comparison, not the
-Cartesian, step-convergence, or invariance reports. All required ON energies
-must still exist and be converged.
+CSVs do not record enough information to verify the model, grid, SCF tolerances,
+precision, rotation, geometry/atom order, units, or grid-response setting. Check
+these separately before interpreting results; the notebook labels grid response
+as `unknown`. Start with an absolute gradient target of 1e-5 Hartree/Bohr and
+verify stability against tighter SCF and grid settings, particularly when
+decreasing the step. Energy uncertainty is amplified by division by the
+displacement.
+
+CSV records from different sources are compared only when the caller explicitly
+supplies the same `settings` dictionary, including `basis`, to `read_force_csv`;
+the caller must verify that those settings apply to each source.
+
+To print a table directly from CSV:
+
+```bash
+python -m scripts.force_validation \
+    --csv validate/def2-QZVPPD_atom-35580/2395/ccdft_def2-QZVPPD_atom-35580_force-def2_molecule_Force.csv \
+    --dataset cc2cc/utils/mol_dataset/force-def2.json \
+    --basis def2-QZVPPD --completed-only
+```
+
+The table includes each case and step's grid-response label, max/RMS gradient
+error, observed convergence order, and maximum net-gradient/torque components.
+Grid response is labeled `unknown` by default. After verifying the setting, use
+`--grid-response on` or `--grid-response off` to declare it.
 
 Regenerate the displacement dataset without running SCF:
 

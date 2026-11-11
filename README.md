@@ -90,13 +90,18 @@ recomputed by this policy are preserved.
 
 ### Custom model gradients
 
-CPU RKS/UKS model gradients retain PySCF's default `grid_response=False`.
-Install `get_veff_grad_modified(g, modeldict, unrestricted=False)` for RKS, or
-pass `unrestricted=True` for UKS. Set
-`g.grid_response = True` before `g.kernel()` to include atom-centered grid
-motion and Becke-weight derivatives.
-AO-overlap Pulay terms remain handled by PySCF in either mode.
-GPU model gradients remain unimplemented.
+CPU and GPU RKS/UKS model gradients retain PySCF's default
+`grid_response=False`. Install `get_veff_grad_modified` on CPU or
+`get_veff_grad_modified_gpu` on GPU, passing `unrestricted=False` for RKS or
+`unrestricted=True` for UKS. Set `g.grid_response = True` before `g.kernel()`
+to include atom-centered grid motion and Becke-weight derivatives.
+AO-overlap Pulay terms remain handled by PySCF in either mode. The validation
+runner uses GPU gradients when CUDA is available and `--device cuda` is set;
+use `--cpu 1` for CPU SCF and gradients.
+GPU `g.get_veff()` returns GPU4PySCF's per-atom half-gradient, not the CPU
+AO-matrix derivative.
+Potential and gradient derivatives include the chain rule when model inputs
+are weighted before inference.
 
 ### GPU SCF integration
 
@@ -108,6 +113,7 @@ CPU model callers still receive NumPy arrays by default.
 The numerical-integration optimizer is reused on each grid object across SCF
 iterations and rebuilt when molecular integral data or the CUDA device changes.
 This does not cache J/K objects or change the large-system CPU J/K fallback.
+The same AO threshold selects CPU J/K derivatives for model gradients.
 
 ## Quick start
 

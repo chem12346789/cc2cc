@@ -6,12 +6,15 @@ import types
 
 import cupy as cp
 from gpu4pyscf.dft.numint import _scale_ao
+from gpu4pyscf.grad import rhf as rhf_grad
+from gpu4pyscf.grad import rks as rks_grad
 from gpu4pyscf.lib import logger
 from gpu4pyscf.lib.cupy_helper import tag_array, transpose_sum
 
 from cc2cc.utils.GridsGPU import (
     eval_xc_eff_gpu,
     get_cached_gdftopt,
+    iterate_grid_response_segments,
     iterate_grid_segments,
 )
 from cc2cc.utils.ModelClass import ModelClass
@@ -271,13 +274,205 @@ def get_veff_modified_gpu(
 
 
 def get_veff_grad_modified_gpu(
-    ks_grad, modeldict: ModelClass, *, unrestricted: bool
+    ks_grad, modeldict: ModelClass, max_memory_gpu=4000, *, unrestricted: bool
 ) -> None:
-    """GPU model gradients are not implemented for either spin treatment."""
-    mode = "UKS" if unrestricted else "RKS"
-    raise NotImplementedError(
-        f"GPU model gradients are not implemented for {mode}"
-    )
+    """Install the GPU model gradient with an explicitly selected spin mode."""
+    nspin = 2 if unrestricted else 1
+
+    def get_model_gradient(ni, mol, grids, xc_code, dm, grid_response):
+        if ni._xc_type(xc_code) != "GGA":
+            raise NotImplementedError(f"GPU model gradient for functional {xc_code}")
+
+        opt = get_cached_gdftopt(grids, mol)
+        sorted_mol = opt._sorted_mol
+        dm_sorted = opt.sort_orbitals(
+            cp.asarray(dm), axis=[1, 2] if unrestricted else [0, 1]
+        )
+        mo_coeff = getattr(dm, "mo_coeff", None)
+        mo_occ = getattr(dm, "mo_occ", None)
+        if mo_coeff is not None and mo_occ is not None:
+            mo_coeff = opt.sort_orbitals(
+                cp.asarray(mo_coeff), axis=[1] if unrestricted else [0]
+            )
+            mo_occ = cp.asarray(mo_occ)
+            if unrestricted:
+                dms = tuple(
+                    tag_array(dm_sorted[spin], mo_coeff=mo_coeff[spin],
+                              mo_occ=mo_occ[spin])
+                    for spin in range(nspin)
+                )
+            else:
+                dms = tag_array(dm_sorted, mo_coeff=mo_coeff, mo_occ=mo_occ)
+        else:
+            dms = dm_sorted
+
+        nao = mol.nao
+        vmat = cp.zeros((nspin, 3, nao, nao), dtype=cp.float64)
+        exc_grid = cp.zeros((mol.natm, 3), dtype=cp.float64)
+        memory = max_memory_gpu // (2 * modeldict.model.cube_size)
+        if grid_response:
+            blocks = iterate_grid_response_segments(
+                mol, grids, nao, 2, memory
+            )
+        else:
+            blocks = (
+                (None, weights, coords, None)
+                for weights, coords in iterate_grid_segments(
+                    sorted_mol, grids, nao, 2, memory
+                )
+            )
+
+        previous_opt = getattr(grids, "opt", None)
+        grids.opt = opt
+        try:
+            for atom, weights, coords, weight1 in blocks:
+                gridcube = grids.gen_cube(sorted_mol, dms, coords)
+                cube_rho = (
+                    gridcube.gen_cube_rho_uks
+                    if unrestricted
+                    else gridcube.gen_cube_rho_rks
+                )
+                rho_cube, vxc_mat, ao = cube_rho(ni, dms, ao_deriv=2)
+                outputs = eval_xc_eff_gpu(
+                    modeldict, rho_cube, weights, weight_response=grid_response
+                )
+                middle_cube = outputs[1]
+                if grid_response:
+                    exc_grid += cp.einsum("p,axp->ax", outputs[2], weight1)
+                if unrestricted:
+                    wv = cp.einsum(
+                        "islpC,piC->slpC", vxc_mat, middle_cube, optimize=True
+                    )
+                else:
+                    wv = cp.einsum(
+                        "ilpC,piC->lpC", vxc_mat, middle_cube, optimize=True
+                    )[None]
+                wv[:, 0] *= 0.5  # The density term enters both AO-derivative terms.
+                wv = wv.reshape(nspin, 4, len(gridcube.coords))
+                for spin in range(nspin):
+                    vtmp = rks_grad._gga_grad_sum_(
+                        ao, cp.ascontiguousarray(wv[spin])
+                    )
+                    vmat[spin] += vtmp
+                    if grid_response:
+                        # The block's grid points move with their parent nucleus.
+                        spin_dm = dm_sorted[spin] if unrestricted else dm_sorted
+                        exc_grid[atom] += 2 * cp.einsum("xij,ji->x", vtmp, spin_dm)
+        finally:
+            grids.opt = previous_opt
+
+        if not unrestricted:
+            vmat = vmat[0]
+        return cp.asnumpy(exc_grid) - rhf_grad.contract_h1e_dm(
+            sorted_mol, vmat, dm_sorted, hermi=1
+        )
+
+    def get_cpu_jk_gradient(ks_grad_, mol, dm, ni):
+        import numpy as np
+        from pyscf import lib
+
+        from cc2cc.utils.modelscf import _gradient_jk
+
+        mf = ks_grad_.base
+        if getattr(mf, "ks_jk", None) is None:
+            mf.ks_jk = mf.to_cpu()
+        cpu_grad = mf.ks_jk.Gradients()
+        auxbasis_response = getattr(ks_grad_, "auxbasis_response", False)
+        cpu_grad.auxbasis_response = auxbasis_response
+        dm_cpu = cp.asnumpy(cp.asarray(dm))
+        mo_coeff = getattr(dm, "mo_coeff", None)
+        mo_occ = getattr(dm, "mo_occ", None)
+        if mo_coeff is not None and mo_occ is not None:
+            dm_cpu = lib.tag_array(
+                dm_cpu, mo_coeff=cp.asnumpy(cp.asarray(mo_coeff)),
+                mo_occ=cp.asnumpy(cp.asarray(mo_occ)),
+            )
+        vjk, e1_aux = _gradient_jk(
+            cpu_grad, ni, mf.xc, mol, dm_cpu,
+            unrestricted=unrestricted, auxbasis_response=auxbasis_response,
+        )
+        hybrid = ni.libxc.is_hybrid_xc(mf.xc)
+        if unrestricted and not hybrid:
+            contract_dm = dm_cpu[0] + dm_cpu[1]
+        else:
+            contract_dm = dm_cpu
+        gradient = np.zeros((mol.natm, 3), dtype=np.float64)
+        for atom, (_, _, p0, p1) in enumerate(mol.aoslice_by_atom()):
+            if unrestricted and hybrid:
+                gradient[atom] = 2 * np.einsum(
+                    "sxij,sji->x", vjk[:, :, p0:p1], contract_dm[:, :, p0:p1]
+                )
+            else:
+                gradient[atom] = 2 * np.einsum(
+                    "xij,ji->x", vjk[:, p0:p1], contract_dm[:, p0:p1]
+                )
+        if e1_aux is not None:
+            gradient += e1_aux
+        return gradient
+
+    def energy_ee(ks_grad_, mol=None, dm=None, verbose=None):
+        if mol is None:
+            mol = ks_grad_.mol
+        mf = ks_grad_.base
+        if dm is None:
+            dm = mf.make_rdm1()
+        log = logger.new_logger(mol, verbose)
+        t0 = log.init_timer()
+        with_df = getattr(mf, "with_df", None) is not None
+        if with_df:
+            mf.with_df.reset()
+
+        grids = ks_grad_.grids if ks_grad_.grids is not None else mf.grids
+        if grids.coords is None:
+            grids.build(with_non0tab=False, sort_grids=False)
+        ni = mf._numint
+        gradient = get_model_gradient(
+            ni, mol, grids, mf.xc, dm, ks_grad_.grid_response
+        )
+        log.timer("model vxc", *t0)
+
+        if mf.do_nlc():
+            nlc_dm = dm
+            if not ks_grad_.grid_response and (
+                getattr(dm, "mo_coeff", None) is None
+                or getattr(dm, "mo_occ", None) is None
+            ):
+                # Fixed-grid VV10 needs orbitals for the supplied density matrix.
+                nlc_dm = cp.asarray(dm, dtype=cp.float64)
+                mo_occ, mo_coeff = cp.linalg.eigh(nlc_dm)
+                nlc_dm = tag_array(nlc_dm, mo_coeff=mo_coeff, mo_occ=mo_occ)
+            nlc_orbital, nlc_grid = rks_grad._get_denlc(ks_grad_, mol, nlc_dm)
+            gradient += 2 * nlc_orbital
+            if ks_grad_.grid_response:
+                gradient += nlc_grid
+
+        if mol.nao > MAX_GPU_JK_NAO:
+            logger.info(ks_grad_, "Large system detected: using CPU J/K gradients")
+            return gradient + get_cpu_jk_gradient(ks_grad_, mol, dm, ni)
+
+        omega, alpha, hyb = ni.rsh_and_hybrid_coeff(mf.xc, spin=mol.spin)
+        hybrid = ni.libxc.is_hybrid_xc(mf.xc)
+        if with_df or omega == 0:
+            k_factor = hyb
+        else:
+            k_factor = alpha if hybrid else 0
+        gradient += ks_grad_.jk_energy_per_atom(
+            dm, j_factor=1, k_factor=k_factor, hermi=1, verbose=log
+        )
+        if hybrid and omega != 0:
+            if with_df:
+                correction, correction_omega = alpha - hyb, omega
+            else:
+                # The direct GPU backend evaluates the short-range correction.
+                correction, correction_omega = hyb - alpha, -omega
+            gradient += ks_grad_.jk_energy_per_atom(
+                dm, j_factor=0, k_factor=correction, hermi=1,
+                omega=correction_omega, verbose=log,
+            )
+        return gradient
+
+    ks_grad.energy_ee = types.MethodType(energy_ee, ks_grad)
+    ks_grad.get_veff = types.MethodType(rhf_grad.Gradients.get_veff, ks_grad)
 
 
 __all__ = [

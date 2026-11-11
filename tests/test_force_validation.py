@@ -3,7 +3,6 @@ import ast
 import contextlib
 import io
 import json
-import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import TestCase
@@ -12,7 +11,7 @@ import numpy as np
 from pyscf.lib import param
 
 from scripts.force_validation import (
-    STEPS_BOHR, build_dataset, gradient_report, read_force_logs,
+    STEPS_BOHR, build_dataset, gradient_report,
 )
 from cc2cc.utils.parser import str2bool
 
@@ -110,46 +109,6 @@ class TestForceValidation(TestCase):
         del records[center]
         with self.assertRaises(KeyError):
             gradient_report(self.dataset, records, records, records)
-
-    def test_log_parser_and_accuracy_rejection(self):
-        name = "Force-oh-center"
-        header = (
-            "if_rotate: False\nif_rotate_random: False\n"
-            "load: test\nload_epoch: 1\ngrid_level: 4\n"
-            "basis: def2-SVP\ndataset: force-def2\nprecision: float64\n"
-        )
-        body = (
-            f"RUN: {name}_def2-SVP\n"
-            "SCF conv_tol = 1e-11\nSCF conv_tol_grad = 1e-07\n"
-            "converged SCF energy = -75.1234567890123\n"
-            "unit = Eh/Bohr\ngrid_response = True\n"
-            "0 O 0.0 0.0 0.2\n1 H 0.0 0.0 -0.2\n"
-        )
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "force.out"
-            path.write_text(header + body)
-            records = read_force_logs([path], self.dataset, "def2-SVP", True)
-            self.assertAlmostEqual(records[name]["energy"], -75.1234567890123)
-            self.assertEqual(records[name]["gradient"].shape, (2, 3))
-            path.write_text(header + body.replace(
-                "converged SCF energy", "SCF not converged.\nconverged SCF energy"
-            ))
-            self.assertIn(name, read_force_logs([path], self.dataset, "def2-SVP", True))
-            path.write_text(header + body + "SCF not converged.\n")
-            with self.assertRaisesRegex(ValueError, "final SCF"):
-                read_force_logs([path], self.dataset, "def2-SVP", True)
-            for old, new in (
-                ("1e-11", "1e-7"),
-                ("1e-07", "1e-3"),
-                ("converged SCF energy", "SCF not converged"),
-                ("grid_response = True", "grid_response = False"),
-                ("if_rotate: False", "if_rotate: True"),
-                ("1 H 0.0 0.0 -0.2\n", ""),
-            ):
-                with self.subTest(replacement=new):
-                    path.write_text((header + body).replace(old, new))
-                    with self.assertRaises(ValueError):
-                        read_force_logs([path], self.dataset, "def2-SVP", True)
 
     def test_runner_convergence_gate(self):
         for spin in ("rks", "uks"):

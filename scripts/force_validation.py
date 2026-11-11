@@ -1,7 +1,8 @@
-"""Build displacement geometries and compare logged model-SCF gradients."""
+"""Build displacement geometries and compare model-SCF gradients."""
 
 import argparse
 import copy
+import csv
 import json
 import re
 from pathlib import Path
@@ -12,6 +13,7 @@ from pyscf.lib import param
 
 STEPS_BOHR = (0.004, 0.002, 0.001)
 NUMBER = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
+GRADIENT_ROW = rf"\[\s*({NUMBER})\s+({NUMBER})\s+({NUMBER})\s*\]"
 
 
 def build_dataset(source):
@@ -29,6 +31,8 @@ def build_dataset(source):
         ("ch4", "Force-ch4-1.000"),
         ("h2o", "W4_11-h2o"),
         ("oh", "W4_11-oh"),
+        ("hal59-brbr_fcch", "HAL59-BrBr_FCCH"),
+        ("w4_11-sif4", "W4_11-sif4"),
     ):
         center = f"Force-{label}-center"
         atoms = copy.deepcopy(source[original])
@@ -67,68 +71,72 @@ def build_dataset(source):
     return result
 
 
-def read_force_logs(paths, dataset, basis, grid_response, conv_tol=1e-11,
-                    conv_tol_grad=1e-7, completed_only=False):
+def read_force_csv(paths, dataset, basis, completed_only=False, *, settings=None):
+    """Read uncorrected SCF energies and gradients from validation CSVs.
+
+    CSVs do not record calculation settings. By default, records from different
+    sources cannot be compared; explicitly supplied settings are caller-verified.
+    """
+    paths = [Path(path) for path in paths]
+    if not paths:
+        raise ValueError("At least one CSV path is required")
+    if settings is not None:
+        if settings.get("basis") != basis:
+            raise ValueError(f"CSV settings must specify basis={basis}")
+        settings = dict(settings)
+
+    names = set(dataset["molecule"])
     records = {}
+    matched = 0
     for path in paths:
-        text = Path(path).read_text()
-        settings = {}
-        for key in ("load", "load_epoch", "grid_level", "basis", "dataset", "precision"):
-            match = re.search(rf"^{key}: (.+)$", text, re.M)
-            if match is None:
-                raise ValueError(f"{path}: missing {key}")
-            settings[key] = match.group(1).strip()
-        if settings["basis"] != basis or settings["precision"] != "float64":
-            raise ValueError(f"{path}: require basis={basis}, precision=float64")
-        for flag in ("if_rotate", "if_rotate_random"):
-            if re.search(rf"^{flag}: False\s*$", text, re.M) is None:
-                raise ValueError(f"{path}: require {flag}=False")
-        for block in re.split(r"^RUN: ", text, flags=re.M)[1:]:
-            run = block.splitlines()[0].strip()
-            if not run.endswith("_" + basis):
-                continue
-            name = run.removesuffix("_" + basis)
-            if name not in dataset["molecule"]:
-                continue
-            converged = list(re.finditer(
-                rf"^converged SCF energy =\s*({NUMBER})", block, re.M
-            ))
-            if not converged:
-                if completed_only:
+        record_settings = settings
+        if record_settings is None:
+            record_settings = dict(basis=basis, csv_source=str(path.resolve()))
+        with path.open(encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle, strict=True)
+            fields = reader.fieldnames or []
+            for column in ("name", "scf_ene", "converged", "scf_grad"):
+                count = fields.count(column)
+                if count > 1 or (column != "scf_grad" and count != 1):
+                    raise ValueError(f"{path}: invalid or missing {column!r} column")
+            for row in reader:
+                if None in row or any(value is None for value in row.values()):
+                    raise ValueError(f"{path}:{reader.line_num}: invalid column count")
+                run = row["name"].strip()
+                if not run.endswith("_" + basis):
                     continue
-                raise ValueError(f"{name}: SCF is not converged")
-            energy = converged[-1]
-            if re.search(r"SCF not converged|not converged!!!", block[energy.end():]):
-                if completed_only:
+                name = run.removesuffix("_" + basis)
+                if name not in names:
                     continue
-                raise ValueError(f"{name}: final SCF is not converged")
-            if name in records:
-                raise ValueError(f"Duplicate run: {name}")
-            for key, limit in (("SCF conv_tol", conv_tol),
-                               ("SCF conv_tol_grad", conv_tol_grad)):
-                match = re.search(rf"^{key} =\s*({NUMBER})", block, re.M)
-                if match is None:
-                    # GPU4PySCF UKS may omit the per-run SCF settings banner.
-                    argument = key.removeprefix("SCF ")
-                    match = re.search(rf"^{argument}:\s*({NUMBER})\s*$", text, re.M)
-                if match is None or float(match.group(1)) > limit:
-                    raise ValueError(f"{name}: require {key} <= {limit}")
-            rows = re.findall(
-                rf"^\s*(\d+)\s+([A-Z][a-z]?)\s+({NUMBER})\s+({NUMBER})\s+({NUMBER})\s*$",
-                block, re.M,
-            )
-            gradient = None
-            if rows:
-                atoms = dataset[name]
-                if ([int(row[0]) for row in rows] != list(range(len(atoms)))
-                        or [row[1] for row in rows] != [atom[0] for atom in atoms]):
-                    raise ValueError(f"{name}: incomplete or misordered gradient")
-                if ("unit = Eh/Bohr" not in block
-                        or f"grid_response = {bool(grid_response)}" not in block):
-                    raise ValueError(f"{name}: wrong gradient units/grid-response setting")
-                gradient = np.array([row[2:] for row in rows], dtype=np.float64)
-            records[name] = dict(energy=float(energy.group(1)), gradient=gradient,
-                                 settings=settings)
+                matched += 1
+                converged = row["converged"].strip().lower()
+                if converged not in ("true", "false", ""):
+                    raise ValueError(f"{path}:{reader.line_num}: invalid convergence status")
+                if converged != "true":
+                    if completed_only:
+                        continue
+                    raise ValueError(f"{name}: SCF is not converged")
+                if name in records:
+                    raise ValueError(f"Duplicate run: {name}")
+                try:
+                    energy = float(row["scf_ene"])
+                except ValueError as exc:
+                    raise ValueError(f"{name}: invalid SCF energy") from exc
+                if not np.isfinite(energy):
+                    raise ValueError(f"{name}: invalid SCF energy")
+                gradient = None
+                value = row.get("scf_grad", "").strip()
+                if value:
+                    if re.fullmatch(rf"\s*\[\s*(?:{GRADIENT_ROW}\s*)+\]\s*", value) is None:
+                        raise ValueError(f"{name}: malformed SCF gradient")
+                    gradient = np.array(re.findall(GRADIENT_ROW, value), dtype=np.float64)
+                    if gradient.shape != (len(dataset[name]), 3):
+                        raise ValueError(f"{name}: incorrect SCF gradient shape {gradient.shape}")
+                    if not np.isfinite(gradient).all():
+                        raise ValueError(f"{name}: invalid SCF gradient")
+                records[name] = dict(energy=energy, gradient=gradient, settings=record_settings)
+    if not matched:
+        raise ValueError(f"No {basis} CSV records matched the dataset")
     return records
 
 
@@ -213,8 +221,58 @@ def gradient_report(dataset, energies, gradients_on, gradients_off=None,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument("--source", type=Path, help="Source dataset for geometry generation")
+    inputs.add_argument("--csv", type=Path, help="Validation CSV file to report")
+    parser.add_argument("--output", type=Path, help="Output path for generated geometries")
+    parser.add_argument("--dataset", type=Path, help="Force-validation dataset JSON")
+    parser.add_argument("--basis", help="Basis suffix used in CSV record names")
+    parser.add_argument("--completed-only", action="store_true",
+                        help="Report only converged, complete Cartesian steps")
+    parser.add_argument("--grid-response", choices=("on", "off", "unknown"), default="unknown",
+                        help="Declared gradient setting; CSVs cannot verify it")
     args = parser.parse_args()
-    args.output.write_text(json.dumps(build_dataset(json.loads(args.source.read_text())),
-                                      indent=4) + "\n")
+    if args.source is not None:
+        if args.output is None:
+            parser.error("--output is required with --source")
+        if (args.dataset is not None or args.basis is not None or args.completed_only
+                or args.grid_response != "unknown"):
+            parser.error("--dataset, --basis, --completed-only and --grid-response require --csv")
+        args.output.write_text(json.dumps(build_dataset(json.loads(args.source.read_text())),
+                                          indent=4) + "\n")
+    else:
+        if args.output is not None:
+            parser.error("--output is only valid with --source")
+        if args.dataset is None or args.basis is None:
+            parser.error("--dataset and --basis are required with --csv")
+        dataset = json.loads(args.dataset.read_text())
+        records = read_force_csv([args.csv], dataset, args.basis,
+                                 completed_only=args.completed_only)
+        reports = gradient_report(dataset, records, records,
+                                  completed_only=args.completed_only)
+        for report in reports:
+            report["grid_response"] = args.grid_response
+        print(f"Completed runs: {len(records)}; Cartesian reports: {len(reports)}")
+        print("Gradient errors: Hartree/Bohr; torque: Hartree")
+        print("CSV does not verify model, grid, SCF tolerances, precision, "
+              "rotation, geometry/atom order, units, or grid response.")
+        columns = (
+            ("Case", 6), ("h/Bohr", 8), ("Grid", 9), ("Max error", 13),
+            ("RMS error", 13), ("Order", 8), ("Net grad max", 14),
+            ("Torque max", 13),
+        )
+        print(" ".join(f"{name:>{width}}" for name, width in columns))
+        print("-" * (sum(width for _, width in columns) + len(columns) - 1))
+        for report in reports:
+            order = report["observed_order"]
+            values = (
+                f"{report['case']:<6}",
+                f"{report['step_bohr']:8.3f}",
+                f"{report['grid_response']:>9}",
+                f"{report['max_error']:13.4e}",
+                f"{report['rms_error']:13.4e}",
+                f"{order:8.3f}" if order is not None else f"{'-':>8}",
+                f"{np.max(np.abs(report['net_gradient'])):14.4e}",
+                f"{np.max(np.abs(report['torque'])):13.4e}",
+            )
+            print(" ".join(values))
