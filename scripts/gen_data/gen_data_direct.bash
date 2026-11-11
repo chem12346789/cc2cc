@@ -12,8 +12,8 @@ fi
 # Generation settings
 # export GEN_CONFIG="gen_mol_addon.json"
 # export GEN_CONFIG="gen_mol2.json"
-# export GEN_CONFIG="gen_error.json"
-export GEN_CONFIG="gen_zmp_error.json"
+export GEN_CONFIG="gen_error.json"
+# export GEN_CONFIG="gen_zmp_error.json"
 export CONVERGENCE=0
 
 export DATASET="gmtkn-def2"

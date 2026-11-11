@@ -189,7 +189,7 @@ class RZMP(_DFHF, pyscf.dft.rks.RKS):
                 break
 
         print(
-            f"In lambda = {l:7.2f}, Use cycles = {cycle + 1}, and final convergence = {self.converged}",
+            f"In lambda = {l:7.2f}, Use cycles = {cycle + 1}, with level_shift = {self.level_shift} and final convergence = {self.converged}",
             flush=True,
         )
 
@@ -306,6 +306,6 @@ class UZMP(_DFHF, pyscf.dft.uks.UKS):
                 break
 
         print(
-            f"In lambda = {l:7.2f}, Use cycles = {cycle + 1}, and final convergence = {self.converged}",
+            f"In lambda = {l:7.2f}, Use cycles = {cycle + 1}, with level_shift = {self.level_shift}, and final convergence = {self.converged}",
             flush=True,
         )
