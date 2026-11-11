@@ -22,7 +22,7 @@ export SPLIT_CONFIG="mol1_add.json"
 # export SPLIT_CONFIG="test.json"
 # export SPLIT_CONFIG="mini.json"
 export MOL0_WEIGHTING=1
-export APPEND_MOL0=1
+export APPEND_MOL0=0
 export RELATIVE_WEIGHT_EPSILON=1e-10
 
 export OUTPUT_ARG="--output_target tol_delta_grids"
