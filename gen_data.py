@@ -2,6 +2,8 @@
 
 import argparse
 import copy
+import os
+import tempfile
 
 import numpy as np
 
@@ -21,6 +23,7 @@ from cc2cc.utils.parser import (
 )
 from cc2cc.utils.helper.chemistry.rotate import rotate
 from cc2cc.utils.reference.reference_vv10 import get_vv10_data
+from cc2cc.utils.reference.reference_b3lyp import get_dft_grad
 from cc2cc.generate_cc_data import cc
 
 if __name__ == "__main__":
@@ -185,7 +188,73 @@ if __name__ == "__main__":
             grids = Grid(mol, args.grid_level, 7)
 
             if args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
-                print(f"SKIP: {name} already exists.")
+                if evaluate:
+                    print(f"SKIP: {name} already exists.")
+                else:
+                    data_path = DATA_PATH / f"data_{name}.npz"
+                    with np.load(data_path, allow_pickle=False) as archive:
+                        data = dict(archive)
+                    dft_class = pyscf.dft.UKS if mol.spin != 0 else pyscf.dft.RKS
+                    mdft = dft_class(mol, xc="b3lyp")
+                    mdft.conv_tol = 1e-12
+                    mdft.conv_tol_grad = 1e-8
+                    mdft.max_cycle = 200
+                    mdft.kernel(data["dm1_dft"])
+                    if not mdft.converged:
+                        raise RuntimeError(f"{name}: B3LYP gradient update SCF not converged.")
+                    print(
+                        f"B3LYP check: energy change = {mdft.e_tot - data['e_dft']:.12e} Hartree; "
+                        f"max |DM - saved DM| = {np.max(np.abs(mdft.make_rdm1() - data['dm1_dft'])):.12e}"
+                    )
+                    gdft = mdft.Gradients()
+                    gdft.grid_response = True
+                    grad_dft = gdft.kernel()
+
+                    mdft_d3bj = dft_class(mol, xc="b3lyp-d3bj")
+                    mdft_d3bj.max_cycle = 200
+                    mdft_d3bj.kernel(mdft.make_rdm1())
+                    if not mdft_d3bj.converged:
+                        raise RuntimeError(f"{name}: B3LYP-D3BJ gradient update SCF not converged.")
+                    print(
+                        f"B3LYP-D3BJ check: energy change = {mdft_d3bj.e_tot - data['e_dft_d3bj']:.12e} Hartree; "
+                        f"max |DM - saved B3LYP DM| = {np.max(np.abs(mdft_d3bj.make_rdm1() - data['dm1_dft'])):.12e}"
+                    )
+                    gdft_d3bj = mdft_d3bj.Gradients()
+                    gdft_d3bj.grid_response = True
+                    grad_dft_d3bj = gdft_d3bj.kernel()
+
+                    data["grad_dft"] = grad_dft
+                    data["grad_dft_d3bj"] = grad_dft_d3bj
+                    data["grad_cc_train"] = data["grad_cc"] - grad_dft
+                    if (
+                        not np.allclose(data["coords"], grids.coords, rtol=0, atol=1e-12)
+                        or not np.allclose(data["weights"], grids.weights, rtol=1e-12, atol=1e-15)
+                    ):
+                        raise ValueError(f"{name}: saved grid differs; use the original grid settings.")
+                    for suffix in ("dft", "zmp"):
+                        mapping = get_dft_grad(
+                            mol, grids, data[f"dm1_{suffix}"],
+                            unrestricted=mol.spin != 0,
+                        )
+                        if suffix == "dft":
+                            data.update(mapping)
+                        else:
+                            data.update({
+                                key.replace("dft", "zmp") if "dft" in key else key + "_zmp": value
+                                for key, value in mapping.items()
+                            })
+                    temporary_path = None
+                    try:
+                        with tempfile.NamedTemporaryFile(
+                            dir=data_path.parent, suffix=".npz", delete=False
+                        ) as handle:
+                            temporary_path = handle.name
+                            np.savez(handle, **data)
+                        os.replace(temporary_path, data_path)
+                    finally:
+                        if temporary_path is not None and os.path.exists(temporary_path):
+                            os.unlink(temporary_path)
+                    print(f"UPDATED: {name} B3LYP/B3LYP-D3BJ gradients with grid response.")
             else:
                 if mol.spin == 0:
                     unrestricted = False

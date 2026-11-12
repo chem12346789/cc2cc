@@ -222,9 +222,11 @@ def cc(
 
         # DFT gradient
         gdft = mdft.Gradients()
+        gdft.grid_response = True
         grad_dft = gdft.kernel()
 
         gdft_d3bj = mdft_d3bj.Gradients()
+        gdft_d3bj.grid_response = True
         grad_dft_d3bj = gdft_d3bj.kernel()
 
         grad_zmp = zmp_baseline_gradient(mdft, dm1_zmp)
