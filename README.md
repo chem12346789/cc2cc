@@ -142,15 +142,3 @@ When switching an existing validation run to this baseline, pass
 `--if_continue 0` (or set `if_continue_args=0` in the launch script).
 Resume checks molecule names, not baseline settings, so otherwise saved
 results can be skipped without any new SCF calculation.
-
-### Two-stage cosine warm restarts
-
-Use `--scheduler cosine_warm2 --cosine_restart_step 160 --cosine_restart_lr 1e-4`
-to keep the existing `cosine_warm` schedule until 160 epochs have
-completed, then use the new peak learning rate at the first natural restart
-at or after that threshold. The current cycle is unchanged; cycle timing and
-growth by `--cosine_T_mult` continue without resetting. `--cosine_eta_min` stays unchanged. Parameter-group
-peak ratios (including Muon) are preserved relative to `--lr`. Both restart
-arguments are required. `--cosine_restart_step` is multiplied by the number of
-optimizer updates per epoch, like `--cosine_T`. Resumed training uses the same
-absolute update count.

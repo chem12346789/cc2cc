@@ -12,9 +12,11 @@ from torch.optim.lr_scheduler import (
     ConstantLR,
     CosineAnnealingWarmRestarts,
 )
-
-from cc2cc.utils.helper.workflow.schedulers import CosineAnnealingWarmRestarts2
-
+from cc2cc.utils.helper.model.checkpoint import (
+    capture_rng_state,
+    load_model,
+    restore_rng_state,
+)
 
 training = importlib.import_module("cc2cc.train_model")
 
@@ -60,7 +62,7 @@ class TrainingCheckpointTests(unittest.TestCase):
         random.seed(1234)
         np.random.seed(1234)
         torch.manual_seed(1234)
-        rng_state = module.ModelClass.capture_rng_state()
+        rng_state = capture_rng_state()
         expected_rng_values = (random.random(), np.random.random(), torch.rand(1).item())
         with TemporaryDirectory() as directory:
             path = Path(directory) / "checkpoint_source"
@@ -81,7 +83,7 @@ class TrainingCheckpointTests(unittest.TestCase):
                     patch.object(Path, "exists", return_value=True), \
                     patch.object(module, "__import__", return_value=SimpleNamespace(
                         Model=lambda: restored), create=True), \
-                    patch.object(wrapper, "_maybe_compile_model"), \
+                    patch.object(module, "maybe_compile_model"), \
                     patch.object(torch.nn.MSELoss, "cuda", return_value=torch.nn.MSELoss()):
                 wrapper.init_model(init_train=True)
             self.assertEqual(wrapper.start_step, 2401)
@@ -102,7 +104,7 @@ class TrainingCheckpointTests(unittest.TestCase):
             random.random()
             np.random.random()
             torch.rand(1)
-            wrapper.restore_rng_state()
+            restore_rng_state(wrapper.rng_state_dict)
             self.assertEqual(random.random(), expected_rng_values[0])
             self.assertEqual(np.random.random(), expected_rng_values[1])
             self.assertEqual(torch.rand(1).item(), expected_rng_values[2])
@@ -124,17 +126,17 @@ class TrainingCheckpointTests(unittest.TestCase):
         )
         wrapper = training.ModelClass(args)
         with self.assertRaisesRegex(ValueError, "requires --load"):
-            wrapper.load_model()
+            load_model(wrapper, module.CHECKPOINTS_PATH)
         args.load = "source"
         with TemporaryDirectory() as directory, \
                 patch.object(module, "CHECKPOINTS_PATH", Path(directory)):
             with self.assertRaises(FileNotFoundError):
-                wrapper.load_model()
+                load_model(wrapper, module.CHECKPOINTS_PATH)
             path = Path(directory) / "checkpoint_source"
             path.mkdir()
             torch.save({"state_dict": {}, "model": "test"}, path / "2400.pth")
             with self.assertRaisesRegex(ValueError, "no optimizer state"):
-                wrapper.load_model()
+                load_model(wrapper, module.CHECKPOINTS_PATH)
 
     def run_training(
         self, scheduler_kind, start_step=0, stride=160, cycle_epochs=2, end_epoch=13
@@ -147,11 +149,6 @@ class TrainingCheckpointTests(unittest.TestCase):
             scheduler = CosineAnnealingWarmRestarts(
                 optimizer, T_0=cycle_epochs * 2, T_mult=2
             )
-        elif scheduler_kind == "cosine_warm2":
-            scheduler = CosineAnnealingWarmRestarts2(
-                optimizer, T_0=cycle_epochs * 2, T_mult=2, eta_min=0.001,
-                restart_step=4, restart_lrs=[0.02],
-            )
         else:
             scheduler = ConstantLR(optimizer, factor=1.0, total_iters=100)
         if start_step:
@@ -160,6 +157,7 @@ class TrainingCheckpointTests(unittest.TestCase):
         record = Mock()
         record.data_dict = {"loss_ene": np.array([1.0])}
         model = Mock()
+        model.rng_state_dict = None
         model.args = SimpleNamespace(distributed=False)
         model.scheduler = scheduler
         model.optimizer = optimizer
@@ -195,7 +193,7 @@ class TrainingCheckpointTests(unittest.TestCase):
         return model, logger, record, saved, update_lrs
 
     def test_last_evaluations_force_checkpoint_and_loss_records(self):
-        for kind in ("cosine_warm", "cosine_warm2"):
+        for kind in ("cosine_warm",):
             with self.subTest(scheduler=kind):
                 model, logger, record, saved, lrs = self.run_training(kind)
                 self.assertEqual([entry[0] for entry in saved], [0, 5, 10])
@@ -226,7 +224,7 @@ class TrainingCheckpointTests(unittest.TestCase):
         self.assertEqual([entry[0] for entry in saved], [5, 10])
 
     def test_requested_160_epoch_schedule(self):
-        for kind in ("cosine_warm", "cosine_warm2"):
+        for kind in ("cosine_warm",):
             with self.subTest(scheduler=kind), patch("builtins.print"):
                 _, _, _, saved, _ = self.run_training(
                     kind, stride=0, cycle_epochs=160, end_epoch=10080

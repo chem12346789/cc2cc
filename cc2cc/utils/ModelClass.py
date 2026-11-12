@@ -1,65 +1,29 @@
 import faulthandler
 import os
-import random
-import shutil
 import time
 from collections import deque
 from contextlib import contextmanager
-from io import BytesIO
-from typing import cast
+from functools import partial
 
 import numpy as np
-import pandas as pd
 import torch
 import torch.distributed as dist
-import torch.optim as optim
 from torch.nn.parallel import DistributedDataParallel
 
 from cc2cc.utils.DataBase import DataBase
-from cc2cc.utils.helper.runtime.env_var import CHECKPOINTS_PATH, CUBE_MIDDLE, MAIN_PATH
-from cc2cc.utils.helper.workflow.schedulers import CosineAnnealingWarmRestarts2
-from cc2cc.utils.helper.units import AU2KCALMOL
+from cc2cc.utils.helper.runtime.env_var import CHECKPOINTS_PATH, MAIN_PATH
+from cc2cc.utils.helper.model.compilation import maybe_compile_model
+from cc2cc.utils.helper.model.data_record import DataRecordList, TORCH_LIST
+from cc2cc.utils.helper.model.data_processing import process_grad2force, process_input
+from cc2cc.utils.helper.model.checkpoint import (
+    load_model,
+    save_model as _save_model,
+)
+from cc2cc.utils.helper.model.schedulers import select_scheduler
+from cc2cc.utils.helper.model.optimizers import select_optimizer
 
-CUBE_INDEX = {
-    "cube5": np.array(
-        [(0, 0, 0), (0, 2, 2), (1, 1, 1), (2, 2, 0), (2, 0, 2)],
-        dtype=np.int64,
-    ),
-    "cube9": np.array(
-        [
-            (0, 0, 0),
-            (0, 0, 2),
-            (0, 2, 0),
-            (0, 2, 2),
-            (1, 1, 1),
-            (2, 0, 0),
-            (2, 0, 2),
-            (2, 2, 0),
-            (2, 2, 2),
-        ],
-        dtype=np.int64,
-    ),
-}
 B3LYP_WEIGHTS = (0.08, 0.19, 0.72, 0.81)
-TORCH_LIST = [
-    "loss_ene",
-    "loss_ene_abs",
-    "loss_ene_atomic",
-    "loss_grad_record",
-    "loss_tot",
-    "loss_tot_ene",
-    "loss_tot_abs",
-    "loss_tot_grad",
-    "loss_tot_atomic",
-]
-TIME_LIST = [
-    "time_loss_tot_ene",
-    "time_loss_tot_abs",
-    "time_loss_tot_grad",
-    "time_loss_tot_atomic",
-]
 
-STATE_DICT_PREFIXES = ("_orig_mod.",)
 DEBUG = 0
 
 
@@ -87,81 +51,6 @@ def training_stage(stage, batch=None):
     finally:
         faulthandler.cancel_dump_traceback_later()
     print(f"{label} done wall_s={time.perf_counter() - start:.3f}", flush=True)
-
-
-class _CheckpointSizeBuffer(BytesIO):
-    def __init__(self):
-        super().__init__()
-        self.size = 0
-
-    def write(self, data):
-        # Discard streamed tensor bytes instead of buffering the whole checkpoint.
-        size = len(data)
-        self.size += size
-        return size
-
-
-class _LossEvent:
-    def __init__(self, event, data_record, timing_events):
-        self.event = event
-        self.data_record = data_record
-        self.timing_events = timing_events
-
-    def _resolve_timings(self):
-        for key, (start, end) in self.timing_events.items():
-            self.data_record[key] = np.array(start.elapsed_time(end) / 1000.0)
-        self.timing_events.clear()
-
-    def query(self):
-        is_complete = self.event.query()
-        if is_complete:
-            self._resolve_timings()
-        return is_complete
-
-    def synchronize(self):
-        self.event.synchronize()
-        self._resolve_timings()
-
-
-class DataRecordList:
-    def __init__(self, len_batch):
-        self.data_dict = {
-            "name": ["" for _ in range(len_batch)],
-        }
-        for key in TORCH_LIST + TIME_LIST:
-            self.data_dict[key] = np.zeros(len_batch)
-        self.iter = 0
-
-    def add_data_record(self, data_record):
-        for key, values in self.data_dict.items():
-            if key not in data_record:
-                raise ValueError(f"Key {key} not found in data_record.")
-            value = data_record[key]
-            if key == "name":
-                values[self.iter] = value
-            elif key in TIME_LIST:
-                values[self.iter] = value.item()
-            else:
-                values[self.iter] = AU2KCALMOL * value.item()
-        self.iter += 1
-
-    def save(self, path):
-        pd.DataFrame(self.data_dict).to_csv(path, index=False)
-
-    def trim(self):
-        self.data_dict = {
-            key: values[: self.iter] for key, values in self.data_dict.items()
-        }
-
-    def merge(self):
-        self.data_dict = (
-            pd.DataFrame(self.data_dict)
-            .groupby("name")
-            .mean()
-            .reset_index()
-            .to_dict(orient="list")
-        )
-        self.iter = len(self.data_dict["name"])
 
 
 class ModelClass:
@@ -193,7 +82,7 @@ class ModelClass:
             self.local_rank = "cpu"
 
     def init_model(self, init_train=False):
-        self.load_model()
+        load_model(self, CHECKPOINTS_PATH)
 
         if not (MAIN_PATH / f"cc2cc/utils/model/{self.args.model}.py").exists():
             raise ValueError("Unknown model")
@@ -218,7 +107,7 @@ class ModelClass:
             self.model.load_state_dict(self.state_dict, strict=True)
             self.state_dict = None
 
-        self._maybe_compile_model()
+        maybe_compile_model(self)
 
         if init_train:
             if self.args.if_resume:
@@ -239,103 +128,15 @@ class ModelClass:
 
             self.init_train()
 
-    def _maybe_compile_model(self):
-        if self.args.if_grad:
-            return
-
-        try:
-            compiled_model = torch.compile(self.model)
-            self.model = cast(torch.nn.Module, compiled_model)
-            self.print("torch.compile enabled; compilation occurs on first use.")
-        except Exception as exc:  # pragma: no cover - fallback path
-            self.print(f"torch.compile failed ({exc}). Using eager mode.")
-
-    def _normalize_state_dict(self, state_dict: dict[str, torch.Tensor]):
-        normalized_state_dict = {}
-        for key, value in state_dict.items():
-            normalized_key = key
-            prefix_removed = True
-            while prefix_removed:
-                prefix_removed = False
-                for prefix in STATE_DICT_PREFIXES:
-                    if normalized_key.startswith(prefix):
-                        normalized_key = normalized_key[len(prefix) :]
-                        prefix_removed = True
-            normalized_state_dict[normalized_key] = value
-        return normalized_state_dict
-
-    def _state_dict_for_save(self):
-        return self._normalize_state_dict(self.model.state_dict())
-
     def print(self, msg):
         if self.verbose:
             print(msg, flush=True)
 
-    def load_model(self):
-        if not self.args.load:
-            if getattr(self.args, "if_resume", False):
-                raise ValueError("Resuming training requires --load and --load_epoch.")
-            self.print("No checkpoint specified, starting from scratch.")
-            return
-        load_checkpoint = (CHECKPOINTS_PATH / f"checkpoint_{self.args.load}").resolve()
-        load_path = load_checkpoint / f"{self.args.load_epoch}.pth"
-        self.print(f"Checking path {load_path}")
-        if load_path.exists():
-            self.print("Loading model from path")
-            checkpoint = torch.load(
-                load_path, map_location=self.args.device, weights_only=True
-            )
-            state_dict = self._normalize_state_dict(checkpoint["state_dict"])
-            self.state_dict = state_dict
-            self.args.model = checkpoint["model"]
-            if getattr(self.args, "if_resume", False):
-                self.optimizer_state_dict = checkpoint.get("optimizer")
-                if self.optimizer_state_dict is None:
-                    raise ValueError(
-                        f"Resume checkpoint has no optimizer state: {load_path}"
-                    )
-                self.rng_state_dict = checkpoint.get("rng_state")
-            self.print(f"Model loaded from {load_path} with model {self.args.model}")
-        else:
-            if getattr(self.args, "if_resume", False):
-                raise FileNotFoundError(f"Resume checkpoint not found: {load_path}")
-            self.print("Model not found, starting from scratch.")
-
     def init_train(self):
-        if self.args.optimizer == "Muon":
-            from pytorch_optimizer import Muon
-
-            muon_params = []
-            adamw_params = []
-            for name, param in self.model.named_parameters():
-                if param.ndim >= 2 and "mixing_weight" not in name.split("."):
-                    muon_params.append(param)
-                else:
-                    adamw_params.append(param)
-
-            # Muon orthogonalizes updates in bfloat16; model weights remain float64.
-            self.optimizer = Muon(
-                [
-                    dict(params=adamw_params, lr=self.args.lr, use_muon=False),
-                    dict(params=muon_params, lr=self.args.muon_lr, use_muon=True),
-                ],
-                weight_decay=self.args.weight_decay,
-                adamw_wd=self.args.weight_decay,
-                adamw_betas=(0.9, 0.999),
-                adamw_eps=1e-8,
-            )
-        else:
-            optimizer_cls = {
-                "AdamW": optim.AdamW,
-                "Adafactor": getattr(optim, "Adafactor", None),
-            }.get(self.args.optimizer)
-            if optimizer_cls is None:
-                raise ValueError(f"Unknown optimizer {self.args.optimizer}")
-            self.optimizer = optimizer_cls(
-                self.model.parameters(),
-                lr=self.args.lr,
-                weight_decay=self.args.weight_decay,
-            )
+        # args.optimizer selects AdamW, Adafactor, or Muon; args.lr and
+        # args.weight_decay configure all three. Muon uses args.muon_lr for
+        # matrix parameters except mixing_weight, and AdamW for the remainder.
+        self.optimizer = select_optimizer(self.args, self.model)
         if self.optimizer_state_dict is not None:
             self.optimizer.load_state_dict(self.optimizer_state_dict)
             self.optimizer_state_dict = None
@@ -350,61 +151,24 @@ class ModelClass:
         self.loss_fun = loss_class(reduction="sum").cuda(self.local_rank)
 
     def init_database(self, train_str_dict, eval_str_dict):
-        def process_input(x):
-            if self.cube_type == "center_4":
-                return x[:, : self.input_level, CUBE_MIDDLE, CUBE_MIDDLE, CUBE_MIDDLE]
-            if self.cube_type == "cube":
-                return x[:, : self.input_level, :, :, :].reshape(
-                    x.shape[0], self.input_level, self.cube_size
-                )
-            if self.cube_type in CUBE_INDEX:
-                idx = CUBE_INDEX[self.cube_type]
-                return x[
-                    :,
-                    : self.input_level,
-                    idx[:, 0],
-                    idx[:, 1],
-                    idx[:, 2],
-                ]
-            raise ValueError(f"Unknown cube type: {self.cube_type}")
-
-        def process_grad2force(x):
-            # tipabcx -> tipCx -> piCtx
-            if self.cube_type == "center_4":
-                x = x[
-                    :, : self.input_level, :, [CUBE_MIDDLE], CUBE_MIDDLE, CUBE_MIDDLE, :
-                ]
-            elif self.cube_type == "cube":
-                x = x[:, : self.input_level, :, :, :, :, :].reshape(
-                    x.shape[0],
-                    self.input_level,
-                    x.shape[2],
-                    self.cube_size,
-                    x.shape[-1],
-                )
-            elif self.cube_type in CUBE_INDEX:
-                idx = CUBE_INDEX[self.cube_type]
-                x = x[
-                    :,
-                    : self.input_level,
-                    :,
-                    idx[:, 0],
-                    idx[:, 1],
-                    idx[:, 2],
-                    :,
-                ]
-            else:
-                raise ValueError(f"Unknown cube type: {self.cube_type}")
-            # tipCx -> piCtx
-            x = np.transpose(x, (2, 1, 3, 0, 4))
-            shape_x = x.shape
-            return x.reshape(shape_x[0], shape_x[1], shape_x[2], -1)
+        input_processor = partial(
+            process_input,
+            cube_type=self.cube_type,
+            input_level=self.input_level,
+            cube_size=self.cube_size,
+        )
+        grad2force_processor = partial(
+            process_grad2force,
+            cube_type=self.cube_type,
+            input_level=self.input_level,
+            cube_size=self.cube_size,
+        )
 
         self.database_train = DataBase(
             train_str_dict,
             self.args,
-            process_input=process_input,
-            process_grad2force=process_grad2force,
+            process_input=input_processor,
+            process_grad2force=grad2force_processor,
             verbose=self.verbose,
             input_mode=self.cube_type,
         )
@@ -415,8 +179,8 @@ class ModelClass:
             if_eval=True,
             atomic_name_dict=self.database_train.atomic_name_dict,
             atomic_energy_dict=self.database_train.atomic_energy_dict,
-            process_input=process_input,
-            process_grad2force=process_grad2force,
+            process_input=input_processor,
+            process_grad2force=grad2force_processor,
             verbose=self.verbose,
             input_mode=self.cube_type,
         )
@@ -434,210 +198,20 @@ class ModelClass:
             group["initial_lr"] = max_lr
             group["lr"] = max_lr
 
-        if self.args.scheduler == "onecycle":
-            for group, max_lr in zip(self.optimizer.param_groups, max_lrs):
-                group["initial_lr"] = max_lr / 25.0
-                group["max_lr"] = max_lr
-                group["min_lr"] = max_lr / 25.0 / 1000.0
-            self.scheduler = optim.lr_scheduler.OneCycleLR(
-                self.optimizer,
-                max_lr=max_lrs,
-                total_steps=(self.args.epoch + 1) * steps_per_epoch,
-                pct_start=0.1,
-                anneal_strategy="cos",
-                cycle_momentum=False,
-                div_factor=25.0,
-                final_div_factor=1000.0,
-                last_epoch=start_update - 1,
-            )
-        elif self.args.scheduler == "cosine":
-            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer,
-                T_max=self.args.cosine_T * steps_per_epoch,
-                eta_min=self.args.cosine_eta_min,
-                last_epoch=start_update - 1,
-            )
-        elif self.args.scheduler == "constant":
-            total_iters = 5 * steps_per_epoch
-            if 0 < start_update <= total_iters:
-                for group in self.optimizer.param_groups:
-                    group["lr"] /= 3.0
-            self.scheduler = optim.lr_scheduler.ConstantLR(
-                self.optimizer,
-                total_iters=total_iters,
-                last_epoch=start_update - 1,
-            )
-        elif self.args.scheduler == "cosine_warm2":
-            if (
-                self.args.cosine_restart_lr is None
-                or self.args.cosine_restart_step is None
-            ):
-                raise ValueError(
-                    "cosine_warm2 requires --cosine_restart_lr and --cosine_restart_step"
-                )
-            self.scheduler = CosineAnnealingWarmRestarts2(
-                self.optimizer,
-                T_0=self.args.cosine_T * steps_per_epoch,
-                T_mult=self.args.cosine_T_mult,
-                eta_min=self.args.cosine_eta_min,
-                restart_step=self.args.cosine_restart_step * steps_per_epoch,
-                restart_lrs=[
-                    self.args.cosine_restart_lr * max_lr / self.args.lr
-                    for max_lr in max_lrs
-                ],
-            )
-            if start_update:
-                self.scheduler.step(start_update)
-        elif self.args.scheduler == "cosine_warm":
-            self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                self.optimizer,
-                T_0=self.args.cosine_T * steps_per_epoch,
-                T_mult=self.args.cosine_T_mult,
-                eta_min=self.args.cosine_eta_min,
-            )
-            if start_update:
-                self.scheduler.step(start_update)
-        else:
-            raise ValueError(f"Unknown scheduler {self.args.scheduler}")
-
-    @staticmethod
-    def capture_rng_state():
-        python_state = random.getstate()
-        numpy_state = np.random.get_state()
-        state = {
-            "python": torch.tensor(
-                (python_state[0], *python_state[1]),
-                dtype=torch.int64,
-                device="cpu",
-            ),
-            "python_gauss": torch.tensor(
-                (python_state[2] is not None, python_state[2] or 0.0),
-                dtype=torch.float64,
-                device="cpu",
-            ),
-            "numpy_name": torch.tensor(
-                list(numpy_state[0].encode("ascii")),
-                dtype=torch.uint8,
-                device="cpu",
-            ),
-            "numpy_keys": torch.tensor(
-                numpy_state[1].tolist(),
-                dtype=torch.int64,
-                device="cpu",
-            ),
-            "numpy_meta": torch.tensor(
-                (numpy_state[2], numpy_state[3]),
-                dtype=torch.int64,
-                device="cpu",
-            ),
-            "numpy_gauss": torch.tensor(
-                (numpy_state[4],),
-                dtype=torch.float64,
-                device="cpu",
-            ),
-            "torch": torch.get_rng_state(),
-        }
-        if torch.cuda.is_initialized():
-            state["cuda"] = torch.cuda.get_rng_state().cpu()
-        return state
-
-    def restore_rng_state(self):
-        if self.rng_state_dict is None:
-            return
-
-        state = self.rng_state_dict
-        if isinstance(state, list):
-            if dist.is_initialized() and len(state) != dist.get_world_size():
-                raise ValueError(
-                    "Checkpoint RNG state rank count differs from the current process group."
-                )
-            rank = dist.get_rank() if dist.is_initialized() else 0
-            if rank >= len(state):
-                raise ValueError(
-                    "Checkpoint RNG state has fewer ranks than the current process group."
-                )
-            state = state[rank]
-        python_state = state["python"].cpu().tolist()
-        python_gauss = state["python_gauss"].cpu().tolist()
-        random.setstate(
-            (
-                python_state[0],
-                tuple(python_state[1:]),
-                python_gauss[1] if python_gauss[0] else None,
-            )
+        # args.scheduler selects onecycle, cosine, constant, or cosine_warm;
+        # args.epoch and args.cosine_* configure their durations,
+        # minimum learning rate, and restarts. Epoch counts become optimizer
+        # updates, including the resume offset; max_lrs supplies each group's LR.
+        self.scheduler = select_scheduler(
+            self.args,
+            self.optimizer,
+            steps_per_epoch,
+            start_update,
+            max_lrs,
         )
-        numpy_name = bytes(state["numpy_name"].cpu().tolist()).decode("ascii")
-        numpy_meta = state["numpy_meta"].cpu().tolist()
-        np.random.set_state(
-            (
-                numpy_name,
-                np.asarray(state["numpy_keys"].cpu().numpy(), dtype=np.uint32),
-                numpy_meta[0],
-                numpy_meta[1],
-                state["numpy_gauss"].cpu().item(),
-            )
-        )
-        torch.set_rng_state(state["torch"].cpu())
-        if "cuda" in state and torch.cuda.is_available():
-            torch.cuda.set_rng_state(state["cuda"].cpu())
-
-    def _estimate_checkpoint_size(self, state_dict, rng_state=None):
-        payload = {
-            "state_dict": state_dict,
-            "model": self.args.model,
-            "optimizer": self.optimizer.state_dict(),
-            "rng_state": (
-                rng_state or self.rng_state_for_save or self.capture_rng_state()
-            ),
-        }
-        with _CheckpointSizeBuffer() as buffer:
-            torch.save(payload, buffer)
-            return max(buffer.size, 1 << 20)
 
     def save_model(self, epoch):
-        if not self.dir_checkpoint.exists():
-            self.print(f"Directory {self.dir_checkpoint} not found. Created!")
-            (self.dir_checkpoint / "loss").mkdir(parents=True, exist_ok=True)
-
-        state_dict = self._state_dict_for_save()
-        checkpoint_path = self.dir_checkpoint / f"{epoch}.pth"
-        rng_state = self.rng_state_for_save or self.capture_rng_state()
-        payload = {
-            "state_dict": state_dict,
-            "model": self.args.model,
-            "optimizer": self.optimizer.state_dict(),
-            "rng_state": rng_state,
-        }
-        required_bytes = self._estimate_checkpoint_size(state_dict, rng_state)
-
-        while True:
-            free_bytes = shutil.disk_usage(self.dir_checkpoint).free
-            if free_bytes >= required_bytes:
-                try:
-                    torch.save(payload, checkpoint_path)
-                    return
-                except OSError as exc:
-                    msg = str(exc).lower()
-                    if "no space left" in msg or "file write failed" in msg:
-                        self.print(
-                            "Disk space became insufficient while writing checkpoint; "
-                            f"waiting for free disk before retrying {checkpoint_path}."
-                        )
-                        time.sleep(30)
-                        continue
-                    raise
-
-            self.print(
-                "Waiting for free disk space before saving checkpoint: "
-                f"{free_bytes} bytes free, {required_bytes} bytes required."
-            )
-            time.sleep(30 * 60)  # Wait for 30 minutes before checking again
-
-    def train(self):
-        self.model.train(True)
-
-    def eval(self):
-        self.model.eval()
+        return _save_model(self, epoch)
 
     def model_output(self, input_, weight):
         model = (
@@ -665,22 +239,6 @@ class ModelClass:
         scale_grad = batch["scale_grad"]
         scale_atomic = batch["scale_atomic"]
         data_record = {"name": batch["name"]}
-        timing_events = {}
-
-        def start_timing():
-            if if_use_cuda_event:
-                event = torch.cuda.Event(enable_timing=True)
-                event.record()
-                return event
-            return time.perf_counter()
-
-        def finish_timing(key, start):
-            if if_use_cuda_event:
-                end = torch.cuda.Event(enable_timing=True)
-                end.record()
-                timing_events[key] = (start, end)
-            else:
-                data_record[key] = np.array(time.perf_counter() - start)
 
         if DEBUG:
             print(f"{batch['name']}")
@@ -701,30 +259,25 @@ class ModelClass:
 
         sum_output = torch.sum(output)
         if if_train:
-            timing_start = start_timing()
             tot_loss = scale * self.loss_fun(sum_target, sum_output)
             data_record["loss_tot_ene"] = tensor_to_numpy(tot_loss)
-            finish_timing("time_loss_tot_ene", timing_start)
         else:
             tot_loss = torch.tensor(0.0, device=self.device, dtype=self.dtype)
         data_record["loss_ene"] = tensor_to_numpy(torch.abs(sum_target - sum_output))
 
         if if_train:
             if self.args.if_abs:
-                timing_start = start_timing()
                 target = batch["output"] * weight
                 abs_error = torch.abs(target - output)
                 loss_ene_abs = scale_abs * self.loss_fun(target, output)
                 tot_loss = tot_loss + loss_ene_abs
                 data_record["loss_ene_abs"] = tensor_to_numpy(torch.sum(abs_error))
                 data_record["loss_tot_abs"] = tensor_to_numpy(loss_ene_abs)
-                finish_timing("time_loss_tot_abs", timing_start)
 
             if self.args.if_grad and if_grad:
                 grad_cc_train = batch["grad_cc_train"]
                 grad2force = batch["grad2force"]
                 if len(grad_cc_train.shape) != 0:
-                    timing_start = start_timing()
                     middle_, weight_derivative = torch.autograd.grad(
                         outputs=torch.sum(output),
                         inputs=(density_input, weight),
@@ -732,7 +285,8 @@ class ModelClass:
                     )
                     force = torch.einsum("piC,piCx->x", middle_, grad2force)
                     force = force + torch.einsum(
-                        "p,px->x", weight_derivative.reshape(-1),
+                        "p,px->x",
+                        weight_derivative.reshape(-1),
                         batch["grid_weight_response"],
                     )
 
@@ -742,11 +296,8 @@ class ModelClass:
                         torch.sum(torch.abs(grad_cc_train - force))
                     )
                     data_record["loss_tot_grad"] = tensor_to_numpy(loss_grad)
-                    finish_timing("time_loss_tot_grad", timing_start)
 
         if self.args.if_atomic and scale_atomic != 0:
-            if if_train:
-                timing_start = start_timing()
             ae_target = batch["ae_target"]
             ae_output = sum_output.clone()
 
@@ -789,25 +340,17 @@ class ModelClass:
                 data_record["loss_ene_atomic"] = tensor_to_numpy(
                     torch.abs(ae_target - ae_output)
                 )
-            else:
-                data_record["loss_tot_atomic"] = np.array(0.0)
-                data_record["loss_ene_atomic"] = np.array(0.0)
-            if if_train:
-                finish_timing("time_loss_tot_atomic", timing_start)
 
         data_record["loss_tot"] = tensor_to_numpy(tot_loss)
         for key in TORCH_LIST:
             if key not in data_record:
-                data_record[key] = np.array(0.0)
-        for key in TIME_LIST:
-            if key not in data_record and key not in timing_events:
                 data_record[key] = np.array(0.0)
 
         event = None
         if if_use_cuda_event:
             final_event = torch.cuda.Event()
             final_event.record()
-            event = _LossEvent(final_event, data_record, timing_events)
+            event = final_event
 
         if DEBUG:
             print(data_record)
@@ -815,15 +358,7 @@ class ModelClass:
         return tot_loss, data_record, event
 
     def train_model(self, if_grad=True):
-        memory_setting = os.environ.get("DFT2CC_PROFILE_TRAIN_MEMORY", "0")
-        if memory_setting not in ("0", "1"):
-            raise ValueError("DFT2CC_PROFILE_TRAIN_MEMORY must be 0 or 1")
-        profile_memory = memory_setting == "1"
-        if profile_memory:
-            memory_device = next(self.model.parameters()).device
-            if memory_device.type != "cuda":
-                raise ValueError("Training GPU memory profiling requires a CUDA model.")
-        self.train()
+        self.model.train()
         self.optimizer.zero_grad(set_to_none=True)
         data_record_l = DataRecordList(len(self.database_train))
         pending_records = deque()
@@ -832,38 +367,17 @@ class ModelClass:
         for step in range(len(self.database_train.data_gpu)):
             with training_stage(f"train-fetch:{step}"):
                 batch = next(batches)
-            if profile_memory:
-                torch.cuda.synchronize(memory_device)
-                torch.cuda.reset_peak_memory_stats(memory_device)
-                start_allocated = torch.cuda.memory_allocated(memory_device)
             batch = self.database_train.process_batch(batch, device=self.local_rank)
             tot_loss, data_record, event = self.loss(batch, if_grad=if_grad)
             with training_stage("backward", batch):
                 tot_loss.backward()
             with training_stage("optimizer", batch):
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_norm)
+                torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters(), self.args.max_norm
+                )
                 self.optimizer.step()
                 self.scheduler.step()
                 self.optimizer.zero_grad(set_to_none=True)
-            if profile_memory:
-                torch.cuda.synchronize(memory_device)
-                peak_allocated = torch.cuda.max_memory_allocated(memory_device)
-                peak_reserved = torch.cuda.max_memory_reserved(memory_device)
-                jacobian = batch["grad2force"]
-                jacobian_bytes = jacobian.numel() * jacobian.element_size()
-                force_loss = bool(
-                    self.args.if_grad and if_grad and batch["grad_cc_train"].ndim != 0
-                )
-                mib = 1024**2
-                print(
-                    f"[train-memory] device={memory_device} step={step} "
-                    f"name={batch['name']} force_loss={force_loss} "
-                    f"start_allocated_MiB={start_allocated / mib:.3f} "
-                    f"peak_allocated_MiB={peak_allocated / mib:.3f} "
-                    f"peak_reserved_MiB={peak_reserved / mib:.3f} "
-                    f"grad2force_MiB={jacobian_bytes / mib:.3f}",
-                    flush=True,
-                )
             if event is None:
                 data_record_l.add_data_record(data_record)
                 continue
@@ -883,7 +397,7 @@ class ModelClass:
 
     @torch.inference_mode()
     def eval_model(self):
-        self.eval()
+        self.model.eval()
         self.optimizer.zero_grad(set_to_none=True)
         data_record_l = DataRecordList(len(self.database_eval))
         pending_records = deque()
@@ -927,7 +441,12 @@ class ModelClass:
         return (rho * self.b3lyp_weights(rho)).sum(-1)
 
     def eval_xc_eff(
-        self, rho_cube, weights_, weight_response=False, *, return_tensors=False,
+        self,
+        rho_cube,
+        weights_,
+        weight_response=False,
+        *,
+        return_tensors=False,
     ):
         """Optionally return weight derivatives and detached on-device tensors."""
         input_mat = torch.as_tensor(rho_cube, dtype=self.dtype, device=self.device)

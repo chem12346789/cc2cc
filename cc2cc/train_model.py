@@ -11,6 +11,7 @@ from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 import swanlab
 
 from cc2cc.utils.ModelClass import ModelClass, training_stage
+from cc2cc.utils.helper.model.checkpoint import capture_rng_state, restore_rng_state
 from cc2cc.utils.helper.runtime.computer_info import print_computer_info
 from cc2cc.utils.helper.runtime.timer import Timer
 
@@ -67,7 +68,7 @@ def _gather_records(record, is_distributed):
 
 
 def _gather_rng_states(modeldict, is_distributed):
-    rng_state = modeldict.capture_rng_state()
+    rng_state = capture_rng_state()
     if not is_distributed:
         return rng_state
 
@@ -185,7 +186,7 @@ def train_model(train_list, eval_list, args):
         logger = _Logger.setup(modeldict, args)
     barrier()
     with training_stage("restore-rng"):
-        modeldict.restore_rng_state()
+        restore_rng_state(modeldict.rng_state_dict)
 
     for epoch in range(args.epoch + 1):
         if modeldict.args.distributed:

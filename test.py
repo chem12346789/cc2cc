@@ -172,7 +172,7 @@ def main():
     print_computer_info(args.device)
     modeldict = ModelClass(args)
     modeldict.init_model(init_train=False)
-    modeldict.eval()
+    modeldict.model.eval()
 
     data_record = DataRecord(
         build_record_path(args),

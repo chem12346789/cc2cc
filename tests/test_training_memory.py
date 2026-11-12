@@ -241,8 +241,8 @@ class TrainingMemoryTests(unittest.TestCase):
     def test_model_checkpoint_reference_released_after_restore(self):
         wrapper = self.make_model()
         wrapper.state_dict = {"scale": torch.tensor(2.0, dtype=torch.float64, device="cpu")}
-        with patch.object(wrapper, "load_model"), \
-                patch.object(wrapper, "_maybe_compile_model"), \
+        with patch.object(model_module, "load_model"), \
+                patch.object(model_module, "maybe_compile_model"), \
                 patch.object(Path, "exists", return_value=True), \
                 patch.object(
                     model_module, "__import__",
@@ -270,19 +270,27 @@ class TrainingMemoryTests(unittest.TestCase):
         state_dict = {
             "large": torch.ones(150000, dtype=torch.float64, device="cpu")
         }
-        rng_state = wrapper.capture_rng_state()
+        from cc2cc.utils.helper.model.checkpoint import (
+            _CheckpointSizeBuffer,
+            capture_rng_state,
+            estimate_checkpoint_size,
+        )
+
+        rng_state = capture_rng_state()
         payload = {
             "state_dict": state_dict, "model": wrapper.args.model,
             "optimizer": wrapper.optimizer.state_dict(),
             "rng_state": rng_state,
         }
-        with BytesIO() as actual, model_module._CheckpointSizeBuffer() as counter:
+        with BytesIO() as actual, _CheckpointSizeBuffer() as counter:
             torch.save(payload, actual)
             torch.save(payload, counter)
             self.assertEqual(counter.size, actual.tell())
             self.assertEqual(counter.getbuffer().nbytes, 0)
             self.assertEqual(
-                wrapper._estimate_checkpoint_size(state_dict, rng_state), actual.tell(),
+                estimate_checkpoint_size(
+                    wrapper.args.model, wrapper.optimizer, state_dict, rng_state
+                ), actual.tell(),
             )
 
     def test_real_npz_tensors_remain_valid_after_archive_close(self):

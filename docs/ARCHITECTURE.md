@@ -245,24 +245,6 @@ synchronization overhead. Training mathematics is unchanged.
 Enable tracing in a newly launched process; it cannot instrument an already
 running worker. These diagnostics identify the slow stage, not a speedup.
 
-### Training peak GPU memory
-
-Set `DFT2CC_PROFILE_TRAIN_MEMORY=1` in the training job environment to log one
-`[train-memory]` line per local training step, on every rank. Default is `0`;
-other values are rejected, and enabling it requires a CUDA model.
-Measurement starts before batch transfer and ends after backward, gradient
-clipping, optimizer/scheduler updates and gradient clearing. CUDA synchronization
-and peak-counter reset delimit each step; profiling adds synchronization overhead.
-Logs include device, local step, molecule, whether force loss is active, initial
-allocated MiB, peak allocated/reserved MiB, and the batch Jacobian's logical MiB.
-These are process-local PyTorch allocator statistics, not total device usage or
-memory allocated by other libraries. Reserved memory includes cached blocks from
-earlier steps; no cache is emptied. The allocated peak includes resident model
-and optimizer state, not just allocations made during the step.
-Compare identical molecules, precision, model, and force-loss settings; report
-the first-step peak separately from warmed-up steps because optimizer state is
-initialized lazily. Profiling does not enable nuclear-gradient evaluation.
-
 ### GPU SCF XC profiling
 
 `setup_gpu_test_job CPU_MEMORY GPU_MEMORY [USE_NUMBA]` exports its second
@@ -532,7 +514,7 @@ out of importable Python modules.
   sets. The run identifier in the log often matches the checkpoint directory;
   verify the recorded checkpoint path and arguments when associating artifacts.
 - Loss CSVs are written when a best-loss metric improves or the checkpoint
-  stride is reached (`eval_step * 32`). For `cosine_warm` and `cosine_warm2`,
+  stride is reached (`eval_step * 32`). For `cosine_warm`,
   the last scheduled evaluation before each LR restart forces a checkpoint
   and loss CSVs, without adding evaluations outside `eval_step`. With
   zero-based epoch labels, `cosine_T=160`, `cosine_T_mult=2`, and `eval_step=5`
