@@ -6,6 +6,8 @@ Warn and continue when data files are missing or malformed.
 Finish with counts of checked, missing, invalid, and above-threshold results.
 The current NPZ files are used, so saved reruns replace earlier results.
 Use --train or --eval to check only that split; the default checks both.
+Moving-grid force-training data is always checked for every selected archive.
+Force residuals use --force-threshold, separately from kcal/mol energy errors.
 """
 
 import argparse
@@ -35,7 +37,9 @@ def calculate_errors(path):
         "nuc_hf_grids", "ecp_hf_grids",
         "exc_dft_grids", "exc_k_dft_grids", "hatree_dft_grids",
         "kinl_dft_grids", "nuc_dft_grids", "ecp_dft_grids",
+        "grid_weight_response", "grid_weight_response_zmp",
     )
+    response_keys = ("grid_weight_response", "grid_weight_response_zmp")
     archive = np.load(path, allow_pickle=False)
     if not isinstance(archive, np.lib.npyio.NpzFile):
         raise ValueError(f"{path}: expected an NPZ archive")
@@ -48,7 +52,13 @@ def calculate_errors(path):
         if weights.ndim != 1 or weights.size == 0:
             raise ValueError(f"{path}: weights must be a nonempty 1-D array")
         for key, value in data.items():
-            expected_shape = () if key in energy_keys else weights.shape
+            if key in response_keys:
+                gradient = archive["grad_cc"]
+                if gradient.ndim != 2 or gradient.shape[1] != 3 or not gradient.shape[0]:
+                    raise ValueError(f"{path}: grad_cc must have shape (natm, 3)")
+                expected_shape = (len(gradient), 3, len(weights))
+            else:
+                expected_shape = () if key in energy_keys else weights.shape
             if value.shape != expected_shape:
                 raise ValueError(
                     f"{path}: {key} has shape {value.shape}; expected {expected_shape}"
@@ -111,6 +121,77 @@ def calculate_errors(path):
     return results
 
 
+def calculate_force_errors(path):
+    """Validate force-array structure and return target/translation residuals."""
+    with np.load(path, allow_pickle=False) as data:
+        def read_array(key, shape):
+            if key not in data:
+                raise ValueError(f"{path}: missing {key}; regenerate force mappings")
+            value = data[key]
+            if value.shape != shape:
+                raise ValueError(
+                    f"{path}: {key} has shape {value.shape}; expected {shape}"
+                )
+            if value.dtype.kind != "f":
+                raise ValueError(f"{path}: {key} must contain real floating-point values")
+            for block in value:
+                if not np.isfinite(block).all():
+                    raise ValueError(f"{path}: {key} contains non-finite values")
+            return value
+
+        weights = data["weights"]
+        if weights.ndim != 1 or weights.size == 0:
+            raise ValueError(f"{path}: weights must be a nonempty 1-D array")
+        ngrid = len(weights)
+        grad_cc = data["grad_cc"]
+        if grad_cc.ndim != 2 or grad_cc.shape[1] != 3 or not grad_cc.shape[0]:
+            raise ValueError(f"{path}: grad_cc must have shape (natm, 3)")
+        natm = len(grad_cc)
+        gradients = {
+            key: read_array(key, (natm, 3))
+            for key in ("grad_cc", "grad_dft", "grad_dft_d3bj", "grad_zmp", "grad_cc_train")
+        }
+        errors = {
+            "Gradient target (Hartree/Bohr)": float(np.max(np.abs(
+                gradients["grad_cc_train"] - (gradients["grad_cc"] - gradients["grad_dft"])
+            ))),
+        }
+        for suffix in ("dft", "zmp"):
+            rho_key = f"rho_cube_{suffix}"
+            rho = data[rho_key]
+            if (
+                rho.ndim != 5 or rho.shape[0] != ngrid or rho.shape[1] == 0
+                or rho.shape[2] == 0 or len(set(rho.shape[2:])) != 1
+            ):
+                raise ValueError(f"{path}: {rho_key} must have shape (ngrids, ninput, edge, edge, edge)")
+            rho_shape = rho.shape
+            del rho
+            mapping_key = "grad2force" if suffix == "dft" else "grad2force_zmp"
+            mapping = read_array(
+                mapping_key, (natm, rho_shape[1], ngrid, *rho_shape[2:], 3)
+            )
+            translation_error = 0.0
+            # Bound temporary reductions for the large feature Jacobian.
+            for start in range(0, ngrid, 128):
+                stop = start + 128
+                residual = mapping[:, :, start:stop].sum(axis=0)
+                residual = residual[:, weights[start:stop] != 0]
+                translation_error = max(
+                    translation_error, float(np.max(np.abs(residual), initial=0))
+                )
+            del mapping
+            errors[f"{suffix} feature translation (feature/Bohr)"] = translation_error
+            response_key = (
+                "grid_weight_response" if suffix == "dft" else "grid_weight_response_zmp"
+            )
+            response = read_array(response_key, (natm, 3, ngrid))
+            errors[f"{suffix} weight translation (weight/Bohr)"] = float(
+                np.max(np.abs(response.sum(axis=0)))
+            )
+            del response
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--gen_config", default="gen_mol2.json")
@@ -133,9 +214,15 @@ def main():
         "--threshold", type=float, default=1e-3,
         help="Print errors whose absolute value exceeds this value in kcal/mol.",
     )
+    parser.add_argument(
+        "--force-threshold", type=float, default=1e-8,
+        help="Absolute residual threshold in each force diagnostic's displayed units.",
+    )
     args = parser.parse_args()
     if not np.isfinite(args.threshold) or args.threshold < 0:
         parser.error("--threshold must be finite and nonnegative")
+    if not np.isfinite(args.force_threshold) or args.force_threshold < 0:
+        parser.error("--force-threshold must be finite and nonnegative")
     config = process_config(args.gen_config)
     splits = ("train", "eval") if args.split == "both" else (args.split,)
     configured_names = [
@@ -144,6 +231,7 @@ def main():
     names = gen_name_args(configured_names, args.dataset)
     checked = missing = invalid = outlier_molecules = 0
     outliers_by_label = {}
+    force_outliers_by_label = {}
     for name in names:
         path = args.data_dir / f"data_{name}_{args.basis}.npz"
         if not path.is_file():
@@ -156,6 +244,7 @@ def main():
             continue
         try:
             errors = calculate_errors(path)
+            force_errors = calculate_force_errors(path)
         except (OSError, ValueError, KeyError, EOFError, BadZipFile, ZlibError) as error:
             invalid += 1
             print(
@@ -172,16 +261,24 @@ def main():
                 has_outlier = True
                 outliers_by_label[label] += 1
                 print(f"{name}: {label} (kcal/mol): {error}", flush=True)
+        for label, error in force_errors.items():
+            force_outliers_by_label.setdefault(label, 0)
+            if abs(error) > args.force_threshold:
+                has_outlier = True
+                force_outliers_by_label[label] += 1
+                print(f"{name}: {label}: {error}", flush=True)
         outlier_molecules += int(has_outlier)
     print(
         f"Summary ({args.split}): requested={len(names)}, checked={checked}, "
         f"missing={missing}, invalid={invalid}, "
         f"outlier_molecules={outlier_molecules}, "
-        f"outlier_diagnostics={sum(outliers_by_label.values())}",
+        f"outlier_diagnostics={sum(outliers_by_label.values()) + sum(force_outliers_by_label.values())}",
         flush=True,
     )
     for label, count in outliers_by_label.items():
         print(f"  {label}: {count} above {args.threshold:g} kcal/mol in magnitude")
+    for label, count in force_outliers_by_label.items():
+        print(f"  {label}: {count} above {args.force_threshold:g} in magnitude")
 
 
 if __name__ == "__main__":

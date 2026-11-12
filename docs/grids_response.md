@@ -50,6 +50,15 @@ force mappings. Use the original geometry and grid settings. Other stored
 reference data is retained. Archives without weight-response arrays are
 rejected when force training is enabled.
 
+Run `python -m scripts.gen_check --train` to check the saved
+DFT/ZMP mapping and weight-response shapes, finite values, translation
+residuals, and the CC-minus-B3LYP gradient target. `--force-threshold` controls
+these residuals in their displayed units, independently of the energy
+threshold in kcal/mol. This reads the large mappings one at a time; it does
+not recompute forces or prove that the saved reference gradients enabled
+grid response. Force checks are mandatory for every selected archive, including
+evaluation archives; missing force arrays are reported as invalid data.
+
 ## Interpretation and validation
 
 For moving-grid finite differences, rebuild the quadrature grids consistently.
