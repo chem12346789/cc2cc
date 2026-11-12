@@ -1,8 +1,5 @@
-import faulthandler
 import os
-import time
 from collections import deque
-from contextlib import contextmanager
 from functools import partial
 
 import numpy as np
@@ -25,32 +22,6 @@ from cc2cc.utils.helper.model.optimizers import select_optimizer
 B3LYP_WEIGHTS = (0.08, 0.19, 0.72, 0.81)
 
 DEBUG = 0
-
-
-@contextmanager
-def training_stage(stage, batch=None):
-    setting = os.environ.get("DFT2CC_TRACE_TRAIN", "0")
-    if setting not in ("0", "1"):
-        raise ValueError("DFT2CC_TRACE_TRAIN must be 0 or 1")
-    if setting == "0":
-        yield
-        return
-
-    label = f"[train-progress] pid={os.getpid()} stage={stage}"
-    device = None
-    if batch is not None:
-        device = batch["input"].device
-        label += f" name={batch.get('name', 'atomic')} device={device} grids={len(batch['input'])}"
-    print(f"{label} start", flush=True)
-    start = time.perf_counter()
-    faulthandler.dump_traceback_later(120, repeat=True)
-    try:
-        yield
-        if device is not None and device.type == "cuda":
-            torch.cuda.synchronize(device)
-    finally:
-        faulthandler.cancel_dump_traceback_later()
-    print(f"{label} done wall_s={time.perf_counter() - start:.3f}", flush=True)
 
 
 class ModelClass:
@@ -224,122 +195,135 @@ class ModelClass:
         output = self.model(input_)
         return input_, output if model.before_weight else output * weight
 
+    def loss_ene(self, batch, sum_output):
+        target = batch["energy_target"]
+        return (
+            batch["scale"] * self.loss_fun(target, sum_output),
+            torch.abs(target - sum_output),
+        )
+
+    def loss_abs(self, batch, output):
+        target = batch["output"] * batch["weight"]
+        return (
+            batch["scale_abs"] * self.loss_fun(target, output),
+            torch.sum(torch.abs(target - output)),
+        )
+
+    def loss_grad(self, batch, sum_output):
+        density_derivative, weight_derivative = torch.autograd.grad(
+            outputs=sum_output,
+            inputs=(batch["input"], batch["weight"]),
+            create_graph=True,
+        )
+        force = torch.einsum("piC,piCx->x", density_derivative, batch["grad2force"])
+        force = force + torch.einsum(
+            "p,px->x",
+            weight_derivative.reshape(-1),
+            batch["grid_weight_response"],
+        )
+        target = batch["grad_cc_train"]
+        return (
+            batch["scale_grad"] * self.loss_fun(target, force),
+            torch.sum(torch.abs(target - force)),
+        )
+
+    def loss_atomic(self, batch, sum_output, if_train=True):
+        ae_output = sum_output.clone()
+        for i_system, system_atom in enumerate(batch["atomic_systems"]):
+            name_atom = self.database_train.atomic_name_dict.get(system_atom)
+            if DEBUG:
+                print(
+                    f"atom {system_atom} and stoichiometry {batch['atomic_stoichiometry'][i_system]}"
+                )
+            if name_atom is None:
+                self.print(
+                    f"Warning: {system_atom} not found in atomic_name_dict, "
+                    "skipping atomic energy calculation."
+                )
+                return None
+            atomic_batch = self.database_train.dataset.get_from_name(name_atom)
+            atomic_batch = self.database_train.process_batch(
+                {
+                    key: atomic_batch[key]
+                    for key in ("input", "weight")
+                    if key in atomic_batch
+                },
+                device=self.local_rank,
+            )
+            _, atomic_output = self.model_output(
+                atomic_batch["input"], atomic_batch["weight"]
+            )
+            ae_output -= batch["atomic_stoichiometry"][i_system] * torch.sum(
+                atomic_output
+            )
+
+        target = batch["ae_target"]
+        loss = (
+            batch["scale_atomic"] * self.loss_fun(target, ae_output)
+            if if_train
+            else None
+        )
+        return loss, torch.abs(target - ae_output)
+
     def loss(self, batch, if_train=True, if_grad=True):
-        input_ = batch["input"]
-        weight = batch["weight"]
-        if_use_cuda_event = input_.is_cuda
+        if_use_cuda_event = batch["input"].is_cuda
         tensor_to_numpy = lambda x: (
             x.detach().to("cpu", non_blocking=if_use_cuda_event)
             if x.is_cuda
             else x.detach().numpy()
         )
-        sum_target = batch["energy_target"]
-        scale = batch["scale"]
-        scale_abs = batch["scale_abs"]
-        scale_grad = batch["scale_grad"]
-        scale_atomic = batch["scale_atomic"]
         data_record = {"name": batch["name"]}
 
         if DEBUG:
             print(f"{batch['name']}")
 
         if if_train:
-            input_.requires_grad_(
+            batch["input"].requires_grad_(
                 self.args.if_grad and if_grad and batch["grad_cc_train"].ndim != 0
             )
-            weight.requires_grad_(input_.requires_grad)
-        else:
-            input_ = input_.detach()
+            batch["weight"].requires_grad_(batch["input"].requires_grad)
 
-        density_input = input_
-        with training_stage("forward" if if_train else "eval-forward", batch):
-            input_, output = self.model_output(input_, weight)
+        _, output = self.model_output(
+            batch["input"] if if_train else batch["input"].detach(),
+            batch["weight"],
+        )
         if not if_train:
             output = output.detach()
 
         sum_output = torch.sum(output)
         if if_train:
-            tot_loss = scale * self.loss_fun(sum_target, sum_output)
+            tot_loss, energy_error = self.loss_ene(batch, sum_output)
             data_record["loss_tot_ene"] = tensor_to_numpy(tot_loss)
-        else:
-            tot_loss = torch.tensor(0.0, device=self.device, dtype=self.dtype)
-        data_record["loss_ene"] = tensor_to_numpy(torch.abs(sum_target - sum_output))
 
-        if if_train:
             if self.args.if_abs:
-                target = batch["output"] * weight
-                abs_error = torch.abs(target - output)
-                loss_ene_abs = scale_abs * self.loss_fun(target, output)
+                loss_ene_abs, abs_error = self.loss_abs(batch, output)
                 tot_loss = tot_loss + loss_ene_abs
-                data_record["loss_ene_abs"] = tensor_to_numpy(torch.sum(abs_error))
+                data_record["loss_ene_abs"] = tensor_to_numpy(abs_error)
                 data_record["loss_tot_abs"] = tensor_to_numpy(loss_ene_abs)
 
-            if self.args.if_grad and if_grad:
-                grad_cc_train = batch["grad_cc_train"]
-                grad2force = batch["grad2force"]
-                if len(grad_cc_train.shape) != 0:
-                    middle_, weight_derivative = torch.autograd.grad(
-                        outputs=torch.sum(output),
-                        inputs=(density_input, weight),
-                        create_graph=True,
-                    )
-                    force = torch.einsum("piC,piCx->x", middle_, grad2force)
-                    force = force + torch.einsum(
-                        "p,px->x",
-                        weight_derivative.reshape(-1),
-                        batch["grid_weight_response"],
-                    )
+            if (
+                self.args.if_grad
+                and if_grad
+                and batch["grad_cc_train"].ndim != 0
+            ):
+                loss_grad, grad_error = self.loss_grad(batch, sum_output)
+                tot_loss = tot_loss + loss_grad
+                data_record["loss_grad_record"] = tensor_to_numpy(grad_error)
+                data_record["loss_tot_grad"] = tensor_to_numpy(loss_grad)
+        else:
+            tot_loss = torch.tensor(0.0, device=self.device, dtype=self.dtype)
+            energy_error = torch.abs(batch["energy_target"] - sum_output)
 
-                    loss_grad = scale_grad * self.loss_fun(grad_cc_train, force)
-                    tot_loss = tot_loss + loss_grad
-                    data_record["loss_grad_record"] = tensor_to_numpy(
-                        torch.sum(torch.abs(grad_cc_train - force))
-                    )
-                    data_record["loss_tot_grad"] = tensor_to_numpy(loss_grad)
+        data_record["loss_ene"] = tensor_to_numpy(energy_error)
 
-        if self.args.if_atomic and scale_atomic != 0:
-            ae_target = batch["ae_target"]
-            ae_output = sum_output.clone()
-
-            if_finish = True
-            for i_system, system_atom in enumerate(batch["atomic_systems"]):
-                name_atom = self.database_train.atomic_name_dict.get(system_atom)
-                if DEBUG:
-                    print(
-                        f"atom {system_atom} and stoichiometry {batch['atomic_stoichiometry'][i_system]}"
-                    )
-                if name_atom is None:
-                    self.print(
-                        f"Warning: {system_atom} not found in atomic_name_dict, "
-                        "skipping atomic energy calculation."
-                    )
-                    if_finish = False
-                    break
-                atomic_batch = self.database_train.dataset.get_from_name(name_atom)
-                atomic_batch = self.database_train.process_batch(
-                    {
-                        key: atomic_batch[key]
-                        for key in ("input", "weight")
-                        if key in atomic_batch
-                    },
-                    device=self.local_rank,
-                )
-                with training_stage(f"atomic-forward:{name_atom}", atomic_batch):
-                    _, atomic_output = self.model_output(
-                        atomic_batch["input"],
-                        atomic_batch["weight"],
-                    )
-                atomic_output = torch.sum(atomic_output)
-                ae_output -= batch["atomic_stoichiometry"][i_system] * atomic_output
-
-            if if_finish:
+        if self.args.if_atomic and batch["scale_atomic"] != 0:
+            atomic_result = self.loss_atomic(batch, sum_output, if_train=if_train)
+            if atomic_result is not None:
+                loss_atomic, atomic_error = atomic_result
                 if if_train:
-                    loss_atomic = scale_atomic * self.loss_fun(ae_target, ae_output)
                     tot_loss = tot_loss + loss_atomic
                     data_record["loss_tot_atomic"] = tensor_to_numpy(loss_atomic)
-                data_record["loss_ene_atomic"] = tensor_to_numpy(
-                    torch.abs(ae_target - ae_output)
-                )
+                data_record["loss_ene_atomic"] = tensor_to_numpy(atomic_error)
 
         data_record["loss_tot"] = tensor_to_numpy(tot_loss)
         for key in TORCH_LIST:
@@ -364,20 +348,17 @@ class ModelClass:
         pending_records = deque()
 
         batches = iter(self.database_train.data_gpu)
-        for step in range(len(self.database_train.data_gpu)):
-            with training_stage(f"train-fetch:{step}"):
-                batch = next(batches)
+        for _ in range(len(self.database_train.data_gpu)):
+            batch = next(batches)
             batch = self.database_train.process_batch(batch, device=self.local_rank)
             tot_loss, data_record, event = self.loss(batch, if_grad=if_grad)
-            with training_stage("backward", batch):
-                tot_loss.backward()
-            with training_stage("optimizer", batch):
-                torch.nn.utils.clip_grad_norm_(
-                    self.model.parameters(), self.args.max_norm
-                )
-                self.optimizer.step()
-                self.scheduler.step()
-                self.optimizer.zero_grad(set_to_none=True)
+            tot_loss.backward()
+            torch.nn.utils.clip_grad_norm_(
+                self.model.parameters(), self.args.max_norm
+            )
+            self.optimizer.step()
+            self.scheduler.step()
+            self.optimizer.zero_grad(set_to_none=True)
             if event is None:
                 data_record_l.add_data_record(data_record)
                 continue
@@ -403,9 +384,8 @@ class ModelClass:
         pending_records = deque()
 
         batches = iter(self.database_eval.data_gpu)
-        for step in range(len(self.database_eval.data_gpu)):
-            with training_stage(f"eval-fetch:{step}"):
-                batch = next(batches)
+        for _ in range(len(self.database_eval.data_gpu)):
+            batch = next(batches)
             batch = self.database_eval.process_batch(batch, device=self.local_rank)
             _, data_record, event = self.loss(batch, if_train=False)
             if event is None:

@@ -199,7 +199,6 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   sizing rather than reserving memory; orbital dimensions and block-splitting
   heuristics also limit block sizes.
 - `DataBase.py`, `ModelClass.py`: data loading, model init, checkpoints, losses.
-  The `training_stage` context manager is shared with the training entry point.
 - `reference/test_data_dft.py`: cached DFT reference generation.
 - `helper/chemistry/density_metrics.py`: density comparisons.
 - `helper/workflow/DataRecord.py`: CSV record keeping
@@ -228,22 +227,6 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
 - `*.json`: dataset/split definitions (`gmtkn-def2`, `gmtkn-diet30-def2`,
   `gmtkn-diet100-def2`, `dft-fitset-def2`)
 - PySCF CCSD(T) intermediate files: vendor-like scientific code — patch minimally
-
-### Training stall diagnostics
-
-Set `DFT2CC_TRACE_TRAIN=1` in the training job environment to emit flushed
-`[train-progress]` start/done messages for logger setup, RNG restoration, batch
-fetching, molecular/atomic forward passes, backward, and optimizer updates.
-Default is `0`; other values are rejected. Each message identifies the PID
-and stage; tensor stages also include the system, device, and grid count.
-
-An unfinished stage dumps Python thread stacks to stderr every 120 seconds.
-The watchdog is cancelled on success or exception; exceptions propagate without
-a misleading `done` message. Tensor stages synchronize CUDA before reporting
-completion, so diagnostic wall times include queued GPU work and tracing adds
-synchronization overhead. Training mathematics is unchanged.
-Enable tracing in a newly launched process; it cannot instrument an already
-running worker. These diagnostics identify the slow stage, not a speedup.
 
 ### GPU SCF XC profiling
 
