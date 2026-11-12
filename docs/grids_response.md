@@ -40,6 +40,8 @@ Force training contracts the energy derivatives with respect to the original
 features and weights with these two arrays, including models that apply
 weights before their forward pass. These are explicit nuclear derivatives;
 they do not introduce orbital relaxation.
+When `--if_grad 1` is enabled, force loss is included on every training epoch
+for systems with force mappings.
 
 Legacy force-training archives must be regenerated. Running `gen_data.py`
 with `--if_continue 1` in non-evaluation mode refreshes the B3LYP and

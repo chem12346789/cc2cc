@@ -150,8 +150,16 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   skipped with `--if_continue true`; regenerating them requires
   `--if_continue false` and reruns the CC calculation.
   `--zmp_response_block_size` (default 32 centers) bounds transient Jacobian
-  blocks, not disk size or model autograd memory. No training losses or force
-  conventions are changed by these generation options.
+  blocks, not disk size or model autograd memory. Training with
+  `--if_zmp_response true` requires `--rho_input zmp` and these observable
+  response sidecars. It contracts the full weighted model-energy feature
+  derivative with each sidecar, adds the saved baseline potential coefficients,
+  and minimizes the selected loss against `zmp_observable_target`; its
+  multiplier is `--loss_multiplier_zmp_response` (default 1). The logged
+  response error remains in the mixed observable units, not kcal/mol. For
+  UKS, the per-spin projections are averaged into one shared model potential
+  before summing the spin response contributions.
+  Generating constraints alone does not change existing training losses.
 - `--zmp_ov_loss true` is no longer supported and is rejected.
 - `reference/reference_cc.py`: shared CCSD solver settings, CCSD(T) lambda solving,
   triples-corrected target density and CC-gradient one-particle intermediates.

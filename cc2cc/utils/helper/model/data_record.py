@@ -13,7 +13,11 @@ TORCH_LIST = [
     "loss_tot_abs",
     "loss_tot_grad",
     "loss_tot_atomic",
+    "loss_zmp_response",
+    "loss_tot_zmp_response",
 ]
+
+NON_ENERGY_LOSSES = {"loss_zmp_response", "loss_tot_zmp_response"}
 
 
 class DataRecordList:
@@ -33,7 +37,11 @@ class DataRecordList:
             if key == "name":
                 values[self.iter] = value
             else:
-                values[self.iter] = AU2KCALMOL * value.item()
+                values[self.iter] = (
+                    value.item()
+                    if key in NON_ENERGY_LOSSES
+                    else AU2KCALMOL * value.item()
+                )
         self.iter += 1
 
     def save(self, path):

@@ -40,12 +40,6 @@ if __name__ == "__main__":
         help="Weighting scheme for atomic energy. Default is 1 (with 20 copies).",
     )
     parser.add_argument(
-        "--grad_step",
-        type=int,
-        default=1,
-        help="Interval for calculating the gradient. Default is 1 (calculate every step).",
-    )
-    parser.add_argument(
         "--loss_type",
         type=str,
         choices=["MSELoss", "L1Loss"],
@@ -201,6 +195,18 @@ if __name__ == "__main__":
         type=float,
         default=1.0,
         help="Lambda for the loss function. Default is 1.0.",
+    )
+    parser.add_argument(
+        "--if_zmp_response",
+        type=str2bool,
+        default=False,
+        help="Whether to train with the compact ZMP observable-response loss.",
+    )
+    parser.add_argument(
+        "--loss_multiplier_zmp_response",
+        type=float,
+        default=1.0,
+        help="Lambda for the ZMP observable-response loss. Default is 1.0.",
     )
     parser.add_argument(
         "--if_grad",

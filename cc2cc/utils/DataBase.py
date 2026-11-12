@@ -12,7 +12,8 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
 from cc2cc.utils.mol import gen_mole
-from cc2cc.utils.helper.runtime.env_var import DATA_PATH
+from cc2cc.utils.helper.runtime.env_var import CUBE_MIDDLE, DATA_PATH, EDGE_SIZE
+from cc2cc.utils.helper.model.data_processing import CUBE_INDEX
 from cc2cc.utils.helper.units import AU2KCALMOL
 
 MAX_ERROR_ENERGY = 0.01  # kcal/mol per atom, if the error energy is larger than this value, we set the absolute loss multiplier to 0 to avoid the numerical instability in training.
@@ -92,6 +93,9 @@ class DataBase:
         if getattr(args, "zmp_ov_loss", False):
             raise ValueError("--zmp_ov_loss is no longer supported.")
         self.args = args
+        self.if_zmp_response = getattr(args, "if_zmp_response", False)
+        if self.if_zmp_response and args.rho_input != "zmp":
+            raise ValueError("--if_zmp_response requires --rho_input zmp.")
         self.input_mode = input_mode
         if args.precision == "float64":
             self.dtype = torch.float64
@@ -110,6 +114,7 @@ class DataBase:
             "grad2force",
             "grid_weight_response",
             "grad_cc_train",
+            "scale_zmp_response",
         )
 
         loss_func_dict = {
@@ -220,7 +225,9 @@ class DataBase:
         """
         batch_gpu = {}
         for key, val in batch.items():
-            if key in self.gpu_key:
+            if key in self.gpu_key or (
+                key.startswith("zmp_response_") and "_features_s" not in key
+            ):
                 batch_gpu[key] = val.to(device=device, non_blocking=True)
             else:
                 batch_gpu[key] = val
@@ -275,6 +282,11 @@ class DataBase:
         print(np.std(data_dict["input"]))
 
         del input_mat, weight_mat
+
+        if self.if_zmp_response and not self.if_eval:
+            data_dict.update(
+                self._load_zmp_response_data(data, name, data_dict["input"])
+            )
 
         if self.if_eval:
             data_dict["output"] = 0
@@ -415,16 +427,110 @@ class DataBase:
         else:
             data_dict["scale_grad"] = data_weight * scale_grad
         data_dict["scale_atomic"] = data_weight * scale_atomic
+        if self.if_zmp_response and not self.if_eval:
+            data_dict["scale_zmp_response"] = (
+                data_weight * getattr(self.args, "loss_multiplier_zmp_response", 1.0)
+            )
 
         self.print(
             f"Adjusted scale: {scale:>6.3f}, grad {scale_grad:>6.3f}, atomic {scale_atomic:>6.3f}, abs {scale_abs:>6.3f}",
         )
 
-        for key in self.gpu_key:
-            if isinstance(data_dict[key], np.ndarray):
-                self.print(f"key: {key}, shape: {data_dict[key].shape}")
-            data_dict[key] = torch.as_tensor(
-                data_dict[key], dtype=self.dtype, device="cpu",
-            )
+        for key, value in data_dict.items():
+            if key in self.gpu_key or (
+                key.startswith("zmp_response_") and "_features_s" not in key
+            ):
+                if isinstance(value, np.ndarray):
+                    self.print(f"key: {key}, shape: {value.shape}")
+                dtype = torch.float64 if key.startswith("zmp_response_") else self.dtype
+                data_dict[key] = torch.as_tensor(value, dtype=dtype, device="cpu")
 
         return num_data_used, data_dict
+
+    def _load_zmp_response_data(self, data, name, processed_input):
+        required = (
+            "zmp_observable_reference",
+            "zmp_observable_target",
+            "zmp_constraint_mo_coeff",
+        )
+        missing = [key for key in required if key not in data]
+        if missing:
+            raise ValueError(
+                f"{name}: missing ZMP response data {missing}; regenerate with "
+                "--zmp_observable_response true."
+            )
+
+        response_data = {
+            "zmp_response_reference": np.asarray(
+                data["zmp_observable_reference"], dtype=np.float64
+            ),
+            "zmp_response_target": np.asarray(
+                data["zmp_observable_target"], dtype=np.float64
+            ),
+        }
+        nspin = len(data["zmp_constraint_mo_coeff"])
+        for spin in range(nspin):
+            file_key = f"zmp_potential_feature_file_s{spin}"
+            response_key = f"zmp_observable_response_s{spin}"
+            baseline_key = f"zmp_baseline_potential_coeff_s{spin}"
+            missing = [
+                key for key in (file_key, response_key, baseline_key) if key not in data
+            ]
+            if missing:
+                raise ValueError(
+                    f"{name}: missing ZMP response data {missing}; regenerate with "
+                    "--zmp_observable_response true."
+                )
+
+            feature_path = DATA_PATH / str(data[file_key])
+            if not feature_path.is_file():
+                raise FileNotFoundError(
+                    f"{name}: missing ZMP response sidecar {feature_path}."
+                )
+            features = np.load(feature_path, mmap_mode="c")
+            response_data[f"zmp_response_features_s{spin}"] = (
+                self._process_zmp_response_features(features, processed_input)
+            )
+            response_data[f"zmp_response_matrix_s{spin}"] = np.asarray(
+                data[response_key], dtype=np.float64
+            )
+            response_data[f"zmp_response_baseline_s{spin}"] = np.asarray(
+                data[baseline_key], dtype=np.float64
+            )
+        return response_data
+
+    def _process_zmp_response_features(self, features, processed_input):
+        if features.ndim != 4:
+            raise ValueError(
+                "ZMP response feature sidecars must have axes "
+                "(center, feature, cube_sample, observable)."
+            )
+        features = features[:, : processed_input.shape[1]]
+        if processed_input.ndim == 2:
+            center = (
+                CUBE_MIDDLE * EDGE_SIZE**2
+                + CUBE_MIDDLE * EDGE_SIZE
+                + CUBE_MIDDLE
+            )
+            features = features[:, :, center, :][:, :, None, :]
+        if self.input_mode in ("cube5", "cube9") and features.shape[2] == EDGE_SIZE**3:
+            indices = CUBE_INDEX[self.input_mode]
+            features = features.reshape(
+                features.shape[0],
+                features.shape[1],
+                EDGE_SIZE,
+                EDGE_SIZE,
+                EDGE_SIZE,
+                features.shape[-1],
+            )
+            features = features[:, :, indices[:, 0], indices[:, 1], indices[:, 2], :]
+        if features.shape[:3] != (
+            processed_input.shape[0],
+            processed_input.shape[1],
+            processed_input.shape[2] if processed_input.ndim == 3 else 1,
+        ):
+            raise ValueError(
+                f"ZMP response sidecar shape {features.shape[:3]} does not match "
+                f"model input shape {processed_input.shape}."
+            )
+        return features

@@ -227,6 +227,61 @@ class ModelClass:
             torch.sum(torch.abs(target - force)),
         )
 
+    def loss_zmp_response(self, batch, sum_output):
+        input_derivative = torch.autograd.grad(
+            outputs=sum_output,
+            inputs=batch["input"],
+            create_graph=True,
+        )[0].to(device=self.device, dtype=torch.float64)
+        if input_derivative.ndim == 2:
+            input_derivative = input_derivative.unsqueeze(2)
+
+        prediction = batch["zmp_response_reference"].clone()
+        ncenter = input_derivative.shape[0]
+        block_size = 2048
+        model_coefficients = []
+        spin_responses = []
+        spin = 0
+        while f"zmp_response_features_s{spin}" in batch:
+            features = batch[f"zmp_response_features_s{spin}"]
+            model_coeff = torch.zeros_like(
+                batch[f"zmp_response_baseline_s{spin}"],
+                dtype=torch.float64,
+                device=self.device,
+            )
+            for start in range(0, ncenter, block_size):
+                stop = min(start + block_size, ncenter)
+                feature_block = torch.as_tensor(
+                    np.array(features[start:stop], dtype=np.float64, copy=True),
+                    dtype=torch.float64,
+                    device=self.device,
+                )
+                model_coeff = model_coeff + torch.einsum(
+                    "pfc,pfck->k",
+                    input_derivative[start:stop],
+                    feature_block,
+                )
+            model_coefficients.append(model_coeff)
+            spin_responses.append(
+                (
+                    batch[f"zmp_response_matrix_s{spin}"],
+                    batch[f"zmp_response_baseline_s{spin}"],
+                )
+            )
+            spin += 1
+
+        if not model_coefficients:
+            raise ValueError("Missing ZMP response feature sidecars in the batch.")
+        model_coeff = torch.stack(model_coefficients).mean(dim=0)
+        for response, baseline in spin_responses:
+            prediction = prediction + torch.mv(response, model_coeff + baseline)
+
+        target = batch["zmp_response_target"]
+        return (
+            batch["scale_zmp_response"] * self.loss_fun(target, prediction),
+            torch.sum(torch.abs(target - prediction)),
+        )
+
     def loss_atomic(self, batch, sum_output, if_train=True):
         ae_output = sum_output.clone()
         for i_system, system_atom in enumerate(batch["atomic_systems"]):
@@ -265,7 +320,7 @@ class ModelClass:
         )
         return loss, torch.abs(target - ae_output)
 
-    def loss(self, batch, if_train=True, if_grad=True):
+    def loss(self, batch, if_train=True):
         if_use_cuda_event = batch["input"].is_cuda
         tensor_to_numpy = lambda x: (
             x.detach().to("cpu", non_blocking=if_use_cuda_event)
@@ -279,7 +334,11 @@ class ModelClass:
 
         if if_train:
             batch["input"].requires_grad_(
-                self.args.if_grad and if_grad and batch["grad_cc_train"].ndim != 0
+                (
+                    self.args.if_grad
+                    and batch["grad_cc_train"].ndim != 0
+                )
+                or getattr(self.args, "if_zmp_response", False)
             )
             batch["weight"].requires_grad_(batch["input"].requires_grad)
 
@@ -301,15 +360,22 @@ class ModelClass:
                 data_record["loss_ene_abs"] = tensor_to_numpy(abs_error)
                 data_record["loss_tot_abs"] = tensor_to_numpy(loss_ene_abs)
 
-            if (
-                self.args.if_grad
-                and if_grad
-                and batch["grad_cc_train"].ndim != 0
-            ):
+            if self.args.if_grad and batch["grad_cc_train"].ndim != 0:
                 loss_grad, grad_error = self.loss_grad(batch, sum_output)
                 tot_loss = tot_loss + loss_grad
                 data_record["loss_grad_record"] = tensor_to_numpy(grad_error)
                 data_record["loss_tot_grad"] = tensor_to_numpy(loss_grad)
+            if getattr(self.args, "if_zmp_response", False):
+                loss_zmp_response, zmp_response_error = self.loss_zmp_response(
+                    batch, sum_output
+                )
+                tot_loss = tot_loss + loss_zmp_response
+                data_record["loss_zmp_response"] = tensor_to_numpy(
+                    zmp_response_error
+                )
+                data_record["loss_tot_zmp_response"] = tensor_to_numpy(
+                    loss_zmp_response
+                )
         else:
             tot_loss = torch.tensor(0.0, device=self.device, dtype=self.dtype)
             energy_error = torch.abs(batch["energy_target"] - sum_output)
@@ -341,7 +407,7 @@ class ModelClass:
             print("end of loss\n")
         return tot_loss, data_record, event
 
-    def train_model(self, if_grad=True):
+    def train_model(self):
         self.model.train()
         self.optimizer.zero_grad(set_to_none=True)
         data_record_l = DataRecordList(len(self.database_train))
@@ -351,7 +417,7 @@ class ModelClass:
         for _ in range(len(self.database_train.data_gpu)):
             batch = next(batches)
             batch = self.database_train.process_batch(batch, device=self.local_rank)
-            tot_loss, data_record, event = self.loss(batch, if_grad=if_grad)
+            tot_loss, data_record, event = self.loss(batch)
             tot_loss.backward()
             torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(), self.args.max_norm

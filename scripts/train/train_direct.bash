@@ -37,7 +37,7 @@ export IF_ABS=1
 
 export ENE_ARG="--loss_multiplier_ene 1 --if_relative_weight_ene 1"
 export ATOMIC_ARG="--loss_multiplier_atomic 1 --if_relative_weight_atomic 1 --if_atomic ${IF_ATOMIC}"
-export GRAD_ARG="--loss_multiplier_grad 1 --if_relative_weight_grad 0 --if_grad ${IF_GRAD} --grad_step 1"
+export GRAD_ARG="--loss_multiplier_grad 1 --if_relative_weight_grad 0 --if_grad ${IF_GRAD}"
 export ABS_ARG="--loss_multiplier_abs 0.01 --if_relative_weight_abs 0 --if_abs ${IF_ABS}"
 export LOSS_ARGS="--normal_type L1Loss"
 # export LOSS_ARGS="--loss_type L1Loss --normal_type L1Loss"

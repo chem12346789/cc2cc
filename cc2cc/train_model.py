@@ -195,8 +195,7 @@ def train_model(train_list, eval_list, args):
             barrier()
             continue
 
-        if_grad = epoch % args.grad_step == 0
-        train_record = modeldict.train_model(if_grad=if_grad)
+        train_record = modeldict.train_model()
         train_record = _gather_records(train_record, is_distributed)
         barrier()
 
