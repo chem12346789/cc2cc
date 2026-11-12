@@ -16,7 +16,7 @@ case "${MODEL_INDEX:-0}" in
     (0) export load_model_args="--load atom-3259973 --load_epoch 2395" ;;
 esac
 
-export if_continue_args=1
+export if_continue_args=0
 export name_mol_reverse=0
 export IF_GRAD="${IF_GRAD:-0}"
 export GRID_RESPONSE="${GRID_RESPONSE:-0}"

@@ -16,7 +16,7 @@ case "${MODEL_INDEX:-0}" in
     (0) export load_model_args="--load atom-3259973 --load_epoch 2395" ;;
 esac
 
-export if_continue_args=1
+export if_continue_args=0
 export name_mol_reverse=0
 export IF_GRAD=1
 export GRID_RESPONSE="${GRID_RESPONSE:-1}"
@@ -34,5 +34,5 @@ setup_gpu_test_job 256000 16000
 
 sleep $SLURM_ARRAY_TASK_ID
 begin_test_job
-run_test_job --max_memory_gpu 8000 --max_cycle 50
+run_test_job --max_memory_gpu 8000 --max_cycle 50 --cpu 1
 finish_test_job
