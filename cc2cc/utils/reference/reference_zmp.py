@@ -13,6 +13,8 @@ RHO_REL_TOL = 1e-2
 I_VALUE_REL_TOL = 1e-4
 I_VALUE_ABS_TOL = 1e-10
 DIIS_SPACE = 128
+HARTREE_REL_TOL = 10
+NUCLEAR_REL_TOL = 10
 
 
 def get_zmp(
@@ -76,16 +78,18 @@ def get_zmp(
         print("Differences from CCSD target:")
         print(f"{'Metric':<12} | {'Unit':<12} | {'DFT':>12} | {'ZMP':>12}")
         print(f"{'-' * 12}-+-{'-' * 12}-+-{'-' * 12}-+-{'-' * 12}")
+        error_zmp_dict = {"Hartree": None, "nuclear": None}
         for label, target, dft_values, zmp_values in (
             ("Hartree", hartree_tar, hartree_dft, hartree),
             ("nuclear", nuc_tar, nuc_dft, nuclear),
         ):
-            error_dft = np.dot(np.abs(target - dft_values), grids.weights)
-            error_zmp = np.dot(np.abs(target - zmp_values), grids.weights)
+            error_dft = np.dot(np.abs(target - dft_values), grids.weights) * AU2KCALMOL
+            error_zmp = np.dot(np.abs(target - zmp_values), grids.weights) * AU2KCALMOL
+            error_zmp_dict[label] = error_zmp
             print(
                 f"{label:<12} | {'kcal/mol':<12} | "
-                f"{error_dft * AU2KCALMOL:>12.4f} | "
-                f"{error_zmp * AU2KCALMOL:>12.4f}"
+                f"{error_dft:>12.4f} | "
+                f"{error_zmp:>12.4f}"
             )
         for label, unit, dft_value, zmp_value in (
             ("rho diff", "electrons", dft_difference, zmp_difference),
@@ -110,12 +114,19 @@ def get_zmp(
             return mzmp, previous_dm
 
         if (
-            mzmp.converged
-            and exponent > 15
+            exponent > 15
             and (
                 zmp_difference <= RHO_REL_TOL * dft_difference
                 or zmp_i_value <= I_VALUE_REL_TOL * dft_i_value
                 or zmp_i_value <= I_VALUE_ABS_TOL
+            )
+            and (
+                error_zmp_dict.get("Hartree") is not None
+                and error_zmp_dict.get("Hartree") < HARTREE_REL_TOL
+            )
+            and (
+                error_zmp_dict.get("nuclear") is not None
+                and error_zmp_dict.get("nuclear") < NUCLEAR_REL_TOL
             )
         ):
             print(
