@@ -13,7 +13,8 @@ source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
-    (0) export load_model_args="--load atom-3259973 --load_epoch 2395" ;;
+    # (0) export load_model_args="--load atom-3259973 --load_epoch 2395" ;;
+    (0) export load_model_args="--load dummy --load_epoch 0" ;;
 esac
 
 export if_continue_args=0
@@ -34,5 +35,5 @@ setup_gpu_test_job 256000 16000
 
 sleep $SLURM_ARRAY_TASK_ID
 begin_test_job
-run_test_job --max_memory_gpu 8000 --max_cycle 50 --cpu 1
+run_test_job --max_memory_gpu 8000 --max_cycle 50 --grid_response 1
 finish_test_job
