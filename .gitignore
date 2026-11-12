@@ -11,6 +11,11 @@ data
 log
 checkpoint*/
 checkpoints
+!/checkpoints/
+/checkpoints/*
+!/checkpoints/checkpoint_dummy/
+/checkpoints/checkpoint_dummy/*
+!/checkpoints/checkpoint_dummy/0.pth
 validate*/
 validate
 /log_backup

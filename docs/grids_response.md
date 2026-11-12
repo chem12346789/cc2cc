@@ -32,6 +32,22 @@ density-fitting auxiliary response remain in PySCF's assembly.
 Use `--if_grad 1 --grid_response 1` for moving-grid response.
 Use `--grid_response 0` for entirely fixed-grid XC derivatives.
 
+## Force-training data
+
+`get_dft_grad` includes atom-centered grid motion in `grad2force` and saves
+the quadrature-weight nuclear derivatives as `grid_weight_response`.
+Force training contracts the energy derivatives with respect to the original
+features and weights with these two arrays, including models that apply
+weights before their forward pass. These are explicit nuclear derivatives;
+they do not introduce orbital relaxation.
+
+Legacy force-training archives must be regenerated. Running `gen_data.py`
+with `--if_continue 1` in non-evaluation mode refreshes the B3LYP and
+B3LYP-D3BJ reference gradients, their difference target, and both DFT/ZMP
+force mappings. Use the original geometry and grid settings. Other stored
+reference data is retained. Archives without weight-response arrays are
+rejected when force training is enabled.
+
 ## Interpretation and validation
 
 For moving-grid finite differences, rebuild the quadrature grids consistently.

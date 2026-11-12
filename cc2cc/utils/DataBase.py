@@ -108,6 +108,7 @@ class DataBase:
             "energy_target",
             "ae_target",
             "grad2force",
+            "grid_weight_response",
             "grad_cc_train",
         )
 
@@ -278,6 +279,7 @@ class DataBase:
         if self.if_eval:
             data_dict["output"] = 0
             data_dict["grad2force"] = 0
+            data_dict["grid_weight_response"] = 0
             data_dict["grad_cc_train"] = 0
         else:
             data_dict["output"] = 0
@@ -333,6 +335,17 @@ class DataBase:
                 else:
                     raise ValueError(f"No grad in data: {self.args.rho_input}")
                 data_dict["grad2force"] = self.process_grad2force(grad2force)
+                response_key = (
+                    "grid_weight_response_zmp"
+                    if self.args.rho_input == "zmp" else "grid_weight_response"
+                )
+                if response_key not in data:
+                    raise ValueError(
+                        f"{name}: missing {response_key}; regenerate force mappings."
+                    )
+                data_dict["grid_weight_response"] = data[response_key].reshape(
+                    -1, len(data["weights"])
+                ).T
                 data_dict["grad_cc_train"] = grad_cc_train.reshape(-1)
                 if mol_info["natm"] > 1 and self.args.if_relative_weight_grad:
                     scale_grad /= (
@@ -341,6 +354,7 @@ class DataBase:
                     )
             else:
                 data_dict["grad2force"] = 0
+                data_dict["grid_weight_response"] = 0
                 data_dict["grad_cc_train"] = 0
 
         element_counts = Counter(mol_info["elements"])

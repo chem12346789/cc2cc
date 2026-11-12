@@ -689,9 +689,11 @@ class ModelClass:
             input_.requires_grad_(
                 self.args.if_grad and if_grad and batch["grad_cc_train"].ndim != 0
             )
+            weight.requires_grad_(input_.requires_grad)
         else:
             input_ = input_.detach()
 
+        density_input = input_
         with training_stage("forward" if if_train else "eval-forward", batch):
             input_, output = self.model_output(input_, weight)
         if not if_train:
@@ -723,12 +725,16 @@ class ModelClass:
                 grad2force = batch["grad2force"]
                 if len(grad_cc_train.shape) != 0:
                     timing_start = start_timing()
-                    middle_ = torch.autograd.grad(
+                    middle_, weight_derivative = torch.autograd.grad(
                         outputs=torch.sum(output),
-                        inputs=input_,
+                        inputs=(density_input, weight),
                         create_graph=True,
-                    )[0]
+                    )
                     force = torch.einsum("piC,piCx->x", middle_, grad2force)
+                    force = force + torch.einsum(
+                        "p,px->x", weight_derivative.reshape(-1),
+                        batch["grid_weight_response"],
+                    )
 
                     loss_grad = scale_grad * self.loss_fun(grad_cc_train, force)
                     tot_loss = tot_loss + loss_grad
