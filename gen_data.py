@@ -61,11 +61,15 @@ if __name__ == "__main__":
         help="Whether to check the convergence of the wave function. Default is True.",
     )
     parser.add_argument(
-        "--zmp_feature_ov", type=str2bool, default=True,
+        "--zmp_feature_ov",
+        type=str2bool,
+        default=True,
         help="Stream feature/occupied-virtual rotation Jacobians to float64 sidecars.",
     )
     parser.add_argument(
-        "--zmp_observable_response", type=str2bool, default=True,
+        "--zmp_observable_response",
+        type=str2bool,
+        default=True,
         help="Generate compact dipole, second-moment and atom-projection response data.",
     )
     parser.add_argument(
@@ -75,11 +79,15 @@ if __name__ == "__main__":
         help="Generate fixed-reference orbital metadata without other ZMP constraints.",
     )
     parser.add_argument(
-        "--zmp_response_block_size", type=int, default=32,
+        "--zmp_response_block_size",
+        type=int,
+        default=32,
         help="Number of grid centers per ZMP constraint generation block.",
     )
     parser.add_argument(
-        "--zmp_response_gap_floor", type=float, default=1e-3,
+        "--zmp_response_gap_floor",
+        type=float,
+        default=1e-3,
         help="Positive response denominator floor in Hartree; nonpositive gaps are errors.",
     )
     args = add_args(parser)
@@ -200,8 +208,10 @@ if __name__ == "__main__":
                     mdft.conv_tol_grad = 1e-8
                     mdft.max_cycle = 200
                     mdft.kernel(data["dm1_dft"])
-                    if not mdft.converged:
-                        raise RuntimeError(f"{name}: B3LYP gradient update SCF not converged.")
+                    if args.check_convergence and (not mdft.converged):
+                        raise RuntimeError(
+                            f"{name}: B3LYP gradient update SCF not converged."
+                        )
                     print(
                         f"B3LYP check: energy change = {mdft.e_tot - data['e_dft']:.12e} Hartree; "
                         f"max |DM - saved DM| = {np.max(np.abs(mdft.make_rdm1() - data['dm1_dft'])):.12e}"
@@ -213,8 +223,10 @@ if __name__ == "__main__":
                     mdft_d3bj = dft_class(mol, xc="b3lyp-d3bj")
                     mdft_d3bj.max_cycle = 200
                     mdft_d3bj.kernel(mdft.make_rdm1())
-                    if not mdft_d3bj.converged:
-                        raise RuntimeError(f"{name}: B3LYP-D3BJ gradient update SCF not converged.")
+                    if args.check_convergence and (not mdft_d3bj.converged):
+                        raise RuntimeError(
+                            f"{name}: B3LYP-D3BJ gradient update SCF not converged."
+                        )
                     print(
                         f"B3LYP-D3BJ check: energy change = {mdft_d3bj.e_tot - data['e_dft_d3bj']:.12e} Hartree; "
                         f"max |DM - saved B3LYP DM| = {np.max(np.abs(mdft_d3bj.make_rdm1() - data['dm1_dft'])):.12e}"
@@ -226,23 +238,34 @@ if __name__ == "__main__":
                     data["grad_dft"] = grad_dft
                     data["grad_dft_d3bj"] = grad_dft_d3bj
                     data["grad_cc_train"] = data["grad_cc"] - grad_dft
-                    if (
-                        not np.allclose(data["coords"], grids.coords, rtol=0, atol=1e-12)
-                        or not np.allclose(data["weights"], grids.weights, rtol=1e-12, atol=1e-15)
+                    if not np.allclose(
+                        data["coords"], grids.coords, rtol=0, atol=1e-12
+                    ) or not np.allclose(
+                        data["weights"], grids.weights, rtol=1e-12, atol=1e-15
                     ):
-                        raise ValueError(f"{name}: saved grid differs; use the original grid settings.")
+                        raise ValueError(
+                            f"{name}: saved grid differs; use the original grid settings."
+                        )
                     for suffix in ("dft", "zmp"):
                         mapping = get_dft_grad(
-                            mol, grids, data[f"dm1_{suffix}"],
+                            mol,
+                            grids,
+                            data[f"dm1_{suffix}"],
                             unrestricted=mol.spin != 0,
                         )
                         if suffix == "dft":
                             data.update(mapping)
                         else:
-                            data.update({
-                                key.replace("dft", "zmp") if "dft" in key else key + "_zmp": value
-                                for key, value in mapping.items()
-                            })
+                            data.update(
+                                {
+                                    (
+                                        key.replace("dft", "zmp")
+                                        if "dft" in key
+                                        else key + "_zmp"
+                                    ): value
+                                    for key, value in mapping.items()
+                                }
+                            )
                     temporary_path = None
                     try:
                         with tempfile.NamedTemporaryFile(
@@ -252,16 +275,24 @@ if __name__ == "__main__":
                             np.savez(handle, **data)
                         os.replace(temporary_path, data_path)
                     finally:
-                        if temporary_path is not None and os.path.exists(temporary_path):
+                        if temporary_path is not None and os.path.exists(
+                            temporary_path
+                        ):
                             os.unlink(temporary_path)
-                    print(f"UPDATED: {name} B3LYP/B3LYP-D3BJ gradients with grid response.")
+                    print(
+                        f"UPDATED: {name} B3LYP/B3LYP-D3BJ gradients with grid response."
+                    )
             else:
                 if mol.spin == 0:
                     unrestricted = False
                 else:
                     unrestricted = True
                 cc(
-                    mol, grids, name, args, evaluate=evaluate,
+                    mol,
+                    grids,
+                    name,
+                    args,
+                    evaluate=evaluate,
                     unrestricted=unrestricted,
                 )
 

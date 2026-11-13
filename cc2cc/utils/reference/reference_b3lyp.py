@@ -238,20 +238,9 @@ def get_dft_grad(mol, grids, dm1_dft, max_memory=8000, *, unrestricted=False):
         return {}
 
     from pyscf import lib
-    from pyscf.grad.rks import grids_response_cc
+    from pyscf.grad import rks as rks_grad, uks as uks_grad
     from cc2cc.utils.helper.runtime.env_var import CUBE_MIDDLE, EDGE_SIZE
-    from cc2cc.utils.modelscf import get_veff_grad_modified_zeros
     from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
-
-    mdft = converged_b3lyp(
-        mol, dm0=dm1_dft, grids=grids,
-        verbose=4, unrestricted=unrestricted,
-    )
-    gdft = mdft.Gradients()
-    gdft.grid_response = True
-    grad_dft = gdft.kernel()
-    get_veff_grad_modified_zeros(gdft, unrestricted=unrestricted)
-    grad_dft_zeros = gdft.kernel()
 
     atmlst = range(mol.natm)
     grad2force = np.zeros(
@@ -268,7 +257,9 @@ def get_dft_grad(mol, grids, dm1_dft, max_memory=8000, *, unrestricted=False):
     weight_response = np.zeros((mol.natm, 3, len(grids.coords)), dtype=np.float64)
     grid_owner = np.full(len(grids.coords), -1, dtype=np.int32)
     offset = 0
-    for atom, (coords, weights, weight1) in enumerate(grids_response_cc(grids)):
+    for atom, (coords, weights, weight1) in enumerate(
+        rks_grad.grids_response_cc(grids)
+    ):
         stop = offset + len(weights)
         if (
             not np.allclose(grids.coords[offset:stop], coords, rtol=0, atol=1e-12)
@@ -282,7 +273,7 @@ def get_dft_grad(mol, grids, dm1_dft, max_memory=8000, *, unrestricted=False):
         raise ValueError("Unexpected nonzero grid weights after atom-centered blocks.")
     rho_cube_dft = np.zeros((len(grids.coords), grids.input_level, EDGE_SIZE**3))
     spin_dm = dm1_dft if unrestricted else dm1_dft[None, :, :]
-    ni = mdft._numint
+    ni = pyscf.dft.numint.NumInt()
     step = int(max_memory * 1024**2 / (dm1_dft.shape[-1] * EDGE_SIZE**3 * 32 * 8))
     print(f"Step size: {step}")
     for p0, p1 in lib.prange(0, len(grids.coords), step):
@@ -367,7 +358,20 @@ def get_dft_grad(mol, grids, dm1_dft, max_memory=8000, *, unrestricted=False):
         ),
     )
     force += parallel_einsum("p,txp->tx", feature_energy, weight_response)
-    print("Error force DFT: ", np.linalg.norm(force - (grad_dft - grad_dft_zeros)))
+    get_vxc_full_response = (
+        uks_grad.get_vxc_full_response if unrestricted
+        else rks_grad.get_vxc_full_response
+    )
+    xc_grid_response, xc_matrix = get_vxc_full_response(
+        ni, mol, grids, "b3lyp", dm1_dft, max_memory=max_memory
+    )
+    xc_matrix = xc_matrix if unrestricted else xc_matrix[None]
+    reference = np.array(xc_grid_response, copy=True)
+    for atom, (_, _, ao0, ao1) in enumerate(mol.aoslice_by_atom()):
+        reference[atom] += 2 * parallel_einsum(
+            "sxij,sij->x", xc_matrix[:, :, ao0:ao1], spin_dm[:, ao0:ao1]
+        )
+    print("Error force DFT: ", np.linalg.norm(force - reference))
 
     return {
         "rho_cube_dft": rho_cube_dft.reshape(

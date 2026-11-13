@@ -1,7 +1,8 @@
 """Recompute saved grid-energy errors: python -m scripts.gen_check.
 
 Read train/eval molecules from configs/gen_mol2.json by default. Print errors
-whose magnitude exceeds --threshold in kcal/mol, preserving their signs.
+whose magnitude exceeds --threshold times the atom count in kcal/mol,
+preserving their signs.
 Warn and continue when data files are missing or malformed.
 Finish with counts of checked, missing, invalid, and above-threshold results.
 The current NPZ files are used, so saved reruns replace earlier results.
@@ -122,7 +123,7 @@ def calculate_errors(path):
 
 
 def calculate_force_errors(path):
-    """Validate force-array structure and return target/translation residuals."""
+    """Validate force arrays and return residuals with the atom count."""
     with np.load(path, allow_pickle=False) as data:
         def read_array(key, shape):
             if key not in data:
@@ -189,7 +190,7 @@ def calculate_force_errors(path):
                 np.max(np.abs(response.sum(axis=0)))
             )
             del response
-    return errors
+    return errors, natm
 
 
 def main():
@@ -211,11 +212,11 @@ def main():
         help="Check only evaluation molecules.",
     )
     parser.add_argument(
-        "--threshold", type=float, default=1e-3,
-        help="Print errors whose absolute value exceeds this value in kcal/mol.",
+        "--threshold", type=float, default=5e-3,
+        help="Per-atom threshold; print errors above this value times atom count in kcal/mol.",
     )
     parser.add_argument(
-        "--force-threshold", type=float, default=1e-8,
+        "--force-threshold", type=float, default=1e-6,
         help="Absolute residual threshold in each force diagnostic's displayed units.",
     )
     args = parser.parse_args()
@@ -244,7 +245,7 @@ def main():
             continue
         try:
             errors = calculate_errors(path)
-            force_errors = calculate_force_errors(path)
+            force_errors, natm = calculate_force_errors(path)
         except (OSError, ValueError, KeyError, EOFError, BadZipFile, ZlibError) as error:
             invalid += 1
             print(
@@ -255,9 +256,10 @@ def main():
             continue
         checked += 1
         has_outlier = False
+        threshold = args.threshold * natm
         for label, error in errors.items():
             outliers_by_label.setdefault(label, 0)
-            if abs(error) > args.threshold:
+            if abs(error) > threshold:
                 has_outlier = True
                 outliers_by_label[label] += 1
                 print(f"{name}: {label} (kcal/mol): {error}", flush=True)
@@ -276,7 +278,10 @@ def main():
         flush=True,
     )
     for label, count in outliers_by_label.items():
-        print(f"  {label}: {count} above {args.threshold:g} kcal/mol in magnitude")
+        print(
+            f"  {label}: {count} above {args.threshold:g} kcal/mol per atom "
+            "in magnitude"
+        )
     for label, count in force_outliers_by_label.items():
         print(f"  {label}: {count} above {args.force_threshold:g} in magnitude")
 

@@ -36,6 +36,9 @@ Use `--grid_response 0` for entirely fixed-grid XC derivatives.
 
 `get_dft_grad` includes atom-centered grid motion in `grad2force` and saves
 the quadrature-weight nuclear derivatives as `grid_weight_response`.
+Its printed `Error force DFT` compares the reconstructed B3LYP semilocal XC
+gradient with PySCF's full grid-response XC gradient at the same supplied
+density, including when that density comes from ZMP.
 Force training contracts the energy derivatives with respect to the original
 features and weights with these two arrays, including models that apply
 weights before their forward pass. These are explicit nuclear derivatives;
