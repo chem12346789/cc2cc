@@ -10,11 +10,11 @@ export model_load_epoch_pairs=(
     "atom-3259973:2395:scf_d3bj_ene:vv10"
     # "atom-3259973:2395:post_scf_vv10_ene:vv10"
     # "atom-3259973-vv10:2395:scf_d3bj_ene:vv10"
-    # "atom-3259973-post-b3lyp:2395:scf_d3bj_ene:post B3LYP"
+    "atom-3259973-post-b3lyp:2395:scf_d3bj_ene:post B3LYP"
     # "atom-3259973-post-b3lyp-nl:2395:scf_d3bj_ene:post vv10"
     # "atom-3259973-post-b3lyp-vv10:2395:scf_d3bj_ene:post VV10"
     "atom-4153332:4955:scf_d3bj_ene:SCF"
-    # "atom-4153332-post-b3lyp:4955:scf_d3bj_ene:post B3LYP"
+    "atom-4153332-post-b3lyp:4955:scf_d3bj_ene:post B3LYP"
     # "atom-4153332-post-b3lyp-nl:4955:scf_d3bj_ene:post B3LYP vv10"
     # "atom-4153332-post-b3lyp-vv10:4955:scf_d3bj_ene:post B3LYP VV10"
     # ==================================================

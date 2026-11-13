@@ -109,7 +109,7 @@ train_run() {
 		${LOAD_MODEL_ARGS}
 		--save_dir "atom-${PID_THIS_RUN}"
 		--seed 1
-		--epoch 12500
+		--epoch 10250
 		--eval_step 5
 		--max_norm "${MAX_NORM}"
 		--rho_input "${RHO_INPUT}"
