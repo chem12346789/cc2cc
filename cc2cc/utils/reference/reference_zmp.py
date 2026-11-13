@@ -114,7 +114,7 @@ def get_zmp(
             return mzmp, previous_dm
 
         if (
-            exponent > 15
+            exponent > 12
             and (
                 zmp_difference <= RHO_REL_TOL * dft_difference
                 or zmp_i_value <= I_VALUE_REL_TOL * dft_i_value
