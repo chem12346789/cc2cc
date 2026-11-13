@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --array=[0-4]%5
+#SBATCH --array=[0-1]%2
 # CLUSTER-ONLY: This script is configured for this cluster; do not run it elsewhere.
 
 if [[ "$(hostname)" == "user-MZ73-LM1-000" ]]; then
@@ -10,9 +10,8 @@ else
 fi
 
 # Generation settings
-# export GEN_CONFIG="gen_mol_addon.json"
-export GEN_CONFIG="gen_mol2.json"
-# export GEN_CONFIG="gen_error.json"
+export GEN_CONFIG="gen_mol2_eval.json"
+# export GEN_CONFIG="gen_mol2.json"
 # export GEN_CONFIG="gen_zmp_error.json"
 export CONVERGENCE=0
 
