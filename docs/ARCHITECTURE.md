@@ -387,7 +387,8 @@ created, and failures may occur after earlier files have been updated.
 - `collect_info.py`: collect validation CSV summaries using the shared
   `AU2KCALMOL` conversion from `helper/units.py` (previously 627.5094740631).
   Importing it now initializes `cc2cc.utils` and its scientific dependencies.
-  Existing completed cache entries and saved summaries are not recalculated.
+  Existing completed cache entries and saved summaries are not recalculated
+  unless `--refresh` is supplied.
   The density-effects analysis script also uses `Collect_info.subset_alias()`.
   - Select the corrected model energy with
     `--energy_column post_scf_vv10_ene` (Python:
@@ -400,6 +401,9 @@ created, and failures may occur after earlier files have been updated.
     `model:epoch:energy_column[:note]` entries in `model_load_epoch_pairs`, for
     example `atom-dft:1000:post_scf_vv10_ene`; it forwards the energy column to
     the collector and displays an optional note in the results table.
+  - All `scripts/calculator/calculator*.bash` scripts accept `--refresh`, for
+    example `bash scripts/calculator/calculator.bash --refresh`, to recompute
+    results instead of reusing completed cache entries.
 - `scripts/submit_direct_array_per_gpu.py`: per-GPU job dispatch helper. GPU probes
   sample roughly once per second for `--probe-timeout-sec` (default 60 seconds)
   after starting, with roughly up to two extra seconds for clock rounding and

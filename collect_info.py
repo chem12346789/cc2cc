@@ -50,6 +50,7 @@ class Collect_info:
         verbose=4,
         data_set="gmtkn-def2",
         energy_column="scf_d3bj_ene",
+        refresh=False,
     ):
         self.model_load = model_load
         self.epoch = epoch
@@ -67,6 +68,8 @@ class Collect_info:
         if self.energy_column != "scf_d3bj_ene":
             self.stamp += f"_{self.energy_column}"
         self.done_cache_path = Path(dir_str) / "collect_done_cache.json"
+        if refresh:
+            self._clear_done_cache_entry()
         self.if_done = self.load_done_cache()
 
         if self.if_done:
@@ -135,6 +138,13 @@ class Collect_info:
 
     def load_done_cache(self):
         return bool(self._get_done_cache_entry().get("done", False))
+
+    def _clear_done_cache_entry(self):
+        cache = self._load_done_cache_map()
+        if self.stamp in cache:
+            del cache[self.stamp]
+            with open(self.done_cache_path, "w") as f:
+                json.dump(cache, f, indent=2, sort_keys=True)
 
     def save_done_cache(self, done, output_log_str=""):
         if not done:
@@ -617,6 +627,11 @@ if __name__ == "__main__":
     parser.add_argument("--frequency", type=str, default="10s")
     parser.add_argument("--max_checks", type=int, default=0)
     parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Discard the cached result for this model and recompute it.",
+    )
+    parser.add_argument(
         "--energy_column",
         type=str,
         default="scf_d3bj_ene",
@@ -651,6 +666,7 @@ if __name__ == "__main__":
         data_set=args.data_set,
         force_d3_b3lyp=args.force_d3_b3lyp,
         energy_column=args.energy_column,
+        refresh=args.refresh,
     )
     num_checks = 0
 
@@ -674,6 +690,9 @@ if __name__ == "__main__":
         time.sleep(parse_time(args.frequency))
 
     if collector.load_csv(args.load_csv or None):
-        converged = collector.data["converged"].eq(True).sum()
-        print(f"Converged tests: {converged}/{len(collector.data)}")
+        if "converged" in collector.data:
+            converged = collector.data["converged"].eq(True).sum()
+            print(f"Converged tests: {converged}/{len(collector.data)}")
+        else:
+            print("Converged tests: unavailable (missing 'converged' column)")
     print("All data processed. Exiting.")

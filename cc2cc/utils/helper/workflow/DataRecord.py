@@ -29,10 +29,11 @@ class DataRecord:
         """
         Add data to the dictionary
         """
-        for key, val in dict_.items():
+        for key in dict_:
             if key not in self.df_dict:
                 self.df_dict[key] = [None] * self.length
-            self.df_dict[key].append(val)
+        for key, values in self.df_dict.items():
+            values.append(dict_.get(key))
         self.length += 1
 
     def save_csv(self):

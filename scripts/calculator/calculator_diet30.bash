@@ -1,3 +1,8 @@
+if (( $# > 1 )) || [[ $# -eq 1 && $1 != --refresh ]]; then
+    printf 'Usage: %s [--refresh]\n' "$0" >&2
+    exit 2
+fi
+
 export basis_args="def2-QZVP(D)"
 export model_load_epoch_pairs=(
     "atom-dft:1000"
@@ -23,7 +28,7 @@ for pair in "${model_load_epoch_pairs[@]}"; do
     find "validate/${basis_args}_${model_load}/${load_epoch}" -maxdepth 1 -type f -exec cp -t validate -- {} +
 
     echo "Starting data collection for model ${model_load} with epoch ${load_epoch} and basis ${basis_args}..."
-    ~/anaconda3/envs/pyscf/bin/python collect_info.py --model_load ${model_load} --epoch ${load_epoch} --basis ${basis_args} --verbose 0 --frequency 30m --max_checks 0 --data_set gmtkn-diet30-def2 >log/collect_info_${model_load}_${load_epoch}_cal_30.log 2>&1
+    ~/anaconda3/envs/pyscf/bin/python collect_info.py --model_load ${model_load} --epoch ${load_epoch} --basis ${basis_args} --verbose 0 --frequency 30m --max_checks 0 --data_set gmtkn-diet30-def2 "$@" >log/collect_info_${model_load}_${load_epoch}_cal_30.log 2>&1
     cat log/collect_info_${model_load}_${load_epoch}_cal_30.log | grep "summary" | tail -n 1
 done
 rm -rf validate/*.csv

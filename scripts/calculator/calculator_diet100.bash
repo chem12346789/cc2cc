@@ -1,3 +1,8 @@
+if (( $# > 1 )) || [[ $# -eq 1 && $1 != --refresh ]]; then
+    printf 'Usage: %s [--refresh]\n' "$0" >&2
+    exit 2
+fi
+
 export basis_args="def2-QZVP(D)"
 # Entries: model:epoch:energy_column (e.g. atom-dft:1000:post_scf_vv10_ene).
 export model_load_epoch_pairs=(
@@ -16,7 +21,7 @@ export model_load_epoch_pairs=(
     "atom-4153332:4955:scf_d3bj_ene:SCF"
     "atom-4153332-post-b3lyp:4955:scf_d3bj_ene:post B3LYP"
     # "atom-4153332-post-b3lyp-nl:4955:scf_d3bj_ene:post B3LYP vv10"
-    # "atom-4153332-post-b3lyp-vv10:4955:scf_d3bj_ene:post B3LYP VV10"
+    # # "atom-4153332-post-b3lyp-vv10:4955:scf_d3bj_ene:post B3LYP VV10"
     # ==================================================
     # "atom-35580:2395:scf_d3bj_ene:SCF"
     # "atom-35580:4955:scf_d3bj_ene:SCF"
@@ -59,7 +64,7 @@ for pair in "${model_load_epoch_pairs[@]}"; do
         find_messages+=("$find_output")
     fi
 
-    ~/anaconda3/envs/pyscf/bin/python collect_info.py --model_load "$model_load" --epoch "$load_epoch" --energy_column "$energy_column" --basis "$basis_args" --verbose 0 --frequency 30m --max_checks 0 --data_set gmtkn-diet100-def2 >"$log_file" 2>&1
+    ~/anaconda3/envs/pyscf/bin/python collect_info.py --model_load "$model_load" --epoch "$load_epoch" --energy_column "$energy_column" --basis "$basis_args" --verbose 0 --frequency 30m --max_checks 0 --data_set gmtkn-diet100-def2 "$@" >"$log_file" 2>&1
     awk -v model="${model_load#atom-}" -v epoch="$load_epoch" -v energy_column="$energy_column" -v note="$note" -v table_format="$table_format" '
         /summary/ { summary = $0 }
         /^Converged tests: / { converged = $3 }
