@@ -1,5 +1,21 @@
 # E3NN Training Recorder
 
+## Loss CSV Schema
+
+Training and evaluation loss CSVs use schema version 2 (`schema_version=2`).
+`sample_name` identifies the sample. Objective columns are the raw values
+returned by the loss calculation, with no Hartree-to-kcal/mol recording
+conversion; `objective_total_raw` is their recorded sum. Energy, grid-weighted,
+and atomic absolute-error columns are converted to kcal/mol as their names state.
+`force_abs_error_sum` is the sum of absolute Cartesian force-component errors,
+not a mean; the underlying gradients are in Hartree/Bohr, and this value is not
+converted. ZMP-response metrics are retained in their computed units.
+
+Inactive or unevaluated objectives, errors, and timing values are missing.
+Timing columns retain the historical seconds convention, but current code does
+not record timings. Legacy CSVs without a schema version retain their original
+column names and interpretation; they are not migrated or rewritten.
+
 ## Model Comparison (2026-09-24)
 
 The goal of the corrected implementation is faster execution without changing
