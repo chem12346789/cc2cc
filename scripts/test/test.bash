@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=2400:00:00
-#SBATCH -a [0-54]%2
+#SBATCH -a [12,39]%1
 #SBATCH -J validate-full
 
 SCRIPT_DIR="scripts"
@@ -16,7 +16,7 @@ case "${MODEL_INDEX:-0}" in
     (0) export load_model_args="--load atom-3259973 --load_epoch 2395" ;;
 esac
 
-export if_continue_args=0
+export if_continue_args=1
 export IF_GRAD=0
 export name_mol_reverse=0
 export DATASET="gmtkn-def2"
@@ -41,8 +41,8 @@ if [[ "${load_model_args:-}" =~ --test_mode[[:space:]=]+([^[:space:]]+) ]]; then
     test_mode="${BASH_REMATCH[1]}"
 fi
 if [[ "${test_mode}" == "post-b3lyp-d3" ]]; then
-    run_test_job --max_memory_gpu 4000 --max_cycle 50
+    run_test_job --max_memory_gpu 1000 --max_cycle 50
 else
-    run_test_job --max_memory_gpu 4000 --max_cycle 50 --s6 1.0 --a1 0.8 --s8 -1.0725 --a2 0.15 --alp 14.0 --s9 1.0
+    run_test_job --max_memory_gpu 1000 --max_cycle 50 --s6 1.0 --a1 0.8 --s8 -1.0725 --a2 0.15 --alp 14.0 --s9 1.0
 fi
 finish_test_job

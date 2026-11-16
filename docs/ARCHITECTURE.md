@@ -423,6 +423,8 @@ created, and failures may occur after earlier files have been updated.
 - `scripts/direct_run_per_gpu.py`: background-by-default, single-host alternative without
   Slurm. For example:
   `python scripts/direct_run_per_gpu.py --script test/test_diet100.bash --gpus 0,1`.
+  To run the intermolecular validation array, use
+  `python scripts/direct_run_per_gpu.py --script test/test_intermol.bash --gpus 0`.
   Uses the script's array and CPU directives (`--array` overrides the array),
   supplies `MODEL_INDEX`, `SLURM_ARRAY_TASK_ID`, `SLURM_ARRAY_TASK_COUNT`, and
   `SLURM_CPUS_PER_TASK` for the existing Bash helpers, and binds each job to a
