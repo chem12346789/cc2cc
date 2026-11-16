@@ -327,7 +327,7 @@ class ModelClass:
             if x.is_cuda
             else x.detach().numpy()
         )
-        data_record = {"name": batch["name"]}
+        data_record = {"sample_name": batch["name"]}
 
         if DEBUG:
             print(f"{batch['name']}")
@@ -352,35 +352,37 @@ class ModelClass:
         sum_output = torch.sum(output)
         if if_train:
             tot_loss, energy_error = self.loss_ene(batch, sum_output)
-            data_record["loss_tot_ene"] = tensor_to_numpy(tot_loss)
+            data_record["objective_energy_raw"] = tensor_to_numpy(tot_loss)
 
             if self.args.if_abs:
                 loss_ene_abs, abs_error = self.loss_abs(batch, output)
                 tot_loss = tot_loss + loss_ene_abs
-                data_record["loss_ene_abs"] = tensor_to_numpy(abs_error)
-                data_record["loss_tot_abs"] = tensor_to_numpy(loss_ene_abs)
+                data_record["grid_weighted_abs_error_kcal_mol"] = tensor_to_numpy(
+                    abs_error
+                )
+                data_record["objective_grid_raw"] = tensor_to_numpy(loss_ene_abs)
 
             if self.args.if_grad and batch["grad_cc_train"].ndim != 0:
                 loss_grad, grad_error = self.loss_grad(batch, sum_output)
                 tot_loss = tot_loss + loss_grad
-                data_record["loss_grad_record"] = tensor_to_numpy(grad_error)
-                data_record["loss_tot_grad"] = tensor_to_numpy(loss_grad)
+                data_record["force_abs_error_sum"] = tensor_to_numpy(grad_error)
+                data_record["objective_force_raw"] = tensor_to_numpy(loss_grad)
             if getattr(self.args, "if_zmp_response", False):
                 loss_zmp_response, zmp_response_error = self.loss_zmp_response(
                     batch, sum_output
                 )
                 tot_loss = tot_loss + loss_zmp_response
-                data_record["loss_zmp_response"] = tensor_to_numpy(
+                data_record["zmp_response_abs_error"] = tensor_to_numpy(
                     zmp_response_error
                 )
-                data_record["loss_tot_zmp_response"] = tensor_to_numpy(
+                data_record["objective_zmp_response_raw"] = tensor_to_numpy(
                     loss_zmp_response
                 )
         else:
             tot_loss = torch.tensor(0.0, device=self.device, dtype=self.dtype)
             energy_error = torch.abs(batch["energy_target"] - sum_output)
 
-        data_record["loss_ene"] = tensor_to_numpy(energy_error)
+        data_record["energy_abs_error_kcal_mol"] = tensor_to_numpy(energy_error)
 
         if self.args.if_atomic and batch["scale_atomic"] != 0:
             atomic_result = self.loss_atomic(batch, sum_output, if_train=if_train)
@@ -388,13 +390,16 @@ class ModelClass:
                 loss_atomic, atomic_error = atomic_result
                 if if_train:
                     tot_loss = tot_loss + loss_atomic
-                    data_record["loss_tot_atomic"] = tensor_to_numpy(loss_atomic)
-                data_record["loss_ene_atomic"] = tensor_to_numpy(atomic_error)
+                    data_record["objective_atomic_raw"] = tensor_to_numpy(loss_atomic)
+                data_record["atomic_abs_error_kcal_mol"] = tensor_to_numpy(
+                    atomic_error
+                )
 
-        data_record["loss_tot"] = tensor_to_numpy(tot_loss)
+        if if_train:
+            data_record["objective_total_raw"] = tensor_to_numpy(tot_loss)
         for key in TORCH_LIST:
             if key not in data_record:
-                data_record[key] = np.array(0.0)
+                data_record[key] = np.array(np.nan)
 
         event = None
         if if_use_cuda_event:
