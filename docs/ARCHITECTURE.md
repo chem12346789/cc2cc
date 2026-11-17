@@ -249,11 +249,13 @@ Set `DFT2CC_PROFILE_XC=1` before the existing test command to log stage totals
 at INFO verbosity for every modified GPU RKS/UKS effective-potential evaluation.
 The default is `0` (no events, synchronization, or profiling output).
 This profiles SCF integration only, not the separate nuclear-gradient hooks.
-Stages cover setup, cube coordinates, AO evaluation (including input-buffer
-allocation), density, component XC functionals, cube reshaping, model
-forward/backward plus DLPack exchange, XC contraction, AO weighting, matrix GEMM, and
-symmetrization/orbital unsorting. Counts for the per-block stages give the
-number of integration blocks; wall and GPU elapsed seconds are summed per stage.
+`scripts/test/test.bash` maps the selected GPU to its NUMA node and launches the
+Python test with `numactl --cpunodebind` and `--preferred`, matching training.
+Stages cover setup, cube coordinates, AO evaluation, density, component XC
+functionals, cube reshaping, model forward/backward plus DLPack exchange,
+XC contraction, AO weighting, matrix GEMM, and symmetrization/orbital
+unsorting. Counts for per-block stages are block counts; wall and GPU elapsed
+seconds are summed per stage.
 Each report also lists every block's `base_grids` (integration centers) and
 `cube_points` (expanded AO evaluation points), including the final partial block.
 Block records are printed after timing, not inside the integration loop.
@@ -274,14 +276,21 @@ allocation count. `AO weight preparation` covers density-channel half weighting
 and layout bookkeeping; `AO weighting` covers the native `_scale_ao` call.
 After matrix assembly, caller AO/weight views are explicitly released and timed
 as `caller release`. When the generator resumes, it releases its retained block
-arrays under `generator release` before constructing the next block. Deleting
-references does not guarantee immediate device-memory reclamation; CuPy's memory
-pool and stream ordering still apply. First-block AO/weight shapes, byte strides, dtypes,
-contiguity flags and scratch bytes are printed after timing. No layout copies,
+arrays under `generator release` before constructing the next block; host
+deletion time is reported separately from the boundary's synchronization wait.
+Input-buffer allocation host time is also reported separately from AO evaluation.
+Deleting references does not guarantee immediate device-memory reclamation;
+CuPy's memory pool and stream ordering still apply. First-block AO/weight
+shapes, byte strides, dtypes, contiguity flags, and scratch bytes are printed
+after timing. No layout copies,
 custom weighting kernels, or screening changes are enabled by this diagnostic.
 
 Profiling joins the current CuPy and PyTorch streams and synchronizes at every
-boundary. GPU elapsed time includes host launch gaps, not just kernel execution.
+existing boundary; the separate timings add no boundaries. Stage wall times
+exclude the measured host-only operations and synchronization wait, both of which
+are logged separately. GPU elapsed time includes host launch gaps, not just
+kernel execution. The final report records free GPU memory and CuPy/PyTorch
+allocator usage once per integration call.
 This deliberately perturbs overlap and adds overhead: use it to locate expensive
 stages, then disable it for throughput comparisons. Compare warmed-up SCF
 iterations separately from the first call, which can include model compilation.

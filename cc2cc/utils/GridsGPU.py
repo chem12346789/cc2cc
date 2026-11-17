@@ -213,8 +213,11 @@ class GridCube:
         profile=None,
     ):
         """Generate RKS cube densities and XC inputs on the GPU."""
+        allocation_start = profile.start_host_timer() if profile is not None else None
         input_mat = cp.zeros((self.input_level, len(self.coords)))
         vxc_mat = cp.zeros((self.input_level, 4, len(self.coords)))
+        if profile is not None:
+            profile.record_host_time("input-buffer allocation", allocation_start)
 
         ao_value = numint.eval_ao(
             self.mol, self.coords, deriv=ao_deriv, transpose=False, gdftopt=self.opt
@@ -278,8 +281,11 @@ class GridCube:
         profile=None,
     ):
         """Generate UKS cube densities and XC inputs on the GPU."""
+        allocation_start = profile.start_host_timer() if profile is not None else None
         input_mat = cp.zeros((self.input_level, len(self.coords)))
         vxc_mat = cp.zeros((self.input_level, 2, 4, len(self.coords)))
+        if profile is not None:
+            profile.record_host_time("input-buffer allocation", allocation_start)
 
         dma, dmb = dms
 

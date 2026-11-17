@@ -97,7 +97,9 @@ def get_veff_modified_gpu(
                 profile.mark("XC contraction")
 
                 yield ao, wv
+                deletion_start = profile.start_host_timer()
                 del ao, wv, rho_cube, vxc_mat, energy_den, middle_cube, gridcube
+                profile.record_host_time("host deletion", deletion_start)
                 profile.mark("generator release")
 
         nelec = cp.zeros((nspin, 1), dtype=cp.float64)

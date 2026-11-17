@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=2400:00:00
-#SBATCH -a [12,39]%1
+#SBATCH -a [12]%1
 #SBATCH -J validate-full
 
 SCRIPT_DIR="scripts"

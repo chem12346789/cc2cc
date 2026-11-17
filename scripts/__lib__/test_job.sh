@@ -31,6 +31,49 @@ select_gpu() {
     echo "CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES}"
 }
 
+set_gpu_numa_node() {
+    local -A gpu_numa=(
+        [0]=3 [1]=3
+        [2]=1 [3]=1
+        [4]=7 [5]=7
+        [6]=5 [7]=5
+    )
+    local gpu="${CUDA_VISIBLE_DEVICES:-}"
+    local gpu_index=""
+    local node=""
+
+    if [[ "${gpu}" =~ ^[0-9]+$ ]]; then
+        gpu_index="${gpu}"
+    elif [[ -n "${gpu}" && "${gpu}" != *,* ]]; then
+        local gpu_info
+        local index
+        local uuid
+        gpu_info="$(nvidia-smi --query-gpu=index,uuid --format=csv,noheader,nounits)" || {
+            echo "Unable to resolve GPU UUID ${gpu} to a device index" >&2
+            return 1
+        }
+        while IFS=, read -r index uuid; do
+            index="${index//[[:space:]]/}"
+            uuid="${uuid//[[:space:]]/}"
+            if [[ "${uuid}" == "${gpu}" ]]; then
+                gpu_index="${index}"
+                break
+            fi
+        done <<< "${gpu_info}"
+    fi
+
+    if [[ -n "${gpu_index}" ]]; then
+        node="${gpu_numa[${gpu_index}]:-}"
+    fi
+    if [[ -z "${node}" ]]; then
+        echo "No NUMA node mapping for CUDA_VISIBLE_DEVICES=${gpu:-unset}" >&2
+        return 1
+    fi
+
+    export NUMA_NODE="${node}"
+    echo "NUMA node for GPU ${gpu} (index ${gpu_index}): ${NUMA_NODE}"
+}
+
 setup_gpu_test_job() {
     local max_memory_mb=$1
     local min_free_memory_mb=$2
@@ -39,6 +82,7 @@ setup_gpu_test_job() {
     export MAX_MEMORY_GPU="${min_free_memory_mb}"
     setup_test_job "${max_memory_mb}" "${use_numba}"
     select_gpu "${min_free_memory_mb}"
+    set_gpu_numa_node || exit 1
 }
 
 setup_cpu_test_job() {
@@ -134,7 +178,17 @@ select_molecule_profile() {
 }
 
 run_test_job() {
-    "${PYTHON_BIN}" "${REPO_ROOT}/test.py" \
+    local -a numa_prefix=()
+    if [[ -n "${NUMA_NODE:-}" ]]; then
+        numa_prefix=(
+            numactl
+            "--cpunodebind=${NUMA_NODE}"
+            "--preferred=${NUMA_NODE}"
+        )
+    fi
+
+    OMP_WAIT_POLICY=PASSIVE "${numa_prefix[@]}" "${PYTHON_BIN}" \
+        "${REPO_ROOT}/test.py" \
         --test_mode "${TEST_MODE:-scf}" \
         --basis "${basis_args}" \
         --precision float64 \

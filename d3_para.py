@@ -24,7 +24,7 @@ PARAM_NAMES = ("s6", "rs6", "s18", "rs18", "alp")
 LOSS_TYPES = {"mae", "mse"}
 SUBSET_JSON_PATH = Path("cc2cc/utils/mol_dataset/subset.json")
 DATASET_JSON_DIR = Path("cc2cc/utils/mol_dataset")
-VALIDATE_DIR = Path("validate_hkqai_done")
+VALIDATE_DIR = Path("validate_hkqai")
 SCIPY_MINIMIZE_METHODS = {
     "levenberg-marquardt": ("L-BFGS-B", True),
     "l-bfgs-b": ("L-BFGS-B", True),
@@ -583,6 +583,11 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Model name to load for training continuation or testing.",
     )
+    parser.add_argument(
+        "--load_epoch",
+        type=int,
+        help="Checkpoint epoch in validation CSV and fitted-parameter filenames.",
+    )
     parser.add_argument("--epochs", type=int, default=10000)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--seed", type=int, default=42)
@@ -628,10 +633,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def run_train(args: argparse.Namespace) -> None:
-    data_path = VALIDATE_DIR / f"ccdft_{args.basis}_{args.load}_dft-fitset-def2.csv"
+    model_stamp = args.load
+    if args.load_epoch is not None:
+        model_stamp += f"_{args.load_epoch}"
+    data_path = VALIDATE_DIR / f"ccdft_{args.basis}_{model_stamp}_dft-fitset-def2.csv"
     save_para_path = (
         VALIDATE_DIR
-        / f"ccdft_{args.basis}_{args.load}_{args.damping}_dft-fitset-def2.json"
+        / f"ccdft_{args.basis}_{model_stamp}_{args.damping}_dft-fitset-def2.json"
     )
     dataset_json_path = DATASET_JSON_DIR / "dft-fitset-def2.json"
 
@@ -696,10 +704,13 @@ def run_train(args: argparse.Namespace) -> None:
 
 
 def run_test(args: argparse.Namespace) -> None:
-    data_path = VALIDATE_DIR / f"ccdft_{args.basis}_{args.load}_{args.dataset}.csv"
+    model_stamp = args.load
+    if args.load_epoch is not None:
+        model_stamp += f"_{args.load_epoch}"
+    data_path = VALIDATE_DIR / f"ccdft_{args.basis}_{model_stamp}_{args.dataset}.csv"
     load_para_path = (
         VALIDATE_DIR
-        / f"ccdft_{args.basis}_{args.load}_{args.damping}_dft-fitset-def2.json"
+        / f"ccdft_{args.basis}_{model_stamp}_{args.damping}_dft-fitset-def2.json"
     )
     dataset_json_path = DATASET_JSON_DIR / f"{args.dataset}.json"
 
