@@ -10,11 +10,13 @@ else
 fi
 
 # Generation settings
+export GEN_CONFIG="gen_error_zmp.json"
 # export GEN_CONFIG="gen_mol2_eval.json"
 # export GEN_CONFIG="gen_mol2.json"
-export GEN_CONFIG="gen_error_zmp.json"
+# export GEN_CONFIG="gen_s66_51_59_60.json"
 export CONVERGENCE=0
 
+# export DATASET="dft-fitset-def2_new_ref"
 export DATASET="gmtkn-def2"
 export basis_args="def2-QZVPPD"
 export MD_NUMBER=0
