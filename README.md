@@ -82,6 +82,27 @@ suffix saves post-DFT energy and `grad_post_vv10_zmp` but skips SCF-VV10,
 finite-difference checks, and density comparisons. Existing cached fields not
 recomputed by this policy are preserved.
 
+### D3 parameter sweep
+
+Run one sequential sweep per model, using the GPU assigned by the direct runner:
+
+```bash
+python scripts/direct_run_per_gpu.py --script train/train_d3_para.bash --gpus 0 --foreground
+```
+
+Use `--dry-run` to inspect the plan without launching fitting. Select models in
+`scripts/train/train_d3_para.bash` via its `MODEL_INDEX` cases. Keep array task 0:
+sweep points share the model's validation CSVs and fitted-parameter filename.
+Each run prints its directory:
+`log/d3-sweep_<model>_epoch-<epoch>_<basis>_bj_<loss>_<YYYYMMDD-HHMMSS>_pid-<pid>/`.
+Existing run directories are left unchanged.
+After each completed inner-loop point it appends `results.csv` and redraws
+`heatmap.png` (best intermol training loss and DIET100 test score); unfinished
+points stay blank. The Bash `rs6_values` and `rs18_values` arrays supply both
+the loop values and heatmap axes/total count; change their `seq` ranges to adjust
+the sweep. Per-point parameter JSONs and training/test logs are retained.
+The script also supports direct `bash scripts/train/train_d3_para.bash` execution.
+
 ## Important conventions
 
 - Keep site-specific Slurm paths and environment overrides in `scripts/cluster.local.sh`.

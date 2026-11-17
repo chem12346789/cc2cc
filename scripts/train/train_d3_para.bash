@@ -2,6 +2,7 @@
 #SBATCH -p gpu
 #SBATCH --nodes 1
 #SBATCH --ntasks-per-node=1
+#SBATCH --array=0%1
 #SBATCH --cpus-per-task=10
 #SBATCH --mem=20GB
 #SBATCH --time=20:00:00
@@ -9,7 +10,7 @@
 #SBATCH -o log/train-d3-para-%A.log -e log/train-d3-para-%A.err
 #SBATCH --exclude=gpu[01,02,03,04,05,07]
 
-set -e
+set -eo pipefail
 
 export basis_args="def2-QZVP(D)"
 case "${MODEL_INDEX:-0}" in
@@ -30,9 +31,21 @@ else
     exit 2
 fi
 
-export NVIDIA_VISIBLE_DEVICES=1
-# use less power GPU with available free memory larger than 2000 MiB
-export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=memory.free,power.draw,index --format=csv,nounits,noheader | awk -F, '$1 > 2000 {print $2 $3}' | sort -n | head -1 | awk '{print $NF}')
+if [[ -n "${FORCE_CUDA_VISIBLE_DEVICES:-}" ]]; then
+    export CUDA_VISIBLE_DEVICES="$FORCE_CUDA_VISIBLE_DEVICES"
+elif [[ -z "${CUDA_VISIBLE_DEVICES:-}" ]]; then
+    CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=memory.free,power.draw,index --format=csv,nounits,noheader | awk -F, '$1 > 2000 {print $2, $3}' | sort -n | head -1 | awk '{print $NF}')
+    if [[ -z "$CUDA_VISIBLE_DEVICES" ]]; then
+        printf 'No GPU has more than 2000 MiB free memory.\n' >&2
+        exit 1
+    fi
+    export CUDA_VISIBLE_DEVICES
+fi
+
+if [[ "${SLURM_ARRAY_TASK_ID:-0}" != 0 ]]; then
+    printf 'The D3 sweep uses one task per model; array task must be 0.\n' >&2
+    exit 2
+fi
 
 export VALIDATE_DIR="validate_hkqai"
 
@@ -56,10 +69,18 @@ for dataset in dft-fitset-def2 gmtkn-diet100-def2; do
 done
 
 mkdir -p log validate
+run_timestamp=$(date +%Y%m%d-%H%M%S)
+run_dir="log/d3-sweep_${load_args}_epoch-${load_epoch}_${basis_args}_bj_${LOSS_TYPE}_${run_timestamp}_pid-$$"
+mkdir -- "$run_dir"
+printf 'D3 sweep outputs: %s\n' "$run_dir"
 
-for rs18 in $(seq 0.0 0.1 1.0); do
-    for rs6 in $(seq 0.0 0.2 2.0); do
+mapfile -t rs18_values < <(seq -1.0 0.1 0.2)
+mapfile -t rs6_values < <(seq 0.5 0.1 1.5)
+
+for rs18 in "${rs18_values[@]}"; do
+    for rs6 in "${rs6_values[@]}"; do
         echo "Training with rs6=${rs6}, rs18=${rs18}..."
+        point_prefix="${run_dir}/rs6-${rs6}_rs18-${rs18}"
 
         "${PYTHON_BIN}" d3_para.py \
             --mode train \
@@ -76,7 +97,10 @@ for rs18 in $(seq 0.0 0.1 1.0); do
             --alp 14 \
             --rs6 "${rs6}" \
             --rs18 "${rs18}" \
-            --optimizer lbfgs
+            --optimizer lbfgs 2>&1 | tee "${point_prefix}-train.log"
+
+        cp -- "${VALIDATE_DIR}/ccdft_${basis_args}_${load_args}_${load_epoch}_bj_dft-fitset-def2.json" \
+            "${point_prefix}.json"
 
         "${PYTHON_BIN}" d3_para.py \
             --mode test \
@@ -84,6 +108,11 @@ for rs18 in $(seq 0.0 0.1 1.0); do
             --load "${load_args}" \
             --load_epoch "${load_epoch}" \
             --dataset gmtkn-diet100-def2 \
-            --damping bj
+            --damping bj 2>&1 | tee "${point_prefix}-test.log"
+
+        MPLBACKEND=Agg "${PYTHON_BIN}" scripts/plot_d3_sweep.py \
+            "$run_dir" "$rs6" "$rs18" "$point_prefix" \
+            --rs6-values "${rs6_values[@]}" \
+            --rs18-values "${rs18_values[@]}"
     done
 done
