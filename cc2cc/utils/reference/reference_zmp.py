@@ -7,7 +7,7 @@ from cc2cc.utils.helper.chemistry.density_metrics import diff_rho, diff_I_value
 from cc2cc.utils.zmp.zmp import RZMP, UZMP
 from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
-LEVEL_SHIFT = 2
+LEVEL_SHIFT = 4
 MAX_CYCLE = 50000
 RHO_REL_TOL = 1e-2
 I_VALUE_REL_TOL = 1e-4
