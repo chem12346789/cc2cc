@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --array=[0]%1
+#SBATCH --array=[0-1]%2
 # CLUSTER-ONLY: This script is configured for this cluster; do not run it elsewhere.
 
 if [[ "$(hostname)" == "user-MZ73-LM1-000" ]]; then
@@ -10,9 +10,9 @@ else
 fi
 
 # Generation settings
-export GEN_CONFIG="gen_error_zmp.json"
+# export GEN_CONFIG="gen_error_zmp.json"
 # export GEN_CONFIG="gen_mol2_eval.json"
-# export GEN_CONFIG="gen_mol2.json"
+export GEN_CONFIG="gen_mol2.json"
 # export GEN_CONFIG="gen_s66_51_59_60.json"
 export CONVERGENCE=0
 
@@ -21,6 +21,7 @@ export DATASET="gmtkn-def2"
 export basis_args="def2-QZVPPD"
 export MD_NUMBER=0
 export IF_CONTINUE=0
+export IF_EVAL=1
 
 # Slurm array task
 export MP_TOTAL="${SLURM_ARRAY_TASK_COUNT:?Submit this script as a Slurm array}"
@@ -58,7 +59,7 @@ if [[ "${DIRECT_RUN_LOG_LINKS:-}" == "1" ]]; then
 fi
 exec ~/anaconda3/envs/pyscf/bin/python gen_data.py \
     --basis "${basis_args}" --dataset "${DATASET}" --if_continue "${IF_CONTINUE}" \
-    --if_eval 0 --name_mol_reverse 0 --md_number "${MD_NUMBER}" --device cpu \
+    --if_eval "${IF_EVAL}" --name_mol_reverse 0 --md_number "${MD_NUMBER}" --device cpu \
     --mp_number "${MP_NUMBER}" --mp_total "${MP_TOTAL}" --grid_level 4 \
     --zmp_feature_ov false --zmp_observable_response false \
     --zmp_constraint_metadata true \

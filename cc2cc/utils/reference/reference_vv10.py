@@ -167,6 +167,7 @@ def get_vv10_data(
     Energies are in Hartree and nuclear gradients in Hartree/Bohr.
     The "_zmp" suffix keeps post-DFT energies and gradients but skips SCF-VV10,
     finite-difference checks, and density comparisons. Other suffixes enable all.
+    CC density comparisons are skipped when the CC density is unavailable.
     """
     evaluate = suffix == "_zmp"
     calculate_scf_vv10 = not evaluate
@@ -253,7 +254,7 @@ def get_post_vv10_data(
                 "DFT (B3LYP) analytical/FD gradient max difference "
                 f"(Hartree/Bohr): {grad_dft_error:.12e}"
             )
-    if not evaluate:
+    if not evaluate and dm_cc is not None:
         print(
             "Integrated absolute density difference "
             "(B3LYP/post-DFT VV10 vs CCSD, electrons): "
@@ -282,13 +283,16 @@ def get_scf_vv10_data(mol, grids, dm_dft, dm_cc, args, evaluate=False):
             grad_scf = mf_scf.nuc_grad_method()
             grad_scf.grid_response = True
             data["grad_scf_vv10"] = grad_scf.kernel()
-        for label, left, right in (
-            ("B3LYP vs SCF-VV10", dm_dft, dm_scf_vv10),
-            ("SCF-VV10 vs CCSD", dm_scf_vv10, dm_cc),
-        ):
+        print(
+            "Integrated absolute density difference "
+            "(B3LYP vs SCF-VV10, electrons): "
+            f"{diff_rho(mol, dm_dft, dm_scf_vv10, grids):.10e}"
+        )
+        if dm_cc is not None:
             print(
-                f"Integrated absolute density difference ({label}, electrons): "
-                f"{diff_rho(mol, left, right, grids):.10e}"
+                "Integrated absolute density difference "
+                "(SCF-VV10 vs CCSD, electrons): "
+                f"{diff_rho(mol, dm_scf_vv10, dm_cc, grids):.10e}"
             )
     return data
 

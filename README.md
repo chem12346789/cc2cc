@@ -192,6 +192,10 @@ sbatch scripts/test/test_diet30.bash
 
 ### VV10 model validation
 
+Data generation with `gen_data.py --if_eval true` retains CCSD(T) total
+energies but skips CC densities and gradients. CC density comparisons and
+CC-dependent ZMP data are therefore skipped; non-CC VV10 checks remain enabled.
+
 Pass `--baseline b3lyp-vv10` to `test.py` to include VV10 energy and potential
 in the model SCF on CPU or GPU. The log reports `NLC (vv10) energy` during
 integration. With this baseline, `scf_ene` already includes VV10 and is also

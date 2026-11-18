@@ -146,9 +146,11 @@ def cc(
         dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
         print(f"{np.linalg.norm(cc_dipole - dft_dipole)} A.U. (CCSD vs DFT)")
 
-    mzmp, dm1_zmp = get_zmp(mol, dm1_cc, dm1_dft, grids, max_l=20)
-    # Match the exact Coulomb and exchange integrals used by the grid labels.
-    e_zmp = mdft.energy_tot(dm1_zmp)
+    dm1_zmp = None
+    if not evaluate:
+        mzmp, dm1_zmp = get_zmp(mol, dm1_cc, dm1_dft, grids, max_l=20)
+        # Match the exact Coulomb and exchange integrals used by the grid labels.
+        e_zmp = mdft.energy_tot(dm1_zmp)
 
     # Generate input data
     data_dict = {}
@@ -240,10 +242,6 @@ def cc(
     else:
         data_append_dict = get_dft_input(mol, grids, dm1_dft, unrestricted=unrestricted)
         data_dict.update(data_append_dict)
-        data_append_dict = get_dft_input(mol, grids, dm1_zmp, unrestricted=unrestricted)
-        for key in data_append_dict:
-            key_zmp = key.replace("dft", "zmp")
-            data_dict[key_zmp] = data_append_dict[key]
 
     if "tol_delta_grids" in data_dict:
         error = np.sum(data_dict["tol_delta_grids"] * grids.weights) - energy_train
@@ -322,12 +320,13 @@ def cc(
         }
     )
     data_dict.update(get_vv10_data(mol, grids, dm1_dft, e_dft, dm1_cc, args))
-    data_dict.update(
-        get_vv10_data(mol, grids, dm1_zmp, e_zmp, dm1_cc, args, suffix="_zmp")
-    )
-    data_dict.update(
-        get_zmp_constraint_data(
-            mdft, grids, dm1_zmp, dm1_cc, DATA_PATH / f"data_{name}_zmp", args
+    if dm1_zmp is not None:
+        data_dict.update(
+            get_vv10_data(mol, grids, dm1_zmp, e_zmp, dm1_cc, args, suffix="_zmp")
         )
-    )
+        data_dict.update(
+            get_zmp_constraint_data(
+                mdft, grids, dm1_zmp, dm1_cc, DATA_PATH / f"data_{name}_zmp", args
+            )
+        )
     np.savez(DATA_PATH / f"data_{name}.npz", **data_dict)
