@@ -14,7 +14,7 @@ cc2cc is a PyTorch + PySCF workflow for learning and evaluating DFT-inspired cor
 - `scripts/work/`: operational helper scripts.
 - `notebooks/`: exploratory analysis notebooks.
 - `manuscript/`: manuscript and LaTeX sources.
-- `docs/`: architecture notes and project docs.
+- `docs/`: architecture notes and project docs, including the [training log summary](docs/training_summary.md) (also referred to as `training.md`).
 
 ## Installing PyTorch
 

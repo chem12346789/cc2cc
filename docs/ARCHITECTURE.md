@@ -514,6 +514,10 @@ out of importable Python modules.
 - Basis names: `def2-QZVPPD`, `def2-TZVPPD`, `def2-QZVP(D)`
 
 ### Training Logs and Loss Snapshots
+- The run-by-run log review, settings, loss scales, and observed outcomes are in
+  [`docs/training_summary.md`](training_summary.md). This is the training log
+  summary (also discoverable as “training.md”); update it when reviewing new
+  `log/train-*.log` files.
 - `--load <save_dir> --load_epoch N --if_resume 1` restores the model and
   optimizer after completed epoch N and starts training at N + 1. Scheduler
   progress is reconstructed using N + 1 completed epochs and the current
