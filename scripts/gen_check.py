@@ -7,7 +7,8 @@ Warn and continue when data files are missing or malformed.
 Finish with counts of checked, missing, invalid, and above-threshold results.
 The current NPZ files are used, so saved reruns replace earlier results.
 Use --train or --eval to check only that split; the default checks both.
-Moving-grid force-training data is always checked for every selected archive.
+Evaluation archives are checked without training-only grid or force data.
+Moving-grid force-training data is checked for training archives only.
 Force residuals use --force-threshold, separately from kcal/mol energy errors.
 """
 
@@ -27,8 +28,8 @@ from cc2cc.utils.helper.units import AU2KCALMOL
 from cc2cc.utils.parser import config_list, gen_name_args, process_config
 
 
-def calculate_errors(path):
-    """Return the four generation diagnostics in kcal/mol from one saved NPZ."""
+def calculate_errors(path, *, evaluate=False):
+    """Return training grid errors or the evaluation energy-target error in kcal/mol."""
     energy_keys = ("e_cc", "e_dft", "e_hf", "e_zmp")
     grid_keys = (
         "weights", "tol_delta_grids", "tol_delta_zmp_grids",
@@ -41,6 +42,9 @@ def calculate_errors(path):
         "grid_weight_response", "grid_weight_response_zmp",
     )
     response_keys = ("grid_weight_response", "grid_weight_response_zmp")
+    if evaluate:
+        energy_keys = ("e_cc", "e_dft", "e_hf", "energy_train")
+        grid_keys = ("weights",)
     archive = np.load(path, allow_pickle=False)
     if not isinstance(archive, np.lib.npyio.NpzFile):
         raise ValueError(f"{path}: expected an NPZ archive")
@@ -68,6 +72,13 @@ def calculate_errors(path):
                 raise ValueError(f"{path}: {key} must contain real numeric values")
             if not np.isfinite(value).all():
                 raise ValueError(f"{path}: {key} contains non-finite values")
+        if evaluate:
+            error = float(
+                (data["energy_train"] - (data["e_cc"] - data["e_dft"])) * AU2KCALMOL
+            )
+            if not np.isfinite(error):
+                raise ValueError(f"{path}: Error energy target is non-finite: {error}")
+            return {"Error energy target": error}
         weights = data["weights"]
         e_cc = data["e_cc"]
         e_dft = data["e_dft"]
@@ -230,6 +241,9 @@ def main():
         name for split in splits for name in config_list(config, split)
     ]
     names = gen_name_args(configured_names, args.dataset)
+    training_names = set(
+        gen_name_args(config_list(config, "train"), args.dataset)
+    ) if "train" in splits else set()
     checked = missing = invalid = outlier_molecules = 0
     outliers_by_label = {}
     force_outliers_by_label = {}
@@ -244,8 +258,16 @@ def main():
             )
             continue
         try:
-            errors = calculate_errors(path)
-            force_errors, natm = calculate_force_errors(path)
+            evaluate = name not in training_names
+            errors = calculate_errors(path, evaluate=evaluate)
+            if evaluate:
+                with np.load(path, allow_pickle=False) as data:
+                    natm = int(str(data["mol"]).partition("\n")[0])
+                if natm <= 0:
+                    raise ValueError(f"{path}: mol must have a positive atom count")
+                force_errors = {}
+            else:
+                force_errors, natm = calculate_force_errors(path)
         except (OSError, ValueError, KeyError, EOFError, BadZipFile, ZlibError) as error:
             invalid += 1
             print(

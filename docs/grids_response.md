@@ -59,8 +59,11 @@ residuals, and the CC-minus-B3LYP gradient target. `--force-threshold` controls
 these residuals in their displayed units, independently of the energy
 threshold in kcal/mol. This reads the large mappings one at a time; it does
 not recompute forces or prove that the saved reference gradients enabled
-grid response. Force checks are mandatory for every selected archive, including
-evaluation archives; missing force arrays are reported as invalid data.
+grid response. Force checks are mandatory for training archives; missing force
+arrays are reported as invalid data. `--eval` validates saved energies and weights
+and checks the CC-minus-B3LYP energy target without requiring CC, DFT, or HF
+energy grids, ZMP data, or force arrays. The default `--split both` applies the corresponding
+checks to each split; molecules present in both splits use training checks.
 
 ## Interpretation and validation
 
