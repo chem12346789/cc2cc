@@ -52,6 +52,47 @@ and install command: it does not invoke pip, download packages, or initialize
 CUDA. Driver probing does not account for GPU visibility masks or validate
 CUDA kernels; test the installed stack on the actual compute node.
 
+## Common-first nested training splits
+
+The following configs retain the [mol1_add](configs/mol1_add.json) baseline
+and progressively add eligible `molecule2-W4_11` systems:
+
+| Config | Added systems | Unique training systems |
+| --- | ---: | ---: |
+| [mol2_add_ex1.json](configs/mol2_add_ex1.json) | 0 | 77 |
+| [mol2_add_ex2.json](configs/mol2_add_ex2.json) | 8 | 85 |
+| [mol2_add_ex3.json](configs/mol2_add_ex3.json) | 16 | 93 |
+| [mol2_add_ex4.json](configs/mol2_add_ex4.json) | 32 | 109 |
+| [mol2_add_exf.json](configs/mol2_add_exf.json) | 54 | 131 |
+
+The curated order starts with nitrogen, oxygen, carbon monoxide, acetylene,
+ethylene, ethane, formaldehyde, and methanol, then broadens to other molecules
+and reactive species. "Common-first" denotes chemical familiarity, not measured
+abundance or numerical difficulty. Each addition list is a prefix of the full
+list in `mol2_add_exf.json`; it controls membership, not training order.
+The loader still sorts identifiers and shuffles training samples.
+All five configs preserve the validation entries and five training exclusions
+from [mol2_ex_add](configs/mol2_ex_add.json). The first and last splits match the
+effective training membership of `mol1_add` and `mol2_ex_add`, respectively.
+Counts are before single-atom repetition and any missing-data skips.
+Select a config with `--split_config mol2_add_ex2.json`, for example.
+Use the same three training seeds across all five splits; seed and atomic
+weighting settings remain training arguments, not fields in these configs.
+This ladder measures common-first augmentation, not random-subset scaling.
+
+For [train_direct.bash](scripts/train/train_direct.bash), edit `SEED`,
+`SPLIT_CONFIG`, and `CUDA_VISIBLE_DEVICES` in the top-level run-selection
+section, or override them when launching:
+
+```bash
+SEED=0 SPLIT_CONFIG=mol2_add_ex2.json CUDA_VISIBLE_DEVICES=0 bash scripts/train/train_direct.bash
+```
+
+Defaults remain seed 1, `mol1_add.json`, and GPU 7. Select one GPU index (0-7)
+from the launcher's existing GPU-to-NUMA mapping; its NUMA node is selected
+automatically. The launcher logs all three selections. These overrides do not
+change epochs, atomic weighting, or the single-GPU process count.
+
 ## Typical workflow
 
 1. Generate or load grid data with the Python entry points in the repo root.

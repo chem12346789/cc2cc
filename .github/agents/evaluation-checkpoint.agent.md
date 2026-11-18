@@ -7,6 +7,8 @@ argument-hint: 'Provide load and load_epoch, for example: load="atom-2065162" lo
 ---
 You configure existing evaluation scripts for a supplied checkpoint. Follow repository instructions and make surgical edits only.
 
+For training configuration summaries, see `docs/training_summary.md`.
+
 ## Inputs and scope
 - Require a model load name and epoch, supplied as `load` (or `load name`) and `load_epoch`. Do not guess missing values.
 - Example input: `load="atom-2065162" load_epoch="4955"`.
