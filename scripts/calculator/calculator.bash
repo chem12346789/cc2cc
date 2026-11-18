@@ -8,6 +8,7 @@ export basis_args="def2-QZVP(D)"
 export model_load_epoch_pairs=(
     "atom-82794:10005:scf_d3bj_ene:SCF"
     "atom-3259973:2395:scf_d3bj_ene:SCF"
+    "atom-2065162:4955:scf_d3bj_ene:SCF"
 )
 
 # export model_load_list=("atom-97269")

@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 
-# Copy to cluster.local.sh and set values for this cluster. This file is not tracked.
+# Generate scripts/cluster.local.sh with:
+#   bash scripts/generate_cluster_local.sh
+# This file is not tracked; generated values are specific to your cluster.
 # export PYTHON_BIN="$HOME/anaconda3/envs/pyscf/bin/python"
 # export PYSCF_TMPDIR="$HOME/tmp"
 # export PYTHONPATH="$HOME/python${PYTHONPATH:+:$PYTHONPATH}"
 # export LD_LIBRARY_PATH="$HOME/anaconda3/envs/pyscf/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+# Set an empty value to disable NUMA binding, or provide GPU:node pairs.
+# export GPU_NUMA_NODE_MAP=""
+# export GPU_NUMA_NODE_MAP="0:3,1:3,2:1,3:1"
+# Optional: overrides the job script's #SBATCH array %limit.
+# export CC2CC_ARRAY_CONCURRENCY=4
+# export CC2CC_MIN_SLOTS=2

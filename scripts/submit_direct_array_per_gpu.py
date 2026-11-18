@@ -445,11 +445,16 @@ def build_argument_parser() -> argparse.ArgumentParser:
         help="Job script under the current scripts layout (for example scripts/test/test_diet30.bash).",
     )
     parser.add_argument("--time-array", required=True)
-    parser.add_argument("--array-concurrency", type=int, default=1)
+    parser.add_argument(
+        "--array-concurrency",
+        type=int,
+        default=os.environ.get("CC2CC_ARRAY_CONCURRENCY"),
+        help="Maximum concurrent slots; overrides the job script's array limit.",
+    )
     parser.add_argument(
         "--min-slots",
         type=int,
-        default=1,
+        default=os.environ.get("CC2CC_MIN_SLOTS", "1"),
         help="Minimum usable slots required before submitting; retry probing until reached.",
     )
     parser.add_argument(
@@ -557,6 +562,8 @@ def main() -> int:
     print(f"PID_THIS_RUN={os.getpid()}")
     parser = build_argument_parser()
     args = parser.parse_args()
+    if args.array_concurrency is not None and args.array_concurrency < 1:
+        parser.error("--array-concurrency must be at least 1")
     if args.min_slots < 1:
         parser.error("--min-slots must be at least 1")
     if args.probe_timeout_sec <= 0:
@@ -574,7 +581,12 @@ def main() -> int:
         raise RuntimeError("Partition/array not found in script")
 
     task_ids = parse_array_ids(array_spec)
-    slot_limit = max(1, parse_array_limit(array_spec) or args.array_concurrency)
+    slot_limit = max(
+        1,
+        args.array_concurrency
+        if args.array_concurrency is not None
+        else parse_array_limit(array_spec) or 1,
+    )
     if args.min_slots > slot_limit:
         parser.error("--min-slots must not exceed the array concurrency limit")
     excluded_nodes = set(

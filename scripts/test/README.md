@@ -112,14 +112,24 @@ needed for training data.
 - `calculator*.bash`: calculator-based validation jobs.
 - `run_task.sh` and `submit_diet100.bash`: local launch helpers for GPU-aware submission.
 - `config/`: measured runtime inputs for array-job scheduling.
-- `cluster.local.sh`: optional, untracked cluster-specific environment overrides. Copy
-  `cluster.local.sh.example` to create it.
+- `cluster.local.sh`: optional, untracked cluster-specific environment overrides.
+  Run `bash scripts/generate_cluster_local.sh` to generate it; existing files
+  are preserved unless `--force` is passed. The generator
+  leaves the job script's array limit unchanged unless you provide a
+  `CC2CC_ARRAY_CONCURRENCY` override and validates that the minimum does not
+  exceed that override. It also prompts for an optional GPU-to-NUMA mapping;
+  leave it blank to disable NUMA binding. An unavailable mapped node emits a
+  warning and runs without NUMA binding. Use
+  `bash scripts/submit_direct_array_per_gpu.bash` to submit with these values.
 
 Run Slurm jobs from the repository root, for example:
 
 ```bash
 sbatch scripts/test/test_diet30.bash
 ```
+
+Each Slurm task's output log includes a copyable `scancel` command targeting
+only that task. Local runs do not print a Slurm cancellation command.
 
 `test_force.bash` enables grid response by default. Disable it with
 `sbatch --export=ALL,GRID_RESPONSE=0 scripts/test/test_force.bash`.

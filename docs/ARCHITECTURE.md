@@ -438,7 +438,12 @@ created, and failures may occur after earlier files have been updated.
   supplies `MODEL_INDEX`, `SLURM_ARRAY_TASK_ID`, `SLURM_ARRAY_TASK_COUNT`, and
   `SLURM_CPUS_PER_TASK` for the existing Bash helpers, and binds each job to a
   GPU UUID. The array's `%limit` sets the maximum concurrent jobs per GPU
-  (`--array-concurrency` overrides it); without a limit, one job runs per GPU.
+  (`--array-concurrency` overrides it; `CC2CC_ARRAY_CONCURRENCY` in
+  `scripts/cluster.local.sh` supplies the wrapper's default). Without a limit,
+  one job runs per GPU. `CC2CC_MIN_SLOTS` sets the wrapper's minimum-slot
+  requirement and must not exceed the effective concurrency limit. The
+  cluster-local generator leaves the job script's array limit unchanged unless
+  an override is entered.
   Optional `--time-array` prioritizes longer tasks and skips zero runtimes; the
   task count remains the size of the configured array before filtering.
   Memory (default 15 GiB) and optional power filters are instantaneous checks
