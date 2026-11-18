@@ -1,5 +1,47 @@
+if [[ ${1:-} == --check-log ]]; then
+    if (( $# != 2 )); then
+        printf 'Usage: %s --check-log LOG_FILE\n' "$0" >&2
+        exit 2
+    fi
+    if [[ ! -f $2 || ! -r $2 ]]; then
+        printf 'Cannot read log file: %s\n' "$2" >&2
+        exit 1
+    fi
+    awk -v log_file="$2" '
+        /^model_load: / { model = substr($0, 13) }
+        /^epoch: / { epoch = substr($0, 8) }
+        /^basis: / { basis = substr($0, 8) }
+        /^energy_column: / { energy_column = substr($0, 16) }
+        /^Total number of reactions process\/done: / {
+            processed = $NF
+            summary_line = NR
+        }
+        /^Converged tests: / { converged = $3; converged_line = NR }
+        /^All data processed\. Exiting\.$/ { finished_line = NR }
+        END {
+            if (processed != "DONE" || !summary_line ||
+                converged_line <= summary_line || finished_line <= converged_line) {
+                printf "Incomplete intermolecular log: %s\n", log_file > "/dev/stderr"
+                exit 1
+            }
+            if (converged !~ /^[0-9]+\/[0-9]+$/) {
+                printf "Convergence counts unavailable in %s\n", log_file > "/dev/stderr"
+                exit 1
+            }
+            split(converged, counts, "/")
+            if (counts[2] == 0 || counts[1] != counts[2]) {
+                printf "Not all tests converged (%s) in %s\n", converged, log_file > "/dev/stderr"
+                exit 1
+            }
+            printf "Model: %s\nEpoch: %s\nBasis: %s\nEnergy column: %s\nProcessed: %s\nConverged: %s\n",
+                model, epoch, basis, energy_column, processed, converged
+        }
+    ' "$2"
+    exit $?
+fi
+
 if (( $# > 1 )) || [[ $# -eq 1 && $1 != --refresh ]]; then
-    printf 'Usage: %s [--refresh]\n' "$0" >&2
+    printf 'Usage: %s [--refresh] | --check-log LOG_FILE\n' "$0" >&2
     exit 2
 fi
 

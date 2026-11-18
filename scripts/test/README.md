@@ -2,6 +2,19 @@
 
 This directory contains reproducible evaluation and benchmark submission scripts.
 
+## Check an intermolecular collection log
+
+Check an existing log without rerunning collection or modifying validation data:
+
+```bash
+bash scripts/calculator/calculator_intermol.bash --check-log \
+  log/intermol_atom-3259973_2395_scf_d3bj_ene.log
+```
+
+The command reports the model, epoch, basis, energy column, processing status,
+and convergence counts. It exits unsuccessfully if the log is incomplete,
+convergence counts are unavailable, or any tests did not converge.
+
 ## Post-B3LYP-D3 evaluation
 
 In `test_diet100.bash`, set `TEST_MODE=post-b3lyp-d3` with `MODEL_INDEX=0`
