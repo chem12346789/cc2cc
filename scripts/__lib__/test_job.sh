@@ -32,15 +32,27 @@ select_gpu() {
 }
 
 set_gpu_numa_node() {
-    local -A gpu_numa=(
-        [0]=3 [1]=3
-        [2]=1 [3]=1
-        [4]=7 [5]=7
-        [6]=5 [7]=5
-    )
+    local -A gpu_numa=()
     local gpu="${CUDA_VISIBLE_DEVICES:-}"
     local gpu_index=""
     local node=""
+
+    if [[ -z "${GPU_NUMA_NODE_MAP:-}" ]]; then
+        unset NUMA_NODE
+        echo "NUMA binding disabled by GPU_NUMA_NODE_MAP"
+        return 0
+    fi
+
+    local mapping
+    local -a mappings
+    IFS=, read -r -a mappings <<< "${GPU_NUMA_NODE_MAP}"
+    for mapping in "${mappings[@]}"; do
+        if [[ ! "${mapping}" =~ ^([0-9]+):([0-9]+)$ ]]; then
+            echo "Invalid GPU_NUMA_NODE_MAP entry: ${mapping}" >&2
+            return 1
+        fi
+        gpu_numa["${BASH_REMATCH[1]}"]="${BASH_REMATCH[2]}"
+    done
 
     if [[ "${gpu}" =~ ^[0-9]+$ ]]; then
         gpu_index="${gpu}"
@@ -68,6 +80,13 @@ set_gpu_numa_node() {
     if [[ -z "${node}" ]]; then
         echo "No NUMA node mapping for CUDA_VISIBLE_DEVICES=${gpu:-unset}" >&2
         return 1
+    fi
+
+    if ! command -v numactl >/dev/null 2>&1 ||
+        ! numactl "--cpunodebind=${node}" "--preferred=${node}" true >/dev/null 2>&1; then
+        echo "Warning: NUMA node ${node} is unavailable; continuing without NUMA binding." >&2
+        unset NUMA_NODE
+        return 0
     fi
 
     export NUMA_NODE="${node}"
@@ -175,6 +194,11 @@ select_molecule_profile() {
     fi
     exec >"${log_file}" 2>"${err_file}"
     printf 'array_index=%s\n' "${array_index}"
+    if [[ -n "${SLURM_ARRAY_JOB_ID:-}" && -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
+        printf 'scancel %s_%s\n' "${SLURM_ARRAY_JOB_ID}" "${SLURM_ARRAY_TASK_ID}"
+    elif [[ -n "${SLURM_JOB_ID:-}" ]]; then
+        printf 'scancel %s\n' "${SLURM_JOB_ID}"
+    fi
 }
 
 run_test_job() {

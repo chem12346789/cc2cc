@@ -39,6 +39,7 @@ sets/
 *map
 submit*
 !/scripts/submit_direct_array_per_gpu.py
+!/scripts/submit_direct_array_per_gpu.bash
 *.egg-info/
 *.npz
 *.png
