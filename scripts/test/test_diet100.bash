@@ -23,7 +23,6 @@ export IF_GRAD=0
 export name_mol_reverse=0
 export DATASET="gmtkn-diet100-def2"
 export TEST_MODE="${TEST_MODE:-scf}"
-export DFT2CC_MAX_GPU_JK_NAO=3500
 export DFT2CC_PROFILE_XC=1
 
 export basis_args="def2-QZVP(D)"
