@@ -165,9 +165,22 @@ class RZMP(_DFHF, pyscf.dft.rks.RKS):
             self.F = pyscf.scf.hf.level_shift(
                 self.S, self.dm * 0.5, self.F, self.level_shift
             )
-            self.F, diis_e = self.zdiis.extrapolate(cycle, self.F, self.dm)
-
-            self.mo_energy, self.mo_coeff = pyscf.scf.hf.eig(self.F, self.S)
+            fock_condition = np.linalg.cond(self.F)
+            dm_norm = np.linalg.norm(self.dm)
+            if fock_condition > 1e12 or dm_norm < 1e-12:
+                print(
+                    f"Warning: RZMP orbital coefficients replaced with zeros "
+                    f"at lambda={l}, cycle={cycle} "
+                    f"(Fock condition number={fock_condition:.3e}, "
+                    f"density norm={dm_norm:.3e}).",
+                    flush=True,
+                )
+                self.mo_energy = np.zeros(self.mol.nao)
+                self.mo_coeff = np.zeros((self.mol.nao, self.mol.nao))
+                diis_e = 0.0
+            else:
+                self.F, diis_e = self.zdiis.extrapolate(cycle, self.F, self.dm)
+                self.mo_energy, self.mo_coeff = pyscf.scf.hf.eig(self.F, self.S)
             self.mo_occ = self.get_occ(self.mo_energy, self.mo_coeff)
             self.dm = self.make_rdm1(self.mo_coeff, self.mo_occ)
 
@@ -260,15 +273,30 @@ class UZMP(_DFHF, pyscf.dft.uks.UKS):
             Fa = pyscf.scf.hf.level_shift(self.S, self.dm[0], Fa, self.level_shift)
             Fb = pyscf.scf.hf.level_shift(self.S, self.dm[1], Fb, self.level_shift)
 
-            # check if Fa and Fb is singular, if so, set e_a, c_a to be the same as the previous step to avoid numerical instability
-            if np.linalg.cond(Fa) > 1e12 or np.linalg.norm(self.dm[0]) < 1e-12:
+            cond_a = np.linalg.cond(Fa)
+            dm_norm_a = np.linalg.norm(self.dm[0])
+            if cond_a > 1e12 or dm_norm_a < 1e-12:
+                print(
+                    f"Warning: UZMP alpha orbital coefficients replaced with zeros "
+                    f"at lambda={l}, cycle={cycle} "
+                    f"(Fock condition number={cond_a:.3e}, density norm={dm_norm_a:.3e}).",
+                    flush=True,
+                )
                 e_a = np.zeros(self.mol.nao)
                 c_a = np.zeros((self.mol.nao, self.mol.nao))
                 diis_e_a = 0.0
             else:
                 Fa, diis_e_a = self.zdiis_a.extrapolate(cycle, Fa, self.dm[0])
                 e_a, c_a = pyscf.scf.hf.eig(Fa, self.S)
-            if np.linalg.cond(Fb) > 1e12 or np.linalg.norm(self.dm[1]) < 1e-12:
+            cond_b = np.linalg.cond(Fb)
+            dm_norm_b = np.linalg.norm(self.dm[1])
+            if cond_b > 1e12 or dm_norm_b < 1e-12:
+                print(
+                    f"Warning: UZMP beta orbital coefficients replaced with zeros "
+                    f"at lambda={l}, cycle={cycle} "
+                    f"(Fock condition number={cond_b:.3e}, density norm={dm_norm_b:.3e}).",
+                    flush=True,
+                )
                 e_b = np.zeros(self.mol.nao)
                 c_b = np.zeros((self.mol.nao, self.mol.nao))
                 diis_e_b = 0.0

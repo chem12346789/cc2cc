@@ -10,9 +10,9 @@ else
 fi
 
 # Generation settings
-# export GEN_CONFIG="gen_error_zmp.json"
+export GEN_CONFIG="gen_error_zmp.json"
 # export GEN_CONFIG="gen_mol2_eval.json"
-export GEN_CONFIG="gen_mol2.json"
+# export GEN_CONFIG="gen_mol2.json"
 # export GEN_CONFIG="gen_s66_51_59_60.json"
 export CONVERGENCE=0
 
@@ -21,7 +21,7 @@ export DATASET="gmtkn-def2"
 export basis_args="def2-QZVPPD"
 export MD_NUMBER=0
 export IF_CONTINUE=0
-export IF_EVAL=1
+export IF_EVAL=0
 
 # Slurm array task
 export MP_TOTAL="${SLURM_ARRAY_TASK_COUNT:?Submit this script as a Slurm array}"
