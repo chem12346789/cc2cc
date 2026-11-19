@@ -62,7 +62,7 @@ def _gather_records(record, is_distributed):
             key: np.concatenate([shard[key] for shard in gathered_records])
             for key in record.data_dict
         }
-        record.iter = len(record.data_dict["name"])
+        record.iter = len(record.data_dict["sample_name"])
         record.merge()
     return record
 
@@ -121,17 +121,19 @@ class _Logger:
         )
 
     def log(self, modeldict, train_record, eval_record, epoch, force_checkpoint=False):
+        energy_error_key = "energy_abs_error_kcal_mol"
         stats = {
-            f"{prefix}_{key}": np.mean(val)
+            f"{prefix}_loss_ene": np.mean(record.data_dict[energy_error_key])
             for prefix, record in (("train", train_record), ("eval", eval_record))
-            for key, val in record.data_dict.items()
-            if key.startswith("loss_")
         }
         train_loss = stats["train_loss_ene"]
         eval_loss = stats["eval_loss_ene"]
         tot_loss = np.mean(
             np.concatenate(
-                [train_record.data_dict["loss_ene"], eval_record.data_dict["loss_ene"]]
+                [
+                    train_record.data_dict[energy_error_key],
+                    eval_record.data_dict[energy_error_key],
+                ]
             )
         )
         lr = modeldict.optimizer.param_groups[0]["lr"]

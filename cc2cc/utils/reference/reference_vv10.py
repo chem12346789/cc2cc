@@ -153,6 +153,20 @@ def post_dft_vv10_gradient(mf, nlcgrids):
     return gradient
 
 
+def post_vv10_fixed_density_gradient(mol, nlcgrids, dm):
+    """Explicit post-DFT VV10 gradient at a supplied density, in Hartree/Bohr."""
+    dm_tot = dm if dm.ndim == 2 else dm.sum(axis=0)
+    grid_force, vnlc_deriv = rks_grad.get_nlc_vxc_full_response(
+        pyscf.dft.numint.NumInt(), mol, nlcgrids, "vv10", dm_tot
+    )
+    gradient = grid_force
+    for atom, (_, _, p0, p1) in enumerate(mol.aoslice_by_atom()):
+        gradient[atom] += 2 * parallel_einsum(
+            "xij,ij->x", vnlc_deriv[:, p0:p1], dm_tot[p0:p1],
+        )
+    return gradient
+
+
 def get_vv10_data(
     mol,
     grids,
@@ -165,15 +179,18 @@ def get_vv10_data(
     """Compute VV10 data using the calculation policy selected by suffix.
 
     Energies are in Hartree and nuclear gradients in Hartree/Bohr.
-    The "_zmp" suffix keeps post-DFT energies and gradients but skips SCF-VV10,
-    finite-difference checks, and density comparisons. Other suffixes enable all.
-    CC density comparisons are skipped when the CC density is unavailable.
+    The "_zmp" suffix evaluates the explicit VV10 gradient at the supplied
+    density and skips SCF-VV10, finite-difference checks, and density comparisons.
+    The caller combines that gradient with the ZMP baseline gradient.
+    Other suffixes enable all calculations. CC density comparisons are skipped
+    when the CC density is unavailable.
     """
     evaluate = suffix == "_zmp"
     calculate_scf_vv10 = not evaluate
     data = get_post_vv10_data(
         mol, grids, dm_dft, e_dft, dm_cc, args, evaluate,
         check_post_vv10_gradient=not evaluate,
+        fixed_density=evaluate,
     )
     if calculate_scf_vv10:
         data.update(get_scf_vv10_data(mol, grids, dm_dft, dm_cc, args, evaluate))
@@ -200,6 +217,7 @@ def get_vv10_data(
 def get_post_vv10_data(
     mol, grids, dm_dft, e_dft, dm_cc, args, evaluate=False,
     check_post_vv10_gradient=False,
+    fixed_density=False,
 ):
     """Compute post-DFT VV10 on the supplied RKS or UKS density."""
     unrestricted = np.ndim(dm_dft) == 3
@@ -222,6 +240,10 @@ def get_post_vv10_data(
     }
     if mol.natm == 1:
         data["grad_post_vv10"] = np.zeros((mol.natm, 3))
+    elif fixed_density:
+        data["grad_post_vv10"] = post_vv10_fixed_density_gradient(
+            mol, grids, dm_dft
+        )
     else:
         mf_dft = converged_b3lyp(mol, dm0=dm_dft)
         if not mf_dft.converged:

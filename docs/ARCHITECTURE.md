@@ -84,13 +84,14 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   response; the learned correction must contribute its explicit derivative,
   Pulay term, and grid response separately. Regenerate archives from the old
   density-fitted baseline to update `e_zmp`, `grad_zmp`, `energy_train`, and
-  `e_post_vv10_zmp`; `--if_continue` skips existing archives.
+  `e_post_vv10_zmp`. Training-mode `--if_continue` refreshes only
+  `grad_post_vv10_zmp` in an existing completed archive, without rerunning CC
+  or ZMP inversion.
   No dedicated full-pipeline ZMP finite-difference routine is currently implemented.
   Training mode `--rho_input zmp_vv10` uses the ZMP density with the saved
   post-DFT VV10 energy and grid correction; evaluation uses the ordinary
-  DFT-density Post-DFT VV10 target. Force loss is not supported for this mode:
-  `grad_post_vv10_zmp` is evaluated at a converged B3LYP density, unlike the
-  ZMP-density energy target.
+  DFT-density Post-DFT VV10 target. Its force baseline adds the explicit
+  fixed-density VV10 gradient to `grad_zmp`, matching the energy baseline.
   Generation stops at an SCF-converged stage once the integrated
   density error is at most 10% of the DFT error and the I-value error is at
   most 0.1% of the DFT error, both measured against the target density.
@@ -328,7 +329,8 @@ created, and failures may occur after earlier files have been updated.
     Shared B3LYP SCF and finite-difference helpers live in
     `utils/reference/reference_b3lyp.py`.
     `get_vv10_data()` derives its policy from `suffix`, not caller flags:
-    `"_zmp"` sets evaluation on, SCF-VV10 off, and gradient checks off;
+    `"_zmp"` sets evaluation on, computes the explicit VV10 gradient at the
+    supplied density, and skips SCF-VV10 and gradient checks;
     the default `""` enables SCF-VV10, all gradients, and gradient checks.
     Existing cached SCF-VV10 ZMP fields are preserved, not refreshed.
     The existing-cache branch uses the same helper and saves to the addon,
@@ -340,7 +342,8 @@ created, and failures may occur after earlier files have been updated.
     and must match the rebuilt grid's shape.
   - VV10 calculation policy is independent of `--if_eval`: unsuffixed results
     include SCF-VV10 gradients, finite-difference checks, and density comparisons.
-    ZMP results include `grad_post_vv10_zmp` but omit SCF-VV10, finite-difference
+    ZMP results include `grad_post_vv10_zmp`, the sum of `grad_zmp` and the
+    explicit fixed-density VV10 gradient, but omit SCF-VV10, finite-difference
     checks, and density comparisons; energy comparisons remain enabled.
     `grad_post_vv10` is analytical: B3LYP is reconverged from the cached density
     at tight tolerances, and PySCF's coupled-perturbed RKS/UKS solver supplies

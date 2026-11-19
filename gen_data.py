@@ -21,7 +21,7 @@ from cc2cc.utils.parser import (
 )
 from cc2cc.utils.helper.chemistry.rotate import rotate
 from cc2cc.utils.reference.reference_vv10 import get_vv10_data
-from cc2cc.generate_cc_data import cc
+from cc2cc.generate_cc_data import cc, update_zmp_vv10_gradient
 from cc2cc.generate_pbe_data import generate_pbe_data
 
 if __name__ == "__main__":
@@ -218,8 +218,12 @@ if __name__ == "__main__":
                 else:
                     unrestricted = True
                 if args.if_continue:
-                    raise NotImplementedError(
-                        "B3LYP data continuation is not implemented."
+                    if evaluate:
+                        raise ValueError(
+                            "ZMP+VV10 gradient refresh requires training mode."
+                        )
+                    update_zmp_vv10_gradient(
+                        mol, grids, name, unrestricted=unrestricted
                     )
                 else:
                     cc(

@@ -142,8 +142,10 @@ CC/DFT data in `data_<name>.npz` with `zmp_complete=false` before VV10 and ZMP.
 If those later calculations fail, this archive remains usable for B3LYP DFT
 training (`--baseline b3lyp --rho_input dft`); it must not be used for ZMP training yet.
 Only successful completion of all ZMP labels and response sidecars replaces the
-archive with `zmp_complete=true`. B3LYP continuation with `--if_continue true`
-is not implemented and reports an error without starting CC calculations.
+archive with `zmp_complete=true`. In training mode, `--if_continue true`
+refreshes the `grad_post_vv10_zmp` label in an existing completed archive,
+without rerunning CC or ZMP generation. It requires the original molecule and
+grid settings; evaluation-mode continuation is not supported.
 With `--if_continue false`, a training run reuses an existing CC/DFT archive
 and reruns ZMP, whether its previous ZMP stage completed or not. If no archive
 exists, it generates the HF, CC, and DFT references first.

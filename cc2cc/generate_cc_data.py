@@ -19,7 +19,10 @@ from cc2cc.utils.reference.reference_b3lyp import (
 )
 from cc2cc.utils.reference.reference_zmp import get_zmp, zmp_baseline_gradient
 from cc2cc.utils.zmp.zmp_constraints import get_zmp_constraint_data
-from cc2cc.utils.reference.reference_vv10 import get_vv10_data
+from cc2cc.utils.reference.reference_vv10 import (
+    get_vv10_data,
+    post_vv10_fixed_density_gradient,
+)
 
 
 def cc(
@@ -136,6 +139,46 @@ def _save_data(path, data):
             os.unlink(temporary_path)
 
 
+def update_zmp_vv10_gradient(mol, grids, name, *, unrestricted):
+    """Refresh the ZMP+VV10 gradient label in an existing training archive."""
+    data_path = DATA_PATH / f"data_{name}.npz"
+    if not data_path.is_file():
+        raise ValueError(f"{name}: no existing training archive to update.")
+    with np.load(data_path, allow_pickle=False) as archive:
+        data = dict(archive)
+
+    if not bool(data.get("zmp_complete", False)):
+        raise ValueError(f"{name}: ZMP data is incomplete; cannot update VV10 gradient.")
+    if (
+        str(data["mol"]) != mol.tostring(format="xyz")
+        or int(data["charge"]) != mol.charge
+        or int(data["spin"]) != mol.spin
+        or bool(data["unrestricted"]) != unrestricted
+    ):
+        raise ValueError(f"{name}: cached archive molecule or spin treatment differs.")
+    for key in ("coords", "weights"):
+        if key not in data:
+            raise ValueError(f"{name}: cached archive is missing {key}.")
+        saved = data[key]
+        current = getattr(grids, key)
+        if saved.shape != current.shape or not np.allclose(
+            saved, current, rtol=0, atol=1e-12
+        ):
+            raise ValueError(f"{name}: cached {key} differ; use the original grid.")
+    for key in ("dm1_zmp", "grad_zmp"):
+        if key not in data:
+            raise ValueError(f"{name}: cached archive is missing {key}.")
+
+    vv10_gradient = np.zeros_like(data["grad_zmp"])
+    if mol.natm > 1:
+        vv10_gradient = post_vv10_fixed_density_gradient(
+            mol, grids, data["dm1_zmp"]
+        )
+    data["grad_post_vv10_zmp"] = data["grad_zmp"] + vv10_gradient
+    _save_data(data_path, data)
+    print(f"UPDATED: {name} ZMP+VV10 gradient label.", flush=True)
+
+
 def complete_zmp_data(mol, grids, name, args, data, *, unrestricted):
     """Append ZMP data without discarding the cached CC/DFT references on failure."""
     if (
@@ -183,7 +226,11 @@ def complete_zmp_data(mol, grids, name, args, data, *, unrestricted):
         np.sum(data["tol_delta_zmp_grids"] * grids.weights) - data["energy_train"]
     )
     print(f"Error ZMP (kcal/mol): {AU2KCALMOL * error_zmp}")
-    data.update(get_vv10_data(mol, grids, dm1_zmp, e_zmp, dm1_cc, args, suffix="_zmp"))
+    zmp_vv10_data = get_vv10_data(
+        mol, grids, dm1_zmp, e_zmp, dm1_cc, args, suffix="_zmp"
+    )
+    zmp_vv10_data["grad_post_vv10_zmp"] += data["grad_zmp"]
+    data.update(zmp_vv10_data)
     data.update(
         get_zmp_constraint_data(
             mdft, grids, dm1_zmp, dm1_cc, DATA_PATH / f"data_{name}_zmp", args

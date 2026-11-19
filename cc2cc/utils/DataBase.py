@@ -102,11 +102,6 @@ class DataBase:
         if self.baseline == "pbe" and args.rho_input not in ("dft", "zmp"):
             raise ValueError("PBE supports only --rho_input dft or zmp.")
         self.if_zmp_response = getattr(args, "if_zmp_response", False)
-        if args.rho_input == "zmp_vv10" and args.if_grad:
-            raise ValueError(
-                "--if_grad is not supported with --rho_input zmp_vv10 because "
-                "the saved VV10 force is evaluated at a converged B3LYP density."
-            )
         if self.if_zmp_response and args.rho_input not in ("zmp", "zmp_vv10"):
             raise ValueError(
                 "--if_zmp_response requires --rho_input zmp or zmp_vv10."
