@@ -21,7 +21,7 @@ from cc2cc.utils.parser import (
 )
 from cc2cc.utils.helper.chemistry.rotate import rotate
 from cc2cc.utils.reference.reference_vv10 import get_vv10_data
-from cc2cc.generate_cc_data import cc, complete_zmp_data
+from cc2cc.generate_cc_data import cc
 from cc2cc.generate_pbe_data import generate_pbe_data
 
 if __name__ == "__main__":
@@ -218,18 +218,8 @@ if __name__ == "__main__":
                 else:
                     unrestricted = True
                 if args.if_continue:
-                    data_path = DATA_PATH / f"data_{name}.npz"
-                    if not data_path.exists():
-                        raise ValueError(
-                            f"Cannot continue {name}: {data_path} does not exist."
-                        )
-                    with np.load(data_path, allow_pickle=False) as archive:
-                        if evaluate or archive.get("zmp_complete", True):
-                            print(f"SKIP: {name} already exists.")
-                            continue
-                        data = dict(archive)
-                    complete_zmp_data(
-                        mol, grids, name, args, data, unrestricted=unrestricted
+                    raise NotImplementedError(
+                        "B3LYP data continuation is not implemented."
                     )
                 else:
                     cc(

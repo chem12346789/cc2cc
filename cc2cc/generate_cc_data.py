@@ -40,11 +40,18 @@ def cc(
             "Restricted CCSD(T) requires mol.spin == 0; set unrestricted=True."
         )
     if getattr(args, "if_continue", False):
-        raise ValueError("Continue existing data through gen_data.py, not cc().")
+        raise NotImplementedError("B3LYP data continuation is not implemented.")
     if evaluate:
         _generate_evaluation_data(mol, grids, name, args, unrestricted=unrestricted)
     else:
-        _generate_training_data(mol, grids, name, args, unrestricted=unrestricted)
+        data_path = DATA_PATH / f"data_{name}.npz"
+        cached_data = None
+        if data_path.exists():
+            with np.load(data_path, allow_pickle=False) as archive:
+                cached_data = dict(archive)
+        _generate_training_data(
+            mol, grids, name, args, unrestricted=unrestricted, cached_data=cached_data
+        )
 
 
 def _generate_evaluation_data(mol, grids, name, args, *, unrestricted):
@@ -52,7 +59,7 @@ def _generate_evaluation_data(mol, grids, name, args, *, unrestricted):
         mol, grids, name, args, evaluate=True, unrestricted=unrestricted
     )
     data.update(cc_reference(mol, grids, mf, evaluate=True, unrestricted=unrestricted))
-    reference, dm1_dft = dft_reference(
+    reference = dft_reference(
         mol,
         grids,
         mf,
@@ -62,12 +69,22 @@ def _generate_evaluation_data(mol, grids, name, args, *, unrestricted):
     )
     data.update(reference)
     data["energy_train"] = data["e_cc"] - data["e_dft"]
-    data.update(get_dft_input(mol, grids, dm1_dft, unrestricted=unrestricted))
-    data.update(get_vv10_data(mol, grids, dm1_dft, data["e_dft"], None, args))
+    data.update(
+        get_dft_input(mol, grids, reference["dm1_dft"], unrestricted=unrestricted)
+    )
+    data.update(
+        get_vv10_data(mol, grids, reference["dm1_dft"], data["e_dft"], None, args)
+    )
     _save_data(DATA_PATH / f"data_{name}.npz", data)
 
 
-def _generate_training_data(mol, grids, name, args, *, unrestricted):
+def _generate_training_data(mol, grids, name, args, *, unrestricted, cached_data=None):
+    if cached_data is not None:
+        complete_zmp_data(
+            mol, grids, name, args, cached_data, unrestricted=unrestricted
+        )
+        return
+
     data_dict, mf = hf_reference(
         mol, grids, name, args, evaluate=False, unrestricted=unrestricted
     )

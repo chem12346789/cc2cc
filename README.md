@@ -111,16 +111,12 @@ and grid labels before DFT and ZMP. It atomically caches the complete non-ZMP
 CC/DFT data in `data_<name>.npz` with `zmp_complete=false` before VV10 and ZMP.
 If those later calculations fail, this archive remains usable for B3LYP DFT
 training (`--baseline b3lyp --rho_input dft`); it must not be used for ZMP training yet.
-Rerunning with `--if_continue true` resumes the pending VV10/ZMP stage without
-recalculating CC. Only successful completion of all ZMP labels and response
-sidecars replaces the archive with `zmp_complete=true`.
-`--if_continue true` requires an existing archive and never starts CC calculations;
-missing archives are reported as errors. `--if_continue false` recomputes the
-references. Completed archives, including
-legacy archives without the marker, are skipped with `--if_continue true`;
-their DFT gradients and force mappings are not refreshed.
-`gen_data.py` handles skip/resume decisions; direct `cc()` calls must use
-`if_continue=false`.
+Only successful completion of all ZMP labels and response sidecars replaces the
+archive with `zmp_complete=true`. B3LYP continuation with `--if_continue true`
+is not implemented and reports an error without starting CC calculations.
+With `--if_continue false`, a training run reuses an existing CC/DFT archive
+and reruns ZMP, whether its previous ZMP stage completed or not. If no archive
+exists, it generates the HF, CC, and DFT references first.
 
 ### CC archive fields
 
