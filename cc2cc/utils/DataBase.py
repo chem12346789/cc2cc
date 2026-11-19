@@ -94,8 +94,15 @@ class DataBase:
             raise ValueError("--zmp_ov_loss is no longer supported.")
         self.args = args
         self.if_zmp_response = getattr(args, "if_zmp_response", False)
-        if self.if_zmp_response and args.rho_input != "zmp":
-            raise ValueError("--if_zmp_response requires --rho_input zmp.")
+        if args.rho_input == "zmp_vv10" and args.if_grad:
+            raise ValueError(
+                "--if_grad is not supported with --rho_input zmp_vv10 because "
+                "the saved VV10 force is evaluated at a converged B3LYP density."
+            )
+        if self.if_zmp_response and args.rho_input not in ("zmp", "zmp_vv10"):
+            raise ValueError(
+                "--if_zmp_response requires --rho_input zmp or zmp_vv10."
+            )
         self.input_mode = input_mode
         if args.precision == "float64":
             self.dtype = torch.float64
@@ -265,13 +272,19 @@ class DataBase:
         elif self.args.rho_input == "dft_vv10":
             input_mat = data["rho_cube_dft"]
             energy_target = data["e_cc"] - data["e_post_vv10"]
-        elif self.args.rho_input == "zmp":
+        elif self.args.rho_input in ("zmp", "zmp_vv10"):
             if self.if_eval:
                 input_mat = data["rho_cube_dft"]
-                energy_target = data["e_cc"] - data["e_dft"]
+                if self.args.rho_input == "zmp_vv10":
+                    energy_target = data["e_cc"] - data["e_post_vv10"]
+                else:
+                    energy_target = data["e_cc"] - data["e_dft"]
             else:
                 input_mat = data["rho_cube_zmp"]
-                energy_target = data["e_cc"] - data["e_zmp"]
+                if self.args.rho_input == "zmp_vv10":
+                    energy_target = data["e_cc"] - data["e_post_vv10_zmp"]
+                else:
+                    energy_target = data["e_cc"] - data["e_zmp"]
         else:
             raise ValueError(f"No input_mat in data: {self.args.rho_input}")
 
@@ -303,8 +316,12 @@ class DataBase:
                         output_mat = (
                             data["tol_delta_grids"] - data["exc_post_vv10_grid"]
                         )
-                    elif self.args.rho_input == "zmp":
+                    elif self.args.rho_input in ("zmp", "zmp_vv10"):
                         output_mat = data["tol_delta_zmp_grids"]
+                        if self.args.rho_input == "zmp_vv10":
+                            output_mat = (
+                                output_mat - data["exc_post_vv10_grid_zmp"]
+                            )
                     else:
                         raise ValueError(
                             f"No output_mat in data: {self.args.rho_input}"
@@ -341,15 +358,21 @@ class DataBase:
                 elif self.args.rho_input == "dft_vv10":
                     grad2force = data["grad2force"]
                     grad_cc_train = data["grad_cc"] - data["grad_post_vv10"]
-                elif self.args.rho_input == "zmp":
+                elif self.args.rho_input in ("zmp", "zmp_vv10"):
                     grad2force = data["grad2force_zmp"]
-                    grad_cc_train = data["grad_cc"] - data["grad_zmp"]
+                    if self.args.rho_input == "zmp_vv10":
+                        grad_cc_train = (
+                            data["grad_cc"] - data["grad_post_vv10_zmp"]
+                        )
+                    else:
+                        grad_cc_train = data["grad_cc"] - data["grad_zmp"]
                 else:
                     raise ValueError(f"No grad in data: {self.args.rho_input}")
                 data_dict["grad2force"] = self.process_grad2force(grad2force)
                 response_key = (
                     "grid_weight_response_zmp"
-                    if self.args.rho_input == "zmp" else "grid_weight_response"
+                    if self.args.rho_input in ("zmp", "zmp_vv10")
+                    else "grid_weight_response"
                 )
                 if response_key not in data:
                     raise ValueError(
@@ -458,6 +481,14 @@ class DataBase:
             raise ValueError(
                 f"{name}: missing ZMP response data {missing}; regenerate with "
                 "--zmp_observable_response true."
+            )
+        if self.args.rho_input == "zmp_vv10" and (
+            "zmp_constraint_baseline_vv10" not in data
+            or not bool(np.asarray(data["zmp_constraint_baseline_vv10"]).item())
+        ):
+            raise ValueError(
+                f"{name}: VV10-aware ZMP response data is missing; regenerate with "
+                "--zmp_response_vv10 true."
             )
 
         response_data = {

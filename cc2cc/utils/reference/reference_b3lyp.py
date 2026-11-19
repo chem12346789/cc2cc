@@ -63,8 +63,11 @@ def finite_difference_gradient(mol, total_energy, step):
 
 def get_dft_energy(
     mol, grids, dft_mo_coeff, dm1_dft, evaluate=False, *, unrestricted=False,
+    xc="b3lyp",
 ):
-    """Calculate B3LYP energy-density components on the supplied grid."""
+    """Calculate B3LYP or PBE energy-density components on the supplied grid."""
+    if xc not in ("b3lyp", "pbe"):
+        raise ValueError(f"Unsupported grid-energy baseline: {xc}.")
     if evaluate and not unrestricted:
         return {}
 
@@ -102,13 +105,14 @@ def get_dft_energy(
 
     ecp_dft_grids = ecp_energy_density(mol, ao_value[0], dm_total)
     exc_dft_grids = (
-        pyscf.dft.libxc.eval_xc("b3lyp", rho_dft, spin=int(unrestricted))[0]
+        pyscf.dft.libxc.eval_xc(xc, rho_dft, spin=int(unrestricted))[0]
         * rho_total
     )
 
     print("Start K part...")
     exc_k_dft_grids = np.zeros_like(grids.weights)
-    for i_slice, j_slice, k_slice, l_slice in block_loop_rdm2(mol.nao):
+    exchange_blocks = block_loop_rdm2(mol.nao) if xc == "b3lyp" else ()
+    for i_slice, j_slice, k_slice, l_slice in exchange_blocks:
         dm12 = None
         if unrestricted:
             dm12 = parallel_einsum(
@@ -199,20 +203,23 @@ def get_dft_energy(
     }
 
 
-def get_dft_input(mol, grids, dm1_dft, max_memory=8000, *, unrestricted=False):
-    """Calculate B3LYP grid inputs with first-order AO derivatives in both modes."""
+def get_dft_input(
+    mol, grids, dm1_dft, max_memory=8000, *, unrestricted=False, ni=None,
+):
+    """Calculate grid inputs with first-order AO derivatives in both modes."""
     if dm1_dft is None:
         return {}
 
     from pyscf import lib
     from cc2cc.utils.helper.runtime.env_var import EDGE_SIZE
 
-    mdft = converged_b3lyp(
-        mol, dm0=dm1_dft, grids=grids if unrestricted else None,
-        verbose=4, unrestricted=unrestricted,
-    )
+    if ni is None:
+        mdft = converged_b3lyp(
+            mol, dm0=dm1_dft, grids=grids if unrestricted else None,
+            verbose=4, unrestricted=unrestricted,
+        )
+        ni = mdft._numint
     rho_cube_dft = np.zeros((len(grids.coords), grids.input_level, EDGE_SIZE**3))
-    ni = mdft._numint
     step = int(max_memory * 1024**2 / (dm1_dft.shape[-1] * EDGE_SIZE**3 * 32 * 8))
     print(f"Step size: {step}")
     for p0, p1 in lib.prange(0, len(grids.coords), step):

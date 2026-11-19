@@ -25,6 +25,7 @@ from cc2cc.utils.helper.chemistry.rotate import rotate
 from cc2cc.utils.reference.reference_vv10 import get_vv10_data
 from cc2cc.utils.reference.reference_b3lyp import get_dft_grad
 from cc2cc.generate_cc_data import cc
+from cc2cc.generate_pbe_data import generate_pbe_data
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -35,6 +36,12 @@ if __name__ == "__main__":
         type=str,
         default="gen_test.json",
         help="Path to JSON file defining train/eval splits.",
+    )
+    parser.add_argument(
+        "--baseline",
+        choices=("b3lyp", "pbe"),
+        default="b3lyp",
+        help="PBE writes a separate supplement using an existing CC/ZMP archive.",
     )
     parser.add_argument(
         "--if_eval",
@@ -73,6 +80,12 @@ if __name__ == "__main__":
         help="Generate compact dipole, second-moment and atom-projection response data.",
     )
     parser.add_argument(
+        "--zmp_response_vv10",
+        type=str2bool,
+        default=False,
+        help="Include the post-DFT VV10 potential in the ZMP response baseline.",
+    )
+    parser.add_argument(
         "--zmp_constraint_metadata",
         type=str2bool,
         default=False,
@@ -91,6 +104,8 @@ if __name__ == "__main__":
         help="Positive response denominator floor in Hartree; nonpositive gaps are errors.",
     )
     args = add_args(parser)
+    if args.baseline == "pbe" and args.zmp_response_vv10:
+        parser.error("--baseline pbe does not support --zmp_response_vv10.")
 
     print_computer_info(args.device)
 
@@ -195,7 +210,12 @@ if __name__ == "__main__":
 
             grids = Grid(mol, args.grid_level, 7)
 
-            if args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
+            if args.baseline == "pbe":
+                generate_pbe_data(
+                    mol, grids, name, args,
+                    evaluate=evaluate, unrestricted=mol.spin != 0,
+                )
+            elif args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
                 if evaluate:
                     print(f"SKIP: {name} already exists.")
                 else:

@@ -43,7 +43,10 @@ def get_zmp_constraint_data(mf, grids, dm_zmp, dm_target, cache_prefix, args):
     """
     feature_ov = getattr(args, "zmp_feature_ov", True)
     response = getattr(args, "zmp_observable_response", True)
+    response_vv10 = getattr(args, "zmp_response_vv10", False)
     metadata_only = getattr(args, "zmp_constraint_metadata", False)
+    if response_vv10 and not response:
+        raise ValueError("--zmp_response_vv10 requires --zmp_observable_response true.")
     if not (feature_ov or response or metadata_only):
         return {}
     block_size = getattr(args, "zmp_response_block_size", 32)
@@ -55,6 +58,10 @@ def get_zmp_constraint_data(mf, grids, dm_zmp, dm_target, cache_prefix, args):
     density_energy, coeff = mf.eig(-overlap @ dm_zmp @ overlap, overlap)
     occ = mf.get_occ(density_energy, coeff)
     fock = mf.get_hcore() + mf.get_veff(mol, dm_zmp)
+    if response_vv10:
+        dm_total = dm_zmp if dm_zmp.ndim == 2 else dm_zmp.sum(axis=0)
+        _, _, vnlc = mf._numint.nr_nlc_vxc(mol, grids, "vv10", dm_total)
+        fock = fock + vnlc
     restricted = dm_zmp.ndim == 2
     coeffs = np.array([coeff] if restricted else coeff, dtype=np.float64)
     occs = np.array([occ] if restricted else occ, dtype=np.float64)
@@ -93,6 +100,7 @@ def get_zmp_constraint_data(mf, grids, dm_zmp, dm_target, cache_prefix, args):
         "zmp_constraint_input_level": grids.input_level,
         "zmp_constraint_baseline_xc": mf.xc,
         "zmp_constraint_baseline_density_fit": density_fit is not None,
+        "zmp_constraint_baseline_vv10": response_vv10,
         "zmp_constraint_baseline_auxmol": (
             density_fit.auxmol.dumps() if density_fit is not None else ""
         ),

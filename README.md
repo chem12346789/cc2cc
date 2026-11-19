@@ -123,6 +123,28 @@ suffix saves post-DFT energy and `grad_post_vv10_zmp` but skips SCF-VV10,
 finite-difference checks, and density comparisons. Existing cached fields not
 recomputed by this policy are preserved.
 
+### PBE baseline supplements
+
+Pass `--baseline pbe` to `gen_data.py`, retaining the original dataset, basis,
+grid level, and generation configuration. This requires an existing
+`data_<name>.npz` and writes `data_<name>_pbe.npz` without modifying the original
+archive or rerunning CC or ZMP inversion. `--if_continue true` skips an existing
+PBE supplement; `false` replaces only that supplement.
+
+The supplement contains self-consistent PBE energies, densities, input features,
+energy-density labels and gradients. Training-data generation also evaluates PBE
+at the **saved ZMP density**, with PBE-specific energy/grid/gradient targets and
+optional response data. Shared CC references and ZMP input features remain in
+the original archive, identified by `source_archive`. Evaluation mode writes
+only the self-consistent PBE energy, density, features and reference metadata.
+
+ZMP constraint flags retain their normal defaults. Use `--zmp_feature_ov false`
+to omit full OV Jacobians; `--zmp_observable_response false` also disables compact
+response data. PBE response sidecars use the distinct
+`data_<name>_pbe_zmp_*` prefix. Response gaps and projections are recomputed
+from the PBE Fock, not copied from B3LYP. PBE supplements currently exclude VV10,
+and training does not automatically load these files.
+
 ### D3 parameter sweep
 
 Run one sequential sweep per model, using the GPU assigned by the direct runner:

@@ -18,7 +18,14 @@ if __name__ == "__main__":
         "--rho_input",
         type=str,
         default="dft",
-        choices=["dft", "dft_d3bj", "dft_d3bj_1", "zmp", "dft_vv10"],
+        choices=[
+            "dft",
+            "dft_d3bj",
+            "dft_d3bj_1",
+            "zmp",
+            "zmp_vv10",
+            "dft_vv10",
+        ],
         help="Type of input density. ",
     )
     parser.add_argument(

@@ -86,6 +86,11 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   density-fitted baseline to update `e_zmp`, `grad_zmp`, `energy_train`, and
   `e_post_vv10_zmp`; `--if_continue` skips existing archives.
   No dedicated full-pipeline ZMP finite-difference routine is currently implemented.
+  Training mode `--rho_input zmp_vv10` uses the ZMP density with the saved
+  post-DFT VV10 energy and grid correction; evaluation uses the ordinary
+  DFT-density Post-DFT VV10 target. Force loss is not supported for this mode:
+  `grad_post_vv10_zmp` is evaluated at a converged B3LYP density, unlike the
+  ZMP-density energy target.
   Generation stops at an SCF-converged stage once the integrated
   density error is at most 10% of the DFT error and the I-value error is at
   most 0.1% of the DFT error, both measured against the target density.
@@ -151,14 +156,17 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   `--if_continue false` and reruns the CC calculation.
   `--zmp_response_block_size` (default 32 centers) bounds transient Jacobian
   blocks, not disk size or model autograd memory. Training with
-  `--if_zmp_response true` requires `--rho_input zmp` and these observable
-  response sidecars. It contracts the full weighted model-energy feature
-  derivative with each sidecar, adds the saved baseline potential coefficients,
+  `--if_zmp_response true` requires `--rho_input zmp` or `zmp_vv10` and these
+  observable response sidecars. It contracts the full weighted model-energy
+  feature derivative with each sidecar, adds the saved baseline potential coefficients,
   and minimizes the selected loss against `zmp_observable_target`; its
   multiplier is `--loss_multiplier_zmp_response` (default 1). The logged
   response error remains in the mixed observable units, not kcal/mol. For
   UKS, the per-spin projections are averaged into one shared model potential
-  before summing the spin response contributions.
+  before summing the spin response contributions. For `zmp_vv10`, generate
+  response data with `--zmp_response_vv10 true`; this adds the post-DFT VV10
+  potential to the baseline Fock before constructing the response. Existing
+  archives need regeneration with `--if_continue false`.
   Generating constraints alone does not change existing training losses.
 - `--zmp_ov_loss true` is no longer supported and is rejected.
 - `reference/reference_cc.py`: shared CCSD solver settings, CCSD(T) lambda solving,
