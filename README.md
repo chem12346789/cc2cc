@@ -117,6 +117,67 @@ sidecars replaces the archive with `zmp_complete=true`.
 `--if_continue false` recomputes the references. Completed archives, including
 legacy archives without the marker, are skipped with `--if_continue true`;
 their DFT gradients and force mappings are not refreshed.
+The `cc()` generator handles these skip/resume decisions for both CLI and direct calls.
+
+### CC archive fields
+
+Both evaluation and training archives contain:
+
+- Molecule and grid: `mol`, `charge`, `spin`, `unrestricted`, `coords`, `weights`,
+  `grid_atom_indices`.
+- Reference data: `e_hf`, `e_cc`, `e_dft`, `e_dft_d3bj`, `dm1_hf`, `dm1_cc`,
+  `dm1_dft`, `energy_train`, `rho_cube_dft`. In evaluation mode, `dm1_cc` is
+  `None`.
+- VV10: `exc_post_vv10_grid`, `e_post_vv10`, `grad_post_vv10`, `e_scf_vv10`,
+  `dm1_scf_vv10`, `grad_scf_vv10`. Multi-atom systems also include
+  `grad_post_vv10_fd`.
+
+Training archives additionally contain:
+
+- CC grids: `exc_cc_grids`, `hatree_cc_grids`, `kin_cc_grids`, `kinl_cc_grids`,
+  `nuc_cc_grids`, `ecp_cc_grids`, `tol_cc_grids`.
+- HF grids: `exc_k_hf_grids`, `hatree_hf_grids`, `kin_hf_grids`,
+  `kinl_hf_grids`, `nuc_hf_grids`, `ecp_hf_grids`.
+- DFT grids: `exc_dft_grids`, `exc_k_dft_grids`, `hatree_dft_grids`,
+  `kin_dft_grids`, `kinl_dft_grids`, `nuc_dft_grids`, `ecp_dft_grids`,
+  `tol_dft_grids`, `tol_delta_grids`.
+- DFT derivatives: `grad2force`, `grid_weight_response`, `grad_hf`, `grad_cc`,
+  `grad_dft`, `grad_dft_d3bj`, `grad_cc_train`.
+- After ZMP completion: `zmp_complete`, `e_zmp`, `dm1_zmp`, `grad_zmp`,
+  `exc_zmp_grids`, `exc_k_zmp_grids`, `hatree_zmp_grids`, `kin_zmp_grids`,
+  `kinl_zmp_grids`, `nuc_zmp_grids`, `ecp_zmp_grids`, `tol_zmp_grids`,
+  `tol_delta_zmp_grids`, `rho_cube_zmp`, `grad2force_zmp`,
+  `grid_weight_response_zmp`, `exc_post_vv10_grid_zmp`, `e_post_vv10_zmp`,
+  `grad_post_vv10_zmp`.
+
+If ZMP constraint metadata, feature Jacobians, or observable response is
+enabled, completed training archives also contain:
+
+- `zmp_constraint_version`, `zmp_constraint_mol`, `zmp_constraint_overlap`,
+  `zmp_constraint_dm`, `zmp_constraint_fock`, `zmp_constraint_mo_coeff`,
+  `zmp_constraint_mo_occ`, `zmp_constraint_mo_energy`, `zmp_constraint_coords`,
+  `zmp_constraint_weights`, `zmp_constraint_grid_level`,
+  `zmp_constraint_cube_type`, `zmp_constraint_cube_size`,
+  `zmp_constraint_edge_len`, `zmp_constraint_input_level`,
+  `zmp_constraint_baseline_xc`, `zmp_constraint_baseline_density_fit`,
+  `zmp_constraint_baseline_vv10`, `zmp_constraint_baseline_auxmol`,
+  `zmp_constraint_baseline_grid_coords`, `zmp_constraint_baseline_grid_weights`,
+  `zmp_constraint_jacobian_convention`, `zmp_fock_ov_s{spin}`, `zmp_gap_s{spin}`.
+- With observable response: `zmp_observable_labels`, `zmp_observable_operators`,
+  `zmp_observable_nuclear`, `zmp_observable_reference`, `zmp_observable_target`,
+  `zmp_response_gap_floor`, `zmp_response_projection_rcond`,
+  `zmp_response_model`, `zmp_response_origin_bohr`,
+  `zmp_response_gaussian_width_bohr`, `zmp_potential_ov_s{spin}`,
+  `zmp_baseline_potential_coeff_s{spin}`, `zmp_observable_response_s{spin}`,
+  `zmp_potential_feature_file_s{spin}`.
+- With feature Jacobians: `zmp_feature_ov_file_s{spin}`.
+
+Here `{spin}` is `0` for restricted data and `0` or `1` for unrestricted data;
+the file fields name separate sidecars. The incomplete training cache contains
+`zmp_complete=false`, but not the VV10, ZMP, or constraint fields added during
+completion. Its `energy_train` uses the DFT reference; completed training data
+uses the ZMP reference instead.
+
 The generator calculates Post-DFT VV10 and self-consistent SCF-VV10 energies
 and saves `e_post_vv10`, `e_scf_vv10`, and `dm1_scf_vv10` in the main archive.
 Unsuffixed VV10 results also save `grad_post_vv10` and

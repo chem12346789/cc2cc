@@ -49,7 +49,10 @@ def cc(
     *,
     unrestricted=False,
 ):
-    """Generate CCSD(T) reference data with the explicitly selected spin formalism."""
+    """Generate CCSD(T) reference data with the explicitly selected spin formalism.
+
+    Evaluation and training archive fields are listed in the README.
+    """
     if not unrestricted and mol.spin != 0:
         raise ValueError(
             "Restricted CCSD(T) requires mol.spin == 0; set unrestricted=True."
@@ -58,25 +61,28 @@ def cc(
     data = None
     if getattr(args, "if_continue", False) and data_path.exists():
         with np.load(data_path, allow_pickle=False) as archive:
-            if not archive.get("zmp_complete", True):
-                data = dict(archive)
+            if evaluate or archive.get("zmp_complete", True):
+                print(f"SKIP: {name} already exists.")
+                return
+            data = dict(archive)
     if evaluate:
-        if data is not None:
-            print(f"Using cached CC/DFT references for {name}.")
-            return
         _generate_evaluation_data(mol, grids, name, args, unrestricted=unrestricted)
     else:
         if data is not None:
             complete_zmp_data(
-                mol, grids, name, args, data, unrestricted=unrestricted,
+                mol,
+                grids,
+                name,
+                args,
+                data,
+                unrestricted=unrestricted,
             )
             return
         _generate_training_data(mol, grids, name, args, unrestricted=unrestricted)
 
 
-def _hf_cc_reference(mol, name, args, *, unrestricted):
+def _hf_reference(mol, name, args, *, unrestricted):
     hf_class = pyscf.scf.UHF if unrestricted else pyscf.scf.RHF
-    triples = uccsd_t if unrestricted else ccsd_t
     print(f"Generate data for {name}, spin {mol.spin}")
 
     mf = hf_class(mol)
@@ -91,8 +97,11 @@ def _hf_cc_reference(mol, name, args, *, unrestricted):
             mf.kernel()
     dm1_hf = mf.make_rdm1(ao_repr=True)
     e_hf = mf.e_tot
+    return mf, dm1_hf, e_hf
 
-    # CCSD calculation
+
+def _cc_reference(mf, *, unrestricted):
+    triples = uccsd_t if unrestricted else ccsd_t
     mycc = make_ccsd(mf, unrestricted=unrestricted)
     mycc.verbose = 4
     # To trace the usage of memory, set verbose as 9.
@@ -104,11 +113,17 @@ def _hf_cc_reference(mol, name, args, *, unrestricted):
         f"{'UCCSD(T)' if unrestricted else 'CCSD(T)'} energy (Hartree): {e_cc}",
         flush=unrestricted,
     )
-    return mf, dm1_hf, e_hf, mycc, t1, t2, eris, e_cc
+    return mycc, t1, t2, eris, e_cc
 
 
 def _dft_reference_data(
-    mol, grids, mf, dm1_hf, e_hf, dm1_cc, e_cc, args, *, evaluate, unrestricted,
+    mol,
+    grids,
+    mf,
+    args,
+    *,
+    evaluate,
+    unrestricted,
 ):
     dft_class = pyscf.dft.uks.UKS if unrestricted else pyscf.dft.rks.RKS
     d3bj_class = pyscf.scf.UKS if unrestricted else pyscf.scf.RKS
@@ -117,7 +132,7 @@ def _dft_reference_data(
     mdft.conv_tol_grad = 1e-8
     mdft.max_cycle = 200
     mdft.verbose = 4
-    mdft.kernel(dm1_hf)
+    mdft.kernel(mf.make_rdm1(ao_repr=True))
     if args.check_convergence and not mdft.converged:
         raise ValueError(f"{'UKS' if unrestricted else 'RKS'} not converged.")
     dm1_dft = mdft.make_rdm1(ao_repr=True)
@@ -132,46 +147,52 @@ def _dft_reference_data(
     print(f"DFT-D3BJ correction energy (Hartree): {e_dft_d3bj - e_dft}")
 
     data = get_dft_energy(
-        mol, grids, mdft.mo_coeff, dm1_dft,
-        evaluate=evaluate, unrestricted=unrestricted,
+        mol,
+        grids,
+        mdft.mo_coeff,
+        dm1_dft,
+        evaluate=evaluate,
+        unrestricted=unrestricted,
     )
-    data.update(get_hf_energy(
-        mol, grids, mf, dm1_hf, evaluate=evaluate, unrestricted=unrestricted,
-    ))
-    data.update({
-        "mol": mol.tostring(format="xyz"),
-        "charge": mol.charge,
-        "spin": mol.spin,
-        "unrestricted": unrestricted,
-        "e_hf": e_hf,
-        "e_cc": e_cc,
-        "e_dft": e_dft,
-        "e_dft_d3bj": e_dft_d3bj,
-        "dm1_hf": dm1_hf,
-        "dm1_cc": dm1_cc,
-        "dm1_dft": dm1_dft,
-        "energy_train": e_cc - e_dft,
-        "weights": grids.weights,
-        "coords": grids.coords,
-        "grid_atom_indices": grids.atm_idx,
-    })
+    data.update(
+        {
+            "mol": mol.tostring(format="xyz"),
+            "charge": mol.charge,
+            "spin": mol.spin,
+            "unrestricted": unrestricted,
+            "e_dft": e_dft,
+            "e_dft_d3bj": e_dft_d3bj,
+            "dm1_dft": dm1_dft,
+            "weights": grids.weights,
+            "coords": grids.coords,
+            "grid_atom_indices": grids.atm_idx,
+        }
+    )
     return data, mdft, mdft_d3bj, dm1_dft
 
 
 def _generate_evaluation_data(mol, grids, name, args, *, unrestricted):
-    mf, dm1_hf, e_hf, mycc, t1, t2, eris, e_cc = _hf_cc_reference(
-        mol, name, args, unrestricted=unrestricted
-    )
+    mf, dm1_hf, e_hf = _hf_reference(mol, name, args, unrestricted=unrestricted)
+    mycc, t1, t2, eris, e_cc = _cc_reference(mf, unrestricted=unrestricted)
     del t1, t2, eris, mycc
     gc.collect()
-    data = get_cc_energy(
-        mol, grids, mf, None, None, None, evaluate=True, unrestricted=unrestricted,
+    data, _, _, dm1_dft = _dft_reference_data(
+        mol,
+        grids,
+        mf,
+        args,
+        evaluate=True,
+        unrestricted=unrestricted,
     )
-    reference, _mdft, _mdft_d3bj, dm1_dft = _dft_reference_data(
-        mol, grids, mf, dm1_hf, e_hf, None, e_cc, args,
-        evaluate=True, unrestricted=unrestricted,
+    data.update(
+        {
+            "e_hf": e_hf,
+            "e_cc": e_cc,
+            "dm1_hf": dm1_hf,
+            "dm1_cc": None,
+            "energy_train": e_cc - data["e_dft"],
+        }
     )
-    data.update(reference)
     data.update(get_dft_input(mol, grids, dm1_dft, unrestricted=unrestricted))
     data.update(get_vv10_data(mol, grids, dm1_dft, data["e_dft"], None, args))
     _save_data(DATA_PATH / f"data_{name}.npz", data)
@@ -183,9 +204,8 @@ def _generate_training_data(mol, grids, name, args, *, unrestricted):
     )
     rdm = uccsd_rdm if unrestricted else ccsd_rdm
     hf_grad = pyscf.grad.uhf.Gradients if unrestricted else pyscf.grad.rhf.Gradients
-    mf, dm1_hf, e_hf, mycc, t1, t2, eris, e_cc = _hf_cc_reference(
-        mol, name, args, unrestricted=unrestricted
-    )
+    mf, dm1_hf, e_hf = _hf_reference(mol, name, args, unrestricted=unrestricted)
+    mycc, t1, t2, eris, e_cc = _cc_reference(mf, unrestricted=unrestricted)
     l1, l2, d1, d1_grad, dm1_cc_mo, dm1_cc = ccsd_t_target_density(
         mycc, eris, unrestricted=unrestricted
     )
@@ -199,9 +219,7 @@ def _generate_training_data(mol, grids, name, args, *, unrestricted):
     gc.collect()
 
     print("DM1 done.", flush=True)
-    dm2_cc = rdm._make_rdm2(
-        mycc, d1, d2, with_dm1=True, with_frozen=True, ao_repr=True
-    )
+    dm2_cc = rdm._make_rdm2(mycc, d1, d2, with_dm1=True, with_frozen=True, ao_repr=True)
     print("DM2 done.", flush=True)
     dm1_cc_mo = np.array(dm1_cc_mo)
     dm2_cc = np.array(dm2_cc)
@@ -209,17 +227,36 @@ def _generate_training_data(mol, grids, name, args, *, unrestricted):
     gc.collect()
 
     data_dict = get_cc_energy(
-        mol, grids, mf, dm1_cc, dm1_cc_mo, dm2_cc,
-        evaluate=False, unrestricted=unrestricted,
+        mol,
+        grids,
+        mf,
+        dm1_cc,
+        dm1_cc_mo,
+        dm2_cc,
+        unrestricted=unrestricted,
     )
     del dm1_cc_mo, dm2_cc
     gc.collect()
 
     reference, mdft, mdft_d3bj, dm1_dft = _dft_reference_data(
-        mol, grids, mf, dm1_hf, e_hf, dm1_cc, e_cc, args,
-        evaluate=False, unrestricted=unrestricted,
+        mol,
+        grids,
+        mf,
+        args,
+        evaluate=False,
+        unrestricted=unrestricted,
     )
     data_dict.update(reference)
+    data_dict.update(get_hf_energy(mol, grids, mf, dm1_hf, unrestricted=unrestricted))
+    data_dict.update(
+        {
+            "e_hf": e_hf,
+            "e_cc": e_cc,
+            "dm1_hf": dm1_hf,
+            "dm1_cc": dm1_cc,
+            "energy_train": e_cc - data_dict["e_dft"],
+        }
+    )
     energy_train = data_dict["energy_train"]
     print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} electrons " "(CCSD vs DFT)")
     cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
@@ -232,6 +269,7 @@ def _generate_training_data(mol, grids, name, args, *, unrestricted):
         )
     data_append_dict = get_dft_grad(mol, grids, dm1_dft, unrestricted=unrestricted)
     data_dict.update(data_append_dict)
+
     # HF gradient
     ghf_hf = hf_grad(mf)
     grad_hf = ghf_hf.kernel()
@@ -304,7 +342,12 @@ def _generate_training_data(mol, grids, name, args, *, unrestricted):
     _save_data(DATA_PATH / f"data_{name}.npz", data_dict)
     print(f"CACHED: {name} CC/DFT references; ZMP is pending.", flush=True)
     complete_zmp_data(
-        mol, grids, name, args, data_dict, unrestricted=unrestricted,
+        mol,
+        grids,
+        name,
+        args,
+        data_dict,
+        unrestricted=unrestricted,
     )
 
 
@@ -330,7 +373,9 @@ def complete_zmp_data(mol, grids, name, args, data, *, unrestricted):
         or int(data["spin"]) != mol.spin
         or bool(data["unrestricted"]) != unrestricted
     ):
-        raise ValueError(f"{name}: cached CC reference molecule or spin treatment differs.")
+        raise ValueError(
+            f"{name}: cached CC reference molecule or spin treatment differs."
+        )
     for key in ("coords", "weights"):
         if data[key].shape != getattr(grids, key).shape or not np.allclose(
             data[key], getattr(grids, key), rtol=0, atol=1e-12
@@ -348,14 +393,20 @@ def complete_zmp_data(mol, grids, name, args, data, *, unrestricted):
     mdft.initialize_grids(mol, data["dm1_hf"])
     e_zmp = mdft.energy_tot(dm1_zmp)
     zmp_energy = get_dft_energy(
-        mol, grids, mzmp.mo_coeff, dm1_zmp, unrestricted=unrestricted,
+        mol,
+        grids,
+        mzmp.mo_coeff,
+        dm1_zmp,
+        unrestricted=unrestricted,
     )
     data.update({key.replace("dft", "zmp"): value for key, value in zmp_energy.items()})
     zmp_mapping = get_dft_grad(mol, grids, dm1_zmp, unrestricted=unrestricted)
-    data.update({
-        key.replace("dft", "zmp") if "dft" in key else key + "_zmp": value
-        for key, value in zmp_mapping.items()
-    })
+    data.update(
+        {
+            key.replace("dft", "zmp") if "dft" in key else key + "_zmp": value
+            for key, value in zmp_mapping.items()
+        }
+    )
     data["tol_delta_zmp_grids"] = data["tol_cc_grids"] - data["tol_zmp_grids"]
     data["grad_zmp"] = zmp_baseline_gradient(mdft, dm1_zmp)
     data["e_zmp"] = e_zmp
@@ -366,8 +417,15 @@ def complete_zmp_data(mol, grids, name, args, data, *, unrestricted):
     )
     print(f"Error ZMP (kcal/mol): {AU2KCALMOL * error_zmp}")
     data.update(get_vv10_data(mol, grids, dm1_zmp, e_zmp, dm1_cc, args, suffix="_zmp"))
-    data.update(get_zmp_constraint_data(
-        mdft, grids, dm1_zmp, dm1_cc, DATA_PATH / f"data_{name}_zmp", args,
-    ))
+    data.update(
+        get_zmp_constraint_data(
+            mdft,
+            grids,
+            dm1_zmp,
+            dm1_cc,
+            DATA_PATH / f"data_{name}_zmp",
+            args,
+        )
+    )
     data["zmp_complete"] = True
     _save_data(DATA_PATH / f"data_{name}.npz", data)

@@ -21,7 +21,7 @@ from cc2cc.utils.parser import (
 )
 from cc2cc.utils.helper.chemistry.rotate import rotate
 from cc2cc.utils.reference.reference_vv10 import get_vv10_data
-from cc2cc.generate_cc_data import cc, complete_zmp_data
+from cc2cc.generate_cc_data import cc
 from cc2cc.generate_pbe_data import generate_pbe_data
 
 if __name__ == "__main__":
@@ -212,19 +212,6 @@ if __name__ == "__main__":
                     mol, grids, name, args,
                     evaluate=evaluate, unrestricted=mol.spin != 0,
                 )
-            elif args.if_continue and (DATA_PATH / f"data_{name}.npz").exists():
-                if evaluate:
-                    print(f"SKIP: {name} already exists.")
-                else:
-                    data_path = DATA_PATH / f"data_{name}.npz"
-                    with np.load(data_path, allow_pickle=False) as archive:
-                        if archive.get("zmp_complete", True):
-                            print(f"SKIP: {name} already exists.")
-                            continue
-                        data = dict(archive)
-                    complete_zmp_data(
-                        mol, grids, name, args, data, unrestricted=mol.spin != 0,
-                    )
             else:
                 if mol.spin == 0:
                     unrestricted = False

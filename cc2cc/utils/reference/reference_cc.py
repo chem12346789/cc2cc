@@ -150,12 +150,9 @@ def ccsd_t_target_gradient(mycc, eris, l1, l2, d1_grad, d2, *, unrestricted=Fals
 
 
 def get_cc_energy(
-    mol, grids, mf, dm1_cc, dm1_cc_mo, dm2_cc, evaluate=False, *, unrestricted,
+    mol, grids, mf, dm1_cc, dm1_cc_mo, dm2_cc, *, unrestricted,
 ):
-    """Calculate CC energy-density components on the supplied grid."""
-    if evaluate and not unrestricted:
-        return {}
-
+    """Calculate CC energy-density components for training on the supplied grid."""
     import gc
     import torch
     import pyscf.dft
@@ -173,9 +170,6 @@ def get_cc_energy(
     ao_2_diag = ao_value[4] + ao_value[7] + ao_value[9]
     ao_value = ao_value[:4]
     ao_1 = ao_value[1:4]
-
-    if evaluate:
-        return {}
 
     if unrestricted:
         dm_total = dm1_cc[0] + dm1_cc[1]
