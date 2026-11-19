@@ -104,14 +104,23 @@ Direct calls to `cc()` select restricted CCSD(T) by default; pass
 `unrestricted=True` for unrestricted CCSD(T), including when `mol.spin == 0`.
 Restricted CCSD(T) requires `mol.spin == 0`. `gen_data.py` passes
 `unrestricted=False` for zero spin and `True` otherwise.
-Output filenames do not include the method, so `--if_continue true` skips an
-existing archive regardless of which method produced it.
+Output filenames do not include the method, so restricted and unrestricted
+runs share archive names.
+Training-data generation computes the CC reference energy, densities, gradient,
+and grid labels before DFT and ZMP. It atomically caches the complete non-ZMP
+CC/DFT data in `data_<name>.npz` with `zmp_complete=false` before VV10 and ZMP.
+If those later calculations fail, this archive remains usable for B3LYP DFT
+training (`--baseline b3lyp --rho_input dft`); it must not be used for ZMP training yet.
+Rerunning with `--if_continue true` resumes the pending VV10/ZMP stage without
+recalculating CC. Only successful completion of all ZMP labels and response
+sidecars replaces the archive with `zmp_complete=true`.
+`--if_continue false` recomputes the references. Completed archives, including
+legacy archives without the marker, are skipped with `--if_continue true`;
+their DFT gradients and force mappings are not refreshed.
 The generator calculates Post-DFT VV10 and self-consistent SCF-VV10 energies
 and saves `e_post_vv10`, `e_scf_vv10`, and `dm1_scf_vv10` in the main archive.
 Unsuffixed VV10 results also save `grad_post_vv10` and
 `grad_scf_vv10` in Hartree/Bohr; forces are their negatives.
-`gen_data.py --if_continue true` uses the same calculation for cached data,
-saving results in the addon archive.
 For multi-atom molecules, unsuffixed VV10 calculations additionally report
 analytical/central-finite-difference maximum gradient differences for Post-DFT
 VV10 and B3LYP and saves `grad_post_vv10_fd`. Each check uses a 0.001 Bohr
