@@ -39,27 +39,11 @@ def cc(
         raise ValueError(
             "Restricted CCSD(T) requires mol.spin == 0; set unrestricted=True."
         )
-    data_path = DATA_PATH / f"data_{name}.npz"
-    data = None
-    if getattr(args, "if_continue", False) and data_path.exists():
-        with np.load(data_path, allow_pickle=False) as archive:
-            if evaluate or archive.get("zmp_complete", True):
-                print(f"SKIP: {name} already exists.")
-                return
-            data = dict(archive)
+    if getattr(args, "if_continue", False):
+        raise ValueError("Continue existing data through gen_data.py, not cc().")
     if evaluate:
         _generate_evaluation_data(mol, grids, name, args, unrestricted=unrestricted)
     else:
-        if data is not None:
-            complete_zmp_data(
-                mol,
-                grids,
-                name,
-                args,
-                data,
-                unrestricted=unrestricted,
-            )
-            return
         _generate_training_data(mol, grids, name, args, unrestricted=unrestricted)
 
 
@@ -91,7 +75,7 @@ def _generate_training_data(mol, grids, name, args, *, unrestricted):
         cc_reference(mol, grids, mf, evaluate=False, unrestricted=unrestricted)
     )
 
-    reference, dm1_dft = dft_reference(
+    reference = dft_reference(
         mol,
         grids,
         mf,
@@ -101,82 +85,24 @@ def _generate_training_data(mol, grids, name, args, *, unrestricted):
     )
     data_dict.update(reference)
     data_dict["energy_train"] = data_dict["e_cc"] - data_dict["e_dft"]
-    energy_train = data_dict["energy_train"]
-    dm1_cc = data_dict["dm1_cc"]
-    print(f"{diff_rho(mol, dm1_cc, dm1_dft, grids):.6f} electrons " "(CCSD vs DFT)")
-    cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
-    dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
+    data_dict["grad_cc_train"] = data_dict["grad_cc"] - data_dict["grad_dft"]
+    print(
+        f"{diff_rho(mol, data_dict['dm1_cc'], data_dict['dm1_dft'], grids):.6f} electrons "
+        "(CCSD vs DFT)"
+    )
+    cc_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=data_dict["dm1_cc"], unit="A.U.")
+    dft_dipole = pyscf.scf.hf.dip_moment(mol=mol, dm=data_dict["dm1_dft"], unit="A.U.")
     print(f"{np.linalg.norm(cc_dipole - dft_dipole)} A.U. (CCSD vs DFT)")
 
     if "tol_cc_grids" in data_dict and "tol_dft_grids" in data_dict:
         data_dict["tol_delta_grids"] = (
             data_dict["tol_cc_grids"] - data_dict["tol_dft_grids"]
         )
-    data_append_dict = get_dft_grad(mol, grids, dm1_dft, unrestricted=unrestricted)
-    data_dict.update(data_append_dict)
-
-    data_dict["grad_cc_train"] = data_dict["grad_cc"] - data_dict["grad_dft"]
-
-    if "tol_delta_grids" in data_dict:
-        error = np.sum(data_dict["tol_delta_grids"] * grids.weights) - energy_train
-        print(f"Error (kcal/mol): {AU2KCALMOL * error}")
-        error_hf = np.sum(
-            (
-                (
-                    data_dict["exc_cc_grids"]
-                    + data_dict["hatree_cc_grids"]
-                    + data_dict["kin_cc_grids"]
-                    + data_dict["nuc_cc_grids"]
-                    + data_dict["ecp_cc_grids"]
-                )
-                - (
-                    data_dict["exc_k_hf_grids"]
-                    + data_dict["hatree_hf_grids"]
-                    + data_dict["kin_hf_grids"]
-                    + data_dict["nuc_hf_grids"]
-                    + data_dict["ecp_hf_grids"]
-                )
-            )
-            * grids.weights
-        ) - (data_dict["e_cc"] - data_dict["e_hf"])
-        print(f"Error HF part (kcal/mol): {AU2KCALMOL * error_hf}")
-
-        error_exc_kinl = (
-            np.sum(
-                (
-                    (
-                        data_dict["exc_cc_grids"]
-                        + data_dict["hatree_cc_grids"]
-                        + data_dict["kinl_cc_grids"]
-                        + data_dict["nuc_cc_grids"]
-                        + data_dict["ecp_cc_grids"]
-                    )
-                    - (
-                        data_dict["exc_dft_grids"]
-                        + data_dict["exc_k_dft_grids"]
-                        + data_dict["hatree_dft_grids"]
-                        + data_dict["kinl_dft_grids"]
-                        + data_dict["nuc_dft_grids"]
-                        + data_dict["ecp_dft_grids"]
-                    )
-                )
-                * grids.weights
-            )
-            - energy_train
-        )
-        print(f"Error exc_kinl part (kcal/mol): {AU2KCALMOL * error_exc_kinl}")
 
     data_dict["zmp_complete"] = False
     _save_data(DATA_PATH / f"data_{name}.npz", data_dict)
     print(f"CACHED: {name} CC/DFT references; ZMP is pending.", flush=True)
-    complete_zmp_data(
-        mol,
-        grids,
-        name,
-        args,
-        data_dict,
-        unrestricted=unrestricted,
-    )
+    complete_zmp_data(mol, grids, name, args, data_dict, unrestricted=unrestricted)
 
 
 def _save_data(path, data):
@@ -221,11 +147,7 @@ def complete_zmp_data(mol, grids, name, args, data, *, unrestricted):
     mdft.initialize_grids(mol, data["dm1_hf"])
     e_zmp = mdft.energy_tot(dm1_zmp)
     zmp_energy = get_dft_energy(
-        mol,
-        grids,
-        mzmp.mo_coeff,
-        dm1_zmp,
-        unrestricted=unrestricted,
+        mol, grids, mzmp.mo_coeff, dm1_zmp, unrestricted=unrestricted
     )
     data.update({key.replace("dft", "zmp"): value for key, value in zmp_energy.items()})
     zmp_mapping = get_dft_grad(mol, grids, dm1_zmp, unrestricted=unrestricted)
@@ -247,12 +169,7 @@ def complete_zmp_data(mol, grids, name, args, data, *, unrestricted):
     data.update(get_vv10_data(mol, grids, dm1_zmp, e_zmp, dm1_cc, args, suffix="_zmp"))
     data.update(
         get_zmp_constraint_data(
-            mdft,
-            grids,
-            dm1_zmp,
-            dm1_cc,
-            DATA_PATH / f"data_{name}_zmp",
-            args,
+            mdft, grids, dm1_zmp, dm1_cc, DATA_PATH / f"data_{name}_zmp", args
         )
     )
     data["zmp_complete"] = True

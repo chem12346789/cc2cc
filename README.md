@@ -114,10 +114,13 @@ training (`--baseline b3lyp --rho_input dft`); it must not be used for ZMP train
 Rerunning with `--if_continue true` resumes the pending VV10/ZMP stage without
 recalculating CC. Only successful completion of all ZMP labels and response
 sidecars replaces the archive with `zmp_complete=true`.
-`--if_continue false` recomputes the references. Completed archives, including
+`--if_continue true` requires an existing archive and never starts CC calculations;
+missing archives are reported as errors. `--if_continue false` recomputes the
+references. Completed archives, including
 legacy archives without the marker, are skipped with `--if_continue true`;
 their DFT gradients and force mappings are not refreshed.
-The `cc()` generator handles these skip/resume decisions for both CLI and direct calls.
+`gen_data.py` handles skip/resume decisions; direct `cc()` calls must use
+`if_continue=false`.
 
 ### CC archive fields
 

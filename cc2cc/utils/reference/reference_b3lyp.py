@@ -41,38 +41,38 @@ def dft_reference(
     e_dft_d3bj = mdft_d3bj.e_tot
     print(f"DFT-D3BJ correction energy (Hartree): {e_dft_d3bj - e_dft}")
 
-    data = {}
-    if not evaluate:
-        data.update(
-            get_dft_energy(
-                mol,
-                grids,
-                mdft.mo_coeff,
-                dm1_dft,
-                unrestricted=unrestricted,
-            )
-        )
-        gdft = mdft.Gradients()
-        gdft.grid_response = True
-        data["grad_dft"] = gdft.kernel()
-        gdft_d3bj = mdft_d3bj.Gradients()
-        gdft_d3bj.grid_response = True
-        data["grad_dft_d3bj"] = gdft_d3bj.kernel()
+    data = {
+        "mol": mol.tostring(format="xyz"),
+        "charge": mol.charge,
+        "spin": mol.spin,
+        "unrestricted": unrestricted,
+        "e_dft": e_dft,
+        "e_dft_d3bj": e_dft_d3bj,
+        "dm1_dft": dm1_dft,
+        "weights": grids.weights,
+        "coords": grids.coords,
+        "grid_atom_indices": grids.atm_idx,
+    }
+    if evaluate:
+        return data
+
     data.update(
-        {
-            "mol": mol.tostring(format="xyz"),
-            "charge": mol.charge,
-            "spin": mol.spin,
-            "unrestricted": unrestricted,
-            "e_dft": e_dft,
-            "e_dft_d3bj": e_dft_d3bj,
-            "dm1_dft": dm1_dft,
-            "weights": grids.weights,
-            "coords": grids.coords,
-            "grid_atom_indices": grids.atm_idx,
-        }
+        get_dft_energy(
+            mol,
+            grids,
+            mdft.mo_coeff,
+            dm1_dft,
+            unrestricted=unrestricted,
+        )
     )
-    return data, dm1_dft
+    gdft = mdft.Gradients()
+    gdft.grid_response = True
+    data["grad_dft"] = gdft.kernel()
+    gdft_d3bj = mdft_d3bj.Gradients()
+    gdft_d3bj.grid_response = True
+    data["grad_dft_d3bj"] = gdft_d3bj.kernel()
+    data.update(get_dft_grad(mol, grids, dm1_dft, unrestricted=unrestricted))
+    return data
 
 
 def converged_b3lyp(
