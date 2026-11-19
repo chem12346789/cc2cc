@@ -15,6 +15,10 @@ if __name__ == "__main__":
         description="Generate the inversed potential and energy."
     )
     parser.add_argument(
+        "--baseline", choices=("", "b3lyp", "pbe"), default="b3lyp",
+        help="Training baseline: b3lyp (default) or pbe for PBE supplements.",
+    )
+    parser.add_argument(
         "--rho_input",
         type=str,
         default="dft",

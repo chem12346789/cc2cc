@@ -1,4 +1,4 @@
-"""Shared B3LYP calculations and finite-difference references."""
+"""Shared DFT calculations and B3LYP finite-difference references."""
 
 from __future__ import annotations
 
@@ -15,8 +15,18 @@ def converged_b3lyp(
 ):
     if unrestricted is None:
         unrestricted = mol.spin != 0 or (dm0 is not None and np.ndim(dm0) == 3)
+    return converged_dft(
+        mol, dm0=dm0, xc="b3lyp", nlc=nlc, grids=grids,
+        verbose=verbose, use_gpu=use_gpu, unrestricted=unrestricted,
+    )
+
+
+def converged_dft(
+    mol, dm0=None, *, xc, unrestricted, nlc="", grids=None, verbose=0,
+    use_gpu=False,
+):
     mf_class = pyscf.dft.UKS if unrestricted else pyscf.dft.RKS
-    mf = mf_class(mol, xc="b3lyp")
+    mf = mf_class(mol, xc=xc)
     mf = cast(
         pyscf.dft.rks.RKS | pyscf.dft.roks.ROKS | pyscf.dft.uks.UKS,
         mf.density_fit(),

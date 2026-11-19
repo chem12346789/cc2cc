@@ -75,13 +75,19 @@ def main():
             "post-b3lyp-d3",
             "post-b3lyp-nl",
             "post-b3lyp-vv10",
+            "post-pbe",
+            "post-pbe-d3",
+            "post-pbe-nl",
+            "post-pbe-vv10",
         ),
         default="scf",
         help="Run model SCF (default), or evaluate once without model SCF on a "
         "cached density: B3LYP for post-b3lyp, post-b3lyp-d3, and "
         "post-b3lyp-nl; self-consistent B3LYP-VV10 for "
-        "post-b3lyp-vv10. The D3 mode reports B3LYP-D3BJ plus the model "
-        "correction in scf_d3bj_ene, using B3LYP D3BJ parameters by default; "
+        "post-b3lyp-vv10. The post-pbe variants use PBE or PBE-VV10 densities. "
+        "The checkpoint selects the model energy baseline independently. "
+        "The D3 modes report D3BJ-corrected energy "
+        "in scf_d3bj_ene, using the density functional's D3BJ parameters by default; "
         "scf_ene excludes D3. The NL mode "
         "reports the post-SCF VV10 energy, with the VV10 correction cached "
         "for the reference density and NLC grid. Missing references are computed by "
@@ -89,9 +95,9 @@ def main():
     )
     parser.add_argument(
         "--baseline",
-        choices=("b3lyp-vv10",),
+        choices=("b3lyp-vv10", "pbe-vv10"),
         default=None,
-        help="Include self-consistent VV10 in the model's B3LYP baseline. "
+        help="Include self-consistent VV10 in the matching checkpoint baseline. "
         "Use --if_continue 0 to recompute previously saved results.",
     )
     parser.add_argument(
@@ -164,9 +170,13 @@ def main():
             "post-b3lyp",
             "post-b3lyp-d3",
             "post-b3lyp-nl",
+            "post-pbe",
+            "post-pbe-d3",
+            "post-pbe-nl",
         ) and args.baseline is not None:
             parser.error(
-                "The B3LYP-density post-SCF modes cannot use --baseline b3lyp-vv10."
+                "Plain-density post-SCF modes cannot use --baseline; "
+                "select a -nl or -vv10 test mode instead."
             )
 
     print_computer_info(args.device)

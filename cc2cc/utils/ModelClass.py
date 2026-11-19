@@ -27,6 +27,7 @@ DEBUG = 0
 class ModelClass:
     def __init__(self, args):
         self.args = args
+        self.baseline = "b3lyp"
         self.start_step = 0
         self.dir_checkpoint = None
         self.state_dict = None
@@ -54,6 +55,15 @@ class ModelClass:
 
     def init_model(self, init_train=False):
         load_model(self, CHECKPOINTS_PATH)
+        if init_train:
+            baseline = getattr(self.args, "baseline", "b3lyp")
+            if baseline == "":
+                baseline = "b3lyp"
+            if baseline not in ("b3lyp", "pbe"):
+                raise ValueError(f"Unsupported training baseline: {baseline}")
+            if self.state_dict is not None and self.baseline != baseline:
+                raise ValueError("Checkpoint baseline does not match the training baseline.")
+            self.baseline = baseline
 
         if not (MAIN_PATH / f"cc2cc/utils/model/{self.args.model}.py").exists():
             raise ValueError("Unknown model")
@@ -70,7 +80,11 @@ class ModelClass:
         self.device, self.dtype = param.device, param.dtype
         self.cube_type = self.model.cube_type
         self.cube_size = self.model.cube_size
-        self.input_level = self.model.input_level
+        self.input_level = (
+            max(self.model.input_level, 6)
+            if self.baseline == "pbe"
+            else self.model.input_level
+        )
         for name in ("cube_type", "cube_size", "input_level"):
             self.print(f"{name}: {getattr(self, name)}")
 
@@ -190,6 +204,7 @@ class ModelClass:
             if isinstance(self.model, DistributedDataParallel)
             else self.model
         )
+        input_ = input_[:, :model.input_level]
         if model.before_weight:
             input_ = torch.einsum("p...,pi->p...", input_, weight)
         output = self.model(input_)
@@ -491,6 +506,17 @@ class ModelClass:
             raise ValueError(f"Unknown cube type: {self.cube_type}")
         return (rho * self.b3lyp_weights(rho)).sum(-1)
 
+    def get_pbe_ene(self, rho_cube):
+        if rho_cube.shape[1] < 6:
+            raise ValueError("PBE evaluation requires at least six grid features.")
+        if self.cube_type == "center_4":
+            rho = rho_cube[:, 4:6]
+        elif self.cube_type in ("cube", "cube5"):
+            rho = rho_cube[:, 4:6, self.model.cube_middle]
+        else:
+            raise ValueError(f"Unknown cube type: {self.cube_type}")
+        return rho.sum(-1)
+
     def eval_xc_eff(
         self,
         rho_cube,
@@ -508,7 +534,10 @@ class ModelClass:
         density_input = input_mat
         weights_mat.requires_grad = weight_response
         input_mat, exc_cube = self.model_output(input_mat, weights_mat)
-        baseline = self.get_b3lyp_ene(input_mat)
+        if self.baseline == "pbe":
+            baseline = self.get_pbe_ene(density_input)
+        else:
+            baseline = self.get_b3lyp_ene(input_mat)
         exc_cube += torch.einsum("i,ij->ij", baseline, weights_mat)
         if weight_response:
             middle_cube, weight_derivative = torch.autograd.grad(

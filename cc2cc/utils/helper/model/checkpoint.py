@@ -35,6 +35,11 @@ def load_model(model, checkpoints_path):
     )
     model.state_dict = normalize_state_dict(checkpoint["state_dict"])
     args.model = checkpoint["model"]
+    model.baseline = checkpoint.get("baseline", "")
+    if model.baseline == "":
+        model.baseline = "b3lyp"
+    if model.baseline not in ("b3lyp", "pbe"):
+        raise ValueError(f"Unsupported checkpoint baseline: {model.baseline}")
     if resume:
         model.optimizer_state_dict = checkpoint.get("optimizer")
         if model.optimizer_state_dict is None:
@@ -139,13 +144,15 @@ def restore_rng_state(rng_state_dict):
         torch.cuda.set_rng_state(state["cuda"].cpu())
 
 
-def estimate_checkpoint_size(model_name, optimizer, state_dict, rng_state):
+def estimate_checkpoint_size(model_name, optimizer, state_dict, rng_state, baseline=None):
     payload = {
         "state_dict": state_dict,
         "model": model_name,
         "optimizer": optimizer.state_dict(),
         "rng_state": rng_state,
     }
+    if baseline is not None:
+        payload["baseline"] = baseline
     with _CheckpointSizeBuffer() as buffer:
         torch.save(payload, buffer)
         return max(buffer.size, 1 << 20)
@@ -159,14 +166,20 @@ def save_model(model, epoch):
     state_dict = normalize_state_dict(model.model.state_dict())
     checkpoint_path = model.dir_checkpoint / f"{epoch}.pth"
     rng_state = model.rng_state_for_save or capture_rng_state()
+    baseline = getattr(model, "baseline", "b3lyp")
+    if baseline == "":
+        baseline = "b3lyp"
+    if baseline not in ("b3lyp", "pbe"):
+        raise ValueError(f"Unsupported checkpoint baseline: {baseline}")
     payload = {
         "state_dict": state_dict,
         "model": model.args.model,
         "optimizer": model.optimizer.state_dict(),
         "rng_state": rng_state,
+        "baseline": baseline,
     }
     required_bytes = estimate_checkpoint_size(
-        model.args.model, model.optimizer, state_dict, rng_state
+        model.args.model, model.optimizer, state_dict, rng_state, payload["baseline"]
     )
 
     while True:

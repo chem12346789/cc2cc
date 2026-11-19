@@ -64,33 +64,29 @@ def generate_pbe_data(mol, grids, name, args, *, evaluate=False, unrestricted):
             "coords": grids.coords,
             "weights": grids.weights,
             "e_cc": reference["e_cc"],
-            "e_pbe": mf.e_tot,
-            "dm1_pbe": dm_pbe,
-            "energy_train_pbe": reference["e_cc"] - mf.e_tot,
+            "e_dft": mf.e_tot,
+            "dm1_dft": dm_pbe,
+            "energy_train": reference["e_cc"] - mf.e_tot,
         }
         if evaluate:
-            data["rho_cube_pbe"] = get_dft_input(
+            data["rho_cube_dft"] = get_dft_input(
                 mol, grids, dm_pbe, unrestricted=unrestricted, ni=mf._numint,
             )["rho_cube_dft"]
         else:
             pbe_grid = get_dft_energy(
                 mol, grids, mf.mo_coeff, dm_pbe, unrestricted=unrestricted, xc="pbe",
             )
-            data.update({
-                key.replace("_dft", "_pbe"): val for key, val in pbe_grid.items()
-            })
-            data["tol_delta_pbe_grids"] = (
+            data.update(pbe_grid)
+            data["tol_delta_grids"] = (
                 reference["tol_cc_grids"] - pbe_grid["tol_dft_grids"]
             )
             mappings = get_dft_grad(mol, grids, dm_pbe, unrestricted=unrestricted)
-            data["rho_cube_pbe"] = mappings["rho_cube_dft"]
-            data["grad2force_pbe"] = mappings["grad2force"]
-            data["grid_weight_response_pbe"] = mappings["grid_weight_response"]
+            data.update(mappings)
             grad = mf.nuc_grad_method()
             grad.grid_response = True
-            data["grad_pbe"] = grad.kernel()
+            data["grad_dft"] = grad.kernel()
             data["grad_cc"] = reference["grad_cc"]
-            data["grad_cc_train_pbe"] = data["grad_cc"] - data["grad_pbe"]
+            data["grad_cc_train"] = data["grad_cc"] - data["grad_dft"]
 
             # Keep the inversion density fixed to isolate the baseline change.
             dm_zmp = reference["dm1_zmp"]
@@ -100,15 +96,14 @@ def generate_pbe_data(mol, grids, name, args, *, evaluate=False, unrestricted):
                 mol, grids, coeff_zmp, dm_zmp, unrestricted=unrestricted, xc="pbe",
             )
             data.update({
-                key.replace("_dft", "_pbe_zmp"): val for key, val in zmp_grid.items()
+                key.replace("_dft", "_zmp"): val for key, val in zmp_grid.items()
             })
-            data["e_pbe_zmp"] = mf.energy_tot(dm_zmp)
-            data["energy_train_pbe_zmp"] = reference["e_cc"] - data["e_pbe_zmp"]
-            data["tol_delta_pbe_zmp_grids"] = (
+            data["e_zmp"] = mf.energy_tot(dm_zmp)
+            data["energy_train_zmp"] = reference["e_cc"] - data["e_zmp"]
+            data["tol_delta_zmp_grids"] = (
                 reference["tol_cc_grids"] - zmp_grid["tol_dft_grids"]
             )
-            data["grad_pbe_zmp"] = zmp_baseline_gradient(mf, dm_zmp)
-            data["grad_cc_train_pbe_zmp"] = data["grad_cc"] - data["grad_pbe_zmp"]
+            data["grad_zmp"] = zmp_baseline_gradient(mf, dm_zmp)
             data.update(get_zmp_constraint_data(
                 mf, grids, dm_zmp, reference["dm1_cc"],
                 DATA_PATH / f"data_{name}_pbe_zmp", args,

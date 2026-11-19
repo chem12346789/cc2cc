@@ -69,6 +69,7 @@ class DataBase:
     """Documentation for a class."""
 
     input_mode = "cube"
+    baseline = "b3lyp"
 
     def __init__(
         self,
@@ -93,6 +94,13 @@ class DataBase:
         if getattr(args, "zmp_ov_loss", False):
             raise ValueError("--zmp_ov_loss is no longer supported.")
         self.args = args
+        self.baseline = getattr(args, "baseline", "b3lyp")
+        if self.baseline == "":
+            self.baseline = "b3lyp"
+        if self.baseline not in ("b3lyp", "pbe"):
+            raise ValueError(f"Unsupported training baseline: {self.baseline}")
+        if self.baseline == "pbe" and args.rho_input not in ("dft", "zmp"):
+            raise ValueError("PBE supports only --rho_input dft or zmp.")
         self.if_zmp_response = getattr(args, "if_zmp_response", False)
         if args.rho_input == "zmp_vv10" and args.if_grad:
             raise ValueError(
@@ -167,6 +175,10 @@ class DataBase:
                     error_molecule.append(name)
                     self.print(f"Error molecule: {error_molecule}")
                     continue
+                if self.baseline == "pbe":
+                    pbe_path = DATA_PATH / f"data_{name}_pbe.npz"
+                    if not pbe_path.is_file():
+                        raise FileNotFoundError(f"{name}: missing PBE supplement {pbe_path}.")
 
                 name_list.append(name)
                 if mol.natm == 1 and mol.charge == 0:
@@ -255,6 +267,10 @@ class DataBase:
                 data = ChainMap(data_addon, data)
             else:
                 self.print(f"\nLoading data {name:<40}")
+            if self.baseline == "pbe":
+                pbe_path = DATA_PATH / f"data_{name}_pbe.npz"
+                pbe = stack.enter_context(np.load(pbe_path, allow_pickle=False))
+                data = ChainMap(pbe, data)
             return self._load_data(mol_info, name, data)
 
     def _load_data(self, mol_info, name, data):
@@ -369,11 +385,10 @@ class DataBase:
                 else:
                     raise ValueError(f"No grad in data: {self.args.rho_input}")
                 data_dict["grad2force"] = self.process_grad2force(grad2force)
-                response_key = (
-                    "grid_weight_response_zmp"
-                    if self.args.rho_input in ("zmp", "zmp_vv10")
-                    else "grid_weight_response"
-                )
+                if self.args.rho_input in ("zmp", "zmp_vv10"):
+                    response_key = "grid_weight_response_zmp"
+                else:
+                    response_key = "grid_weight_response"
                 if response_key not in data:
                     raise ValueError(
                         f"{name}: missing {response_key}; regenerate force mappings."
@@ -471,6 +486,11 @@ class DataBase:
         return num_data_used, data_dict
 
     def _load_zmp_response_data(self, data, name, processed_input):
+        if self.baseline == "pbe" and (
+            "zmp_constraint_baseline_xc" not in data
+            or str(data["zmp_constraint_baseline_xc"]).lower() != "pbe"
+        ):
+            raise ValueError(f"{name}: missing PBE-specific ZMP response data.")
         required = (
             "zmp_observable_reference",
             "zmp_observable_target",

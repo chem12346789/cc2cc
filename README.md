@@ -130,6 +130,9 @@ grid level, and generation configuration. This requires an existing
 `data_<name>.npz` and writes `data_<name>_pbe.npz` without modifying the original
 archive or rerunning CC or ZMP inversion. `--if_continue true` skips an existing
 PBE supplement; `false` replaces only that supplement.
+PBE-specific quantities use the same DFT and ZMP field names as the original
+archive. Supplements generated with earlier PBE-prefixed fields must be
+regenerated.
 
 The supplement contains self-consistent PBE energies, densities, input features,
 energy-density labels and gradients. Training-data generation also evaluates PBE
@@ -142,8 +145,26 @@ ZMP constraint flags retain their normal defaults. Use `--zmp_feature_ov false`
 to omit full OV Jacobians; `--zmp_observable_response false` also disables compact
 response data. PBE response sidecars use the distinct
 `data_<name>_pbe_zmp_*` prefix. Response gaps and projections are recomputed
-from the PBE Fock, not copied from B3LYP. PBE supplements currently exclude VV10,
-and training does not automatically load these files.
+from the PBE Fock, not copied from B3LYP. PBE supplements currently exclude VV10.
+
+Train with `--baseline pbe --rho_input dft` or `--baseline pbe --rho_input zmp`.
+The latter can also use `--if_zmp_response true` with PBE response sidecars.
+Every selected system requires its PBE supplement. The baseline is saved in
+the checkpoint and restored for SCF evaluation; new B3LYP checkpoints record
+`b3lyp`, and missing or empty baselines in older checkpoints mean B3LYP. For PBE,
+`modeldict.input_level` is at least six; the neural network retains its
+configured input width.
+
+PBE checkpoints support `--test_mode post-pbe` (fixed PBE density),
+`post-pbe-nl` (fixed PBE density plus post-SCF VV10),
+`post-pbe-vv10` (self-consistent PBE-VV10 reference density), and
+`post-pbe-d3` (fixed PBE density with default PBE-D3BJ parameters).
+Post-SCF modes are energy-only. Mode names select the reference density;
+the checkpoint still selects the model energy baseline. PBE reference densities
+and energies use separate fields in the test cache, leaving B3LYP fields intact.
+Use `--baseline pbe-vv10` for VV10 in the model SCF; the option must match the
+checkpoint baseline. Adding VV10 to a plain-PBE-trained model changes the trained
+energy definition and can double-count correlation corrections.
 
 ### D3 parameter sweep
 
@@ -218,7 +239,8 @@ Data generation with `gen_data.py --if_eval true` retains CCSD(T) total
 energies but skips CC densities and gradients. CC density comparisons and
 CC-dependent ZMP data are therefore skipped; non-CC VV10 checks remain enabled.
 
-Pass `--baseline b3lyp-vv10` to `test.py` to include VV10 energy and potential
+Pass `--baseline b3lyp-vv10` (B3LYP checkpoint) or `--baseline pbe-vv10`
+(PBE checkpoint) to `test.py` to include VV10 energy and potential
 in the model SCF on CPU or GPU. The log reports `NLC (vv10) energy` during
 integration. With this baseline, `scf_ene` already includes VV10 and is also
 saved as `scf_vv10_ene`. Without VV10 in the SCF, `scf_vv10_ene` is blank.

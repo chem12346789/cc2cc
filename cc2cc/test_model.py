@@ -39,6 +39,8 @@ def validate_model(
     post_scf = test_mode != "scf"
     if post_scf and args.if_grad:
         raise ValueError("Post-SCF density modes do not support nuclear gradients.")
+    if args.baseline is not None and args.baseline != f"{modeldict.baseline}-vv10":
+        raise ValueError("VV10 baseline must match the checkpoint baseline.")
     scf_class = pyscf.dft.UKS if unrestricted else pyscf.dft.RKS
     method = "UKS" if unrestricted else "RKS"
     if torch.cuda.is_available() and args.device == "cuda" and not args.cpu:
@@ -60,14 +62,14 @@ def validate_model(
         mdft = scf_class(mol).density_fit()
         get_veff_modified(mdft, modeldict, unrestricted=unrestricted)
 
-    if args.baseline == "b3lyp-vv10" or test_mode in (
+    mdft.xc = modeldict.baseline
+    if args.baseline is not None or test_mode in (
         "post-b3lyp-nl",
         "post-b3lyp-vv10",
+        "post-pbe-nl",
+        "post-pbe-vv10",
     ):
-        mdft.xc = "b3lyp"
         mdft.nlc = "vv10"
-    else:
-        mdft.xc = "b3lyp"
 
     mdft.grids = Grid(
         mol,
@@ -86,12 +88,15 @@ def validate_model(
     if post_scf:
         dm1_scf = load_post_scf_density(
             mol, name, test_mode, grid_level=args.grid_level, use_gpu=use_gpu,
+            unrestricted=unrestricted,
         )
         if use_gpu:
             dm1_scf = cp.asarray(dm1_scf)
-        if test_mode == "post-b3lyp-nl":
+        if test_mode in ("post-b3lyp-nl", "post-pbe-nl"):
             mdft.initialize_grids(mol, dm1_scf)
-            enlc = load_post_scf_vv10(mdft, name, dm1_scf)
+            enlc = load_post_scf_vv10(
+                mdft, name, dm1_scf, unrestricted=unrestricted,
+            )
             mdft.nlc = ""
             e_scf = mdft.energy_tot(dm=dm1_scf) + enlc
         else:
@@ -132,7 +137,7 @@ def validate_model(
         or args.alp is None
     ):
         d3 = disp.DFTD3Dispersion(
-            mol, xc="b3lyp" if test_mode == "post-b3lyp-d3" else "hf",
+            mol, xc=test_mode.split("-")[1] if test_mode.endswith("-d3") else "hf",
         )
     else:
         param = {
@@ -149,7 +154,7 @@ def validate_model(
     if args.if_grad and args.max_cycle != -1:
         g = mdft.Gradients()
         g.grid_response = bool(args.grid_response)
-        g.xc = "b3lyp"
+        g.xc = mdft.xc
         g.grids = mdft.grids
         if torch.cuda.is_available() and args.device == "cuda" and not args.cpu:
             from cc2cc.utils.modelscf_gpu import get_veff_grad_modified_gpu
