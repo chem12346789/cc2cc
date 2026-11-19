@@ -216,29 +216,46 @@ def validate_model(
         print(f"energy (ai vs cc) {(e_scf - data['e_cc']) * AU2KCALMOL} Kcal/mol")
 
         dm1_dft = data["dm1_dft"]
-        dm1_cc = data["dm1_cc"]
+        dm1_cc = data.get("dm1_cc")
+        if (
+            dm1_cc is not None
+            and dm1_cc.shape == ()
+            and dm1_cc.dtype == object
+            and dm1_cc.item() is None
+        ):
+            dm1_cc = None
         dm1_ai = dm1_scf
         print(
             f"electronic density (ai vs dft) {diff_rho(mol, dm1_dft, dm1_ai, mdft.grids)}"
         )
-        print(
-            f"electronic density (ai vs cc) {diff_rho(mol, dm1_cc, dm1_ai, mdft.grids)}"
-        )
-        print(
-            f"electronic density (dft vs cc) {diff_rho(mol, dm1_cc, dm1_dft, mdft.grids)}"
-        )
+        if dm1_cc is not None:
+            print(
+                f"electronic density (ai vs cc) {diff_rho(mol, dm1_cc, dm1_ai, mdft.grids)}"
+            )
+            print(
+                f"electronic density (dft vs cc) {diff_rho(mol, dm1_cc, dm1_dft, mdft.grids)}"
+            )
+        else:
+            print(
+                "CC reference density unavailable; skipping CC density and dipole comparisons."
+            )
         dipole_dft = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_dft, unit="A.U.")
-        dipole_cc = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
-
         print(f"dipole (ai vs dft) {np.linalg.norm(scf_dipole - dipole_dft)}")
-        print(f"dipole (ai vs cc) {np.linalg.norm(scf_dipole - dipole_cc)}")
-        print(f"dipole (dft vs cc) {np.linalg.norm(dipole_dft - dipole_cc)}")
-        grad_dft = data["grad_dft"]
-        grad_cc = data["grad_cc"]
+        if dm1_cc is not None:
+            dipole_cc = pyscf.scf.hf.dip_moment(mol=mol, dm=dm1_cc, unit="A.U.")
+            print(f"dipole (ai vs cc) {np.linalg.norm(scf_dipole - dipole_cc)}")
+            print(f"dipole (dft vs cc) {np.linalg.norm(dipole_dft - dipole_cc)}")
         if args.if_grad:
-            print(f"gradient (ai vs dft) {np.linalg.norm(grad_mdft - grad_dft)}")
-            print(f"gradient (ai vs cc) {np.linalg.norm(grad_mdft - grad_cc)}")
-            print(f"gradient (dft vs cc) {np.linalg.norm(grad_dft - grad_cc)}")
+            if dm1_cc is None and "grad_dft" not in data and "grad_cc" not in data:
+                print(
+                    "Reference DFT/CC gradients unavailable; skipping gradient comparisons."
+                )
+            else:
+                grad_dft = data["grad_dft"]
+                grad_cc = data["grad_cc"]
+                print(f"gradient (ai vs dft) {np.linalg.norm(grad_mdft - grad_dft)}")
+                print(f"gradient (ai vs cc) {np.linalg.norm(grad_mdft - grad_cc)}")
+                print(f"gradient (dft vs cc) {np.linalg.norm(grad_dft - grad_cc)}")
 
     data_record.add_data(dict_)
     data_record.save_csv()

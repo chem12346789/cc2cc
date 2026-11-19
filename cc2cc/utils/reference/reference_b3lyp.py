@@ -7,6 +7,72 @@ from typing import cast
 import numpy as np
 
 import pyscf.dft
+import pyscf.scf
+
+
+def dft_reference(
+    mol,
+    grids,
+    mf,
+    args,
+    *,
+    evaluate,
+    unrestricted,
+):
+    """Generate B3LYP reference data and return its density matrix."""
+    dft_class = pyscf.dft.uks.UKS if unrestricted else pyscf.dft.rks.RKS
+    d3bj_class = pyscf.scf.UKS if unrestricted else pyscf.scf.RKS
+    mdft = dft_class(mol, xc="b3lyp")
+    mdft.conv_tol = 1e-12
+    mdft.conv_tol_grad = 1e-8
+    mdft.max_cycle = 200
+    mdft.verbose = 4
+    mdft.kernel(mf.make_rdm1(ao_repr=True))
+    if args.check_convergence and not mdft.converged:
+        raise ValueError(f"{'UKS' if unrestricted else 'RKS'} not converged.")
+    dm1_dft = mdft.make_rdm1(ao_repr=True)
+    e_dft = mdft.e_tot
+
+    mdft_d3bj = d3bj_class(mol)
+    mdft_d3bj.verbose = 4
+    mdft_d3bj.max_cycle = 200
+    mdft_d3bj.xc = "b3lyp-d3bj"
+    mdft_d3bj.kernel(dm1_dft)
+    e_dft_d3bj = mdft_d3bj.e_tot
+    print(f"DFT-D3BJ correction energy (Hartree): {e_dft_d3bj - e_dft}")
+
+    data = {}
+    if not evaluate:
+        data.update(
+            get_dft_energy(
+                mol,
+                grids,
+                mdft.mo_coeff,
+                dm1_dft,
+                unrestricted=unrestricted,
+            )
+        )
+        gdft = mdft.Gradients()
+        gdft.grid_response = True
+        data["grad_dft"] = gdft.kernel()
+        gdft_d3bj = mdft_d3bj.Gradients()
+        gdft_d3bj.grid_response = True
+        data["grad_dft_d3bj"] = gdft_d3bj.kernel()
+    data.update(
+        {
+            "mol": mol.tostring(format="xyz"),
+            "charge": mol.charge,
+            "spin": mol.spin,
+            "unrestricted": unrestricted,
+            "e_dft": e_dft,
+            "e_dft_d3bj": e_dft_d3bj,
+            "dm1_dft": dm1_dft,
+            "weights": grids.weights,
+            "coords": grids.coords,
+            "grid_atom_indices": grids.atm_idx,
+        }
+    )
+    return data, dm1_dft
 
 
 def converged_b3lyp(

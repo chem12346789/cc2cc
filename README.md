@@ -121,19 +121,22 @@ The `cc()` generator handles these skip/resume decisions for both CLI and direct
 
 ### CC archive fields
 
+HF, CC, and DFT helpers each return their own reference-data dictionary; the
+mode-specific generator merges them before saving the archive.
+
 Both evaluation and training archives contain:
 
 - Molecule and grid: `mol`, `charge`, `spin`, `unrestricted`, `coords`, `weights`,
   `grid_atom_indices`.
-- Reference data: `e_hf`, `e_cc`, `e_dft`, `e_dft_d3bj`, `dm1_hf`, `dm1_cc`,
-  `dm1_dft`, `energy_train`, `rho_cube_dft`. In evaluation mode, `dm1_cc` is
-  `None`.
+- Reference data: `e_hf`, `e_cc`, `e_dft`, `e_dft_d3bj`, `dm1_hf`, `dm1_dft`,
+  `energy_train`, `rho_cube_dft`.
 - VV10: `exc_post_vv10_grid`, `e_post_vv10`, `grad_post_vv10`, `e_scf_vv10`,
   `dm1_scf_vv10`, `grad_scf_vv10`. Multi-atom systems also include
   `grad_post_vv10_fd`.
 
 Training archives additionally contain:
 
+- CC density: `dm1_cc` (not calculated in evaluation mode).
 - CC grids: `exc_cc_grids`, `hatree_cc_grids`, `kin_cc_grids`, `kinl_cc_grids`,
   `nuc_cc_grids`, `ecp_cc_grids`, `tol_cc_grids`.
 - HF grids: `exc_k_hf_grids`, `hatree_hf_grids`, `kin_hf_grids`,

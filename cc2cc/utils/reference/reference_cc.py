@@ -18,6 +18,69 @@ LAMBDA_MAX_CYCLE = 200
 LAMBDA_TOL = 1e-10
 
 
+def cc_reference(mol, grids, mf, *, evaluate, unrestricted):
+    """Generate CCSD(T) energy and training reference data."""
+    import gc
+
+    from pyscf.cc import ccsd_t, uccsd_t
+    from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
+    from cc2cc.utils.ccsd_t.pyscf_uccsd_t_u_gamma2_intermediates import (
+        u_gamma2_intermediates,
+    )
+
+    triples = uccsd_t if unrestricted else ccsd_t
+    mycc = make_ccsd(mf, unrestricted=unrestricted)
+    mycc.verbose = 4
+    # To trace the usage of memory, set verbose as 9.
+    _, t1, t2 = mycc.kernel()
+    eris = mycc.ao2mo()
+    e3ref = triples.kernel(mycc, eris, t1, t2)
+    e_cc = mycc.e_tot + e3ref
+    print(
+        f"{'UCCSD(T)' if unrestricted else 'CCSD(T)'} energy (Hartree): {e_cc}",
+        flush=unrestricted,
+    )
+    data = {"e_cc": e_cc}
+    if evaluate:
+        del t1, t2, eris, mycc
+        gc.collect()
+        return data
+
+    gamma2_intermediates = (
+        u_gamma2_intermediates if unrestricted else _gamma2_intermediates
+    )
+    rdm = uccsd_rdm if unrestricted else ccsd_rdm
+    l1, l2, d1, d1_grad, dm1_cc_mo, dm1_cc = ccsd_t_target_density(
+        mycc, eris, unrestricted=unrestricted
+    )
+    d2 = gamma2_intermediates(mycc, t1, t2, l1, l2, eris, compress_vvvv=False)
+    print("gamma2_intermediates DONE", flush=True)
+    data["grad_cc"] = ccsd_t_target_gradient(
+        mycc, eris, l1, l2, d1_grad, d2, unrestricted=unrestricted
+    )
+
+    del t1, t2, l1, l2
+    gc.collect()
+
+    print("DM1 done.", flush=True)
+    dm2_cc = rdm._make_rdm2(mycc, d1, d2, with_dm1=True, with_frozen=True, ao_repr=True)
+    print("DM2 done.", flush=True)
+    dm1_cc_mo = np.array(dm1_cc_mo)
+    dm2_cc = np.array(dm2_cc)
+    del d1, d2, eris, mycc
+    gc.collect()
+
+    data.update(
+        get_cc_energy(
+            mol, grids, mf, dm1_cc, dm1_cc_mo, dm2_cc, unrestricted=unrestricted
+        )
+    )
+    data["dm1_cc"] = dm1_cc
+    del dm1_cc_mo, dm2_cc
+    gc.collect()
+    return data
+
+
 def make_ccsd(mf, *, unrestricted=False, reference=False):
     """Configure CCSD with identical generation/reference convergence settings.
 

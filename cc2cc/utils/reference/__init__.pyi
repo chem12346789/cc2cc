@@ -9,6 +9,7 @@ from . import test_data_dft as test_data_dft
 from .reference_b3lyp import (
     b3lyp_finite_difference_gradient as b3lyp_finite_difference_gradient,
     converged_b3lyp as converged_b3lyp,
+    dft_reference as dft_reference,
     finite_difference_gradient as finite_difference_gradient,
     get_dft_energy as get_dft_energy,
     get_dft_grad as get_dft_grad,
@@ -20,12 +21,13 @@ from .reference_cc import (
     CC_MAX_CYCLE as CC_MAX_CYCLE,
     LAMBDA_MAX_CYCLE as LAMBDA_MAX_CYCLE,
     LAMBDA_TOL as LAMBDA_TOL,
+    cc_reference as cc_reference,
     ccsd_t_target_density as ccsd_t_target_density,
     ccsd_t_target_gradient as ccsd_t_target_gradient,
     get_cc_energy as get_cc_energy,
     make_ccsd as make_ccsd,
 )
-from .reference_hf import get_hf_energy as get_hf_energy
+from .reference_hf import get_hf_energy as get_hf_energy, hf_reference as hf_reference
 from .reference_vv10 import (
     eval_nlc_exc_density as eval_nlc_exc_density,
     get_post_vv10_data as get_post_vv10_data,

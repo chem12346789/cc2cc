@@ -2,6 +2,32 @@
 
 import numpy as np
 import pyscf.dft
+import pyscf.grad
+import pyscf.scf
+
+
+def hf_reference(mol, grids, name, args, *, evaluate, unrestricted):
+    """Generate HF reference data and return the SCF object."""
+    hf_class = pyscf.scf.UHF if unrestricted else pyscf.scf.RHF
+    print(f"Generate data for {name}, spin {mol.spin}")
+
+    mf = hf_class(mol)
+    mf.conv_tol = 1e-12
+    mf.conv_tol_grad = 1e-8
+    mf.max_cycle = 2500
+    mf.verbose = 4
+    mf.kernel()
+    for level_shift in range(5):
+        if args.check_convergence and not mf.converged:
+            mf.level_shift = 4 ** (level_shift)
+            mf.kernel()
+    dm1_hf = mf.make_rdm1(ao_repr=True)
+    data = {"e_hf": mf.e_tot, "dm1_hf": dm1_hf}
+    if not evaluate:
+        data.update(get_hf_energy(mol, grids, mf, dm1_hf, unrestricted=unrestricted))
+        hf_grad = pyscf.grad.uhf.Gradients if unrestricted else pyscf.grad.rhf.Gradients
+        data["grad_hf"] = hf_grad(mf).kernel()
+    return data, mf
 
 
 def get_hf_energy(mol, grids, mf, dm1_hf, evaluate=False, *, unrestricted):
