@@ -80,6 +80,36 @@ Use the same three training seeds across all five splits; seed and atomic
 weighting settings remain training arguments, not fields in these configs.
 This ladder measures common-first augmentation, not random-subset scaling.
 
+### Atom-only to molecule-addition comparison
+
+The [mol1_0](configs/mol1_0.json) control contains the same 55 atomic
+systems as the atomic portion of [mol1_add](configs/mol1_add.json), but no
+multi-atom training systems. The following nested configs add the same
+common-first W4-11 molecules to that `mol1_add` baseline:
+
+| Config | Extra W4-11 systems | Unique training systems |
+| --- | ---: | ---: |
+| [mol1_0.json](configs/mol1_0.json) | 0; atomic-only | 55 |
+| [mol1_add.json](configs/mol1_add.json) | 0; baseline | 77 |
+| [mol1_add1.json](configs/mol1_add1.json) | 8 | 85 |
+| [mol1_add2.json](configs/mol1_add2.json) | 16 | 93 |
+| [mol1_add3.json](configs/mol1_add3.json) | 32 | 109 |
+| [mol1_add4.json](configs/mol1_add4.json) | 54 | 131 |
+
+Use paired seed 1 for an initial comparison and set `EPOCH=2400`; compare the
+saved epoch-2395 checkpoints. For example:
+
+```bash
+SEED=1 EPOCH=2400 SPLIT_CONFIG=mol1_0.json CUDA_VISIBLE_DEVICES=0 bash scripts/train/train_direct.bash
+SEED=1 EPOCH=2400 SPLIT_CONFIG=mol1_add.json CUDA_VISIBLE_DEVICES=1 bash scripts/train/train_direct.bash
+```
+
+Run the other split configs the same way, using a distinct `CUDA_VISIBLE_DEVICES`
+for each concurrent job. The launcher defaults to `EPOCH=10250` when it is not
+overridden. Match model, loss, optimizer, atomic weighting, and checkpoint
+selection across runs. One seed gives an initial comparison, not a robust
+scaling-law estimate; repeat the entire ladder with additional paired seeds.
+
 For [train_direct.bash](scripts/train/train_direct.bash), edit `SEED`,
 `SPLIT_CONFIG`, and `CUDA_VISIBLE_DEVICES` in the top-level run-selection
 section, or override them when launching:

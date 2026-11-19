@@ -5,6 +5,7 @@
 # =========================
 export SEED="${SEED:-1}"
 export SPLIT_CONFIG="${SPLIT_CONFIG:-mol1_add.json}"
+export EPOCH="${EPOCH:-10250}"
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-7}"
 # export SPLIT_CONFIG="mol2_ex_add.json"
 # export SPLIT_CONFIG="test.json"
@@ -27,8 +28,8 @@ export BASIS_ARGS="def2-QZVPPD"
 export RHO_INPUT="dft_vv10"
 # export RHO_INPUT="zmp"
 
-export MOL0_WEIGHTING=1
-export APPEND_MOL0=0
+export MOL0_WEIGHTING=4
+export APPEND_MOL0=9
 export RELATIVE_WEIGHT_EPSILON=1e-10
 
 export OUTPUT_ARG="--output_target tol_delta_grids"
@@ -114,7 +115,7 @@ train_run() {
 		${LOAD_MODEL_ARGS}
 		--save_dir "atom-${PID_THIS_RUN}"
 		--seed "${SEED}"
-		--epoch 10250
+		--epoch "${EPOCH}"
 		--eval_step 5
 		--max_norm "${MAX_NORM}"
 		--rho_input "${RHO_INPUT}"
@@ -145,6 +146,7 @@ train_run() {
 	echo "Weight decay: ${WEIGHT_DECAY}"
 	echo "Scheduler: ${SCHEDULER}"
 	echo "Seed: ${SEED}"
+	echo "Epoch limit: ${EPOCH}"
 	echo "Split config: ${SPLIT_CONFIG}"
 
 	# OMP_WAIT_POLICY=PASSIVE numactl --cpunodebind=${NUMA_NODE} --memnodebind=${NUMA_NODE} ${TORCHRUN_PATH} train.py "${train_args[@]}"
