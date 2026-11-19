@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --array=[0-1]%2
+#SBATCH --array=[0-2]%3
 # CLUSTER-ONLY: This script is configured for this cluster; do not run it elsewhere.
 
 if [[ "$(hostname)" == "user-MZ73-LM1-000" ]]; then
