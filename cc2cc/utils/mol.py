@@ -17,6 +17,7 @@ from cc2cc.utils.helper.chemistry.basis import (
     def_ecp_list,
     gen_basis,
     gen_ecp,
+    gmtkn55_qzvp_basis,
     get_ecp,
     special_atom_list,
 )
@@ -88,17 +89,26 @@ def gen_mole(
         solve_symmetry=solve_symmetry,
     )
 
-    match = re.search(r"\(.*\)", basis)
-    if match:
-        if dataset[dataset_name]["charge"][name_mol] >= 0:
-            basis = basis[: match.start()] + basis[match.end() :]
-        else:
-            basis = basis.replace("(", "").replace(")", "")
+    atom_list = [atom[0] for atom in molecule]
+    if basis == "def2-QZVP-GMTKN55":
+        if dataset_name not in ("gmtkn-def2", "gmtkn-diet100-def2", "gmtkn-diet30-def2"):
+            raise ValueError(f"{basis} requires a GMTKN dataset, got {dataset_name}.")
+        mole_basis = gmtkn55_qzvp_basis(atom_list, name_mol.split("-", 1)[0])
+        ecp = gen_ecp("def2-QZVP", atom_list)
+    else:
+        match = re.search(r"\(.*\)", basis)
+        if match:
+            if dataset[dataset_name]["charge"][name_mol] >= 0:
+                basis = basis[: match.start()] + basis[match.end() :]
+            else:
+                basis = basis.replace("(", "").replace(")", "")
+        mole_basis = gen_basis(basis, atom_list)
+        ecp = gen_ecp(basis, atom_list)
 
     mol = pyscf.M(
         atom=molecule,
-        basis=gen_basis(basis, [atom[0] for atom in molecule]),
-        ecp=gen_ecp(basis, [atom[0] for atom in molecule]),
+        basis=mole_basis,
+        ecp=ecp,
         verbose=verbose,
         spin=dataset[dataset_name]["spin"][name_mol],
         charge=dataset[dataset_name]["charge"][name_mol],

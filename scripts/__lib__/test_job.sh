@@ -228,13 +228,14 @@ run_test_job() {
 }
 
 run_cpu_benchmark_job() {
-    "${PYTHON_BIN}" "${REPO_ROOT}/benchmark_dft.py" \
+    "${PYTHON_BIN}" "${REPO_ROOT}/benchmark.py" \
         --basis "${basis_args}" \
         --name_mol_reverse "${name_mol_reverse}" \
         --dataset "${DATASET}" \
         --name_mol "${name_mol_input}" \
         --if_continue "${if_continue_args}" \
-        --device cpu
+        --device cpu \
+        "$@"
 }
 
 run_external_benchmark_job() {

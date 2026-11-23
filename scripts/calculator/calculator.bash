@@ -3,7 +3,7 @@ if (( $# > 1 )) || [[ $# -eq 1 && $1 != --refresh ]]; then
     exit 2
 fi
 
-export basis_args="def2-QZVP(D)"
+export basis_args="def2-QZVP-GMTKN55"
 # Entries: model:epoch:energy_column:note.
 export model_load_epoch_pairs=(
     "atom-82794:10005:scf_d3bj_ene:SCF"
@@ -33,7 +33,7 @@ for model_load_epoch_pair in "${model_load_epoch_pairs[@]}"; do
     IFS=: read -r model_load load_epoch energy_column note <<< "$model_load_epoch_pair"
     energy_column="${energy_column:-scf_d3bj_ene}"
     note="${note:-}"
-    log_file="log/collect_info_${model_load}_${load_epoch}_${energy_column}_cal_full.log"
+    log_file="log/collect_info_${model_load}_${load_epoch}_${energy_column}_gmtkn55_cal_full.log"
 
     rm -rf validate/*.csv
     find_output=$(find "validate/${basis_args}_${model_load}/${load_epoch}" -maxdepth 1 -type f -exec cp -t validate -- {} + 2>&1)

@@ -1,4 +1,5 @@
 import basis_set_exchange
+from pyscf import gto
 from pyscf.gto.basis.bse import _ecp_basis, get_basis
 
 from cc2cc.utils.helper.chemistry.addon_basis import addon_basis
@@ -130,6 +131,42 @@ def gen_basis(basis: str, atom_list: list):
                 if atom in special_atom_list:
                     dict_.update(addon_basis[atom][basis])
         return dict_
+
+
+def gmtkn55_qzvp_basis(atom_list: list, subset: str):
+    basis = {}
+    for atom in dict.fromkeys(atom_list):
+        shells = gto.basis.load("def2-qzvp", atom)
+        if subset in ("G21EA", "AHB21", "IL16"):
+            angular_momenta = (0,) if atom == "H" else (0, 1)
+        elif subset == "WATER27" and atom == "O":
+            angular_momenta = (0, 1)
+        else:
+            angular_momenta = ()
+        if angular_momenta:
+            augmented = gto.basis.load("aug-cc-pvqz", atom)
+            unaugmented = gto.basis.load("cc-pvqz", atom)
+            for angular_momentum in angular_momenta:
+                plain_exponents = {
+                    row[0]
+                    for shell in unaugmented if shell[0] == angular_momentum
+                    for row in shell[1:]
+                    if len(row) == 2 and row[1] == 1.0
+                }
+                diffuse = [
+                    shell for shell in augmented
+                    if shell[0] == angular_momentum and len(shell) == 2
+                    and len(shell[1]) == 2 and shell[1][1] == 1.0
+                    and shell[1][0] not in plain_exponents
+                ]
+                if len(diffuse) != 1:
+                    raise ValueError(
+                        f"Expected one diffuse shell for {atom}, l={angular_momentum}; "
+                        f"found {len(diffuse)}."
+                    )
+                shells.extend(diffuse)
+        basis[atom] = shells
+    return basis
 
 
 def gen_ecp(basis: str, atom_list: list) -> dict:

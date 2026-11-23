@@ -250,7 +250,7 @@ class Collect_info:
                     print("D3BJ correction already added.")
                 return
 
-        if "name" not in self.data.columns:
+        if "name" not in self.data.columns or "scf_ene" not in self.data.columns:
             return
 
         reference_set = (

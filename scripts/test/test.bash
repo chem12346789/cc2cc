@@ -26,8 +26,12 @@ export TEST_MODE="${TEST_MODE:-scf}"
 export DFT2CC_MAX_GPU_JK_NAO=3500
 export DFT2CC_PROFILE_XC=0
 
-export basis_args="def2-QZVP(D)"
+export basis_args="def2-QZVP-GMTKN55"
 select_molecule_profile gmtkn55
+if [[ "${name_mol_input}" == "molecule_BH76RC" ]]; then
+    echo "BH76RC uses the molecules evaluated by the BH76 task."
+    exit 0
+fi
 
 setup_gpu_test_job 256000 40000
 # Arguments: PySCF memory (MiB); minimum free GPU memory (MiB).

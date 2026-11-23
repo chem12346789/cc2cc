@@ -24,7 +24,7 @@ export DATASET="gmtkn-diet100-def2"
 export TEST_MODE="${TEST_MODE:-scf}"
 export DFT2CC_PROFILE_XC=1
 
-export basis_args="def2-QZVP(D)"
+export basis_args="${basis_args:-def2-QZVP(D)}"
 select_molecule_profile gmtkn55
 
 setup_gpu_test_job 256000 40000
