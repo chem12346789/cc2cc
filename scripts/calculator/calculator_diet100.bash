@@ -13,6 +13,10 @@ export model_load_epoch_pairs=(
     "atom-82794:10005:scf_d3bj_ene:best before"
     # ==================================================
     "atom-3259973:2395:scf_d3bj_ene:vv10"
+    "atom-2725898:2395:scf_d3bj_ene:vv10"
+    "atom-2751839:2395:scf_d3bj_ene:vv10"
+    # ==================================================
+    # "atom-3259973:2395:scf_d3bj_ene:vv10"
     # "atom-3259973:2395:post_scf_vv10_ene:vv10"
     # "atom-3259973-vv10:2395:scf_d3bj_ene:vv10"
     # "atom-3259973-post-b3lyp:2395:scf_d3bj_ene:post B3LYP"
@@ -36,12 +40,6 @@ export model_load_epoch_pairs=(
     # "atom-1278887:4955:scf_d3bj_ene:SCF"
     # "atom-1278887-post-b3lyp:4955:scf_d3bj_ene:post B3LYP"
     # ==================================================
-    # "atom-1275973:4955:scf_d3bj_ene:SCF"
-    # "atom-1275973-post-b3lyp:4955:scf_d3bj_ene:post B3LYP"
-    # "atom-1275973:10075:scf_d3bj_ene:SCF"
-    # "atom-1275973-post-b3lyp:10075:scf_d3bj_ene:post B3LYP"
-    "atom-2065162:2395:scf_d3bj_ene:SCF"
-    "atom-2065162:4955:scf_d3bj_ene:SCF"
 )
 
 # find log folder with 4 days old files
@@ -51,10 +49,10 @@ find log -type f -mtime +4 -name "*.out" -exec rm -f {} \;
 # clean up empty folders in log folder
 find log -type d -empty -delete
 
-header_format='| %-30s | %8s | %8s | %9s | %-9s | %-9s | %-13s | %-13s |\n'
-table_format='| %-30s | %8s | %8.2f | %9s | %-9s | %-9s | %-13s | %-13s |\n'
-printf "$header_format" 'Model' 'Epoch' 'AI' 'Corrected' 'Processed' 'Converged' 'Energy_column' 'Note'
-printf '%s\n' '|--------------------------------|----------|----------|-----------|-----------|-----------|---------------|---------------|'
+header_format='| %-12s | %8s | %8s | %9s | %-9s | %-9s | %-13s | %-13s |\n'
+table_format='| %-12s | %8s | %8.2f | %9s | %-9s | %-9s | %-13s | %-13s |\n'
+printf "$header_format" 'Model' 'Epoch' 'AI' 'Corrected' 'Processed' 'Converged' 'Dispersion' 'Note'
+printf '%s\n' '|--------------|----------|----------|-----------|-----------|-----------|---------------|---------------|'
 find_messages=()
 for pair in "${model_load_epoch_pairs[@]}"; do
     IFS=: read -r model_load load_epoch energy_column note <<< "$pair"
@@ -73,6 +71,9 @@ for pair in "${model_load_epoch_pairs[@]}"; do
         END {
             if (summary != "") {
                 $0 = summary
+                if (converged == "" || converged == "unavailable") {
+                    converged = "NA"
+                }
                 energy_label = energy_column
                 if (energy_column == "scf_d3bj_ene") {
                     energy_label = "d3bj"

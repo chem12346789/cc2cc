@@ -17,6 +17,7 @@ validate
 /wandb
 /swanlog
 /tmp
+/ref
 out
 
 # Notebooks and datasets
