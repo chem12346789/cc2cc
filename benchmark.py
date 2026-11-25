@@ -8,7 +8,7 @@ import argparse
 from cc2cc.utils.helper.runtime.computer_info import print_computer_info
 from cc2cc.utils.helper.workflow.DataRecord import DataRecord
 from cc2cc.utils.mol import gen_mole
-from cc2cc.utils.parser import add_args
+from cc2cc.utils.parser import add_args, str2bool
 from cc2cc.utils.reference.test_data_dft import TestDataDFT
 from cc2cc.utils.helper.workflow.run_helpers import (
     build_record_path,
@@ -23,6 +23,7 @@ def _benchmark_dft(
     data_record,
     benchmark_method,
     benchmark_disp,
+    use_gpu: bool,
 ) -> None:
     record = {"name": name}
     for xc_code, disp in zip(benchmark_method, benchmark_disp):
@@ -33,6 +34,7 @@ def _benchmark_dft(
             name,
             xc_code=xc_code,
             disp=disp,
+            use_gpu=use_gpu,
         )
         xc_code_disp = xc_code if disp is None else f"{xc_code}-{disp}"
         record.update(
@@ -52,6 +54,18 @@ def main():
         description="Benchmark DFT calculations. Other parameters are from the argparse."
     )
     parser.add_argument(
+        "--max_cycle",
+        type=int,
+        default=250,
+        help="Maximum number of SCF cycles. Default is 250 and -1 for no iteration.",
+    )
+    parser.add_argument(
+        "--if_grad",
+        type=str2bool,
+        default=False,
+        help="Whether to calculate the force. Default is False.",
+    )
+    parser.add_argument(
         "--benchmark_method",
         type=str,
         nargs="+",
@@ -65,6 +79,36 @@ def main():
         default=None,
         help="Dispersion correction for benchmark DFT calculations. Default is None.",
     )
+    parser.add_argument(
+        "--conv_tol",
+        type=float,
+        default=1e-7,
+        help="SCF energy convergence tolerance in Hartree. Default is 1e-7.",
+    )
+    parser.add_argument(
+        "--conv_tol_grad",
+        type=float,
+        default=1e-3,
+        help="SCF orbital-gradient convergence tolerance. Default is 1e-3.",
+    )
+    parser.add_argument(
+        "--cpu",
+        type=str2bool,
+        default=False,
+        help="Force the use of CPU even if GPU is available. Default is False.",
+    )
+    parser.add_argument(
+        "--if_rotate",
+        type=str2bool,
+        default=False,
+        help="Whether to use rotation. Default is False.",
+    )
+    parser.add_argument(
+        "--if_rotate_random",
+        type=str2bool,
+        default=False,
+        help="Whether to use random rotation. Default is False.",
+    )
     args = add_args(parser)
 
     print_computer_info(args.device)
@@ -76,7 +120,9 @@ def main():
         args.benchmark_disp = args.benchmark_disp * len(args.benchmark_method)
 
     if len(args.benchmark_method) != len(args.benchmark_disp):
-        raise ValueError("`--benchmark_method` and `--benchmark_disp` must have same length.")
+        raise ValueError(
+            "`--benchmark_method` and `--benchmark_disp` must have same length."
+        )
 
     data_record = DataRecord(
         build_record_path(args),
@@ -110,6 +156,7 @@ def main():
                 data_record,
                 args.benchmark_method,
                 args.benchmark_disp,
+                use_gpu=args.device == "cuda",
             )
         finally:
             del mol

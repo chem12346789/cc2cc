@@ -2,6 +2,23 @@
 
 This directory contains reproducible evaluation and benchmark submission scripts.
 
+## Queue local GPU validation
+
+To queue the full model evaluation even when the selected local GPUs are busy:
+
+```bash
+python scripts/direct_run_per_gpu.py --script test/test.bash --gpus 0,1 \
+  --wait-for-gpu --min-free-memory 40 --poll-interval 30
+```
+
+The launcher runs in the background by default and logs its path and stop
+command. It starts jobs when free memory is at least 40 GiB; add
+`--max-gpu-power WATTS` to also filter the average of 11 power readings taken
+at one-second intervals over 10 seconds. Free memory uses the latest reading;
+neither check reserves a GPU. Use `--array-concurrency 1` for one job per GPU.
+The model and epoch still come from `test.bash`; adjust them before launching.
+The separate B3LYP baseline below is a CPU job, not a GPU-launcher job.
+
 ## GMTKN55 basis protocol
 
 The full test and calculator scripts use `def2-QZVP-GMTKN55`. The DIET100

@@ -33,7 +33,7 @@ if [[ "${name_mol_input}" == "molecule_BH76RC" ]]; then
     exit 0
 fi
 
-setup_gpu_test_job 256000 40000
+setup_gpu_test_job 256000 20000
 # Arguments: PySCF memory (MiB); minimum free GPU memory (MiB).
 echo "NUMBER_OF_THREADS=${NUMBER_OF_THREADS}"
 

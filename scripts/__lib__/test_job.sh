@@ -238,6 +238,28 @@ run_cpu_benchmark_job() {
         "$@"
 }
 
+run_gpu_benchmark_job() {
+    local -a numa_prefix=()
+    if [[ -n "${NUMA_NODE:-}" ]]; then
+        numa_prefix=(
+            numactl
+            "--cpunodebind=${NUMA_NODE}"
+            "--preferred=${NUMA_NODE}"
+        )
+    fi
+
+    OMP_WAIT_POLICY=PASSIVE "${numa_prefix[@]}" "${PYTHON_BIN}" \
+        "${REPO_ROOT}/benchmark.py" \
+        --basis "${basis_args}" \
+        --name_mol_reverse "${name_mol_reverse}" \
+        --dataset "${DATASET}" \
+        --name_mol "${name_mol_input}" \
+        --if_continue "${if_continue_args}" \
+        --if_grad "${IF_GRAD}" \
+        --device cuda \
+        "$@"
+}
+
 run_external_benchmark_job() {
     local python_bin=$1
     local script=$2

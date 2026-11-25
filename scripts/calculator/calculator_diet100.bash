@@ -56,11 +56,9 @@ printf '%s\n' '|--------------|----------|----------|-----------|-----------|---
 find_messages=()
 for pair in "${model_load_epoch_pairs[@]}"; do
     IFS=: read -r model_load load_epoch energy_column note <<< "$pair"
-    if [[ "$basis_args" == "def2-QZVP-GMTKN55" ]]; then
-        log_file="log/collect_info_${model_load}_${load_epoch}_${energy_column}_gmtkn55_cal_100.log"
-    else
-        log_file="log/collect_info_${model_load}_${load_epoch}_${energy_column}_cal_100.log"
-    fi
+    log_dir="log/basis_${basis_args}/gmtkn-diet100-def2"
+    mkdir -p "${log_dir}"
+    log_file="${log_dir}/collect_info_${model_load}_${load_epoch}_${energy_column}.log"
 
     rm -rf validate/*.csv
     find_output=$(find "validate/${basis_args}_${model_load}/${load_epoch}" -maxdepth 1 -type f -exec cp -t validate -- {} + 2>&1)

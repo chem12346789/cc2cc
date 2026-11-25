@@ -24,31 +24,51 @@ else:
 def query_gpus(
     requested: list[str] | None, min_free_memory: float, max_power: float | None,
 ) -> dict[str, str]:
-    result = subprocess.run(
-        ["nvidia-smi", "--query-gpu=index,uuid,memory.free,power.draw",
-         "--format=csv,noheader,nounits"],
-        text=True, capture_output=True, check=True, timeout=15,
-    )
+    def sample() -> dict[str, tuple[str, float, str]]:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=index,uuid,memory.free,power.draw",
+             "--format=csv,noheader,nounits"],
+            text=True, capture_output=True, check=True, timeout=15,
+        )
+        found = set()
+        selected = {}
+        for line in result.stdout.splitlines():
+            index, gpu_uuid, memory, power = (field.strip() for field in line.split(","))
+            found.update((index, gpu_uuid))
+            if requested is None or index in requested or gpu_uuid in requested:
+                selected[index] = (gpu_uuid, float(memory), power)
+        if requested is not None and (missing := set(requested) - found):
+            raise ValueError(f"Unknown GPU IDs: {', '.join(sorted(missing))}")
+        return selected
+
+    snapshot = sample()
+    power_sums: dict[str, float] = {}
+    if max_power is not None and snapshot:
+        start = time.monotonic()
+        devices = {index: values[0] for index, values in snapshot.items()}
+        for second in range(11):
+            if second:
+                time.sleep(max(0, start + second - time.monotonic()))
+                snapshot = sample()
+                if {index: values[0] for index, values in snapshot.items()} != devices:
+                    raise RuntimeError("GPU selection changed during power sampling")
+            for index, (_, _, power) in snapshot.items():
+                try:
+                    power_value = float(power)
+                except ValueError as error:
+                    raise ValueError(f"GPU {index} cannot report power: {power}") from error
+                if not math.isfinite(power_value):
+                    raise ValueError(f"GPU {index} cannot report power: {power}")
+                power_sums[index] = power_sums.get(index, 0.0) + power_value
+
     available = {}
-    found = set()
-    for line in result.stdout.splitlines():
-        index, gpu_uuid, memory, power = (field.strip() for field in line.split(","))
-        found.update((index, gpu_uuid))
-        if requested is not None and index not in requested and gpu_uuid not in requested:
+    for index, (gpu_uuid, memory, _) in snapshot.items():
+        if memory < min_free_memory * 1024:
             continue
-        if float(memory) < min_free_memory * 1024:
+        if max_power is not None and power_sums[index] / 11 > max_power:
             continue
-        if max_power is not None:
-            try:
-                power_value = float(power)
-            except ValueError as error:
-                raise ValueError(f"GPU {index} cannot report power: {power}") from error
-            if not math.isfinite(power_value) or power_value > max_power:
-                continue
         # UUIDs avoid CUDA ordinal remapping and CUDA_DEVICE_ORDER assumptions.
         available[index] = gpu_uuid
-    if requested is not None and (missing := set(requested) - found):
-        raise ValueError(f"Unknown GPU IDs: {', '.join(sorted(missing))}")
     return available
 
 
@@ -72,8 +92,16 @@ def build_argument_parser() -> argparse.ArgumentParser:
         "--time-array", help="Optional timing JSON: run longer tasks first; skip zero times.",
     )
     parser.add_argument("--min-free-memory", type=float, default=15.0, help="GiB (default: 15).")
-    parser.add_argument("--max-gpu-power", type=float, help="Maximum power in watts.")
+    parser.add_argument(
+        "--max-gpu-power", type=float,
+        help="Maximum 10-second average power in watts (sampled once per second).",
+    )
     parser.add_argument("--poll-interval", type=float, default=5.0, help="Seconds (default: 5).")
+    parser.add_argument(
+        "--wait-for-gpu", action="store_true",
+        help="Keep all selected GPUs in the queue, including those currently busy; "
+        "wait until each meets the memory and power filters before dispatch.",
+    )
     parser.add_argument("--log-dir", help="Default: log/direct-<run timestamp>.")
     parser.add_argument(
         "--foreground", action="store_true",
@@ -118,6 +146,7 @@ def run_jobs(
     running: dict[subprocess.Popen, tuple[str | None, int, int]] = {}
     failures = 0
     total_concurrency = concurrency * len(resources)
+    waiting_for_gpu = False
     try:
         while pending or running:
             for process, (gpu, model, task) in list(running.items()):
@@ -142,6 +171,16 @@ def run_jobs(
                     set(query_gpus(list(gpus.values()), min_free_memory, max_power))
                     if gpus is not None else {None}
                 )
+                if not any(gpu in available for gpu in available_gpus):
+                    if not waiting_for_gpu:
+                        print(
+                            f"[WAIT] {len(pending)} jobs pending; no selected GPU "
+                            "currently satisfies the resource filters.",
+                            flush=True,
+                        )
+                        waiting_for_gpu = True
+                else:
+                    waiting_for_gpu = False
                 for gpu in available_gpus:
                     while (
                         pending and active_by_gpu[gpu] < concurrency
@@ -246,10 +285,16 @@ def main(argv: list[str] | None = None) -> int:
         gpus: dict[str, str] | None = dict.fromkeys(requested, "")
     else:
         try:
-            gpus = query_gpus(requested, args.min_free_memory, args.max_gpu_power)
+            gpus = query_gpus(
+                requested,
+                0 if args.wait_for_gpu else args.min_free_memory,
+                None if args.wait_for_gpu else args.max_gpu_power,
+            )
         except FileNotFoundError as error:
             if error.filename != "nvidia-smi":
                 raise
+            if args.wait_for_gpu:
+                raise RuntimeError("--wait-for-gpu requires nvidia-smi") from error
             print(
                 "[WARN] nvidia-smi not found; GPU selection and filters are "
                 "disabled. Jobs inherit CUDA visibility.",
@@ -260,6 +305,8 @@ def main(argv: list[str] | None = None) -> int:
             if requested == []:
                 parser.error("The GPU selection is empty")
             if not gpus:
+                if args.wait_for_gpu:
+                    raise RuntimeError("No selected local GPUs found")
                 raise RuntimeError("No local GPUs satisfy the memory/power filters")
     concurrency = concurrency or 1
     total_concurrency = concurrency * (len(gpus) if gpus is not None else 1)
