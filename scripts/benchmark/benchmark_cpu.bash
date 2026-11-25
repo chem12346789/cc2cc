@@ -7,7 +7,7 @@
 #SBATCH --time=2400:00:00
 #SBATCH -a [0-54]%8
 #SBATCH -J validate-data
-#SBATCH -o log/test-atom-%A-%a.log -e log/test-atom-%A-%a.err
+#SBATCH -o log/detail/test-atom-%A-%a.log -e log/detail/test-atom-%A-%a.err
 ###SBATCH --exclude=cpu[18]
 
 SCRIPT_DIR="scripts"

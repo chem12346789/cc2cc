@@ -14,6 +14,7 @@ import sys
 import time
 from collections import deque
 from pathlib import Path
+from urllib.parse import quote
 
 if __package__:
     from . import submit_direct_array_per_gpu as submit
@@ -147,13 +148,65 @@ def run_jobs(
     failures = 0
     total_concurrency = concurrency * len(resources)
     waiting_for_gpu = False
+    job_status = {
+        (model, task): ["-", "-", "Pending", "-", None, None]
+        for model, task in jobs
+    }
+    log_metadata = {
+        (model, task): scratch_dir / f"model-{model}-task-{task}" / "log-paths"
+        for model, task in jobs
+    }
+    status_path = log_dir / "launcher-status.md"
+
+    def file_link(path: str | None, label: str) -> str:
+        if path is None:
+            return "-"
+        relative_path = os.path.relpath(path, status_path.parent)
+        return f"[{label}]({quote(relative_path, safe='/-._~')})"
+
+    def write_status_table() -> None:
+        rows = [
+            "| Model | Task | GPU | PID | Status | Exit code | Log | Err |",
+            "| ---: | ---: | --- | ---: | --- | ---: | --- | --- |",
+        ]
+        rows.extend(
+            f"| {model} | {task} | {gpu} | {pid} | {status} | {exit_code} "
+            f"| {file_link(log_file, 'out')} | {file_link(err_file, 'err')} |"
+            for (model, task), (gpu, pid, status, exit_code, log_file, err_file)
+            in job_status.items()
+        )
+        temporary_path = status_path.with_suffix(".md.tmp")
+        temporary_path.write_text(
+            f"Updated: {datetime.now().astimezone().isoformat(timespec='seconds')}\n\n"
+            + "\n".join(rows) + "\n"
+        )
+        temporary_path.replace(status_path)
+
+    write_status_table()
     try:
         while pending or running:
+            metadata_updated = False
+            for job, metadata_path in log_metadata.items():
+                if job_status[job][4] is not None or not metadata_path.exists():
+                    continue
+                paths = metadata_path.read_text().splitlines()
+                if len(paths) == 2:
+                    job_status[job][4:] = paths
+                    metadata_updated = True
+            if metadata_updated:
+                write_status_table()
             for process, (gpu, model, task) in list(running.items()):
                 if (returncode := process.poll()) is None:
                     continue
                 del running[process]
                 failures += returncode != 0
+                job_status[(model, task)][:4] = [
+                    str(gpu) if gpu is not None else "unmanaged",
+                    str(process.pid),
+                    "Failed" if returncode else "Completed",
+                    str(returncode),
+                ]
+                write_status_table()
                 device = f"GPU={gpu}" if gpu is not None else "GPU=unmanaged"
                 print(
                     f"[DONE] model={model} task={task} {device} exit={returncode}",
@@ -198,6 +251,9 @@ def run_jobs(
                             SLURM_CPUS_PER_TASK=str(cpus),
                             PYSCF_TMPDIR=str(task_scratch),
                             DIRECT_RUN_LOG_LINKS="1",
+                            DIRECT_RUN_LOG_METADATA=str(
+                                task_scratch / "log-paths"
+                            ),
                         )
                         if array_task_count is not None:
                             env["SLURM_ARRAY_TASK_COUNT"] = str(array_task_count)
@@ -212,6 +268,13 @@ def run_jobs(
                         )
                         running[process] = (gpu, model, task)
                         active_by_gpu[gpu] += 1
+                        job_status[(model, task)][:4] = [
+                            str(gpu) if gpu is not None else "unmanaged",
+                            str(process.pid),
+                            "Running",
+                            "-",
+                        ]
+                        write_status_table()
                         device = f"GPU={gpu}" if gpu is not None else "GPU=unmanaged"
                         print(
                             f"[START] model={model} task={task} {device} PID={process.pid}",
@@ -364,6 +427,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"[BACKGROUND] PID={process.pid} log={launcher_log}\n"
             f"[MONITOR] tail -f {launcher_log}\n"
+            f"[STATUS] {log_dir / 'launcher-status.md'} (auto-updated)\n"
             f"[STOP] kill -TERM {process.pid}", flush=True,
         )
         return 0

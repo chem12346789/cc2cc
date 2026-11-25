@@ -2,6 +2,10 @@
 
 This directory contains reproducible evaluation and benchmark submission scripts.
 
+Slurm opens job output files before running the script. Before submitting a
+test or benchmark that writes scheduler output under `log/detail/`, run
+`mkdir -p log/detail` from the repository root.
+
 ## Queue local GPU validation
 
 To queue the full model evaluation even when the selected local GPUs are busy:

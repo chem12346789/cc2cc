@@ -7,7 +7,7 @@
 #SBATCH --time=2400:00:00
 #SBATCH -a [0-54]%1
 #SBATCH -J validate-data
-#SBATCH -o log/benchmark-%A-%a.log -e log/benchmark-%A-%a.err
+#SBATCH -o log/detail/benchmark-%A-%a.log -e log/detail/benchmark-%A-%a.err
 
 SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"
@@ -25,7 +25,7 @@ if [[ "${name_mol_input}" == "molecule_BH76RC" ]]; then
     echo "BH76RC uses the molecules evaluated by the BH76 task."
     exit 0
 fi
-setup_gpu_test_job 15000 20000
+setup_gpu_test_job 250000 20000
 begin_test_job benchmark_dft
 run_gpu_benchmark_job
 finish_test_job

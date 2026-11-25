@@ -7,6 +7,7 @@
 #SBATCH --time=2400:00:00
 #SBATCH -a [0-15]%1
 #SBATCH -J validate-detail
+#SBATCH -o log/detail/test-detail-%A-%a.log
 
 SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"

@@ -7,6 +7,7 @@
 #SBATCH --time=2400:00:00
 #SBATCH -a [0]%1
 #SBATCH -J validate-force
+#SBATCH -o log/detail/test-force-%A-%a.log
 
 SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"

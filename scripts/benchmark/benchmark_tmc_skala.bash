@@ -7,7 +7,7 @@
 #SBATCH --time=2400:00:00
 #SBATCH -a [0-1]%2
 #SBATCH -J benchmark_tmc_skala
-#SBATCH -o log/benchmark_tmc_skala_%A_%a.out
+#SBATCH -o log/detail/benchmark_tmc_skala_%A_%a.out
 
 SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"
