@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gc
+import os
 from pathlib import Path
 
 from cc2cc.utils.helper.runtime.env_var import MAIN_PATH
@@ -45,7 +46,13 @@ def build_record_path(args) -> Path:
         base = f"{base}_{args.name_mol_input[0]}"
     dir_path = MAIN_PATH / "validate" / f"{args.basis}_{model_load}" / f"{args.load_epoch}"
     dir_path.mkdir(parents=True, exist_ok=True)
-    return dir_path / f"{base}.csv"
+    record_path = dir_path / f"{base}.csv"
+    if metadata := os.environ.get("DIRECT_RUN_CSV_METADATA"):
+        metadata_path = Path(metadata)
+        temporary_path = metadata_path.with_suffix(".tmp")
+        temporary_path.write_text(f"{record_path}\n")
+        temporary_path.replace(metadata_path)
+    return record_path
 
 
 def load_post_scf_density(

@@ -273,7 +273,9 @@ The former matrix-assembly stage is now split into `AO weighting` and
 float64 `cp.dot` followed by addition into the potential matrices. The
 `matrix GEMM` timer includes both the matrix product and this addition;
 direct cuBLAS accumulation has been rolled back.
-Weighted-AO scratch storage is reused across blocks, growing only when needed.
+AO evaluation and weighted-AO scratch storage are reused across blocks, growing
+only when needed. The AO buffer is local to one integration call and its host
+allocation time is reported separately.
 UKS processes alpha then beta through the same scratch buffer; `AO weighting`
 and `matrix GEMM` therefore each have two calls per block in UKS (one in RKS).
 Their total times still include both spins. All scratch storage is local to one

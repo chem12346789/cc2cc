@@ -149,11 +149,15 @@ def run_jobs(
     total_concurrency = concurrency * len(resources)
     waiting_for_gpu = False
     job_status = {
-        (model, task): ["-", "-", "Pending", "-", None, None]
+        (model, task): ["-", "-", "Pending", "-", None, None, None]
         for model, task in jobs
     }
     log_metadata = {
         (model, task): scratch_dir / f"model-{model}-task-{task}" / "log-paths"
+        for model, task in jobs
+    }
+    csv_metadata = {
+        (model, task): scratch_dir / f"model-{model}-task-{task}" / "csv-path"
         for model, task in jobs
     }
     status_path = log_dir / "launcher-status.md"
@@ -169,13 +173,14 @@ def run_jobs(
 
     def write_status_table() -> None:
         rows = [
-            "| Model | Task | GPU | PID | Status | Exit code | Log | Err |",
-            "| ---: | ---: | --- | ---: | --- | ---: | --- | --- |",
+            "| Model | Task | GPU | PID | Status | Exit code | Log | Err | CSV |",
+            "| ---: | ---: | --- | ---: | --- | ---: | --- | --- | --- |",
         ]
         rows.extend(
             f"| {model} | {task} | {gpu} | {pid} | {status} | {exit_code} "
-            f"| {file_link(log_file, 'out')} | {file_link(err_file, 'err')} |"
-            for (model, task), (gpu, pid, status, exit_code, log_file, err_file)
+            f"| {file_link(log_file, 'out')} | {file_link(err_file, 'err')} "
+            f"| {file_link(csv_file, 'csv')} |"
+            for (model, task), (gpu, pid, status, exit_code, log_file, err_file, csv_file)
             in job_status.items()
         )
         temporary_path = status_path.with_suffix(".md.tmp")
@@ -188,16 +193,6 @@ def run_jobs(
     write_status_table()
     try:
         while pending or running:
-            metadata_updated = False
-            for job, metadata_path in log_metadata.items():
-                if job_status[job][4] is not None or not metadata_path.exists():
-                    continue
-                paths = metadata_path.read_text().splitlines()
-                if len(paths) == 2:
-                    job_status[job][4:] = paths
-                    metadata_updated = True
-            if metadata_updated:
-                write_status_table()
             for process, (gpu, model, task) in list(running.items()):
                 if (returncode := process.poll()) is None:
                     continue
@@ -215,6 +210,19 @@ def run_jobs(
                     f"[DONE] model={model} task={task} {device} exit={returncode}",
                     flush=True,
                 )
+            metadata_updated = False
+            for job, metadata_path in log_metadata.items():
+                if job_status[job][4] is None and metadata_path.exists():
+                    paths = metadata_path.read_text().splitlines()
+                    if len(paths) == 2:
+                        job_status[job][4:6] = paths
+                        metadata_updated = True
+                csv_path = csv_metadata[job]
+                if job_status[job][6] is None and csv_path.exists():
+                    job_status[job][6] = csv_path.read_text().strip()
+                    metadata_updated = True
+            if metadata_updated:
+                write_status_table()
             active_by_gpu = {
                 gpu: sum(active_gpu == gpu for active_gpu, _, _ in running.values())
                 for gpu in resources
@@ -257,6 +265,7 @@ def run_jobs(
                             DIRECT_RUN_LOG_METADATA=str(
                                 task_scratch / "log-paths"
                             ),
+                            DIRECT_RUN_CSV_METADATA=str(task_scratch / "csv-path"),
                         )
                         if array_task_count is not None:
                             env["SLURM_ARRAY_TASK_COUNT"] = str(array_task_count)
