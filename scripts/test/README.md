@@ -36,10 +36,18 @@ aug-cc-pVQZ functions documented for G21EA and WATER27 in the earlier GMTKN30
 publication; the 2017 paper does not specify their exponents for AHB21 and
 IL16 separately.
 
+Unmodified atoms use the named def2-QZVP basis; when no augmentation is needed,
+the molecule uses that basis name directly. PySCF can then select its default
+fitting basis instead of generating even-tempered functions for those atoms.
+This changes density-fitted results relative to earlier GMTKN55-label runs;
+cached results produced with the old auxiliary basis need recomputation.
+
 The new basis label keeps output and collector caches separate from existing
 `def2-QZVP(D)` results. Recompute the benchmark before comparing scores; the
 collector does not include old precomputed functional columns for this label.
 Existing `def2-QZVP(D)` selection and other scripts are unchanged.
+Calculation logs are written to `log/detail/<model>/<epoch>/<basis>/` so
+different bases do not overwrite each other's logs.
 
 ## B3LYP baseline with the GMTKN55 basis
 
