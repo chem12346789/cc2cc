@@ -5,6 +5,9 @@ Other parameter are from the argparse.
 
 import argparse
 
+# Load the matching DFT-D3 library before PySCF loads its bundled library.
+import dftd3.library
+
 from cc2cc.utils.ModelClass import ModelClass
 from cc2cc.utils.helper.runtime.computer_info import print_computer_info
 from cc2cc.utils.helper.workflow.DataRecord import DataRecord
