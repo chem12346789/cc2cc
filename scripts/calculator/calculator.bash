@@ -8,6 +8,7 @@ export basis_args="${basis_args:-def2-QZVP-GMTKN55}"
 # Entries: model:epoch:energy_column:note.
 export model_load_epoch_pairs=(
     ":-1:b3lyp_ene:B3LYP"
+    # "atom-dft:1000:scf_d3bj_ene:B3LYP"
     # "atom-82794:10005:scf_d3bj_ene:SCF"
     # "atom-3259973:2395:scf_d3bj_ene:SCF"
     # "atom-2065162:4955:scf_d3bj_ene:SCF"
@@ -33,7 +34,7 @@ printf '%s\n' '|--------------------------------|----------|----------|---------
 find_messages=()
 for model_load_epoch_pair in "${model_load_epoch_pairs[@]}"; do
     IFS=: read -r model_load load_epoch energy_column note <<< "$model_load_epoch_pair"
-    log_dir="log/basis_${basis_args}/gmtkn-diet100-def2"
+    log_dir="log/basis_${basis_args}/gmtkn-def2"
     mkdir -p "${log_dir}"
     energy_column="${energy_column:-scf_d3bj_ene}"
     note="${note:-}"
