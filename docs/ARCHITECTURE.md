@@ -491,7 +491,8 @@ created, and failures may occur after earlier files have been updated.
   For force testing, use `--script test/test_force.bash --gpus 0`;
   its array runs one job with 20 CPU threads. The `force` molecule profile selects
   `molecule_Force` and redirects calculation output to
-  `log/<checkpoint>/<epoch>/Force_0.out` and `.err`, like the other profiles.
+  `log/detail/<checkpoint>/<epoch>/<basis>/Force_0.out` and `.err`, like the
+  other profiles.
   For rotation checks, use `--script test/test_rotate.bash --gpus 0`.
   The `rotate` profile selects `molecule_Rotation` from `rotation-def2.json`:
   the CH4, H2O, open-shell OH, HAL59-BrBr_FCCH, and W4_11-sif4 center geometries

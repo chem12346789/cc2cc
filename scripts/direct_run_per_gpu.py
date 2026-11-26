@@ -161,7 +161,10 @@ def run_jobs(
     def file_link(path: str | None, label: str) -> str:
         if path is None:
             return "-"
-        relative_path = os.path.relpath(path, status_path.parent)
+        relative_path = os.path.relpath(
+            Path(path).resolve(),
+            status_path.parent.resolve(),
+        )
         return f"[{label}]({quote(relative_path, safe='/-._~')})"
 
     def write_status_table() -> None:

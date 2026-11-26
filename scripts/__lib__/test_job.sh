@@ -184,7 +184,7 @@ select_molecule_profile() {
         load_name="${load_name}-${test_mode}"
     fi
     local set_name="${name_mol_input#molecule_}"
-    local log_dir="${REPO_ROOT}/log/detail/${load_name}/${load_epoch}"
+    local log_dir="${REPO_ROOT}/log/detail/${load_name}/${load_epoch}/${basis_args:?basis_args must be set}"
     mkdir -p "${log_dir}"
     local log_file="${log_dir}/${set_name}_${array_index}.out"
     local err_file="${log_dir}/${set_name}_${array_index}.err"
