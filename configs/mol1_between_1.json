@@ -2,7 +2,13 @@
   "train": [
     "molecule0-W4_11",
     "molecule0-ADDON",
-    "molecule0-APPENDIX"
+    "molecule0-APPENDIX",
+    "W4_11-h2s",
+    "W4_11-sih4",
+    "W4_11-ph3",
+    "W4_11-nh",
+    "W4_11-nh2",
+    "W4_11-bh"
   ],
   "eval": [
     "molecule5-W4_11",
