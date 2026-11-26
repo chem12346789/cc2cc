@@ -8,13 +8,13 @@ from cc2cc.utils.zmp.zmp import RZMP, UZMP
 from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
 LEVEL_SHIFT = 3
-MAX_CYCLE = 2500
+MAX_CYCLE = 25000
 RHO_REL_TOL = 1e-2
 I_VALUE_REL_TOL = 1e-4
 I_VALUE_ABS_TOL = 1e-10
 DIIS_SPACE = 1024
-HARTREE_REL_TOL = 25
-NUCLEAR_REL_TOL = 25
+HARTREE_REL_TOL = 15
+NUCLEAR_REL_TOL = 15
 
 
 def get_zmp(
