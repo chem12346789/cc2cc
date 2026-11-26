@@ -16,7 +16,7 @@ setup_test_job() {
 
     export PYSCF_MAX_MEMORY="${max_memory_mb}"
     export PYSCF_TMPDIR="${PYSCF_TMPDIR:-${TMPDIR:-$HOME/tmp}}"
-    mkdir -p "${REPO_ROOT}/log" "${REPO_ROOT}/validate"
+    mkdir -p "${REPO_ROOT}/log/detail" "${REPO_ROOT}/validate"
 }
 
 select_gpu() {
@@ -115,7 +115,7 @@ setup_cpu_test_job() {
     export OPENBLAS_NUM_THREADS="${NUMBER_OF_THREADS}"
     export PYSCF_MAX_MEMORY="${max_memory_mb}"
     export PYSCF_TMPDIR="${PYSCF_TMPDIR:-${TMPDIR:-$HOME/tmp}}"
-    mkdir -p "${REPO_ROOT}/log" "${REPO_ROOT}/validate"
+    mkdir -p "${REPO_ROOT}/log/detail" "${REPO_ROOT}/validate"
 }
 
 begin_test_job() {
@@ -184,13 +184,17 @@ select_molecule_profile() {
         load_name="${load_name}-${test_mode}"
     fi
     local set_name="${name_mol_input#molecule_}"
-    local log_dir="${REPO_ROOT}/log/${load_name}/${load_epoch}"
+    local log_dir="${REPO_ROOT}/log/detail/${load_name}/${load_epoch}/${basis_args:?basis_args must be set}"
     mkdir -p "${log_dir}"
     local log_file="${log_dir}/${set_name}_${array_index}.out"
     local err_file="${log_dir}/${set_name}_${array_index}.err"
     if [[ "${DIRECT_RUN_LOG_LINKS:-}" == "1" ]]; then
         printf '[TASK-LOG] model=%s task=%s log=%s err=%s\n' \
             "${MODEL_INDEX:-0}" "${array_index}" "${log_file}" "${err_file}"
+        if [[ -n "${DIRECT_RUN_LOG_METADATA:-}" ]]; then
+            printf '%s\n%s\n' "${log_file}" "${err_file}" \
+                >"${DIRECT_RUN_LOG_METADATA}"
+        fi
     fi
     exec >"${log_file}" 2>"${err_file}"
     printf 'array_index=%s\n' "${array_index}"
@@ -228,13 +232,36 @@ run_test_job() {
 }
 
 run_cpu_benchmark_job() {
-    "${PYTHON_BIN}" "${REPO_ROOT}/benchmark_dft.py" \
+    "${PYTHON_BIN}" "${REPO_ROOT}/benchmark.py" \
         --basis "${basis_args}" \
         --name_mol_reverse "${name_mol_reverse}" \
         --dataset "${DATASET}" \
         --name_mol "${name_mol_input}" \
         --if_continue "${if_continue_args}" \
-        --device cpu
+        --device cpu \
+        "$@"
+}
+
+run_gpu_benchmark_job() {
+    local -a numa_prefix=()
+    if [[ -n "${NUMA_NODE:-}" ]]; then
+        numa_prefix=(
+            numactl
+            "--cpunodebind=${NUMA_NODE}"
+            "--preferred=${NUMA_NODE}"
+        )
+    fi
+
+    OMP_WAIT_POLICY=PASSIVE "${numa_prefix[@]}" "${PYTHON_BIN}" \
+        "${REPO_ROOT}/benchmark.py" \
+        --basis "${basis_args}" \
+        --name_mol_reverse "${name_mol_reverse}" \
+        --dataset "${DATASET}" \
+        --name_mol "${name_mol_input}" \
+        --if_continue "${if_continue_args}" \
+        --if_grad "${IF_GRAD}" \
+        --device cuda \
+        "$@"
 }
 
 run_external_benchmark_job() {

@@ -7,15 +7,15 @@
 #SBATCH --time=2400:00:00
 #SBATCH -a [12]%1
 #SBATCH -J validate-diet100
+#SBATCH -o log/detail/test-diet100-%A-%a.log
 
 SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
 case "${MODEL_INDEX:-0}" in
-    (0) export load_model_args="--load atom-2065162 --load_epoch 4955" ;;
-    # (1) export load_model_args="--load atom-2065162 --load_epoch 4955" ;;
-    # (2) export load_model_args="--load atom-2065162 --load_epoch 10075" ;;
+    (0) export load_model_args="--load atom-2725898 --load_epoch 2395" ;;
+    # (1) export load_model_args="--load atom-2751839 --load_epoch 2395" ;;
 esac
 
 export if_continue_args=1
@@ -25,7 +25,7 @@ export DATASET="gmtkn-diet100-def2"
 export TEST_MODE="${TEST_MODE:-scf}"
 export DFT2CC_PROFILE_XC=1
 
-export basis_args="def2-QZVP(D)"
+export basis_args="${basis_args:-def2-QZVP(D)}"
 select_molecule_profile gmtkn55
 
 setup_gpu_test_job 256000 40000

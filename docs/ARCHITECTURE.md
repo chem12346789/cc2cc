@@ -457,8 +457,17 @@ created, and failures may occur after earlier files have been updated.
   an override is entered.
   Optional `--time-array` prioritizes longer tasks and skips zero runtimes; the
   task count remains the size of the configured array before filtering.
-  Memory (default 15 GiB) and optional power filters are instantaneous checks
-  before dispatch, not reservations; coordinate GPU ownership with other users.
+  The memory filter (default 15 GiB) uses the latest reading. The optional
+  `--max-gpu-power` filter uses the arithmetic mean of 11 readings taken at
+  one-second intervals over 10 seconds, in watts. Each power check therefore
+  takes at least 10 seconds. Neither filter reserves a GPU; coordinate GPU
+  ownership with other users.
+  Add `--wait-for-gpu` to retain selected GPUs even if they initially fail
+  the filters; the launcher polls them at `--poll-interval` (default 5 seconds)
+  and starts queued jobs as GPUs become eligible. Without the option, initially
+  ineligible GPUs are excluded and an empty selection fails immediately.
+  Waiting requires `nvidia-smi`; it does not reserve GPUs or detect all external
+  jobs, and thresholds should be chosen for the workload.
   With no `--gpus`, respects `CUDA_VISIBLE_DEVICES` or discovers all local GPUs.
   If `nvidia-smi` is missing, it warns and skips GPU selection and filters;
   jobs inherit CUDA visibility and must choose their own device. In that mode,
@@ -482,7 +491,8 @@ created, and failures may occur after earlier files have been updated.
   For force testing, use `--script test/test_force.bash --gpus 0`;
   its array runs one job with 20 CPU threads. The `force` molecule profile selects
   `molecule_Force` and redirects calculation output to
-  `log/<checkpoint>/<epoch>/Force_0.out` and `.err`, like the other profiles.
+  `log/detail/<checkpoint>/<epoch>/<basis>/Force_0.out` and `.err`, like the
+  other profiles.
   For rotation checks, use `--script test/test_rotate.bash --gpus 0`.
   The `rotate` profile selects `molecule_Rotation` from `rotation-def2.json`:
   the CH4, H2O, open-shell OH, HAL59-BrBr_FCCH, and W4_11-sif4 center geometries

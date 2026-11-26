@@ -7,6 +7,7 @@
 #SBATCH --time=2400:00:00
 #SBATCH -a [0]%1
 #SBATCH -J validate-rotate
+#SBATCH -o log/detail/test-rotate-%A-%a.log
 
 SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"

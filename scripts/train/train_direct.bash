@@ -25,7 +25,8 @@ export BASIS_ARGS="def2-QZVPPD"
 
 # dft_vv10 is the renamed dft_d3bj_vv10 target.
 # export RHO_INPUT="dft"
-export RHO_INPUT="dft_vv10"
+# export RHO_INPUT="dft_vv10"
+export RHO_INPUT="zmp"
 # export RHO_INPUT="zmp_vv10"
 
 export MOL0_WEIGHTING=4

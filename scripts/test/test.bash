@@ -7,6 +7,7 @@
 #SBATCH --time=2400:00:00
 #SBATCH -a [12]%1
 #SBATCH -J validate-full
+#SBATCH -o log/detail/test-%A-%a.log
 
 SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"
@@ -24,12 +25,16 @@ export name_mol_reverse=0
 export DATASET="gmtkn-def2"
 export TEST_MODE="${TEST_MODE:-scf}"
 export DFT2CC_MAX_GPU_JK_NAO=3500
-export DFT2CC_PROFILE_XC=1
+export DFT2CC_PROFILE_XC=0
 
-export basis_args="def2-QZVP(D)"
+export basis_args="def2-QZVP-GMTKN55"
 select_molecule_profile gmtkn55
+if [[ "${name_mol_input}" == "molecule_BH76RC" ]]; then
+    echo "BH76RC uses the molecules evaluated by the BH76 task."
+    exit 0
+fi
 
-setup_gpu_test_job 256000 40000
+setup_gpu_test_job 256000 20000
 # Arguments: PySCF memory (MiB); minimum free GPU memory (MiB).
 echo "NUMBER_OF_THREADS=${NUMBER_OF_THREADS}"
 

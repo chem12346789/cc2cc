@@ -7,6 +7,7 @@
 #SBATCH --time=2400:00:00
 #SBATCH -a [0-54]%4
 #SBATCH -J validate-diet30
+#SBATCH -o log/detail/test-diet30-%A-%a.log
 
 SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"

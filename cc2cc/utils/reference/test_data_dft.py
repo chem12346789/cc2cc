@@ -21,8 +21,10 @@ class TestDataDFT:
         name: str,
         xc_code: str,
         disp: str | None,
+        use_gpu: bool = False,
     ) -> None:
         self.mol = mol
+        self.use_gpu = use_gpu
         xc_code_disp = xc_code if disp is None else f"{xc_code}-{disp}"
         print(f"Testing DFT {xc_code_disp} for {name}")
         path_to_data = DATA_TEST_PATH / f"{name}_cc.npz"
@@ -75,7 +77,12 @@ class TestDataDFT:
         ks_class = pyscf.scf.UKS if is_uks else pyscf.scf.RKS
         method_name = "UKS" if is_uks else "RKS"
         time_start = timer()
-        mdft = ks_class(self.mol).density_fit()
+        mf = ks_class(self.mol)
+        if self.use_gpu:
+            import cupy as cp
+
+            mf = mf.to_gpu()
+        mdft = mf.density_fit()
         if xc_code_disp.lower() == "dm21":
             raise ValueError(
                 "DM21 is not supported in this function. Use a different xc_code."
@@ -87,12 +94,18 @@ class TestDataDFT:
         mdft.level_shift = 0.1
         if dm1_dft is None:
             mdft.kernel()
+        elif self.use_gpu:
+            mdft.kernel(dm0=cp.asarray(dm1_dft))
         else:
             mdft.kernel(dm0=dm1_dft)
         if not mdft.converged:
             raise ValueError(f"{method_name} not converged.")
         dm1_dft = mdft.make_rdm1(ao_repr=True)
         time_dft = timer() - time_start
+        grad_dft = mdft.Gradients().kernel()
+        if self.use_gpu:
+            dm1_dft = cp.asnumpy(dm1_dft)
+            grad_dft = cp.asnumpy(grad_dft)
         data = {
             f"e_dft-{xc_code_disp}": mdft.e_tot,
             f"dft_dipole-{xc_code_disp}": pyscf.scf.hf.dip_moment(
@@ -101,7 +114,7 @@ class TestDataDFT:
                 unit="A.U.",
             ),
             f"time_dft-{xc_code_disp}": time_dft,
-            f"grad_dft-{xc_code_disp}": mdft.Gradients().kernel(),
+            f"grad_dft-{xc_code_disp}": grad_dft,
             f"dm1_dft-{xc_code_disp}": dm1_dft,
         }
         if xc_code_disp == "b3lyp":

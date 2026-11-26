@@ -2,6 +2,75 @@
 
 This directory contains reproducible evaluation and benchmark submission scripts.
 
+Slurm opens job output files before running the script. Before submitting a
+test or benchmark that writes scheduler output under `log/detail/`, run
+`mkdir -p log/detail` from the repository root.
+
+## Queue local GPU validation
+
+To queue the full model evaluation even when the selected local GPUs are busy:
+
+```bash
+python scripts/direct_run_per_gpu.py --script test/test.bash --gpus 0,1 \
+  --wait-for-gpu --min-free-memory 40 --poll-interval 30
+```
+
+The launcher runs in the background by default and logs its path and stop
+command. It starts jobs when free memory is at least 40 GiB; add
+`--max-gpu-power WATTS` to also filter the average of 11 power readings taken
+at one-second intervals over 10 seconds. Free memory uses the latest reading;
+neither check reserves a GPU. Use `--array-concurrency 1` for one job per GPU.
+The model and epoch still come from `test.bash`; adjust them before launching.
+The separate B3LYP baseline below is a CPU job, not a GPU-launcher job.
+
+## GMTKN55 basis protocol
+
+The full test and calculator scripts use `def2-QZVP-GMTKN55`. The DIET100
+scripts retain `def2-QZVP(D)` by default; set
+`basis_args=def2-QZVP-GMTKN55` in the environment to opt in to the new protocol.
+It selects def2-QZVP for most subsets, adds the aug-cc-pVQZ diffuse s and p
+shells on non-hydrogen atoms and the diffuse s shell on hydrogen throughout
+G21EA, AHB21, and IL16, and adds the diffuse s and p shells on oxygen
+throughout WATER27. This follows the GMTKN55 augmentation protocol, using the
+aug-cc-pVQZ functions documented for G21EA and WATER27 in the earlier GMTKN30
+publication; the 2017 paper does not specify their exponents for AHB21 and
+IL16 separately.
+
+Unmodified atoms use the named def2-QZVP basis; when no augmentation is needed,
+the molecule uses that basis name directly. PySCF can then select its default
+fitting basis instead of generating even-tempered functions for those atoms.
+This changes density-fitted results relative to earlier GMTKN55-label runs;
+cached results produced with the old auxiliary basis need recomputation.
+
+The new basis label keeps output and collector caches separate from existing
+`def2-QZVP(D)` results. Recompute the benchmark before comparing scores; the
+collector does not include old precomputed functional columns for this label.
+Existing `def2-QZVP(D)` selection and other scripts are unchanged.
+Calculation logs are written to `log/detail/<model>/<epoch>/<basis>/` so
+different bases do not overwrite each other's logs.
+
+## B3LYP baseline with the GMTKN55 basis
+
+`scripts/benchmark/benchmark_cpu.bash` evaluates B3LYP and B3LYP-D3(BJ)
+for all 55 GMTKN55 subsets with the new basis. Its existing Slurm array uses
+CPU resources; submit it only when the full calculation is intended. Completed
+per-subset records are resumed and stored under
+`validate/def2-QZVP-GMTKN55_/-1/`, separate from the old basis.
+The BH76 task also supplies BH76RC; its separate array slot is skipped.
+The benchmark raises on SCF non-convergence.
+
+After the jobs finish, copy the per-subset CSVs from that directory to
+`validate/`, then run:
+
+```bash
+python collect_info.py --model_load '' --epoch -1 \
+  --basis def2-QZVP-GMTKN55 --data_set gmtkn-def2 --max_checks 0
+```
+
+The collector reports the new B3LYP and B3LYP(BJ) columns, without importing
+old-basis reference columns. Numerical grids, fitting, and other settings must
+also be matched before treating this as an exact reproduction of the paper.
+
 ## Check an intermolecular collection log
 
 Check an existing log without rerunning collection or modifying validation data:

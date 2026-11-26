@@ -7,26 +7,30 @@
 #SBATCH --time=2400:00:00
 #SBATCH -a [0-54]%8
 #SBATCH -J validate-data
-#SBATCH -o log/test-atom-%A-%a.log -e log/test-atom-%A-%a.err
+#SBATCH -o log/detail/test-atom-%A-%a.log -e log/detail/test-atom-%A-%a.err
 ###SBATCH --exclude=cpu[18]
 
 SCRIPT_DIR="scripts"
 source "${SCRIPT_DIR}/__lib__/runtime.sh"
 source "${SCRIPT_DIR}/__lib__/test_job.sh"
 
-export if_continue_args=0
+export if_continue_args=1
 export name_mol_reverse=0
 export load_epoch="-1"
 
 # export basis_args="def2-QZVPPD"
-export basis_args="def2-QZVP(D)"
+export basis_args="def2-QZVP-GMTKN55"
 # export basis_args="cc-pVQZ"
 
 export DATASET="gmtkn-def2"
 select_molecule_profile gmtkn55
+if [[ "${name_mol_input}" == "molecule_BH76RC" ]]; then
+    echo "BH76RC uses the molecules evaluated by the BH76 task."
+    exit 0
+fi
 setup_cpu_test_job 8000
 begin_test_job benchmark_dft
-run_cpu_benchmark_job
+run_cpu_benchmark_job --benchmark_method b3lyp b3lyp --benchmark_disp None d3bj
 finish_test_job
 
 # # Basic properties and reaction energies for small systems
