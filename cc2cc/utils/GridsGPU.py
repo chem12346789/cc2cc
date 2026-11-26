@@ -211,6 +211,7 @@ class GridCube:
         dms,
         ao_deriv=1,
         profile=None,
+        ao_buffer=None,
     ):
         """Generate RKS cube densities and XC inputs on the GPU."""
         allocation_start = profile.start_host_timer() if profile is not None else None
@@ -220,7 +221,8 @@ class GridCube:
             profile.record_host_time("input-buffer allocation", allocation_start)
 
         ao_value = numint.eval_ao(
-            self.mol, self.coords, deriv=ao_deriv, transpose=False, gdftopt=self.opt
+            self.mol, self.coords, deriv=ao_deriv, transpose=False, gdftopt=self.opt,
+            out=ao_buffer,
         )
         if profile is not None:
             profile.mark("AO evaluation")
@@ -279,6 +281,7 @@ class GridCube:
         dms,
         ao_deriv=1,
         profile=None,
+        ao_buffer=None,
     ):
         """Generate UKS cube densities and XC inputs on the GPU."""
         allocation_start = profile.start_host_timer() if profile is not None else None
@@ -290,7 +293,8 @@ class GridCube:
         dma, dmb = dms
 
         ao_value = numint.eval_ao(
-            self.mol, self.coords, deriv=ao_deriv, transpose=False, gdftopt=self.opt
+            self.mol, self.coords, deriv=ao_deriv, transpose=False, gdftopt=self.opt,
+            out=ao_buffer,
         )
         if profile is not None:
             profile.mark("AO evaluation")

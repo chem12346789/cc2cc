@@ -65,6 +65,7 @@ def get_veff_modified_gpu(
         nao = mol.nao
 
         def block_loop(ao_deriv):
+            ao_buffer = None
             for weights, coords in iterate_grid_segments(
                 sorted_mol,
                 grids,
@@ -75,12 +76,20 @@ def get_veff_modified_gpu(
                 gridcube = grids.gen_cube(sorted_mol, dms_sorted, coords)
                 profile.record_block(len(coords), len(gridcube.coords))
                 profile.mark("cube coordinates")
+                comp = (ao_deriv + 1) * (ao_deriv + 2) * (ao_deriv + 3) // 6
+                ao_size = comp * sorted_mol.nao * len(gridcube.coords)
+                if ao_buffer is None or ao_buffer.size < ao_size:
+                    allocation_start = profile.start_host_timer()
+                    ao_buffer = cp.empty(ao_size, dtype=cp.float64)
+                    profile.record_host_time("AO buffer allocation", allocation_start)
                 cube_rho = (
                     gridcube.gen_cube_rho_uks
                     if unrestricted
                     else gridcube.gen_cube_rho_rks
                 )
-                rho_cube, vxc_mat, ao = cube_rho(ni, dms_sorted, profile=profile)
+                rho_cube, vxc_mat, ao = cube_rho(
+                    ni, dms_sorted, ao_buffer=ao_buffer, profile=profile
+                )
                 energy_den, middle_cube = eval_xc_eff_gpu(modeldict, rho_cube, weights)
                 profile.mark("model + DLPack")
 
