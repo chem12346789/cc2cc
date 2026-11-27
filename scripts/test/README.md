@@ -23,7 +23,8 @@ neither check reserves a GPU. Use `--array-concurrency 1` for one job per GPU.
 The model and epoch still come from `test.bash`; adjust them before launching.
 The separate B3LYP baseline below is a CPU job, not a GPU-launcher job.
 The launcher's `launcher-status.md` links to each job's actual CSV once its
-record path is initialized; the CSV may not exist until results are saved.
+record path is initialized; the CSV may not exist until results are saved. It
+also records the dataset declared by the job script.
 
 ## GMTKN55 basis protocol
 

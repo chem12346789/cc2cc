@@ -8,6 +8,7 @@ from datetime import datetime
 import json
 import math
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -71,6 +72,17 @@ def query_gpus(
         # UUIDs avoid CUDA ordinal remapping and CUDA_DEVICE_ORDER assumptions.
         available[index] = gpu_uuid
     return available
+
+
+def extract_dataset_name(script_text: str) -> str | None:
+    for line in script_text.splitlines():
+        match = re.fullmatch(
+            r"""\s*(?:export\s+)?DATASET\s*=\s*(['"]?)([^"'#\s]+)\1\s*(?:#.*)?""",
+            line,
+        )
+        if match:
+            return match[2]
+    return None
 
 
 def build_argument_parser() -> argparse.ArgumentParser:
@@ -140,7 +152,7 @@ def run_jobs(
     script: Path, jobs: list[tuple[int, int]], gpus: dict[str, str] | None,
     concurrency: int, cpus: int, log_dir: Path, scratch_dir: Path,
     min_free_memory: float, max_power: float | None, poll_interval: float,
-    *, array_task_count: int | None = None,
+    *, array_task_count: int | None = None, dataset_name: str | None = None,
 ) -> int:
     pending = deque(jobs)
     resources: list[str | None] = list(gpus) if gpus is not None else [None]
@@ -173,6 +185,8 @@ def run_jobs(
 
     def write_status_table() -> None:
         rows = [
+            f"Dataset: {dataset_name or 'not declared in script'}",
+            "",
             "| Model | Task | GPU | PID | Status | Exit code | Log | Err | CSV |",
             "| ---: | ---: | --- | ---: | --- | ---: | --- | --- | --- |",
         ]
@@ -314,6 +328,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--poll-interval must be positive")
     script = submit.resolve_path(args.script)
     text = script.read_text()
+    dataset_name = extract_dataset_name(text)
     array = args.array or submit.read_sbatch_field(text, ["-a", "--array"])
     if not array:
         parser.error("Specify --array or include #SBATCH --array in the job script")
@@ -400,7 +415,8 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"[PLAN] script={script} jobs={len(jobs)} {selection} "
         f"total-concurrency={total_concurrency} cpus/job={cpus} "
-        f"SLURM_ARRAY_TASK_COUNT={array_task_count} logs={log_dir}",
+        f"SLURM_ARRAY_TASK_COUNT={array_task_count} "
+        f"dataset={dataset_name or 'not declared in script'} logs={log_dir}",
         flush=True,
     )
     if args.dry_run:
@@ -453,7 +469,7 @@ def main(argv: list[str] | None = None) -> int:
         status = run_jobs(
             script, jobs, gpus, concurrency, cpus, log_dir, scratch_dir,
             args.min_free_memory, args.max_gpu_power, args.poll_interval,
-            array_task_count=array_task_count,
+            array_task_count=array_task_count, dataset_name=dataset_name,
         )
     except KeyboardInterrupt:
         print("[STOP] Interrupted; local job process groups terminated.", flush=True)
