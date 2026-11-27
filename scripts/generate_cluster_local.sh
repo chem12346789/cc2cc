@@ -39,12 +39,49 @@ read_setting() {
     printf -v "${variable}" '%s' "${answer:-${default}}"
 }
 
+detect_gpu_numa_map() {
+    local topology
+
+    command -v nvidia-smi >/dev/null 2>&1 || return 1
+    topology="$(nvidia-smi topo -m)" || return 1
+    awk '
+        /CPU Affinity/ {
+            gsub(/CPU Affinity/, "CPU_Affinity")
+            gsub(/NUMA Affinity/, "NUMA_Affinity")
+            for (i = 1; i <= NF; i++) {
+                if ($i == "NUMA_Affinity") column = i + 1
+            }
+            next
+        }
+        $1 ~ /^GPU[0-9]+$/ {
+            if (!column || $column !~ /^[0-9]+$/) {
+                invalid = 1
+                next
+            }
+            gpu = substr($1, 4)
+            mapping = mapping separator gpu ":" $column
+            separator = ","
+        }
+        END {
+            if (invalid || mapping == "") exit 1
+            print mapping
+        }
+    ' <<< "${topology}"
+}
+
 python_default="$(command -v python3 || command -v python)"
 read_setting python_bin "Python interpreter" "${python_default}"
 read_setting pyscf_tmpdir "PySCF scratch directory" "${TMPDIR:-${HOME}/tmp}"
 read_setting python_path "Additional Python path (absolute; optional)" ""
 read_setting library_path "Additional library path (absolute; optional)" ""
-read_setting numa_map "GPU-to-NUMA mapping (GPU:node pairs; blank disables binding)" ""
+if ! numa_default="$(detect_gpu_numa_map)"; then
+    echo "Warning: unable to detect GPU-to-NUMA mapping on this host; enter it manually or leave blank to disable binding." >&2
+    numa_default=""
+fi
+read_setting numa_map "GPU-to-NUMA mapping (GPU:node pairs; none disables binding)" "${numa_default}"
+if [[ "${numa_map}" == "none" ]]; then
+    numa_map=""
+fi
 read_setting array_concurrency "Maximum concurrent slots override (optional)" ""
 read_setting min_slots "Minimum usable slots required before submitting" "1"
 

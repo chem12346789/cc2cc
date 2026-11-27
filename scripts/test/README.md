@@ -202,9 +202,12 @@ needed for training data.
   are preserved unless `--force` is passed. The generator
   leaves the job script's array limit unchanged unless you provide a
   `CC2CC_ARRAY_CONCURRENCY` override and validates that the minimum does not
-  exceed that override. It also prompts for an optional GPU-to-NUMA mapping;
-  leave it blank to disable NUMA binding. An unavailable mapped node emits a
-  warning and runs without NUMA binding. Use
+  exceed that override. It detects the current host's GPU-to-NUMA mapping using
+  `nvidia-smi topo -m`; press Enter to accept it, enter GPU:node pairs to
+  override it, or enter `none` to disable binding. Generate the configuration
+  on a representative GPU node, not a GPU-less login node. If detection fails,
+  it warns and leaves the default blank (binding disabled). An unavailable
+  mapped node emits a warning and runs without NUMA binding. Use
   `bash scripts/submit_direct_array_per_gpu.bash` to submit with these values.
 
 Run Slurm jobs from the repository root, for example:
