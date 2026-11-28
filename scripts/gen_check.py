@@ -18,10 +18,11 @@ import sys
 from zipfile import BadZipFile
 from zlib import error as ZlibError
 
-import numpy as np
+repo_root = str(Path(__file__).resolve().parents[1])
+if not sys.path or sys.path[0] != repo_root:
+    sys.path.insert(0, repo_root)
 
-if __package__ in (None, ""):
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import numpy as np
 
 from cc2cc.utils.helper.runtime.env_var import DATA_PATH
 from cc2cc.utils.helper.units import AU2KCALMOL
