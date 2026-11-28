@@ -7,7 +7,7 @@ from cc2cc.utils.helper.chemistry.density_metrics import diff_rho, diff_I_value
 from cc2cc.utils.zmp.zmp import RZMP, UZMP
 from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
-LEVEL_SHIFT = 3
+LEVEL_SHIFT = 2.5
 MAX_CYCLE = 25000
 RHO_REL_TOL = 1e-2
 I_VALUE_REL_TOL = 1e-4
@@ -29,8 +29,8 @@ def get_zmp(
 ):
     """Invert a restricted/unrestricted density and print per-stage diagnostics.
 
-    Stop a converged stage when both density errors meet the relative DFT
-    tolerances, preserving the divergence stop and previous-density fallback.
+    Raise an error if the density diverges or no stage meets the convergence
+    criteria within the specified lambda range.
     """
     if dm_tar is None:
         return None, None
@@ -62,7 +62,6 @@ def get_zmp(
     dft_i_value = diff_I_value(mol, dm_dft, dm_tar, grids)
     dft_difference_dipole = np.linalg.norm(dft_dipole - tar_dipole)
     best_difference = None
-    previous_dm = None
     for exponent in range(start_l, max_l + 1):
         mzmp.diis_space = DIIS_SPACE
         mzmp.level_shift = LEVEL_SHIFT**exponent
@@ -109,9 +108,10 @@ def get_zmp(
         if best_difference is None or zmp_difference < best_difference:
             best_difference = zmp_difference
         elif zmp_difference > best_difference * 10:
-            print("Warning: rho difference increased significantly, may be diverged.")
-            print("Warning: ZMP did not converge within the specified lambda range.")
-            return mzmp, previous_dm
+            raise RuntimeError(
+                "ZMP did not converge: rho difference increased significantly, "
+                "may be diverged."
+            )
 
         if (
             exponent > 12
@@ -134,8 +134,7 @@ def get_zmp(
                 f"rho diff = {zmp_difference:.3e}, I value = {zmp_i_value:.3e}",
             )
             return mzmp, dm
-        previous_dm = np.array(dm, copy=True)
-    return mzmp, mzmp.make_rdm1()
+    raise RuntimeError("ZMP did not converge within the specified lambda range.")
 
 
 def zmp_baseline_gradient(mf, dm_zmp):
