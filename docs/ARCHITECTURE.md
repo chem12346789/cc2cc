@@ -242,6 +242,28 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   sizing rather than reserving memory; orbital dimensions and block-splitting
   heuristics also limit block sizes.
 - `DataBase.py`, `ModelClass.py`: data loading, model init, checkpoints, losses.
+  - Models declaring `requires_vv10_input` select `DataBaseVV10` for both
+    training and evaluation; other models retain `DataBase`. The new loader
+    preserves targets, weights, atomic bookkeeping, and addon precedence. It
+    keeps four spatial features and places VV10 only at the center of channel five.
+    `dft_vv10` and `zmp_vv10` evaluation use `exc_scf_vv10_grid`;
+    `zmp`/`zmp_vv10` training uses `exc_post_vv10_grid_zmp`; ordinary B3LYP
+    inputs use `exc_post_vv10_grid`. PBE DFT inputs use the PBE density rather
+    than a B3LYP VV10 field. Missing VV10 densities are evaluated from the
+    matching saved density and quadrature grid during loading.
+    B3LYP and PBE support force and ZMP-response losses. Force mappings include
+    the VV10 channel's response to AO motion and both inner and outer quadrature
+    coordinates and weights. Compact ZMP response sidecars retain their
+    original four local features and receive a separate projected VV10
+    derivative per spin. Missing local force mappings are reconstructed only
+    when the original grid can be reproduced; missing ZMP response metadata or
+    sidecars still require regeneration. Missing local cube features are
+    reconstructed from the saved density when the grid can be reproduced.
+    PBE retains its existing `dft`/`zmp` input restriction and requires PBE
+    supplements with the relevant energy and response targets.
+    VV10 derivatives are computed on the CPU during loading and couple all
+    grid points, so initialization can be expensive. Compilation is disabled
+    for either force or ZMP-response losses, which require double backward.
 - `reference/test_data_dft.py`: cached DFT reference generation.
 - `helper/chemistry/density_metrics.py`: density comparisons.
 - `helper/workflow/DataRecord.py`: CSV record keeping
@@ -260,6 +282,19 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     Checkpoint-size checks stream serialization into a byte counter rather than
     retaining a full serialized checkpoint in RAM.
 - `model/`: neural model definitions; `--model NAME` → `model/NAME.py` with `Model`
+  - `transformer+dense_mix_e3nn_4_vv10` accepts float64 `[batch, 5, EDGE_SIZE**3]`:
+    the original four spatial channels followed by a center-only, unweighted
+    VV10 energy density (energy per volume in atomic units). Non-center entries
+    of the fifth channel are ignored, not passed through e3nn or the transformer.
+    The center network uses all five center values; the mixture gate also
+    receives the VV10 center value and combines seven outputs (spatial network,
+    center network, and five raw center values). A fresh checkpoint is required.
+    Training and dataset evaluation populate channel five through `DataBaseVV10`.
+    Model-SCF evaluation raises an error rather than use a non-VV10 channel.
+  - `transformer+dense_mix_e3nn_4_scaled` keeps the original
+    four-channel input without VV10. Four learnable scales, initialized to one,
+    multiply the center-network inputs and raw center experts. Original-model
+    checkpoints lack these parameters and are not directly compatible.
   - `transformer+dense_mix_e3nn_4_correct_5` uses the `cube5` input contract:
     four alternating corners and the center in `ModelClass.CUBE_INDEX` order
     `[0, 8, 13, 24, 20]`, with `cube_type="cube5"` and `cube_size=5`.
@@ -350,49 +385,48 @@ created, and failures may occur after earlier files have been updated.
   `Grid` → `cc(..., unrestricted=unrestricted)` → `.npz` grid data.
   It passes `unrestricted=False` for zero spin and `True` otherwise.
   - `cc()` calls the shared `get_vv10_data()` helper in
-    `utils/reference/reference_vv10.py` and saves Post-DFT VV10 and SCF-VV10 energies,
-    `dm1_scf_vv10`, and gradients in the main archive. It also
+    `utils/reference/reference_vv10.py` and saves SCF-VV10 energy,
+    `dm1_scf_vv10`, features, energy densities, and training gradients in the
+    main archive. It also
     saves separate VV10 results based on `dm1_zmp` with `_zmp`-suffixed keys.
     The helper separates `get_post_vv10_data()` and `get_scf_vv10_data()`.
     Shared B3LYP SCF and finite-difference helpers live in
     `utils/reference/reference_b3lyp.py`.
-    `get_vv10_data()` derives its policy from `suffix`, not caller flags:
-    `"_zmp"` sets evaluation on, computes the explicit VV10 gradient at the
-    supplied density, and skips SCF-VV10 and gradient checks;
-    the default `""` enables SCF-VV10, all gradients, and gradient checks.
+    `get_vv10_data()` calls `get_scf_vv10_data()` by default; evaluation skips
+    energy-density components and gradient labels.
+    `"_zmp"` computes the explicit VV10 gradient at the supplied density and
+    skips SCF-VV10 and gradient checks.
     Existing cached SCF-VV10 ZMP fields are preserved, not refreshed.
-    The existing-cache branch uses the same helper and saves to the addon,
-    including `_zmp`-suffixed results when cached ZMP density and energy exist.
-    Existing-cache comparisons report B3LYP/post-DFT VV10 and SCF-VV10
+    The existing-cache branch uses the same helper when completing ZMP data.
+    Comparisons report B3LYP and SCF-VV10
     integrated absolute density differences against cached `dm1_cc` (electrons).
-    Post-DFT VV10 energy density uses the same `Grid` coordinates, ordering,
+    SCF-VV10 uses exact Coulomb/exchange integrals and the supplied grid for
+    both XC and NLC. Its energy density uses the same coordinates, ordering,
     and weights as the density comparisons. Weights are loaded from the cache
     and must match the rebuilt grid's shape.
-  - VV10 calculation policy is independent of `--if_eval`: unsuffixed results
-    include SCF-VV10 gradients, finite-difference checks, and density comparisons.
+  - Default VV10 results use the converged `dm1_scf_vv10` for all grid labels.
+    `exc_scf_vv10_grid` is the VV10 energy density; `tol_scf_vv10_grids` includes
+    all B3LYP energy-density components at that density plus VV10.
+    `rho_cube_scf_vv10`, `grad2force_scf_vv10`, and
+    `grid_weight_response_scf_vv10` use the same density.
+    `dft_vv10` training uses these fields with `e_scf_vv10` and `grad_scf_vv10`;
+    `zmp_vv10` evaluation uses the SCF-VV10 reference as well.
+    Existing archives must be regenerated; old post-DFT fields are not a fallback.
     ZMP results include `grad_post_vv10_zmp`, the sum of `grad_zmp` and the
     explicit fixed-density VV10 gradient, but omit SCF-VV10, finite-difference
     checks, and density comparisons; energy comparisons remain enabled.
-    `grad_post_vv10` is analytical: B3LYP is reconverged from the cached density
-    at tight tolerances, and PySCF's coupled-perturbed RKS/UKS solver supplies
-    its orbital response. The VV10 and B3LYP atom-centered grid-motion terms
-    are included. `grad_scf_vv10` uses PySCF's SCF-VV10 gradient.
+    `grad_scf_vv10` uses PySCF's SCF-VV10 gradient.
     SCF-VV10 uses tight SCF tolerances and moving-grid response; force
     generation requires converged wavefunctions even when optional evaluation
     convergence checks are disabled.
     Gradients have shape `(natm, 3)`, in Hartree/Bohr; forces are their negatives.
-    Unsuffixed results also save `grad_post_vv10_fd` for multi-atom molecules,
-    using central differences with a 0.001 Bohr step (six B3LYP single points
-    per atom), and reports maximum errors for both Post-DFT VV10 and B3LYP.
+    Post-DFT analytical and finite-difference helpers remain available for
+    separate comparisons but are not called by the default generator.
     The VV10 energy-density weighted integral is checked against PySCF
     `nr_nlc_vxc` on the same
     density and grid (`rtol=1e-10`, `atol=1e-12` Hartree); mismatches are errors.
-    After this check, `exc_post_vv10_grid` (VV10 energy per volume, in atomic
-    units), `e_post_vv10` (B3LYP plus the VV10 correction), and `e_scf_vv10`
-    are saved. Cached updates preserve existing addon fields while removing
-    legacy `exc_post_grid` and `enlc_post` fields.
-    Caches missing `dm1_dft`, `e_dft`, `dm1_cc`, or `weights` are logged and skipped
-    without recomputing DFT.
+    `exc_scf_vv10_grid` is energy per volume in atomic units. Cached completion
+    preserves fields not recomputed by the selected policy.
 - `train.py`: train/eval list setup → `train_model()`
 - `test.py`: checkpoint loading and RKS/UKS model validation
   - `--test_mode post-b3lyp` evaluates the model once on cached `dm1_dft`,
@@ -558,6 +592,10 @@ out of importable Python modules.
 | Training/grid data | `data/grids_dft` | `DFT2CC_DATA_DIR` |
 | Test data | `data/test` | `DFT2CC_DATA_TEST_DIR` |
 | Checkpoints | `checkpoints/checkpoint_<save_dir>` | `--load <save_dir> --load_epoch <epoch>` |
+
+- `scripts/gen_data/gen_data_direct.bash` regenerates CCSD(T) response-density data
+  in `data/grids_dft_response`, leaving existing `data/grids_dft` archives untouched.
+  Set `DFT2CC_DATA_DIR=grids_dft_response` when consuming the regenerated data.
 
 - Dataset names: `gmtkn-def2`, `gmtkn-diet30-def2`, `gmtkn-diet100-def2`, `dft-fitset-def2`
 - Basis names: `def2-QZVPPD`, `def2-TZVPPD`, `def2-QZVP(D)`

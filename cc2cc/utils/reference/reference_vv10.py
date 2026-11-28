@@ -15,6 +15,9 @@ from cc2cc.utils.reference.reference_b3lyp import (
     b3lyp_finite_difference_gradient,
     converged_b3lyp,
     finite_difference_gradient,
+    get_dft_energy,
+    get_dft_grad,
+    get_dft_input,
 )
 from cc2cc.utils.helper.chemistry.tensor_helper import parallel_einsum
 
@@ -175,6 +178,9 @@ def get_vv10_data(
     dm_cc,
     args,
     suffix="",
+    *,
+    unrestricted=False,
+    evaluate=False,
 ):
     """Compute VV10 data using the calculation policy selected by suffix.
 
@@ -182,33 +188,29 @@ def get_vv10_data(
     The "_zmp" suffix evaluates the explicit VV10 gradient at the supplied
     density and skips SCF-VV10, finite-difference checks, and density comparisons.
     The caller combines that gradient with the ZMP baseline gradient.
-    Other suffixes enable all calculations. CC density comparisons are skipped
-    when the CC density is unavailable.
+    Other suffixes use self-consistent B3LYP+VV10, including grid labels from
+    its converged density. Evaluation skips energy-density and gradient labels.
     """
-    evaluate = suffix == "_zmp"
-    calculate_scf_vv10 = not evaluate
-    data = get_post_vv10_data(
-        mol, grids, dm_dft, e_dft, dm_cc, args, evaluate,
-        check_post_vv10_gradient=not evaluate,
-        fixed_density=evaluate,
-    )
-    if calculate_scf_vv10:
-        data.update(get_scf_vv10_data(mol, grids, dm_dft, dm_cc, args, evaluate))
+    if suffix == "_zmp":
+        data = get_post_vv10_data(
+            mol, grids, dm_dft, e_dft, dm_cc, args, evaluate=True,
+            fixed_density=True,
+        )
+        energy_key = "e_post_vv10"
+        label = "Post-DFT VV10"
+    else:
+        data = get_scf_vv10_data(
+            mol, grids, dm_dft, dm_cc, args, evaluate,
+            unrestricted=unrestricted,
+        )
+        energy_key = "e_scf_vv10"
+        label = "Self-consistent SCF-VV10"
     print("Energy relative to B3LYP total (kcal/mol):")
     print("  B3LYP baseline:                      0.0")
     print(
-        "  Post-DFT VV10:                      "
-        f"{(data['e_post_vv10'] - e_dft) * AU2KCALMOL:>16.8f}"
+        f"  {label}: "
+        f"{(data[energy_key] - e_dft) * AU2KCALMOL:>16.8f}"
     )
-    if calculate_scf_vv10:
-        print(
-            "  Self-consistent SCF-VV10:            "
-            f"{(data['e_scf_vv10'] - e_dft) * AU2KCALMOL:>16.8f}"
-        )
-        print(
-            "  SCF-VV10 minus post-DFT:             "
-            f"{(data['e_scf_vv10'] - data['e_post_vv10']) * AU2KCALMOL:>16.8f}"
-        )
     if suffix:
         data = {f"{key}{suffix}": value for key, value in data.items()}
     return data
@@ -285,10 +287,22 @@ def get_post_vv10_data(
     return data
 
 
-def get_scf_vv10_data(mol, grids, dm_dft, dm_cc, args, evaluate=False):
-    """Compute self-consistent B3LYP+VV10 data starting from an RKS or UKS density."""
-    mf_scf = converged_b3lyp(mol, dm0=dm_dft, nlc="vv10", verbose=4)
-    if not mf_scf.converged and (args.check_convergence or not evaluate):
+def get_scf_vv10_data(
+    mol, grids, dm_dft, dm_cc, args, evaluate=False, *, unrestricted=False,
+):
+    """Compute SCF-VV10 and grid labels from the same converged density."""
+    dft_class = pyscf.dft.UKS if unrestricted else pyscf.dft.RKS
+    # Exact J/K and shared XC/NLC grids match the energy-density labels.
+    mf_scf = dft_class(mol, xc="b3lyp")
+    mf_scf.grids = grids
+    mf_scf.nlcgrids = grids
+    mf_scf.nlc = "vv10"
+    mf_scf.conv_tol = 1e-12
+    mf_scf.conv_tol_grad = 1e-8
+    mf_scf.max_cycle = 200
+    mf_scf.verbose = 4
+    mf_scf.kernel(dm0=dm_dft)
+    if not mf_scf.converged:
         mf_scf.level_shift = 1
         mf_scf.kernel(dm0=dm_dft)
         if not mf_scf.converged:
@@ -298,6 +312,34 @@ def get_scf_vv10_data(mol, grids, dm_dft, dm_cc, args, evaluate=False):
         "e_scf_vv10": float(mf_scf.e_tot),
         "dm1_scf_vv10": dm_scf_vv10,
     }
+    dm_tot = dm_scf_vv10.sum(axis=0) if unrestricted else dm_scf_vv10
+    exc_scf_vv10_grid = eval_nlc_exc_density(mol, grids, dm_tot, "vv10")
+    enlc = np.dot(exc_scf_vv10_grid, grids.weights)
+    _, enlc_check, _ = mf_scf._numint.nr_nlc_vxc(mol, grids, "vv10", dm_tot)
+    if not np.isclose(enlc, enlc_check, rtol=1e-10, atol=1e-12):
+        raise RuntimeError(
+            "SCF-VV10 grid integral disagrees with nr_nlc_vxc: "
+            f"{enlc} vs {enlc_check} Hartree"
+        )
+    data["exc_scf_vv10_grid"] = exc_scf_vv10_grid
+    if evaluate:
+        mapping = get_dft_input(
+            mol, grids, dm_scf_vv10, unrestricted=unrestricted, ni=mf_scf._numint
+        )
+    else:
+        energy = get_dft_energy(
+            mol, grids, mf_scf.mo_coeff, dm_scf_vv10,
+            unrestricted=unrestricted,
+        )
+        energy["tol_dft_grids"] += exc_scf_vv10_grid
+        data.update({
+            key.replace("dft", "scf_vv10"): value for key, value in energy.items()
+        })
+        mapping = get_dft_grad(mol, grids, dm_scf_vv10, unrestricted=unrestricted)
+    data.update({
+        key.replace("dft", "scf_vv10") if "dft" in key else f"{key}_scf_vv10": value
+        for key, value in mapping.items()
+    })
     if not evaluate:
         if mol.natm == 1:
             data["grad_scf_vv10"] = np.zeros((mol.natm, 3))

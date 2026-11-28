@@ -76,7 +76,10 @@ def _generate_evaluation_data(mol, grids, name, args, *, unrestricted):
         get_dft_input(mol, grids, reference["dm1_dft"], unrestricted=unrestricted)
     )
     data.update(
-        get_vv10_data(mol, grids, reference["dm1_dft"], data["e_dft"], None, args)
+        get_vv10_data(
+            mol, grids, reference["dm1_dft"], data["e_dft"], None, args,
+            unrestricted=unrestricted, evaluate=True,
+        )
     )
     _save_data(DATA_PATH / f"data_{name}.npz", data)
 
@@ -198,7 +201,10 @@ def complete_zmp_data(mol, grids, name, args, data, *, unrestricted):
 
     print(f"Using cached CC/DFT references for {name}; completing ZMP.", flush=True)
     dm1_cc, dm1_dft = data["dm1_cc"], data["dm1_dft"]
-    data.update(get_vv10_data(mol, grids, dm1_dft, data["e_dft"], dm1_cc, args))
+    data.update(get_vv10_data(
+        mol, grids, dm1_dft, data["e_dft"], dm1_cc, args,
+        unrestricted=unrestricted,
+    ))
     mzmp, dm1_zmp = get_zmp(mol, dm1_cc, dm1_dft, grids, max_l=20)
     dft_class = pyscf.dft.UKS if unrestricted else pyscf.dft.RKS
     # Match the exact Coulomb and exchange integrals used by the grid labels.
@@ -227,7 +233,8 @@ def complete_zmp_data(mol, grids, name, args, data, *, unrestricted):
     )
     print(f"Error ZMP (kcal/mol): {AU2KCALMOL * error_zmp}")
     zmp_vv10_data = get_vv10_data(
-        mol, grids, dm1_zmp, e_zmp, dm1_cc, args, suffix="_zmp"
+        mol, grids, dm1_zmp, e_zmp, dm1_cc, args, suffix="_zmp",
+        unrestricted=unrestricted,
     )
     zmp_vv10_data["grad_post_vv10_zmp"] += data["grad_zmp"]
     data.update(zmp_vv10_data)

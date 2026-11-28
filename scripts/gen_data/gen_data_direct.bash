@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --array=[0-2]%3
+#SBATCH --array=[0-4]%5
 # CLUSTER-ONLY: This script is configured for this cluster; do not run it elsewhere.
 
 if [[ "$(hostname)" == "user-MZ73-LM1-000" ]]; then
@@ -10,9 +10,9 @@ else
 fi
 
 # Generation settings
-export GEN_CONFIG="gen_error_zmp.json"
+# export GEN_CONFIG="gen_error_zmp.json"
 # export GEN_CONFIG="gen_mol2_eval.json"
-# export GEN_CONFIG="gen_mol2.json"
+export GEN_CONFIG="gen_mol1.json"
 # export GEN_CONFIG="gen_s66_51_59_60.json"
 export CONVERGENCE=0
 
@@ -47,8 +47,9 @@ export BLIS_NUM_THREADS=${NUMBER_OF_THREADS}
 export OMP_WAIT_POLICY=PASSIVE
 
 # Output directories
+export DFT2CC_DATA_DIR="grids_dft_response"
 mkdir -p log
-mkdir -p data/grids_dft
+mkdir -p "data/${DFT2CC_DATA_DIR}"
 
 # Run generation
 log_file="log/gen_data-${PID_THIS_RUN}-${MP_NUMBER}.log"

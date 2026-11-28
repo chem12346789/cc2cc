@@ -182,6 +182,7 @@ class DataBase:
                         self.print(f"{mol.elements} use {name}")
 
                 mol_info_dict[name] = {
+                    "mol": mol,
                     "natm": mol.natm,
                     "elements": mol.elements,
                     "charge": mol.charge,
@@ -281,14 +282,16 @@ class DataBase:
             input_mat = data["rho_cube_dft"]
             energy_target = data["e_cc"] - data[f"e_{self.args.rho_input}"]
         elif self.args.rho_input == "dft_vv10":
-            input_mat = data["rho_cube_dft"]
-            energy_target = data["e_cc"] - data["e_post_vv10"]
+            input_mat = data["rho_cube_scf_vv10"]
+            energy_target = data["e_cc"] - data["e_scf_vv10"]
         elif self.args.rho_input in ("zmp", "zmp_vv10"):
             if self.if_eval:
-                input_mat = data["rho_cube_dft"]
+                # Evaluation has no ZMP density; VV10 uses SCF-VV10 instead.
                 if self.args.rho_input == "zmp_vv10":
-                    energy_target = data["e_cc"] - data["e_post_vv10"]
+                    input_mat = data["rho_cube_scf_vv10"]
+                    energy_target = data["e_cc"] - data["e_scf_vv10"]
                 else:
+                    input_mat = data["rho_cube_dft"]
                     energy_target = data["e_cc"] - data["e_dft"]
             else:
                 input_mat = data["rho_cube_zmp"]
@@ -325,7 +328,7 @@ class DataBase:
                         output_mat = data["tol_delta_grids"]
                     elif self.args.rho_input == "dft_vv10":
                         output_mat = (
-                            data["tol_delta_grids"] - data["exc_post_vv10_grid"]
+                            data["tol_cc_grids"] - data["tol_scf_vv10_grids"]
                         )
                     elif self.args.rho_input in ("zmp", "zmp_vv10"):
                         output_mat = data["tol_delta_zmp_grids"]
@@ -367,8 +370,8 @@ class DataBase:
                         data["grad_cc"] - data[f"grad_{self.args.rho_input}"]
                     )
                 elif self.args.rho_input == "dft_vv10":
-                    grad2force = data["grad2force"]
-                    grad_cc_train = data["grad_cc"] - data["grad_post_vv10"]
+                    grad2force = data["grad2force_scf_vv10"]
+                    grad_cc_train = data["grad_cc"] - data["grad_scf_vv10"]
                 elif self.args.rho_input in ("zmp", "zmp_vv10"):
                     grad2force = data["grad2force_zmp"]
                     if self.args.rho_input == "zmp_vv10":
@@ -382,6 +385,8 @@ class DataBase:
                 data_dict["grad2force"] = self.process_grad2force(grad2force)
                 if self.args.rho_input in ("zmp", "zmp_vv10"):
                     response_key = "grid_weight_response_zmp"
+                elif self.args.rho_input == "dft_vv10":
+                    response_key = "grid_weight_response_scf_vv10"
                 else:
                     response_key = "grid_weight_response"
                 if response_key not in data:

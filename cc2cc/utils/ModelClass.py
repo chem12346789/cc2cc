@@ -8,7 +8,10 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel
 
 from cc2cc.utils.DataBase import DataBase
-from cc2cc.utils.helper.runtime.env_var import CHECKPOINTS_PATH, MAIN_PATH
+from cc2cc.utils.DataBaseVV10 import DataBaseVV10
+from cc2cc.utils.helper.runtime.env_var import (
+    CHECKPOINTS_PATH, CUBE_MIDDLE, EDGE_SIZE, MAIN_PATH,
+)
 from cc2cc.utils.helper.model.compilation import maybe_compile_model
 from cc2cc.utils.helper.model.data_record import DataRecordList, TORCH_LIST
 from cc2cc.utils.helper.model.data_processing import process_grad2force, process_input
@@ -73,6 +76,11 @@ class ModelClass:
         )
 
         self.model: torch.nn.Module = model().to(self.args.device)
+        if (
+            getattr(self.model, "requires_vv10_input", False)
+            and self.args.precision != "float64"
+        ):
+            raise ValueError("VV10-input models require --precision float64.")
         if self.args.precision == "float64":
             self.model.double()
 
@@ -136,6 +144,14 @@ class ModelClass:
         self.loss_fun = loss_class(reduction="sum").cuda(self.local_rank)
 
     def init_database(self, train_str_dict, eval_str_dict):
+        model = (
+            self.model.module
+            if isinstance(self.model, DistributedDataParallel)
+            else self.model
+        )
+        database_class = (
+            DataBaseVV10 if getattr(model, "requires_vv10_input", False) else DataBase
+        )
         input_processor = partial(
             process_input,
             cube_type=self.cube_type,
@@ -149,7 +165,7 @@ class ModelClass:
             cube_size=self.cube_size,
         )
 
-        self.database_train = DataBase(
+        self.database_train = database_class(
             train_str_dict,
             self.args,
             process_input=input_processor,
@@ -157,7 +173,7 @@ class ModelClass:
             verbose=self.verbose,
             input_mode=self.cube_type,
         )
-        self.database_eval = DataBase(
+        self.database_eval = database_class(
             eval_str_dict,
             self.args,
             shuffle=False,
@@ -259,6 +275,7 @@ class ModelClass:
         spin = 0
         while f"zmp_response_features_s{spin}" in batch:
             features = batch[f"zmp_response_features_s{spin}"]
+            vv10_features = batch.get(f"zmp_response_vv10_features_s{spin}")
             model_coeff = torch.zeros_like(
                 batch[f"zmp_response_baseline_s{spin}"],
                 dtype=torch.float64,
@@ -273,9 +290,21 @@ class ModelClass:
                 )
                 model_coeff = model_coeff + torch.einsum(
                     "pfc,pfck->k",
-                    input_derivative[start:stop],
+                    input_derivative[start:stop, :feature_block.shape[1]],
                     feature_block,
                 )
+                if vv10_features is not None:
+                    vv10_block = torch.as_tensor(
+                        np.array(vv10_features[start:stop], dtype=np.float64, copy=True),
+                        dtype=torch.float64,
+                        device=self.device,
+                    )
+                    center = CUBE_MIDDLE * (EDGE_SIZE**2 + EDGE_SIZE + 1)
+                    model_coeff = model_coeff + torch.einsum(
+                        "p,pk->k",
+                        input_derivative[start:stop, 4, center],
+                        vv10_block,
+                    )
             model_coefficients.append(model_coeff)
             spin_responses.append(
                 (
@@ -526,6 +555,15 @@ class ModelClass:
         return_tensors=False,
     ):
         """Optionally return weight derivatives and detached on-device tensors."""
+        model = (
+            self.model.module
+            if isinstance(self.model, DistributedDataParallel)
+            else self.model
+        )
+        if getattr(model, "requires_vv10_input", False):
+            raise NotImplementedError(
+                "Model-SCF evaluation does not support VV10 input derivatives."
+            )
         input_mat = torch.as_tensor(rho_cube, dtype=self.dtype, device=self.device)
         weights_mat = torch.as_tensor(
             weights_.reshape((-1, 1)), dtype=self.dtype, device=self.device

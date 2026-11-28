@@ -142,7 +142,9 @@ CC/DFT data in `data_<name>.npz` with `zmp_complete=false` before VV10 and ZMP.
 If those later calculations fail, this archive remains usable for B3LYP DFT
 training (`--baseline b3lyp --rho_input dft`); it must not be used for ZMP training yet.
 Only successful completion of all ZMP labels and response sidecars replaces the
-archive with `zmp_complete=true`. In training mode, `--if_continue true`
+archive with `zmp_complete=true`. Divergence or failure to meet the ZMP
+convergence criteria raises an error without saving ZMP results.
+In training mode, `--if_continue true`
 refreshes the `grad_post_vv10_zmp` label in an existing completed archive,
 without rerunning CC or ZMP generation. It requires the original molecule and
 grid settings; evaluation-mode continuation is not supported.
@@ -161,9 +163,8 @@ Both evaluation and training archives contain:
   `grid_atom_indices`.
 - Reference data: `e_hf`, `e_cc`, `e_dft`, `e_dft_d3bj`, `dm1_hf`, `dm1_dft`,
   `energy_train`, `rho_cube_dft`.
-- VV10: `exc_post_vv10_grid`, `e_post_vv10`, `grad_post_vv10`, `e_scf_vv10`,
-  `dm1_scf_vv10`, `grad_scf_vv10`. Multi-atom systems also include
-  `grad_post_vv10_fd`.
+- VV10: `exc_scf_vv10_grid`, `e_scf_vv10`, `dm1_scf_vv10`,
+  `rho_cube_scf_vv10`.
 
 Training archives additionally contain:
 
@@ -177,6 +178,9 @@ Training archives additionally contain:
   `tol_dft_grids`, `tol_delta_grids`.
 - DFT derivatives: `grad2force`, `grid_weight_response`, `grad_hf`, `grad_cc`,
   `grad_dft`, `grad_dft_d3bj`, `grad_cc_train`.
+- SCF-VV10: `grad_scf_vv10`, `grad2force_scf_vv10`,
+  `grid_weight_response_scf_vv10`, and DFT energy-density components with
+  `dft` replaced by `scf_vv10`. `tol_scf_vv10_grids` includes the VV10 term.
 - After ZMP completion: `zmp_complete`, `e_zmp`, `dm1_zmp`, `grad_zmp`,
   `exc_zmp_grids`, `exc_k_zmp_grids`, `hatree_zmp_grids`, `kin_zmp_grids`,
   `kinl_zmp_grids`, `nuc_zmp_grids`, `ecp_zmp_grids`, `tol_zmp_grids`,
@@ -212,20 +216,19 @@ the file fields name separate sidecars. The incomplete training cache contains
 completion. Its `energy_train` uses the DFT reference; completed training data
 uses the ZMP reference instead.
 
-The generator calculates Post-DFT VV10 and self-consistent SCF-VV10 energies
-and saves `e_post_vv10`, `e_scf_vv10`, and `dm1_scf_vv10` in the main archive.
-Unsuffixed VV10 results also save `grad_post_vv10` and
-`grad_scf_vv10` in Hartree/Bohr; forces are their negatives.
-For multi-atom molecules, unsuffixed VV10 calculations additionally report
-analytical/central-finite-difference maximum gradient differences for Post-DFT
-VV10 and B3LYP and saves `grad_post_vv10_fd`. Each check uses a 0.001 Bohr
-displacement and six additional B3LYP calculations per atom, starting from the
-converged reference density to track the selected spin solution.
-VV10 policy depends on the result suffix, independently of `--if_eval`.
-The default suffix `""` enables all VV10 calculations and checks. The `"_zmp"`
-suffix saves post-DFT energy and `grad_post_vv10_zmp` but skips SCF-VV10,
-finite-difference checks, and density comparisons. Existing cached fields not
-recomputed by this policy are preserved.
+The default VV10 path calls `get_scf_vv10_data()` for self-consistent B3LYP+VV10.
+It uses exact Coulomb/exchange integrals, tight SCF tolerances, and the supplied
+grid for both XC and VV10. Energy densities, input features, and force mappings
+are generated from `dm1_scf_vv10`; the VV10 grid integral is checked against
+PySCF on that density and grid. Training uses `e_scf_vv10`, the complete
+`tol_scf_vv10_grids`, and `grad_scf_vv10` (Hartree/Bohr, with moving-grid response).
+Evaluation skips energy-density components and gradient labels.
+`--rho_input dft_vv10` uses these SCF-VV10 fields; `zmp_vv10` evaluation also
+uses the SCF-VV10 reference. Regenerate existing archives before using these
+modes: old post-DFT fields are not a fallback and are not refreshed.
+The `"_zmp"` suffix remains a post-DFT correction at the fixed ZMP density,
+including `grad_post_vv10_zmp`; it does not run SCF-VV10 or finite differences.
+The explicit post-DFT helper remains available for separate comparisons.
 
 ### PBE baseline supplements
 
@@ -253,6 +256,15 @@ from the PBE Fock, not copied from B3LYP. PBE supplements currently exclude VV10
 
 Train with `--baseline pbe --rho_input dft` or `--baseline pbe --rho_input zmp`.
 The latter can also use `--if_zmp_response true` with PBE response sidecars.
+For the five-channel `transformer+dense_mix_e3nn_4_vv10` model, the
+loader evaluates the VV10 input from the selected PBE or B3LYP density when
+needed. Use `--precision float64`; `--if_grad true` and
+`--if_zmp_response true` include the nonlocal VV10 input derivatives; the
+latter still requires the corresponding ZMP
+response sidecars. Reference energies and sufficient data to reconstruct the
+requested loss targets must be available. Computing these derivatives on CPU
+at load time can be expensive. Model-SCF evaluation raises an error because it
+does not yet construct this VV10 input or its nonlocal potential.
 Every selected system requires its PBE supplement. The baseline is saved in
 the checkpoint and restored for SCF evaluation; new B3LYP checkpoints record
 `b3lyp`, and missing or empty baselines in older checkpoints mean B3LYP. For PBE,

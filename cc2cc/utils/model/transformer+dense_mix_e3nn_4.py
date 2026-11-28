@@ -4,11 +4,11 @@ from cc2cc.utils.helper.runtime.env_var import EDGE_SIZE
 
 from cc2cc.utils.model.model_utils.model_dense import DenseNet
 from cc2cc.utils.model.model_utils.model_transformer import Transformer
-from cc2cc.utils.model.model_utils.model_e3nn import E3nn
+from cc2cc.utils.model.model_utils.model_e3nn_correct import E3nn
 
 
 class Model(torch.nn.Module):
-    """Transformer/e3nn mixed model."""
+    """Transformer/e3nn mixed model using spacing-normalized radial inputs."""
 
     def __init__(self):
         super().__init__()
@@ -18,19 +18,17 @@ class Model(torch.nn.Module):
         self.cube_middle = (self.cube_size - 1) // 2
         self.input_level = 4
         self.before_weight = False
-        self.lmax = 2
-        self.out_l = 0
+        self.lmax = 0
         self.flat_size = self.input_level * self.cube_size
 
-        e3nn_args = (
-            self.cube_type,
-            self.cube_size,
-            self.input_level,
-            self.lmax,
-            self.out_l,
-        )
+        e3nn_args = {
+            "cube_type": self.cube_type,
+            "cube_size": self.cube_size,
+            "input_level": self.input_level,
+            "lmax": self.lmax,
+        }
         for i in range(1, self.input_level + 1):
-            setattr(self, f"conv{i}", E3nn(*e3nn_args))
+            setattr(self, f"conv{i}", E3nn(**e3nn_args))
 
         self.predictor = Transformer(
             d_model=self.cube_size,
@@ -47,7 +45,7 @@ class Model(torch.nn.Module):
             mlp=108,
             depth=5,
             dense_bias=False,
-            if_skip_connection_dense=0,
+            if_skip_connection_dense=1,
             dense_actv="gelu",
         )
 
@@ -56,7 +54,7 @@ class Model(torch.nn.Module):
             mlp=108,
             depth=5,
             dense_bias=False,
-            if_skip_connection_dense=0,
+            if_skip_connection_dense=1,
             drop_rate=0,
             dense_actv="gelu",
         )
@@ -68,18 +66,9 @@ class Model(torch.nn.Module):
 
         x_in = x.permute(0, 2, 1).contiguous()
 
-        # x_in = torch.cat(
-        #     (
-        #         torch.zeros_like(x_in[:, : self.cube_middle, :]),
-        #         x_in[:, [self.cube_middle], :],
-        #         torch.zeros_like(x_in[:, self.cube_middle + 1 :, :]),
-        #     ),
-        #     dim=-2,
-        # )
-
         x_cube = torch.cat(
             tuple(
-                torch.vmap(getattr(self, f"conv{i}"))(x_in)
+                (getattr(self, f"conv{i}"))(x_in)
                 for i in range(1, self.input_level + 1)
             ),
             dim=-2,
