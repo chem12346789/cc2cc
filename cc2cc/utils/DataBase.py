@@ -182,6 +182,7 @@ class DataBase:
                         self.print(f"{mol.elements} use {name}")
 
                 mol_info_dict[name] = {
+                    "mol": mol,
                     "natm": mol.natm,
                     "elements": mol.elements,
                     "charge": mol.charge,

@@ -256,6 +256,15 @@ from the PBE Fock, not copied from B3LYP. PBE supplements currently exclude VV10
 
 Train with `--baseline pbe --rho_input dft` or `--baseline pbe --rho_input zmp`.
 The latter can also use `--if_zmp_response true` with PBE response sidecars.
+For the five-channel `transformer+dense_mix_e3nn_4_vv10` model, the
+loader evaluates the VV10 input from the selected PBE or B3LYP density when
+needed. Use `--precision float64`; `--if_grad true` and
+`--if_zmp_response true` include the nonlocal VV10 input derivatives; the
+latter still requires the corresponding ZMP
+response sidecars. Reference energies and sufficient data to reconstruct the
+requested loss targets must be available. Computing these derivatives on CPU
+at load time can be expensive. Model-SCF evaluation raises an error because it
+does not yet construct this VV10 input or its nonlocal potential.
 Every selected system requires its PBE supplement. The baseline is saved in
 the checkpoint and restored for SCF evaluation; new B3LYP checkpoints record
 `b3lyp`, and missing or empty baselines in older checkpoints mean B3LYP. For PBE,

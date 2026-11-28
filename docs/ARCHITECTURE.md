@@ -216,6 +216,28 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   sizing rather than reserving memory; orbital dimensions and block-splitting
   heuristics also limit block sizes.
 - `DataBase.py`, `ModelClass.py`: data loading, model init, checkpoints, losses.
+  - Models declaring `requires_vv10_input` select `DataBaseVV10` for both
+    training and evaluation; other models retain `DataBase`. The new loader
+    preserves targets, weights, atomic bookkeeping, and addon precedence. It
+    keeps four spatial features and places VV10 only at the center of channel five.
+    `dft_vv10` and `zmp_vv10` evaluation use `exc_scf_vv10_grid`;
+    `zmp`/`zmp_vv10` training uses `exc_post_vv10_grid_zmp`; ordinary B3LYP
+    inputs use `exc_post_vv10_grid`. PBE DFT inputs use the PBE density rather
+    than a B3LYP VV10 field. Missing VV10 densities are evaluated from the
+    matching saved density and quadrature grid during loading.
+    B3LYP and PBE support force and ZMP-response losses. Force mappings include
+    the VV10 channel's response to AO motion and both inner and outer quadrature
+    coordinates and weights. Compact ZMP response sidecars retain their
+    original four local features and receive a separate projected VV10
+    derivative per spin. Missing local force mappings are reconstructed only
+    when the original grid can be reproduced; missing ZMP response metadata or
+    sidecars still require regeneration. Missing local cube features are
+    reconstructed from the saved density when the grid can be reproduced.
+    PBE retains its existing `dft`/`zmp` input restriction and requires PBE
+    supplements with the relevant energy and response targets.
+    VV10 derivatives are computed on the CPU during loading and couple all
+    grid points, so initialization can be expensive. Compilation is disabled
+    for either force or ZMP-response losses, which require double backward.
 - `reference/test_data_dft.py`: cached DFT reference generation.
 - `helper/chemistry/density_metrics.py`: density comparisons.
 - `helper/workflow/DataRecord.py`: CSV record keeping
@@ -234,6 +256,19 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
     Checkpoint-size checks stream serialization into a byte counter rather than
     retaining a full serialized checkpoint in RAM.
 - `model/`: neural model definitions; `--model NAME` → `model/NAME.py` with `Model`
+  - `transformer+dense_mix_e3nn_4_vv10` accepts float64 `[batch, 5, EDGE_SIZE**3]`:
+    the original four spatial channels followed by a center-only, unweighted
+    VV10 energy density (energy per volume in atomic units). Non-center entries
+    of the fifth channel are ignored, not passed through e3nn or the transformer.
+    The center network uses all five center values; the mixture gate also
+    receives the VV10 center value and combines seven outputs (spatial network,
+    center network, and five raw center values). A fresh checkpoint is required.
+    Training and dataset evaluation populate channel five through `DataBaseVV10`.
+    Model-SCF evaluation raises an error rather than use a non-VV10 channel.
+  - `transformer+dense_mix_e3nn_4_scaled` keeps the original
+    four-channel input without VV10. Four learnable scales, initialized to one,
+    multiply the center-network inputs and raw center experts. Original-model
+    checkpoints lack these parameters and are not directly compatible.
   - `transformer+dense_mix_e3nn_4_correct_5` uses the `cube5` input contract:
     four alternating corners and the center in `ModelClass.CUBE_INDEX` order
     `[0, 8, 13, 24, 20]`, with `cube_type="cube5"` and `cube_size=5`.

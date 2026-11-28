@@ -4,7 +4,7 @@ import torch
 
 
 def maybe_compile_model(model):
-    if model.args.if_grad:
+    if model.args.if_grad or getattr(model.args, "if_zmp_response", False):
         return
 
     try:
