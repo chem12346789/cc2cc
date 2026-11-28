@@ -171,10 +171,36 @@ Codex reads this only when it needs full structural detail — keeping AGENTS.md
   Generating constraints alone does not change existing training losses.
 - `--zmp_ov_loss true` is no longer supported and is rejected.
 - `reference/reference_cc.py`: shared CCSD solver settings, CCSD(T) lambda solving,
-  triples-corrected target density and CC-gradient one-particle intermediates.
+  full-block triples intermediates and orbital-relaxed effective densities.
+  `ccsd_t_target_density()` retains its six-result interface; `with_rdm2=True`
+  appends the uncompressed two-particle intermediates and relaxed AO 2-RDM.
+  Its two one-particle intermediate entries now share the full-block corrections,
+  not diagonal-only triples corrections. The occupied-virtual density is replaced
+  by the PySCF gradient Z-vector; the returned MO 1-RDM is explicitly symmetrized.
+  Frozen CC orbitals are unsupported: generation, density, and gradient entry
+  points raise `ValueError` before computation if either spin freezes orbitals.
+  This restriction does not disable ECP support.
+  The AO 2-RDM includes separable response terms with RHF spin-summed exchange
+  factors or UHF same-spin exchange and opposite-spin Coulomb terms.
+  `cc_reference()` uses all three densities for grid energies but only returns
+  `dm1_cc`; the large MO 1-RDM and AO 2-RDM are not added to saved reference
+  data. UHF `dm2_cc` remains an internal `(aa, ab, bb)` tuple.
+  Regenerate old CC reference archives to obtain relaxed densities and grids.
   `ccsd_t_target_gradient()` handles restricted/unrestricted two-particle
   intermediate compression, electronic/nuclear gradient assembly, and symmetry
   projection without modifying the density intermediates used for training.
+  Its existing PySCF calculation remains unchanged and solves its response
+  independently; no global PySCF hooks or locally patched density attributes
+  are needed. The expensive triples intermediates are built only once.
+  `tests/test_cc_reference_relaxed.py` verifies water/RHF and OH/UHF in cc-pVDZ,
+  without frozen orbitals, using exact contractions, three-axis
+  finite-field dipoles, electron counts/symmetries, level-3 grids (0.1 mHa
+  tolerance), and recorded original gradients. Run with
+  `python -m unittest discover -s tests -p test_cc_reference_relaxed.py`.
+  The requested exact pair-normalization assertions remain explicit failures:
+  effective CCSD(T) energy-derivative 2-RDMs are not normalized wavefunction
+  2-RDMs. Their pair-trace excess is about 0.00291 for water and 0.00160 for OH;
+  no artificial normalization is applied to mask this distinction.
   Both generation entry points and displaced ZMP references use this helper;
   generation/reference CC convergence settings are identical: energy `1e-12`,
   amplitudes/lambda `1e-10`, and CC/lambda iteration limits of 200.

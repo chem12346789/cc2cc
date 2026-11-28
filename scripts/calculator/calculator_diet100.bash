@@ -15,6 +15,8 @@ export model_load_epoch_pairs=(
     "atom-3259973:2395:scf_d3bj_ene:vv10"
     "atom-2725898:2395:scf_d3bj_ene:vv10"
     "atom-2751839:2395:scf_d3bj_ene:vv10"
+    "atom-2065162:2395:scf_d3bj_ene:mol2 vv10"
+    "atom-2065162:4955:scf_d3bj_ene:mol2 vv10"
     # ==================================================
     # "atom-3259973:2395:scf_d3bj_ene:vv10"
     # "atom-3259973:2395:post_scf_vv10_ene:vv10"

@@ -23,13 +23,10 @@ def cc_reference(mol, grids, mf, *, evaluate, unrestricted):
     import gc
 
     from pyscf.cc import ccsd_t, uccsd_t
-    from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
-    from cc2cc.utils.ccsd_t.pyscf_uccsd_t_u_gamma2_intermediates import (
-        u_gamma2_intermediates,
-    )
 
     triples = uccsd_t if unrestricted else ccsd_t
     mycc = make_ccsd(mf, unrestricted=unrestricted)
+    _require_no_frozen_orbitals(mycc, unrestricted=unrestricted)
     mycc.verbose = 4
     # To trace the usage of memory, set verbose as 9.
     _, t1, t2 = mycc.kernel()
@@ -46,15 +43,9 @@ def cc_reference(mol, grids, mf, *, evaluate, unrestricted):
         gc.collect()
         return data
 
-    gamma2_intermediates = (
-        u_gamma2_intermediates if unrestricted else _gamma2_intermediates
+    l1, l2, d1, d1_grad, dm1_cc_mo, dm1_cc, d2, dm2_cc = ccsd_t_target_density(
+        mycc, eris, unrestricted=unrestricted, with_rdm2=True
     )
-    rdm = uccsd_rdm if unrestricted else ccsd_rdm
-    l1, l2, d1, d1_grad, dm1_cc_mo, dm1_cc = ccsd_t_target_density(
-        mycc, eris, unrestricted=unrestricted
-    )
-    d2 = gamma2_intermediates(mycc, t1, t2, l1, l2, eris, compress_vvvv=False)
-    print("gamma2_intermediates DONE", flush=True)
     data["grad_cc"] = ccsd_t_target_gradient(
         mycc, eris, l1, l2, d1_grad, d2, unrestricted=unrestricted
     )
@@ -63,11 +54,8 @@ def cc_reference(mol, grids, mf, *, evaluate, unrestricted):
     gc.collect()
 
     print("DM1 done.", flush=True)
-    dm2_cc = rdm._make_rdm2(mycc, d1, d2, with_dm1=True, with_frozen=True, ao_repr=True)
     print("DM2 done.", flush=True)
-    dm1_cc_mo = np.array(dm1_cc_mo)
-    dm2_cc = np.array(dm2_cc)
-    del d1, d2, eris, mycc
+    del d1, d1_grad, d2, eris, mycc
     gc.collect()
 
     data.update(
@@ -76,7 +64,6 @@ def cc_reference(mol, grids, mf, *, evaluate, unrestricted):
         )
     )
     data["dm1_cc"] = dm1_cc
-    del dm1_cc_mo, dm2_cc
     gc.collect()
     return data
 
@@ -93,13 +80,23 @@ def make_ccsd(mf, *, unrestricted=False, reference=False):
     return mycc
 
 
-def ccsd_t_target_density(mycc, eris, *, unrestricted=False, reference=False):
+def ccsd_t_target_density(
+    mycc, eris, *, unrestricted=False, reference=False, with_rdm2=False
+):
     """Return l1, l2, density/gradient intermediates, MO density, AO density.
 
-    The density uses diagonal triples corrections; the CC gradient requires
-    full-block corrections instead. Keep separate arrays for these two uses.
+    Both intermediates entries contain full-block triples corrections. The
+    returned densities include orbital relaxation; frozen orbitals are rejected.
+    With ``with_rdm2=True``, also return d2 and the relaxed AO 2-RDM
+    (an aa, ab, bb tuple for UHF), reusing the same triples intermediates.
     Reference mode requires converged CC and lambda equations.
     """
+    from pyscf.cc.ccsd_t_rdm import _gamma2_intermediates
+    from cc2cc.utils.ccsd_t.pyscf_uccsd_t_u_gamma2_intermediates import (
+        u_gamma2_intermediates,
+    )
+
+    _require_no_frozen_orbitals(mycc, unrestricted=unrestricted)
     if reference and not mycc.converged:
         raise RuntimeError("Reference CCSD did not converge.")
     t1, t2 = mycc.t1, mycc.t2
@@ -126,27 +123,120 @@ def ccsd_t_target_density(mycc, eris, *, unrestricted=False, reference=False):
             (dvo, dVO),
             (dvv + gvv, dVV + gVV),
         )
-        corrections = ((doo, -goo), (dOO, -gOO), (dvv, gvv), (dVV, gVV))
         rdm = uccsd_rdm
     else:
         d1, goo, gvv = gamma1_intermediates(mycc, t1, t2, l1, l2, eris)
         doo, dov, dvo, dvv = d1
         d1_grad = (doo - goo * 0.5, dov, dvo, dvv + gvv * 0.5)
-        corrections = ((doo, -goo * 0.5), (dvv, gvv * 0.5))
         rdm = ccsd_rdm
     time = lib.logger.timer(mycc, "CCSD(T) gamma1", *time)
 
-    for block, correction in corrections:
-        block[np.diag_indices_from(block)] += correction.diagonal()
-    dm_mo = np.asarray(rdm._make_rdm1(mycc, d1, with_frozen=True, ao_repr=False))
+    gamma2 = u_gamma2_intermediates if unrestricted else _gamma2_intermediates
+    d2 = gamma2(mycc, t1, t2, l1, l2, eris, compress_vvvv=False)
+    dm2 = rdm._make_rdm2(
+        mycc, d1_grad, d2, with_dm1=False, with_frozen=False, ao_repr=True
+    )
+    dm_mo = _orbital_relaxed_dm1(
+        mycc, eris, d1_grad, dm2, unrestricted=unrestricted
+    )
     coeff = np.asarray(mycc.mo_coeff)
     dm_ao = coeff @ dm_mo @ coeff.swapaxes(-1, -2).conj()
     time = lib.logger.timer(mycc, "CCSD(T) density", *time)
-    return l1, l2, d1, d1_grad, dm_mo, dm_ao
+    result = (l1, l2, d1_grad, d1_grad, dm_mo, dm_ao)
+    if with_rdm2:
+        hf_dm = np.asarray(mycc._scf.make_rdm1(mycc.mo_coeff, mycc.mo_occ))
+        _add_separable_dm2(dm2, dm_ao, hf_dm, unrestricted=unrestricted)
+        return (*result, d2, dm2)
+    return result
+
+
+def _require_no_frozen_orbitals(mycc, *, unrestricted):
+    masks = mycc.get_frozen_mask()
+    masks = masks if unrestricted else (masks,)
+    if any(not np.all(mask) for mask in masks):
+        raise ValueError("Frozen orbitals are not supported for CCSD(T) references.")
+
+
+def _orbital_relaxed_dm1(mycc, eris, d1, dm2, *, unrestricted):
+    """Build the same orbital-response RHS as the PySCF CC nuclear gradient."""
+    mol, mf = mycc.mol, mycc._scf
+    coeff = np.asarray(mycc.mo_coeff)
+    rdm = uccsd_rdm if unrestricted else ccsd_rdm
+    grad = uccsd_grad if unrestricted else ccsd_grad
+    dm = np.asarray(rdm._make_rdm1(mycc, d1, with_frozen=False, with_mf=False))
+    matrices = dm if unrestricted else dm[None]
+    coefficients = coeff if unrestricted else coeff[None]
+    occupations = mycc.mo_occ if unrestricted else (mycc.mo_occ,)
+    spin_pairs = (
+        ((dm2[0], dm2[1]), (dm2[2], dm2[1].transpose(2, 3, 0, 1)))
+        if unrestricted else ((dm2,),)
+    )
+    imat = np.zeros((len(matrices), mol.nao, mol.nao), dtype=np.float64)
+    max_memory = max(0, mycc.max_memory - lib.current_memory()[0])
+    blksize = max(1, int(max_memory * 0.9e6 / (8 * mol.nao**3 * 4)))
+    p1 = 0
+    for b0, b1, nf in ccsd_grad._shell_prange(mol, 0, mol.nbas, blksize):
+        p0, p1 = p1, p1 + nf
+        eri = mol.intor(
+            "int2e", shls_slice=(b0, b1, 0, mol.nbas, 0, mol.nbas, 0, mol.nbas)
+        )
+        for spin, pairs in enumerate(spin_pairs):
+            for pair in pairs:
+                # Only the ERI-symmetric part contributes to the orbital RHS.
+                buf = pair[p0:p1] + pair[:, p0:p1].transpose(1, 0, 2, 3)
+                imat[spin] -= 0.5 * lib.einsum("iprs,iqrs->pq", eri, buf)
+        del eri, buf
+    overlap = mf.get_ovlp()
+    imat = [c.T @ im @ overlap @ c for c, im in zip(coefficients, imat)]
+    for density, occ in zip(matrices, occupations):
+        nocc = np.count_nonzero(occ > 0)
+        # The gradient Z-vector replaces, rather than adds to, the
+        # unrelaxed occupied-virtual blocks.
+        density[:nocc, nocc:] = 0
+        density[nocc:, :nocc] = 0
+    dao = coeff @ dm @ coeff.swapaxes(-1, -2).conj()
+    veff = np.asarray(mf.get_veff(mol, dao))
+    potentials = veff if unrestricted else (veff * 2,)
+    rhs = []
+    for c, occ, v, im in zip(coefficients, occupations, potentials, imat):
+        nocc = np.count_nonzero(occ > 0)
+        rhs.append(
+            c[:, nocc:].T @ v @ c[:, :nocc]
+            + im[:nocc, nocc:].T - im[nocc:, :nocc]
+        )
+    dm += np.asarray(
+        grad._response_dm1(mycc, tuple(rhs) if unrestricted else rhs[0], eris)
+    )
+    for density, occ in zip(matrices, occupations):
+        density[np.diag_indices_from(density)] += occ
+    return (dm + dm.swapaxes(-1, -2).conj()) * 0.5
+
+
+def _add_separable_dm2(dm2, dm1, hf_dm1, *, unrestricted):
+    """Complete the nonseparable AO 2-RDM in PySCF's chemist convention, in place."""
+    # Half the HF density supplies the reference determinant once; the rest
+    # gives the separable correlated and orbital-response contributions.
+    correction = dm1 - hf_dm1 * 0.5
+    same_spin = (
+        zip((dm2[0], dm2[2]), correction, hf_dm1)
+        if unrestricted else ((dm2, correction, hf_dm1),)
+    )
+    exchange = 1.0 if unrestricted else 0.5
+    for pair, delta, hf in same_spin:
+        for p in range(hf.shape[0]):
+            pair[p] += np.einsum("q,rs->qrs", delta[p], hf)
+            pair[p] += np.einsum("q,rs->qrs", hf[p], delta)
+            pair[p] -= exchange * np.einsum("s,rq->qrs", delta[p], hf)
+            pair[p] -= exchange * np.einsum("s,rq->qrs", hf[p], delta)
+    if unrestricted:
+        for p in range(hf_dm1[0].shape[0]):
+            dm2[1][p] += np.einsum("q,rs->qrs", correction[0][p], hf_dm1[1])
+            dm2[1][p] += np.einsum("q,rs->qrs", hf_dm1[0][p], correction[1])
 
 
 def ccsd_t_target_gradient(mycc, eris, l1, l2, d1_grad, d2, *, unrestricted=False):
     """Compute the target nuclear gradient in Hartree/Bohr without modifying d2."""
+    _require_no_frozen_orbitals(mycc, unrestricted=unrestricted)
     mol = mycc.mol
     if mol.natm == 1:
         gradient = np.zeros((mol.natm, 3), dtype=np.float64)
